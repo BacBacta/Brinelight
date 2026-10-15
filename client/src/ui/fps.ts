@@ -3,7 +3,7 @@ import { fpsFrame, fpsMin, modelsLoaded, newFpsMeter } from "./fpsMeter.js";
 
 const VIEW_NAMES = { city: "City", sea: "Sea" } as const;
 
-/** The ?fps counter: a small box in the top right corner, refreshed every second. It catches no tap. */
+/** The ?fps counter: a small box in the bottom left corner, just above the bottom menu, refreshed every second. It catches no tap. */
 export function createFpsCounter(root: HTMLElement, scene: SceneHandle) {
   const el = document.createElement("div");
   el.className = "fps";

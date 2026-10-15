@@ -4,7 +4,7 @@ Goal of week 2 (task 6): **30 FPS or more on the low-end Android test phone**, i
 
 ## Tools in the game
 
-- `?fps` in the URL shows a small counter in the top right corner, refreshed every second:
+- `?fps` in the URL shows a small counter in the bottom left corner, just above the bottom menu, refreshed every second:
   - FPS: the average over the last second;
   - min: the lowest one-second rate of the last 10 seconds;
   - the quality step (`0`, `1` or `2`), `auto` or `forced`;

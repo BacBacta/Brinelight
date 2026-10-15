@@ -21,7 +21,8 @@ export { forcedQuality } from "./quality.js";
 /** What the ?fps counter shows about rendering. */
 export type RenderStats = { step: QualityStep; forced: boolean; calls: number; triangles: number };
 
-export type ScreenPoint = { x: number; y: number; visible: boolean };
+/** A point on screen; `depth` grows with the distance from the camera (normalized device depth). */
+export type ScreenPoint = { x: number; y: number; depth: number; visible: boolean };
 
 export type SceneHandle = {
   /** Moves the camera back and resizes the Lighthouse for this level. */
@@ -166,6 +167,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       return {
         x: r.left + ((v3.x + 1) / 2) * r.width,
         y: r.top + ((1 - v3.y) / 2) * r.height,
+        depth: v3.z,
         visible: v3.z < 1 && Math.abs(v3.x) < 1.2 && Math.abs(v3.y) < 1.2,
       };
     },
