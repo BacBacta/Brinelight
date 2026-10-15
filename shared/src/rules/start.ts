@@ -16,5 +16,8 @@ export type OwnedCaptain = { level: number; xp: number; stars: number };
 /** Every new city starts with Old Tom, level 1, 1 star. */
 export const STARTING_CAPTAIN: { id: CaptainId } & OwnedCaptain = { id: "tom", level: 1, xp: 0, stars: 1 };
 
+/** The captain at the head of your fleets at the start: Old Tom. */
+export const STARTING_LEAD: CaptainId = STARTING_CAPTAIN.id;
+
 /** Longest absence counted when the player comes back, in real seconds. */
 export const OFFLINE_CAP = 8 * HOUR;
