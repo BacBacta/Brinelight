@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@brinelight/shared": "*",
+    "@fastify/cors": "11.3.0",
+    "@fastify/rate-limit": "11.2.0",
     "drizzle-orm": "0.45.3",
     "fastify": "5.1.0",
     "pg": "8.23.1"

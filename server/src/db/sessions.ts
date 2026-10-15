@@ -50,3 +50,11 @@ export async function purgeExpired(db: Db, now: Date): Promise<{ nonces: number;
   const s = await db.delete(sessions).where(lt(sessions.expiresAt, now)).returning({ tokenHash: sessions.tokenHash });
   return { nonces: n.length, sessions: s.length };
 }
+
+/** Why a nonce could not be used, read after `useNonce` refused it (never instead of it). */
+export async function nonceRefusal(db: Db, nonce: string, now: Date): Promise<"unknown" | "used" | "expired"> {
+  const [row] = await db.select({ usedAt: authNonces.usedAt, expiresAt: authNonces.expiresAt }).from(authNonces).where(eq(authNonces.nonce, nonce));
+  if (!row) return "unknown";
+  if (row.usedAt) return "used";
+  return row.expiresAt <= now ? "expired" : "used";
+}
