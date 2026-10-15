@@ -35,6 +35,7 @@ Read this whole file before every task. When in doubt, ask rather than guess.
 
 - Any code for payments, Solana transaction verification or purchase delivery.
 - Keys, secrets and `.env` files (never read, display or commit them).
+- Sign-in and sessions: wallet sign-in (Sign In With Solana), nonces, session tokens and their storage.
 - `shared/src/rules/comfort.ts`: the convenience cap (100 USDC per month, 30 for a minor, 4 h per day) is a public promise.
 - The recruitment odds (`RECRUIT_ODDS`): they are published.
 
