@@ -72,7 +72,7 @@ if (new URLSearchParams(location.search).has("rules")) {
     onLoaded: (kit) => {
       status.remove();
       fps?.modelsLoaded();
-      city = createCity(kit, scene, canvas, app, { state: () => state, upgrade: startUpgrade, speed: DEV_SPEED });
+      city = createCity(kit, scene, canvas, app, { state: () => state, upgrade: startUpgrade, toCity: () => ui.showView("city"), speed: DEV_SPEED });
       sea = createSea(kit, scene, canvas, app, {
         state: () => state,
         sail: sendFleet,

@@ -19,11 +19,11 @@ export function createCity(
   scene: SceneHandle,
   canvas: HTMLCanvasElement,
   root: HTMLElement,
-  game: { state(): PlayerState; upgrade(id: BuildingId): void; speed: number },
+  game: { state(): PlayerState; upgrade(id: BuildingId): void; toCity(): void; speed: number },
 ): City {
   const buildings = createCityBuildings(kit, (o) => scene.add(o));
   const labels = createLabels(root, scene);
-  const queue = createQueue(root);
+  const queue = createQueue(root, () => game.toCity());
   const sheet = createSheet(root, {
     upgrade: (id) => game.upgrade(id),
     close: () => {

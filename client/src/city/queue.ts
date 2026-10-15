@@ -1,4 +1,5 @@
 import { BUILDINGS, BUILDERS, seaSite, type Fleet } from "@brinelight/shared";
+import { ICONS } from "../ui/icons.js";
 import type { PlayerState } from "../state/index.js";
 import { formatTimeLeft } from "./format.js";
 import { fleetPosition } from "../sea/fleets.js";
@@ -6,14 +7,34 @@ import { progress } from "./suggest.js";
 
 const fleetLabel = (f: Fleet): string => `Fleet · ${f.phase === "back" ? "home" : (seaSite(f.site)?.name ?? "")}`;
 
-/** The builders' queue and the fleets at sea, top left: what is going on and how long is left. */
-export function createQueue(root: HTMLElement) {
+/** What the badge shown at sea says: how many upgrades are in progress, or nothing when there is none. */
+export const buildBadge = (state: PlayerState): { count: number; label: string } | null =>
+  state.queue.length === 0
+    ? null
+    : { count: state.queue.length, label: `${state.queue.length} upgrade${state.queue.length > 1 ? "s" : ""} in progress. Back to the city` };
+
+/**
+ * The builders' queue and the fleets at sea, top left: what is going on and how long is left.
+ * At sea the list would hide the top of the map, so a small hammer badge stands in for it; tapping it goes back to the city.
+ */
+export function createQueue(root: HTMLElement, onCity: () => void) {
   const el = document.createElement("div");
   el.className = "queue";
   el.setAttribute("aria-label", `Your ${BUILDERS} builders`);
   root.appendChild(el);
+  const badge = document.createElement("button");
+  badge.className = "build-badge";
+  badge.hidden = true;
+  badge.addEventListener("click", onCity);
+  root.appendChild(badge);
   return {
     update(state: PlayerState, speed: number) {
+      const b = buildBadge(state);
+      badge.hidden = b === null;
+      if (b && badge.getAttribute("aria-label") !== b.label) {
+        badge.setAttribute("aria-label", b.label);
+        badge.innerHTML = `${ICONS.hammer}<b>${b.count}</b>`;
+      }
       el.hidden = state.queue.length === 0 && state.fleets.length === 0;
       // Time left on the real clock: in development, DEV_SPEED makes it shorter.
       const row = (name: string, p: number, left: number) =>

@@ -11,6 +11,7 @@ export const ICONS = {
   sea: '<svg viewBox="0 0 24 24"><path d="M2 16c3 0 3-2 5-2s2 2 5 2 3-2 5-2 2 2 5 2M6 12l6-9 1 9z" fill="#9FE6FF" stroke="#0C1F3A" stroke-width="1.5" stroke-linejoin="round"/></svg>',
   captains: '<svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="4" fill="#FFD866" stroke="#0C1F3A" stroke-width="1.5"/><path d="M4 21c1-5 15-5 16 0z" fill="#3BC6FF" stroke="#0C1F3A" stroke-width="1.5"/><path d="M7 7h10l-2-4H9z" fill="#B53A1E" stroke="#0C1F3A" stroke-width="1.2"/></svg>',
   alliance: '<svg viewBox="0 0 24 24"><path d="M5 3v18M5 4h12l-3 4 3 4H5" fill="#6BE07A" stroke="#0C1F3A" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  hammer: '<svg viewBox="0 0 24 24"><path d="M4 8l6-5 3 3-2 2 8 8-3 3-8-8-2 2z" fill="#FFD866" stroke="#0C1F3A" stroke-width="1.5" stroke-linejoin="round"/></svg>',
   shop: '<svg viewBox="0 0 24 24"><path d="M4 9h16l-1 11H5zM8 9a4 4 0 0 1 8 0" fill="#FFD866" stroke="#0C1F3A" stroke-width="1.6"/></svg>',
 } as const;
 

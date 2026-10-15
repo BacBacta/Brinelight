@@ -2,6 +2,7 @@ import { BUILDING_IDS } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
 import { formatDuration, formatTimeLeft } from "../src/city/format.js";
 import { PLOTS, buildingModel, hasTower } from "../src/city/plots.js";
+import { buildBadge } from "../src/city/queue.js";
 import { progress, suggestedUpgrades } from "../src/city/suggest.js";
 import { newPlayerState, upgrade } from "../src/state/state.js";
 
@@ -63,5 +64,23 @@ describe("formats", () => {
     expect(progress({ left: 3240, duration: 3240 })).toBe(0);
     expect(progress({ left: 1620, duration: 3240 })).toBe(0.5);
     expect(progress({ left: -5, duration: 3240 })).toBe(1);
+  });
+});
+
+describe("builders' badge at sea", () => {
+  it("is hidden when nothing is being built", () => {
+    expect(buildBadge(newPlayerState())).toBeNull();
+  });
+
+  it("counts the upgrades in progress", () => {
+    let s = newPlayerState();
+    const one = upgrade(s, "fishery");
+    if (!one.ok) throw new Error(one.reason);
+    s = one.state;
+    expect(buildBadge(s)).toEqual({ count: 1, label: "1 upgrade in progress. Back to the city" });
+    const two = upgrade(s, "lumberyard");
+    if (!two.ok) throw new Error(two.reason);
+    expect(buildBadge(two.state)?.count).toBe(2);
+    expect(buildBadge(two.state)?.label).toBe("2 upgrades in progress. Back to the city");
   });
 });

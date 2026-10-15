@@ -21,8 +21,13 @@ export function createNav(root: HTMLElement, onSoon: () => void, onView: (view: 
     const item = NAV_ITEMS.find((n) => n.id === b.dataset.v);
     if (!item) return;
     if (!item.ready) return onSoon();
-    nav.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
-    onView(item.id as NavView);
+    select(item.id as NavView);
   });
   root.appendChild(nav);
+  /** Shows a view and marks its button, from a tap on the menu or from elsewhere in the game. */
+  const select = (view: NavView) => {
+    nav.querySelectorAll<HTMLButtonElement>("button[data-v]").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.v === view)));
+    onView(view);
+  };
+  return { select };
 }

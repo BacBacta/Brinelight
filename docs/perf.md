@@ -44,10 +44,18 @@ Always wait 10 seconds after a change of view or of quality step before reading 
 | Chromium (container, software rendering) | same | Sea | 13 | 11 | 1 (forced) | |
 | Chromium (container, software rendering) | same | City | 12 | 9 | 2 (forced) | |
 | Chromium (container, software rendering) | same | Sea | 14 | 12 | 2 (forced) | |
+| Samsung Galaxy S22 (SM-S901U) | Chrome Android | City | 60 | 60 | 0 (auto) | Cloudflare preview. 86 draw calls, 66.7 k triangles. |
+| Samsung Galaxy S22 (SM-S901U) | Chrome Android | Sea | 60 | 60 | 0 (auto) | Cloudflare preview. 200 draw calls, 73.3 k triangles. |
 | | | City | | | | |
 | | | Sea | | | | |
 
-The container rows only show the order of the costs: going from step 0 to step 2 roughly quadruples the frame rate in the city. A real phone with a graphics chip will be much faster. Only the phone rows decide whether the goal is met.
+The container rows only show the order of the costs: going from step 0 to step 2 roughly quadruples the frame rate in the city. A real phone with a graphics chip is much faster. Only the phone rows decide whether the goal is met.
+
+## Conclusion
+
+The 30 FPS goal is met on the Samsung Galaxy S22: 60 FPS with a minimum of 60, in the city and at sea, at full quality (step 0), so the automatic tuning never had to lower the quality.
+
+This is a high-end phone. Before the beta, the same protocol must still be run on an entry-level Android phone (about 120 €), which is the phone the goal is about.
 
 ## If a phone stays under 30 FPS
 
@@ -57,7 +65,7 @@ From the simplest to the heaviest:
 2. **Smaller shadow map**: 1024 instead of 2048, or no soft shadows (`PCFShadowMap`).
 3. **Pixel ratio 1.5** at most instead of 2, as a middle step between 0 and 1.
 4. **Lighter water**: the wave plane has 140 × 140 segments; 64 × 64 looks the same from the usual camera distance.
-5. **Fewer draw calls**: merge the island tiles and repeated models into one mesh (`BufferGeometryUtils.mergeGeometries`) or use instancing. The city draws about 80 calls, the sea about 140.
+5. **Fewer draw calls**: merge the island tiles and repeated models into one mesh (`BufferGeometryUtils.mergeGeometries`) or use instancing. The city draws about 85 calls, the sea 140 to 200.
 6. **Labels drawn in the 3D view** (sprites or a canvas) instead of HTML elements moved on every frame.
 7. **A 30 FPS cap** on weak phones: draw one frame in two. It is steadier, and it saves battery and heat.
 
