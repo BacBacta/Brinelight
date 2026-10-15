@@ -99,6 +99,9 @@ table.rep{width:100%;border-collapse:collapse;font-size:12.5px}table.rep th,tabl
 .verd{text-align:center;font-weight:900;font-size:13px}.verd.easy{color:#9FE6A9}.verd.close{color:#FFD866}.verd.hard{color:#FF9A86}
 body.at-sea .labels.city,body:not(.at-sea) .labels.sea{display:none}
 
+/* ?fps counter: top right, under the Mist banner, far from the bottom menu */
+.fps{position:fixed;right:8px;top:calc(100px + env(safe-area-inset-top,0px));z-index:40;pointer-events:none;white-space:pre;text-align:right;font:700 10.5px/1.35 ui-monospace,Menlo,Consolas,monospace;color:#E8F6FF;background:rgba(6,16,36,.7);border-radius:8px;padding:4px 7px}
+
 /* Small screens, as in the prototype */
 @media (max-width:440px){.res{gap:3px}.pill{font-size:12px;padding:2px 6px 2px 2px;gap:3px}.pill .ic{width:19px;height:19px}.pill .fill{left:23px;right:6px}.lvl .av{width:36px;height:36px}.lvl b{font-size:13px}.hud{gap:4px;padding-left:6px;padding-right:6px}}
 @media (max-width:420px){.lvl{padding:3px 8px 3px 3px}.sub{gap:4px}.mor .bar{width:44px}.mor,.brume{font-size:11px;padding:3px 6px}.queue{width:min(240px,62vw)}.pill{font-size:12.5px;padding-right:7px}.pill small{display:none}}

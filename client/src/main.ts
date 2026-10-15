@@ -9,8 +9,10 @@
 import { HOME, type BuildingId } from "@brinelight/shared";
 import { createCity, type City } from "./city/index.js";
 import { showRules } from "./rules.js";
-import { startScene, type View } from "./scene/index.js";
+import { forcedQuality, startScene, type View } from "./scene/index.js";
 import { createSea, type Sea } from "./sea/index.js";
+import { createFpsCounter } from "./ui/fps.js";
+import { fpsWanted } from "./ui/fpsMeter.js";
 import { createUi } from "./ui/index.js";
 import { DEV_SPEED, SAVE_EVERY_MS, browserStore, elapse, loadGame, readReport, sail, saveGame, upgrade, type ActionResult, type PlayerState } from "./state/index.js";
 import "./style.css";
@@ -63,10 +65,13 @@ if (new URLSearchParams(location.search).has("rules")) {
     sea?.closeSheet();
   };
 
+  let fps: ReturnType<typeof createFpsCounter> | null = null;
   const scene = startScene(canvas, {
     home: HOME,
+    quality: forcedQuality(location.search),
     onLoaded: (kit) => {
       status.remove();
+      fps?.modelsLoaded();
       city = createCity(kit, scene, canvas, app, { state: () => state, upgrade: startUpgrade, speed: DEV_SPEED });
       sea = createSea(kit, scene, canvas, app, {
         state: () => state,
@@ -83,6 +88,9 @@ if (new URLSearchParams(location.search).has("rules")) {
     },
     onError: () => (status.textContent = "Could not load the 3D models. Reload the page."),
   });
+
+  // Measuring on a phone: ?fps shows the counter, ?quality=0|1|2 forces a quality step (docs/perf.md).
+  if (fpsWanted(location.search)) fps = createFpsCounter(app, scene);
 
   let shownLevel = -1;
   const showLighthouse = () => {

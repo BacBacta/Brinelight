@@ -4,7 +4,7 @@ import { createCamera, createControls, frameCity } from "./camera.js";
 import { createIsland, type Kit } from "./island.js";
 import { createLighthouse, lighthouseScale } from "./lighthouse.js";
 import { addCityLights } from "./lights.js";
-import { applyQualityStep, createQualityMonitor } from "./quality.js";
+import { applyQualityStep, createQualityMonitor, type QualityStep } from "./quality.js";
 import { createRenderer } from "./renderer.js";
 import { addCitySky } from "./sky.js";
 import { createSeaView } from "./sea.js";
@@ -15,6 +15,11 @@ export { hexGeometry, hexX, hexZ, kitModel } from "./island.js";
 export { createLighthouse, lighthouseScale } from "./lighthouse.js";
 
 export type View = "city" | "sea";
+export type { QualityStep } from "./quality.js";
+export { forcedQuality } from "./quality.js";
+
+/** What the ?fps counter shows about rendering. */
+export type RenderStats = { step: QualityStep; forced: boolean; calls: number; triangles: number };
 
 export type ScreenPoint = { x: number; y: number; visible: boolean };
 
@@ -32,11 +37,15 @@ export type SceneHandle = {
   project(x: number, y: number, z: number): ScreenPoint;
   /** Called on every drawn frame, before rendering, with the scene clock in seconds and the shown view. */
   onFrame(cb: (now: number, view: View) => void): void;
+  /** Quality step and the last frame's draw calls and triangles (renderer.info). */
+  stats(): RenderStats;
   /** Stops the loop and removes the listeners. */
   dispose(): void;
 };
 
 export type SceneOptions = {
+  /** A quality step forced for measuring (?quality): automatic tuning is then off. */
+  quality?: QualityStep | null;
   /** Where the sea camera first looks: your city on the sea map. */
   home?: { x: number; z: number };
   /** Called once phare.glb is loaded, with its models. */
@@ -97,16 +106,20 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   const ndc = new THREE.Vector2();
   const v3 = new THREE.Vector3();
 
-  const quality = createQualityMonitor();
+  const forced = options.quality ?? null;
+  let step: QualityStep = forced ?? 0;
+  if (forced !== null) applyQualityStep(renderer, sun, forced);
+  const quality = forced === null ? createQualityMonitor() : null;
   const clock = new THREE.Clock();
   let frame = 0;
   const loop = () => {
     frame = requestAnimationFrame(loop);
     const dt = Math.min(0.1, clock.getDelta());
     const now = clock.elapsedTime;
-    const step = quality.tick(dt);
-    if (step !== null) {
-      applyQualityStep(renderer, sun, step);
+    const next = quality?.tick(dt) ?? null;
+    if (next !== null) {
+      step = next;
+      applyQualityStep(renderer, sun, next);
       layout();
     }
     const v = shown();
@@ -134,6 +147,9 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     },
     get view() {
       return view;
+    },
+    stats() {
+      return { step, forced: forced !== null, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles };
     },
     add(object, v = "city") {
       (v === "city" ? scene : sea.scene).add(object);
