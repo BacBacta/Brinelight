@@ -1,7 +1,7 @@
-import { HOUR, OFFLINE_CAP, STARTING_BUILDINGS, STARTING_STOCK, netRates, storeCap } from "@brinelight/shared";
+import { HOUR, OFFLINE_CAP, STARTING_BUILDINGS, STARTING_STOCK, netRates, storeCap, upgradeCost, upgradeTime } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
 import { SAVE_KEY, loadGame, saveGame, type KeyValueStore } from "../src/state/save.js";
-import { advance, catchUp, elapse, newPlayerState, tick } from "../src/state/state.js";
+import { advance, catchUp, elapse, newPlayerState, tick, upgrade } from "../src/state/state.js";
 
 const memoryStore = (): KeyValueStore & { data: Map<string, string> } => {
   const data = new Map<string, string>();
@@ -120,5 +120,77 @@ describe("time between two frames", () => {
 
   it("3 days with the tab hidden counts at most OFFLINE_CAP", () => {
     expect(elapse(s, 3 * 24 * HOUR, speed)).toEqual(advance(s, OFFLINE_CAP));
+  });
+});
+
+describe("buildings", () => {
+  const t0 = Date.UTC(2026, 9, 15, 12);
+
+  it("upgrading pays the shared cost and queues the shared duration", () => {
+    const s = newPlayerState();
+    const r = upgrade(s, "refinery");
+    if (!r.ok) throw new Error(r.reason);
+    expect(r.state.stock.wood).toBe(s.stock.wood - (upgradeCost("refinery", 1).wood ?? 0));
+    expect(r.state.queue).toEqual([{ id: "refinery", left: upgradeTime("refinery", 1), duration: upgradeTime("refinery", 1) }]);
+  });
+
+  it("a refusal keeps the reason from the shared rules", () => {
+    const s = newPlayerState();
+    expect(upgrade({ ...s, stock: { oil: 0, fish: 0, wood: 0, rope: 0 } }, "refinery")).toEqual({ ok: false, reason: "Not enough resources" });
+    expect(upgrade({ ...s, buildings: { ...s.buildings, refinery: 2 } }, "refinery")).toEqual({ ok: false, reason: "Upgrade the Lighthouse first" });
+    const one = upgrade(s, "refinery");
+    if (!one.ok) throw new Error(one.reason);
+    expect(upgrade(one.state, "refinery")).toEqual({ ok: false, reason: "This building is already being upgraded" });
+  });
+
+  it("the level rises when the upgrade ends", () => {
+    const r = upgrade(newPlayerState(), "refinery");
+    if (!r.ok) throw new Error(r.reason);
+    const d = upgradeTime("refinery", 1);
+    expect(advance(r.state, d - 1).buildings.refinery).toBe(1);
+    const done = advance(r.state, d);
+    expect(done.buildings.refinery).toBe(2);
+    expect(done.queue).toEqual([]);
+  });
+
+  it("time away finishes upgrades and produces at the new rate after them", () => {
+    const r = upgrade(newPlayerState(), "refinery");
+    if (!r.ok) throw new Error(r.reason);
+    const d = upgradeTime("refinery", 1);
+    const before = { ...r.state, queue: [] }; // same city, level 1 all along
+    const after = catchUp(r.state, OFFLINE_CAP);
+    expect(after.buildings.refinery).toBe(2);
+    // Up to the end of the job, level 1; then level 2 for the rest of the 8 h.
+    const expected = advance({ ...advance(before, d), buildings: { ...before.buildings, refinery: 2 } }, OFFLINE_CAP - d);
+    expect(after.stock.oil).toBeCloseTo(expected.stock.oil);
+    expect(after.stock.oil).toBeGreaterThan(catchUp(before, OFFLINE_CAP).stock.oil);
+  });
+
+  it("the queue is saved and comes back on load", () => {
+    const store = memoryStore();
+    const r = upgrade(newPlayerState(), "refinery");
+    if (!r.ok) throw new Error(r.reason);
+    saveGame(store, r.state, t0);
+    expect(loadGame(store, t0)).toEqual(r.state);
+  });
+
+  it("a bad job in the save is dropped, the rest of the city is kept", () => {
+    const store = memoryStore();
+    const s = advance(newPlayerState(), HOUR);
+    const good = { id: "fishery", left: 100, duration: 3240 };
+    const file = {
+      v: 1,
+      savedAt: t0,
+      state: { ...s, queue: [good, { id: "castle", left: 10, duration: 10 }, { id: "refinery", left: "soon", duration: 10 }, null] },
+    };
+    store.data.set(SAVE_KEY, JSON.stringify(file));
+    expect(loadGame(store, t0)).toEqual({ ...s, queue: [good] });
+  });
+
+  it("a save from before the queue loads with an empty queue", () => {
+    const store = memoryStore();
+    const { queue: _none, ...old } = newPlayerState();
+    store.data.set(SAVE_KEY, JSON.stringify({ v: 1, savedAt: t0, state: old }));
+    expect(loadGame(store, t0)).toEqual(newPlayerState());
   });
 });

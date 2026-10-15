@@ -6,9 +6,12 @@ import {
   STARTING_STOCK,
   STARTING_SURVIVORS,
   STARTING_TROOPS,
+  advanceQueue,
   advanceStock,
   netRates,
+  startUpgrade,
   storeCap,
+  type BuildingId,
 } from "@brinelight/shared";
 import type { PlayerState } from "./types.js";
 
@@ -24,15 +27,39 @@ export function newPlayerState(): PlayerState {
     captains: { [id]: captain },
     survivors: STARTING_SURVIVORS,
     morale: STARTING_MORALE,
+    queue: [],
   };
 }
 
-/** Advances production by `seconds` of game time, with the shared rules (calm weather). */
-export function advance(state: PlayerState, seconds: number): PlayerState {
-  if (seconds <= 0) return state;
-  const rates = netRates(state);
+/** Production at constant levels, with the shared rules (calm weather). */
+function produce(state: PlayerState, seconds: number): PlayerState {
   const cap = storeCap(state.buildings.lighthouse, state.techs);
-  return { ...state, stock: advanceStock(state.stock, rates, seconds, cap) };
+  return { ...state, stock: advanceStock(state.stock, netRates(state), seconds, cap) };
+}
+
+/**
+ * Advances the city by `seconds` of game time. Time is cut at each finished upgrade,
+ * so production and storage follow the new levels from the exact moment they are reached.
+ */
+export function advance(state: PlayerState, seconds: number): PlayerState {
+  let s = state;
+  let rest = seconds;
+  while (rest > 0) {
+    const next = Math.min(rest, ...s.queue.map((j) => Math.max(0, j.left)));
+    s = produce(s, next);
+    const q = advanceQueue(s.buildings, s.queue, next);
+    s = { ...s, buildings: q.buildings, queue: q.queue };
+    rest -= next;
+  }
+  return s;
+}
+
+export type UpgradeResult = { ok: true; state: PlayerState } | { ok: false; reason: string };
+
+/** Starts an upgrade with the shared rule; a refusal comes with its reason. */
+export function upgrade(state: PlayerState, id: BuildingId): UpgradeResult {
+  const r = startUpgrade(id, state);
+  return r.ok ? { ok: true, state: { ...state, stock: r.stock, queue: r.queue } } : r;
 }
 
 /** Live time: real seconds sped up by `speed` (DEV_SPEED in development). */

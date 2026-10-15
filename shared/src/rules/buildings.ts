@@ -1,4 +1,4 @@
-import { OK, canPay, refuse, roundCost, type BuildingId, type Buildings, type Check, type Cost, type Stock } from "./types.js";
+import { OK, canPay, payCost, refuse, roundCost, type BuildingId, type Buildings, type Check, type Cost, type Stock } from "./types.js";
 import { protoSeconds } from "./time.js";
 
 /** Maximum Lighthouse level in the full game (the prototype stopped at 10). */
@@ -71,4 +71,35 @@ export function canUpgrade(id: BuildingId, ctx: UpgradeContext): Check {
   if (ctx.queue.length >= BUILDERS) return refuse(`Your ${BUILDERS} builders are busy`);
   if (!canPay(ctx.stock, upgradeCost(id, level))) return refuse("Not enough resources");
   return OK;
+}
+
+/** An upgrade in progress. `left` and `duration` are real seconds; the duration is fixed when the upgrade starts. */
+export type UpgradeJob = { id: BuildingId; left: number; duration: number };
+
+export type StartUpgrade =
+  | { ok: true; stock: Stock; queue: UpgradeJob[] }
+  | { ok: false; reason: string };
+
+/** Starts an upgrade: checks canUpgrade, pays the cost and adds the job at the end of the queue. */
+export function startUpgrade(id: BuildingId, ctx: { buildings: Buildings; stock: Stock; queue: UpgradeJob[] }): StartUpgrade {
+  const check = canUpgrade(id, { buildings: ctx.buildings, stock: ctx.stock, queue: ctx.queue.map((j) => j.id) });
+  if (!check.ok) return check;
+  const level = ctx.buildings[id];
+  const duration = upgradeTime(id, level);
+  return { ok: true, stock: payCost(ctx.stock, upgradeCost(id, level)), queue: [...ctx.queue, { id, left: duration, duration }] };
+}
+
+/**
+ * Advances the queue by `seconds` real seconds. Each finished job raises its building by one level.
+ * Jobs finish in the order of their end time; jobs ending at the same moment finish in the order they were started.
+ * The duration of a job in progress is never recomputed.
+ */
+export function advanceQueue(buildings: Buildings, queue: UpgradeJob[], seconds: number): { buildings: Buildings; queue: UpgradeJob[]; finished: BuildingId[] } {
+  const step = Math.max(0, seconds);
+  // Array.prototype.sort is stable: equal end times keep the starting order.
+  const finished = queue.filter((j) => j.left <= step).sort((a, b) => a.left - b.left).map((j) => j.id);
+  const next = { ...buildings };
+  for (const id of finished) next[id] += 1;
+  const rest = queue.filter((j) => j.left > step).map((j) => ({ ...j, left: j.left - step }));
+  return { buildings: next, queue: rest, finished };
 }

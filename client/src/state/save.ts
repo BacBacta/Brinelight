@@ -1,4 +1,4 @@
-import { BUILDING_IDS } from "@brinelight/shared";
+import { BUILDING_IDS, type UpgradeJob } from "@brinelight/shared";
 import { catchUp, newPlayerState } from "./state.js";
 import type { PlayerState } from "./types.js";
 
@@ -39,7 +39,11 @@ function readSave(store: KeyValueStore | null): SaveFile | null {
   if (!store) return null;
   try {
     const o: unknown = JSON.parse(store.getItem(SAVE_KEY) ?? "null");
-    return isSaveFile(o) ? o : null;
+    if (!isSaveFile(o)) return null;
+    // A save from before the build queue has none; a bad job is dropped, the rest of the city is kept.
+    const raw: unknown = (o.state as { queue?: unknown }).queue;
+    o.state.queue = Array.isArray(raw) ? raw.filter(isJob) : [];
+    return o;
   } catch {
     return null;
   }
@@ -48,6 +52,9 @@ function readSave(store: KeyValueStore | null): SaveFile | null {
 const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const hasNums = (o: unknown, keys: readonly string[]) => isObj(o) && keys.every((k) => isNum(o[k]));
+
+const isJob = (j: unknown): j is UpgradeJob =>
+  isObj(j) && typeof j.id === "string" && (BUILDING_IDS as string[]).includes(j.id) && isNum(j.left) && isNum(j.duration) && j.duration > 0;
 
 function isSaveFile(o: unknown): o is SaveFile {
   if (!isObj(o) || o.v !== VERSION || !isNum(o.savedAt) || !isObj(o.state)) return false;
