@@ -9,15 +9,30 @@ import { createRenderer } from "./renderer.js";
 import { addCitySky } from "./sky.js";
 import { createWater } from "./water.js";
 
+export type { Kit } from "./island.js";
+export { hexX, hexZ, kitModel } from "./island.js";
+export { lighthouseScale } from "./lighthouse.js";
+
+export type ScreenPoint = { x: number; y: number; visible: boolean };
+
 export type SceneHandle = {
   /** Moves the camera back and resizes the Lighthouse for this level. */
   setLighthouseLevel(level: number): void;
+  /** Adds an object to the city. */
+  add(object: THREE.Object3D): void;
+  /** Objects under a screen point (client pixels), nearest first. */
+  pick(clientX: number, clientY: number, targets: THREE.Object3D[]): THREE.Intersection[];
+  /** Screen position (CSS pixels) of a point of the city. */
+  project(x: number, y: number, z: number): ScreenPoint;
+  /** Called on every drawn frame, before rendering, with the scene clock in seconds. */
+  onFrame(cb: (now: number) => void): void;
   /** Stops the loop and removes the listeners. */
   dispose(): void;
 };
 
 export type SceneOptions = {
-  onLoaded?: () => void;
+  /** Called once phare.glb is loaded, with its models. */
+  onLoaded?: (kit: Kit) => void;
   onError?: (err: unknown) => void;
 };
 
@@ -53,7 +68,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       const kit: Kit = {};
       gltf.scenes.forEach((sc) => (kit[sc.name] = sc));
       scene.add(createIsland(kit));
-      options.onLoaded?.();
+      options.onLoaded?.(kit);
     },
     undefined,
     (err) => {
@@ -61,6 +76,11 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       if (!disposed) options.onError?.(err);
     },
   );
+
+  const frameCallbacks: ((now: number) => void)[] = [];
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  const v3 = new THREE.Vector3();
 
   const quality = createQualityMonitor();
   const clock = new THREE.Clock();
@@ -77,6 +97,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     water.setTime(now);
     lighthouse.animate(now);
     controls.update();
+    for (const cb of frameCallbacks) cb(now);
     renderer.render(scene, camera);
   };
 
@@ -86,7 +107,29 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       lighthouse.group.scale.setScalar(lighthouseScale(l));
       layout();
     },
+    add(object) {
+      scene.add(object);
+    },
+    pick(clientX, clientY, targets) {
+      const r = canvas.getBoundingClientRect();
+      ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+      raycaster.setFromCamera(ndc, camera);
+      return raycaster.intersectObjects(targets, true);
+    },
+    project(x, y, z) {
+      v3.set(x, y, z).project(camera);
+      const r = canvas.getBoundingClientRect();
+      return {
+        x: r.left + ((v3.x + 1) / 2) * r.width,
+        y: r.top + ((1 - v3.y) / 2) * r.height,
+        visible: v3.z < 1 && Math.abs(v3.x) < 1.2 && Math.abs(v3.y) < 1.2,
+      };
+    },
+    onFrame(cb) {
+      frameCallbacks.push(cb);
+    },
     dispose() {
+      frameCallbacks.length = 0;
       disposed = true;
       cancelAnimationFrame(frame);
       removeEventListener("resize", layout);

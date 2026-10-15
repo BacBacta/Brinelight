@@ -1,4 +1,4 @@
-import type { Buildings, CaptainId, OwnedCaptain, Rafts, Stock, Techs, Troops } from "@brinelight/shared";
+import type { Buildings, CaptainId, OwnedCaptain, Rafts, Stock, Techs, Troops, UpgradeJob } from "@brinelight/shared";
 
 /** Everything the client knows about the player's city. Temporary: the server takes over in week 4. */
 export type PlayerState = {
@@ -10,4 +10,6 @@ export type PlayerState = {
   captains: Partial<Record<CaptainId, OwnedCaptain>>;
   survivors: number;
   morale: number;
+  /** Upgrades in progress, in the order they were started. */
+  queue: UpgradeJob[];
 };
