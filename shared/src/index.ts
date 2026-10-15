@@ -9,3 +9,4 @@ export * from "./rules/captains.js";
 export * from "./rules/combat.js";
 export * from "./rules/comfort.js";
 export * from "./rules/power.js";
+export * from "./rules/start.js";
