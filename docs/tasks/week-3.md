@@ -50,7 +50,7 @@ Sign-in is a sensitive area: add it to the protected areas of CLAUDE.md ("sign-i
 ## Task 5 · Sign in from the game
 
 - A "Profile" entry (top left, on the Power card) with "Sign in with your wallet". Playing without signing in stays possible, with the local save as today.
-- Find wallets with the Wallet Standard (`getWallets`), use the `solana:signIn` feature, or `solana:signMessage` when the wallet does not have it.
+- Find wallets with the Wallet Standard (`getWallets`) and use only the `solana:signIn` feature, never `solana:signMessage`. The `Origin` header only protects inside a browser: with `signMessage`, a fake site could get a "Brinelight" message signed and replay it from a script. With `solana:signIn`, the wallet itself checks the domain. A wallet without `signIn` shows: "Your wallet cannot sign in yet. Use Phantom, Solflare or Backpack."
 - On a phone without a wallet in the browser (Chrome Android), offer "Open in Phantom": a link that opens the game inside Phantom's browser.
 - After sign-in:
   - no city on the account: the local city is sent;
