@@ -6,7 +6,7 @@
  */
 import { showRules } from "./rules.js";
 import { startScene } from "./scene/index.js";
-import { DEV_SPEED, SAVE_EVERY_MS, browserStore, loadGame, saveGame, tick, type PlayerState } from "./state/index.js";
+import { DEV_SPEED, SAVE_EVERY_MS, browserStore, elapse, loadGame, saveGame, type PlayerState } from "./state/index.js";
 import "./style.css";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -38,7 +38,7 @@ if (new URLSearchParams(location.search).has("rules")) {
   let frame = 0;
   const loop = (now: number) => {
     frame = requestAnimationFrame(loop);
-    state = tick(state, Math.max(0, now - last) / 1000, DEV_SPEED);
+    state = elapse(state, Math.max(0, now - last) / 1000, DEV_SPEED);
     last = now;
     showLighthouse();
   };

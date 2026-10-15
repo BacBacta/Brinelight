@@ -1,7 +1,7 @@
 import { HOUR, OFFLINE_CAP, STARTING_BUILDINGS, STARTING_STOCK, netRates, storeCap } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
 import { SAVE_KEY, loadGame, saveGame, type KeyValueStore } from "../src/state/save.js";
-import { advance, catchUp, newPlayerState, tick } from "../src/state/state.js";
+import { advance, catchUp, elapse, newPlayerState, tick } from "../src/state/state.js";
 
 const memoryStore = (): KeyValueStore & { data: Map<string, string> } => {
   const data = new Map<string, string>();
@@ -98,5 +98,27 @@ describe("save and time away", () => {
   it("works without any storage", () => {
     expect(() => saveGame(null, newPlayerState(), t0)).not.toThrow();
     expect(loadGame(null, t0)).toEqual(newPlayerState());
+  });
+});
+
+describe("time between two frames", () => {
+  const s = newPlayerState();
+  const speed = 60;
+
+  it("16 ms is live time, sped up", () => {
+    expect(elapse(s, 0.016, speed)).toEqual(tick(s, 0.016, speed));
+    expect(elapse(s, 0.016, speed)).toEqual(advance(s, 0.016 * speed));
+  });
+
+  it("exactly 1 s is still live time", () => {
+    expect(elapse(s, 1, speed)).toEqual(advance(s, speed));
+  });
+
+  it("2 h with the tab hidden is time away: real time, not sped up", () => {
+    expect(elapse(s, 2 * HOUR, speed)).toEqual(advance(s, 2 * HOUR));
+  });
+
+  it("3 days with the tab hidden counts at most OFFLINE_CAP", () => {
+    expect(elapse(s, 3 * 24 * HOUR, speed)).toEqual(advance(s, OFFLINE_CAP));
   });
 });
