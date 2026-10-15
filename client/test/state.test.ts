@@ -242,3 +242,34 @@ describe("queue read from a save", () => {
     ]);
   });
 });
+
+describe("Pearls", () => {
+  const t0 = Date.UTC(2026, 9, 15, 12);
+
+  it("a new city starts with the shared starting Pearls, apart from the stock", () => {
+    const s = newPlayerState();
+    expect(s.pearls).toBe(200);
+    expect(s.stock).not.toHaveProperty("pearls");
+  });
+
+  it("are not capped by storage and do not change with production", () => {
+    const s = { ...newPlayerState(), pearls: 1_000_000 };
+    expect(advance(s, 1000 * HOUR).pearls).toBe(1_000_000);
+  });
+
+  it("are saved and come back on load", () => {
+    const store = memoryStore();
+    const s = { ...newPlayerState(), pearls: 345 };
+    saveGame(store, s, t0);
+    expect(loadGame(store, t0).pearls).toBe(345);
+  });
+
+  it("a save from before the Pearls loads with 200", () => {
+    const store = memoryStore();
+    const { pearls: _none, ...old } = newPlayerState();
+    store.data.set(SAVE_KEY, JSON.stringify({ v: 1, savedAt: t0, state: { ...old, stock: { ...old.stock, wood: 700 } } }));
+    const loaded = loadGame(store, t0);
+    expect(loaded.pearls).toBe(200);
+    expect(loaded.stock.wood).toBe(700);
+  });
+});

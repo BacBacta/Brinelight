@@ -1,4 +1,4 @@
-import { BUILDERS, BUILDING_IDS, type UpgradeJob } from "@brinelight/shared";
+import { BUILDERS, BUILDING_IDS, STARTING_PEARLS, type UpgradeJob } from "@brinelight/shared";
 import { catchUp, newPlayerState } from "./state.js";
 import type { PlayerState } from "./types.js";
 
@@ -41,6 +41,8 @@ function readSave(store: KeyValueStore | null): SaveFile | null {
     const o: unknown = JSON.parse(store.getItem(SAVE_KEY) ?? "null");
     if (!isSaveFile(o)) return null;
     o.state.queue = cleanQueue((o.state as { queue?: unknown }).queue);
+    // A save from before the Pearls has none: it gets the starting Pearls.
+    if (!isNum(o.state.pearls) || o.state.pearls < 0) o.state.pearls = STARTING_PEARLS;
     return o;
   } catch {
     return null;

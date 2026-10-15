@@ -3,6 +3,7 @@ import {
   STARTING_BUILDINGS,
   STARTING_CAPTAIN,
   STARTING_MORALE,
+  STARTING_PEARLS,
   STARTING_STOCK,
   STARTING_SURVIVORS,
   STARTING_TROOPS,
@@ -27,6 +28,7 @@ export function newPlayerState(): PlayerState {
     captains: { [id]: captain },
     survivors: STARTING_SURVIVORS,
     morale: STARTING_MORALE,
+    pearls: STARTING_PEARLS,
     queue: [],
   };
 }

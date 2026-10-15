@@ -7,6 +7,8 @@ export const STARTING_STOCK: Stock = { oil: 380, fish: 420, wood: 520, rope: 3 }
 export const STARTING_TROOPS: Troops = { boarders: 25, harpooners: 25, crossbowmen: 25 };
 export const STARTING_SURVIVORS = 8;
 export const STARTING_MORALE = 84;
+/** Pearls are earned by playing; they are not stored in the warehouses, so storage does not cap them. */
+export const STARTING_PEARLS = 200;
 
 /** A captain the player owns. */
 export type OwnedCaptain = { level: number; xp: number; stars: number };

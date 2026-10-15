@@ -5,7 +5,6 @@ import { createCityBuildings } from "./buildings.js";
 import { createLabels } from "./labels.js";
 import { createQueue } from "./queue.js";
 import { createSheet } from "./sheet.js";
-import "./city.css";
 
 export type City = {
   /** Shows the state: models, labels, queue and open sheet. */

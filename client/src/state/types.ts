@@ -10,6 +10,8 @@ export type PlayerState = {
   captains: Partial<Record<CaptainId, OwnedCaptain>>;
   survivors: number;
   morale: number;
+  /** Pearls: kept apart from the stock, never capped by storage. */
+  pearls: number;
   /** Upgrades in progress, in the order they were started. */
   queue: UpgradeJob[];
 };

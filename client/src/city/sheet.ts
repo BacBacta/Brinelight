@@ -1,12 +1,13 @@
 import { BUILDINGS, canUpgrade, maxLevel, upgradeCost, upgradeTime, type BuildingId } from "@brinelight/shared";
 import type { PlayerState } from "../state/index.js";
+import { resourceIcon } from "../ui/icons.js";
 import { RESOURCE_NAMES, costEntries, formatAmount, formatDuration, formatTimeLeft } from "./format.js";
 import { progress } from "./suggest.js";
 
 /** The sheet of a building: level, upgrade cost and duration, and why you cannot upgrade when the button is off. */
 export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId): void; close(): void }) {
   const el = document.createElement("section");
-  el.className = "sheet";
+  el.className = "sheet card";
   el.hidden = true;
   el.setAttribute("role", "dialog");
   root.appendChild(el);
@@ -32,25 +33,27 @@ export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId
 
     let body: string;
     if (job) {
-      body = `<p class="chip ok">Building · ${left}</p><p class="pb"><i style="width:${(progress(job) * 100).toFixed(1)}%"></i></p>`;
+      body = `<div class="pb"><i style="width:${(progress(job) * 100).toFixed(1)}%"></i></div>`;
     } else if (next) {
       const cost = costEntries(upgradeCost(id, level))
-        .map(([r, v]) => `<span class="${state.stock[r] < v ? "no" : ""}">${formatAmount(v)} ${RESOURCE_NAMES[r]}</span>`)
+        .map(([r, v]) => `<span class="${state.stock[r] < v ? "no" : ""}" title="${RESOURCE_NAMES[r]}">${resourceIcon(r)}${formatAmount(v)}</span>`)
         .join("");
       body =
-        `<div class="box"><h3>${level === 0 ? "Build" : `Upgrade to level ${level + 1}`}</h3>` +
-        `<div class="cost">${cost}</div><p class="small">Time: ${formatDuration(upgradeTime(id, level) / speed)}</p></div>` +
-        `<button class="b gold" data-act="upgrade" ${check.ok ? "" : "disabled"}>${level === 0 ? "Build" : "Upgrade"}</button>` +
-        (check.ok ? "" : `<p class="why" role="status">${check.reason}</p>`);
+        `<div class="box"><h4>${level === 0 ? "Build" : `Upgrade to level ${level + 1}`}</h4>` +
+        `<div class="cost">${cost}</div><p class="p" style="font-size:12.5px;margin-top:6px">Time: ${formatDuration(upgradeTime(id, level) / speed)}</p></div>` +
+        // Still tappable when refused: the tap shows the reason in a toast too.
+        `<button class="b gold xl" data-act="upgrade" aria-disabled="${!check.ok}">${level === 0 ? "Build" : "Upgrade"}</button>` +
+        (check.ok ? "" : `<p class="why">${check.reason}</p>`);
     } else {
-      body = `<p class="why">${check.ok ? "" : check.reason}</p>`;
+      body = check.ok ? "" : `<p class="why">${check.reason}</p>`;
     }
     el.setAttribute("aria-label", BUILDINGS[id].name);
     el.innerHTML =
-      `<header><h2>${BUILDINGS[id].name}</h2><button class="x" data-act="close" aria-label="Close">✕</button></header>` +
-      `<p>${BUILDINGS[id].description}</p>` +
-      `<p class="chip gold">Level ${level}${level === 0 ? " (not built)" : ""}</p>` +
-      body;
+      `<div class="sh-h"><h2>${BUILDINGS[id].name}</h2><button class="x" data-act="close" aria-label="Close">✕</button></div>` +
+      `<div class="sh-b"><p class="p">${BUILDINGS[id].description}</p>` +
+      `<div class="row"><span class="chip gold">Level ${level}${level === 0 ? " (not built)" : ""}</span>${job ? `<span class="chip ok">Building · ${left}</span>` : ""}</div>` +
+      body +
+      `</div>`;
   };
 
   return {

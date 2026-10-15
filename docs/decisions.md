@@ -4,6 +4,8 @@ One line per decision, most recent first.
 
 | Date | Decision | Why |
 | --- | --- | --- |
+| 2026-10-15 | The game fonts (Lilita One 400, Nunito 600 to 900) are served by the game itself with `@fontsource/lilita-one` and `@fontsource/nunito` 5.3.0, never from Google Fonts. | GDPR: loading Google Fonts sends the players' IP addresses to Google. |
+| 2026-10-15 | Pearls live in the player state apart from the stock (`STARTING_PEARLS = 200` in `start.ts`); storage never caps them. | They are earned by playing and are not stored in the warehouses. |
 | 2026-10-15 | The build queue is a shared rule (`startUpgrade`, `advanceQueue`, `UpgradeJob` in `shared/src/rules/buildings.ts`): a job keeps the duration fixed at its start, and jobs ending at the same moment finish in the order they were started. | The client and the server run the same queue; the client cuts production at each finished job, so time away gives the same result as playing live. |
 | 2026-10-15 | Starting values of a new city (stock, troops, survivors, morale, captain) and the offline cap (8 h) live in `shared/src/rules/start.ts`, with the prototype's values. | The client and the server create the same city; no starting value is written in the client. |
 | 2026-10-15 | `phare.glb` is a kit of models (island tiles, buildings, decor), not the Lighthouse; the Lighthouse is built in code (`client/src/scene/lighthouse.ts`), as in the prototype. | Its look depends on the game (level, skins, Mist), and the name of the file is misleading. |
