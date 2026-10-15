@@ -1,5 +1,5 @@
 {
-  "name": "@phare/client",
+  "name": "@brinelight/client",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@phare/shared": "*",
+    "@brinelight/shared": "*",
     "three": "0.160.0"
   },
   "devDependencies": {

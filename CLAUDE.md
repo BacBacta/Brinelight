@@ -1,54 +1,54 @@
-# Projet Phare · règles pour l'assistant de code
+# Brinelight · rules for the coding assistant
 
-Jeu de stratégie mobile et web (genre Whiteout Survival) dans un monde noyé. Solana sert de notaire : paiements en USDC, preuves, badges et cosmétiques. Un seul développeur, budget serré.
+A mobile and web strategy game (in the vein of Whiteout Survival) set in a drowned world. Solana acts as a notary: USDC payments, proofs, badges and cosmetics. One developer, tight budget.
 
-Lis ce fichier en entier avant chaque tâche. En cas de doute, demande plutôt que de deviner.
+Read this whole file before every task. When in doubt, ask rather than guess.
 
 ## Structure
 
-- `shared/` : les règles du jeu en TypeScript pur (`@phare/shared`). Aucune dépendance au réseau, au DOM, à l'heure système ni au hasard. Tout y est testé.
-- `server/` : Fastify. Le serveur DÉCIDE. Il applique les règles de `shared/` et refuse tout ce qu'elles refusent.
-- `client/` : Vite + three.js. Le client AFFICHE. Il envoie des intentions (« améliorer la Raffinerie »), jamais des résultats (« j'ai 9 000 huile »).
-- `client/public/prototype/` : le prototype de référence. On le consulte, on ne le modifie plus.
-- `docs/decisions.md` : les décisions prises et pourquoi. Ajoute une ligne quand tu tranches quelque chose.
+- `shared/`: the game rules in pure TypeScript (`@brinelight/shared`). No dependency on the network, the DOM, the system clock or randomness. Everything in it is tested.
+- `server/`: Fastify. The server DECIDES. It applies the rules from `shared/` and refuses everything they refuse.
+- `client/`: Vite + three.js. The client DISPLAYS. It sends intentions ("upgrade the Refinery"), never results ("I have 9,000 oil").
+- `client/public/prototype/`: the reference prototype. We consult it; we no longer modify it.
+- `docs/decisions.md`: the decisions made and why. Add a line whenever you settle something.
 
-## Commandes
+## Commands
 
-- `npm install` : installe tout le monorepo.
-- `npm test` : tous les tests (Vitest). Doit passer avant chaque commit.
-- `npm run typecheck` : vérification des types des trois paquets.
-- `npm run build` : build du client.
-- `npm run check` : les trois à la suite. C'est ce que lance l'intégration continue.
-- `npm run dev:client` et `npm run dev:server` : développement local.
+- `npm install`: installs the whole monorepo.
+- `npm test`: all tests (Vitest). Must pass before every commit.
+- `npm run typecheck`: type checking of the three packages.
+- `npm run build`: client build.
+- `npm run check`: all three in a row. This is what continuous integration runs.
+- `npm run dev:client` and `npm run dev:server`: local development.
 
-## Règles de travail
+## Working rules
 
-1. Une tâche à la fois, petite, décrite par écrit : ce qu'elle fait, ce qu'elle ne fait pas, comment on la teste.
-2. Toute règle de jeu nouvelle ou modifiée va dans `shared/src/rules/` avec ses tests dans `shared/test/`. Écris le test d'abord quand c'est possible.
-3. Ne change jamais une valeur d'équilibrage (coût, durée, débit, plafond) sans le dire explicitement dans ta réponse et sans mettre à jour le test concerné.
-4. Les durées des règles sont en secondes RÉELLES et les débits PAR HEURE réelle (voir `shared/src/rules/time.ts`). L'accélération de développement se fait côté serveur, jamais dans les règles.
-5. Une règle refuse avec une raison lisible en français (`refuse("…")`). Le serveur renvoie cette raison telle quelle.
-6. Pas de nouvelle dépendance sans l'annoncer et dire pourquoi. Versions exactes uniquement.
-7. Lance `npm run check` avant de dire qu'une tâche est finie.
+1. One task at a time, small, described in writing: what it does, what it does not do, how it is tested.
+2. Every new or changed game rule goes in `shared/src/rules/` with its tests in `shared/test/`. Write the test first when you can.
+3. Never change a balance value (cost, duration, rate, cap) without saying so explicitly in your answer and updating the relevant test.
+4. Rule durations are in REAL seconds and rates are PER real HOUR (see `shared/src/rules/time.ts`). Development speedup happens on the server, never in the rules.
+5. A rule refuses with a readable reason in English (`refuse("…")`). The server returns that reason as is.
+6. No new dependency without announcing it and saying why. Exact versions only.
+7. Run `npm run check` before saying a task is done.
 
-## Zones protégées : ne pas modifier sans demande explicite et relecture humaine
+## Protected areas: do not modify without an explicit request and human review
 
-- Tout code de paiement, de vérification de transaction Solana ou de livraison d'achat.
-- Les clés, secrets et fichiers `.env` (ne jamais les lire, les afficher ni les commiter).
-- `shared/src/rules/comfort.ts` : le plafond de confort (100 USDC par mois, 30 pour un mineur, 4 h par jour) est une promesse publique.
-- Les probabilités du recrutement (`RECRUIT_ODDS`) : elles sont publiées.
+- Any code for payments, Solana transaction verification or purchase delivery.
+- Keys, secrets and `.env` files (never read, display or commit them).
+- `shared/src/rules/comfort.ts`: the convenience cap (100 USDC per month, 30 for a minor, 4 h per day) is a public promise.
+- The recruitment odds (`RECRUIT_ODDS`): they are published.
 
-## Principes du jeu à ne jamais casser
+## Game principles never to break
 
-- Jamais de hasard payant. Le seul tirage aléatoire, le recrutement quotidien, est gratuit et vérifiable.
-- Jamais de jeton, d'airdrop, ni de terrain vendu en NFT.
-- Ne se vendent jamais : troupes, recrutements, fragments, Perles, radeaux, protections, places d'alliance.
-- Le paiement en USDC est réservé aux majeurs ; le plafond de confort se compte par compte de jeu, pas par wallet.
-- Le coffre d'alliance ne contient que des Perles et ne peut jamais payer un joueur choisi.
-- Aucune donnée personnelle sur la chaîne.
+- Never paid randomness. The only random draw, the daily recruitment, is free and verifiable.
+- Never a token, an airdrop, or land sold as NFTs.
+- Never for sale: troops, recruitments, fragments, Pearls, rafts, protections, alliance seats.
+- USDC payment is reserved for adults; the convenience cap is counted per game account, not per wallet.
+- The Alliance Treasury holds only Pearls and can never pay a chosen player.
+- No personal data on chain.
 
 ## Style
 
-- TypeScript strict. Fonctions pures dans `shared/`. Noms en anglais dans le code, textes visibles par le joueur en français.
-- Textes du jeu : phrases courtes, tutoiement, vocabulaire du joueur (« cité », « Phare », « flotte »), jamais de jargon technique.
-- Commits courts au présent : « Ajoute la règle des radeaux ».
+- Strict TypeScript. Pure functions in `shared/`. Player-facing text in English (plain, short, second person), code identifiers in English.
+- Game text: short sentences, second person ("you"), the player's vocabulary ("city", "Lighthouse", "fleet"), never technical jargon.
+- Short commits in the imperative present: "Add the raft rule".

@@ -1,17 +1,17 @@
 /**
- * Échelle de temps.
+ * Time scale.
  *
- * Le prototype tournait en « secondes prototype ». Le vrai jeu les convertit :
- * 1 seconde prototype = 6 minutes réelles (TIME_SCALE = 360).
- * Toutes les durées des règles sont exprimées en secondes RÉELLES, et tous les débits PAR HEURE réelle.
- * Pour le développement, le serveur peut appliquer un facteur d'accélération (DEV_SPEED) sans toucher aux règles.
+ * The prototype ran in "prototype seconds". The real game converts them:
+ * 1 prototype second = 6 real minutes (TIME_SCALE = 360).
+ * All rule durations are expressed in REAL seconds, and all rates PER real HOUR.
+ * For development, the server can apply a speedup factor (DEV_SPEED) without touching the rules.
  */
 export const TIME_SCALE = 360;
 
-/** Convertit une durée prototype (s) en secondes réelles. */
+/** Converts a prototype duration (s) to real seconds. */
 export const protoSeconds = (s: number): number => s * TIME_SCALE;
 
-/** Convertit un débit prototype (par seconde) en débit par heure réelle. */
+/** Converts a prototype rate (per second) to a rate per real hour. */
 export const protoRatePerHour = (perProtoSecond: number): number => (perProtoSecond * 3600) / TIME_SCALE;
 
 export const HOUR = 3600;

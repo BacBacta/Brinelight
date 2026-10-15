@@ -1,4 +1,4 @@
-name: Vérifications
+name: Checks
 
 on:
   push:

@@ -3,25 +3,25 @@ import { techLevel, type Techs } from "./research.js";
 import { raftEffect, type Rafts } from "./rafts.js";
 import { protoRatePerHour } from "./time.js";
 
-/** Débits du prototype, par seconde prototype et par niveau. */
+/** Prototype rates, per prototype second and per level. */
 const PROTO = {
-  raffinerie: 1.1,
-  pecherie: 1.4,
-  chantier: 1.4,
-  phareBurn: 0.25,
+  refinery: 1.1,
+  fishery: 1.4,
+  lumberyard: 1.4,
+  lighthouseBurn: 0.25,
   survivorEats: 0.06,
-  serre: 0.45,
+  greenhouse: 0.45,
 };
-export const PUSH_MULTIPLIER = 2.2;
-export const BRUME_PENALTY = 0.7;
+export const STOKE_MULTIPLIER = 2.2;
+export const MIST_PENALTY = 0.7;
 export const HIGH_MORALE = 90;
 export const HIGH_MORALE_BONUS = 1.1;
 
-export function storeCap(phare: number, techs: Techs = {}): number {
-  return Math.round((2500 * phare + 1500) * (1 + 0.15 * techLevel(techs, "stock")));
+export function storeCap(lighthouse: number, techs: Techs = {}): number {
+  return Math.round((2500 * lighthouse + 1500) * (1 + 0.15 * techLevel(techs, "warehouses")));
 }
 
-export const survivorCap = (abris: number): number => 6 + abris * 4;
+export const survivorCap = (shelters: number): number => 6 + shelters * 4;
 
 export type EconomyState = {
   buildings: Buildings;
@@ -31,36 +31,36 @@ export type EconomyState = {
   morale: number;
 };
 
-export type Weather = { brume: boolean; pushed: boolean };
+export type Weather = { mist: boolean; stoked: boolean };
 
-/** Débits nets PAR HEURE réelle (production moins consommation). */
-export function netRates(s: EconomyState, w: Weather = { brume: false, pushed: false }): Record<Exclude<Resource, "cord">, number> {
-  const mul = (s.morale >= HIGH_MORALE ? HIGH_MORALE_BONUS : 1) * (w.brume && !w.pushed ? BRUME_PENALTY : 1);
-  const t = (id: "raff" | "filets" | "scie") => 1 + 0.1 * techLevel(s.techs, id);
-  const fum = Math.max(0.5, 1 - 0.1 * raftEffect(s.rafts, "fumoir"));
-  const huile = PROTO.raffinerie * s.buildings.raffinerie * mul * t("raff") - PROTO.phareBurn * s.buildings.phare * (w.pushed ? PUSH_MULTIPLIER : 1);
-  const poisson = PROTO.pecherie * s.buildings.pecherie * mul * t("filets") + PROTO.serre * raftEffect(s.rafts, "serre") - s.survivors * PROTO.survivorEats * fum;
-  const bois = PROTO.chantier * s.buildings.chantier * mul * t("scie");
-  return { huile: protoRatePerHour(huile), poisson: protoRatePerHour(poisson), bois: protoRatePerHour(bois) };
+/** Net rates PER real HOUR (production minus consumption). */
+export function netRates(s: EconomyState, w: Weather = { mist: false, stoked: false }): Record<Exclude<Resource, "rope">, number> {
+  const mul = (s.morale >= HIGH_MORALE ? HIGH_MORALE_BONUS : 1) * (w.mist && !w.stoked ? MIST_PENALTY : 1);
+  const t = (id: "refining" | "nets" | "saws") => 1 + 0.1 * techLevel(s.techs, id);
+  const smoke = Math.max(0.5, 1 - 0.1 * raftEffect(s.rafts, "smokehouse"));
+  const oil = PROTO.refinery * s.buildings.refinery * mul * t("refining") - PROTO.lighthouseBurn * s.buildings.lighthouse * (w.stoked ? STOKE_MULTIPLIER : 1);
+  const fish = PROTO.fishery * s.buildings.fishery * mul * t("nets") + PROTO.greenhouse * raftEffect(s.rafts, "greenhouse") - s.survivors * PROTO.survivorEats * smoke;
+  const wood = PROTO.lumberyard * s.buildings.lumberyard * mul * t("saws");
+  return { oil: protoRatePerHour(oil), fish: protoRatePerHour(fish), wood: protoRatePerHour(wood) };
 }
 
 /**
- * Fait avancer le stock de `seconds` secondes réelles à débits constants.
- * Une ressource ne descend jamais sous 0 et ne dépasse pas le stockage,
- * sauf si elle le dépassait déjà (butin, récompense) : dans ce cas elle n'augmente plus.
- * C'est la base du calcul « à la demande » côté serveur : pas de boucle qui tourne en continu.
+ * Advances the stock by `seconds` real seconds at constant rates.
+ * A resource never drops below 0 and never goes above storage,
+ * unless it was already above it (loot, reward): in that case it stops growing.
+ * This is the basis of the "on demand" computation on the server: no loop running all the time.
  */
-export function advanceStock(stock: Stock, rates: Record<Exclude<Resource, "cord">, number>, seconds: number, cap: number): Stock {
+export function advanceStock(stock: Stock, rates: Record<Exclude<Resource, "rope">, number>, seconds: number, cap: number): Stock {
   const out = { ...stock };
-  for (const k of ["huile", "poisson", "bois"] as const) {
+  for (const k of ["oil", "fish", "wood"] as const) {
     const next = stock[k] + (rates[k] * seconds) / 3600;
     out[k] = Math.min(Math.max(0, next), Math.max(cap, stock[k]));
   }
   return out;
 }
 
-/** Autonomie en huile pendant une Brume poussée, en secondes réelles. Infinity si la production suffit. */
+/** How long the oil lasts while the Lighthouse is stoked during the Mist, in real seconds. Infinity if production is enough. */
 export function oilAutonomy(s: EconomyState, oil: number): number {
-  const r = netRates(s, { brume: true, pushed: true }).huile;
+  const r = netRates(s, { mist: true, stoked: true }).oil;
   return r >= 0 ? Infinity : (oil / -r) * 3600;
 }

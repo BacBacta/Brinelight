@@ -1,24 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { BUILDERS, BUILDING_IDS, STARTING_BUILDINGS, canUpgrade, maxLevel, upgradeCost, upgradeTime, PHARE_MAX, TIME_SCALE } from "../src/index.js";
+import { BUILDERS, BUILDING_IDS, STARTING_BUILDINGS, canUpgrade, maxLevel, upgradeCost, upgradeTime, LIGHTHOUSE_MAX, TIME_SCALE } from "../src/index.js";
 
-const stock = { huile: 10_000, poisson: 10_000, bois: 10_000, cord: 0 };
+const stock = { oil: 10_000, fish: 10_000, wood: 10_000, rope: 0 };
 
-describe("bâtiments", () => {
-  it("connaît les 9 bâtiments", () => {
+describe("buildings", () => {
+  it("knows the 9 buildings", () => {
     expect(BUILDING_IDS).toHaveLength(9);
   });
 
-  it("le coût de la Raffinerie au niveau 1 correspond au prototype", () => {
-    // 90 × 1,6 = 144 → 140 ; 40 × 1,6 = 64 → 60
-    expect(upgradeCost("raffinerie", 1)).toEqual({ bois: 140, poisson: 60 });
+  it("Refinery level 1 cost matches the prototype", () => {
+    // 90 × 1.6 = 144 → 140; 40 × 1.6 = 64 → 60
+    expect(upgradeCost("refinery", 1)).toEqual({ wood: 140, fish: 60 });
   });
 
-  it("le coût du Phare au niveau 2 correspond au prototype", () => {
-    // 180 × 1,62² = 472,4 → 470 ; 120 × 1,62² = 314,9 → 310
-    expect(upgradeCost("phare", 2)).toEqual({ bois: 470, huile: 310 });
+  it("Lighthouse level 2 cost matches the prototype", () => {
+    // 180 × 1.62² = 472.4 → 470; 120 × 1.62² = 314.9 → 310
+    expect(upgradeCost("lighthouse", 2)).toEqual({ wood: 470, oil: 310 });
   });
 
-  it("les coûts sont arrondis à la dizaine", () => {
+  it("costs are rounded to the nearest ten", () => {
     for (const id of BUILDING_IDS) {
       for (let l = 0; l < 12; l++) {
         for (const v of Object.values(upgradeCost(id, l))) expect(v % 10).toBe(0);
@@ -26,7 +26,7 @@ describe("bâtiments", () => {
     }
   });
 
-  it("les coûts augmentent à chaque niveau", () => {
+  it("costs go up at every level", () => {
     for (const id of BUILDING_IDS) {
       const a = Object.values(upgradeCost(id, 3)).reduce((x, y) => x + y, 0);
       const b = Object.values(upgradeCost(id, 4)).reduce((x, y) => x + y, 0);
@@ -34,38 +34,38 @@ describe("bâtiments", () => {
     }
   });
 
-  it("une durée prototype de 6 s vaut 36 minutes réelles", () => {
-    expect(upgradeTime("raffinerie", 0)).toBe(6 * TIME_SCALE);
-    expect(upgradeTime("raffinerie", 0)).toBe(2160);
+  it("a 6 s prototype duration equals 36 real minutes", () => {
+    expect(upgradeTime("refinery", 0)).toBe(6 * TIME_SCALE);
+    expect(upgradeTime("refinery", 0)).toBe(2160);
   });
 
-  it("le Phare plafonne les autres bâtiments", () => {
-    expect(maxLevel("raffinerie", { ...STARTING_BUILDINGS, phare: 4 })).toBe(4);
-    expect(maxLevel("phare", STARTING_BUILDINGS)).toBe(PHARE_MAX);
+  it("the Lighthouse caps the other buildings", () => {
+    expect(maxLevel("refinery", { ...STARTING_BUILDINGS, lighthouse: 4 })).toBe(4);
+    expect(maxLevel("lighthouse", STARTING_BUILDINGS)).toBe(LIGHTHOUSE_MAX);
   });
 
-  it("accepte une amélioration valide", () => {
-    expect(canUpgrade("raffinerie", { buildings: STARTING_BUILDINGS, stock, queue: [] })).toEqual({ ok: true });
+  it("accepts a valid upgrade", () => {
+    expect(canUpgrade("refinery", { buildings: STARTING_BUILDINGS, stock, queue: [] })).toEqual({ ok: true });
   });
 
-  it("refuse si le Phare est trop bas", () => {
-    const b = { ...STARTING_BUILDINGS, raffinerie: 2 };
-    expect(canUpgrade("raffinerie", { buildings: b, stock, queue: [] })).toEqual({ ok: false, reason: "Améliore d'abord le Phare" });
+  it("refuses when the Lighthouse is too low", () => {
+    const b = { ...STARTING_BUILDINGS, refinery: 2 };
+    expect(canUpgrade("refinery", { buildings: b, stock, queue: [] })).toEqual({ ok: false, reason: "Upgrade the Lighthouse first" });
   });
 
-  it("refuse si les ouvriers sont occupés", () => {
-    const r = canUpgrade("chantier", { buildings: STARTING_BUILDINGS, stock, queue: ["raffinerie", "pecherie"] });
+  it("refuses when the builders are busy", () => {
+    const r = canUpgrade("lumberyard", { buildings: STARTING_BUILDINGS, stock, queue: ["refinery", "fishery"] });
     expect(r.ok).toBe(false);
     expect(BUILDERS).toBe(2);
   });
 
-  it("refuse un bâtiment déjà en chantier", () => {
-    const r = canUpgrade("raffinerie", { buildings: STARTING_BUILDINGS, stock, queue: ["raffinerie"] });
-    expect(r).toEqual({ ok: false, reason: "Ce bâtiment est déjà en chantier" });
+  it("refuses a building that is already being upgraded", () => {
+    const r = canUpgrade("refinery", { buildings: STARTING_BUILDINGS, stock, queue: ["refinery"] });
+    expect(r).toEqual({ ok: false, reason: "This building is already being upgraded" });
   });
 
-  it("refuse sans ressources suffisantes", () => {
-    const r = canUpgrade("phare", { buildings: STARTING_BUILDINGS, stock: { huile: 0, poisson: 0, bois: 0, cord: 0 }, queue: [] });
-    expect(r).toEqual({ ok: false, reason: "Ressources insuffisantes" });
+  it("refuses without enough resources", () => {
+    const r = canUpgrade("lighthouse", { buildings: STARTING_BUILDINGS, stock: { oil: 0, fish: 0, wood: 0, rope: 0 }, queue: [] });
+    expect(r).toEqual({ ok: false, reason: "Not enough resources" });
   });
 });

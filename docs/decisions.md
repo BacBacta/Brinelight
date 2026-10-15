@@ -1,14 +1,14 @@
-# Décisions
+# Decisions
 
-Une ligne par décision, la plus récente en haut.
+One line per decision, most recent first.
 
-| Date | Décision | Pourquoi |
+| Date | Decision | Why |
 | --- | --- | --- |
-| 2026-10-15 | Les règles s'expriment en secondes réelles et en débits par heure ; 1 seconde du prototype = 6 minutes réelles (`TIME_SCALE = 360`). | Un seul jeu de règles pour le serveur, le client et les tests ; l'accélération de développement se fait côté serveur. |
-| 2026-10-15 | Monorepo npm en trois paquets (`shared`, `client`, `server`), TypeScript partout. | Le client et le serveur lisent exactement les mêmes règles. |
-| 2026-10-15 | Le prototype est conservé tel quel dans `client/public/prototype/` comme référence. | Comparer le comportement pendant le portage. |
+| 2026-10-15 | Rules are expressed in real seconds and rates per hour; 1 prototype second = 6 real minutes (`TIME_SCALE = 360`). | One set of rules for the server, the client and the tests; development speedup happens on the server. |
+| 2026-10-15 | npm monorepo with three packages (`shared`, `client`, `server`), TypeScript everywhere. | The client and the server read exactly the same rules. |
+| 2026-10-15 | The prototype is kept as is in `client/public/prototype/` as a reference. | Compare behavior during the port. |
 
-## Points ouverts
+## Open questions
 
-- **Début de partie trop lent avec l'échelle actuelle.** La Raffinerie niveau 2 prend 54 minutes réelles, alors que le dossier prévoit deux premières heures très rapides. À régler en semaine 17 avec une courbe de temps propre aux premiers niveaux.
-- **Phare niveau 30.** Les coûts et durées au-delà du niveau 10 sont extrapolés du prototype. À équilibrer par simulation en semaine 17.
+- **Early game too slow at the current scale.** Refinery level 2 takes 54 real minutes, while the design document plans two very fast first hours. To be fixed in week 17 with a time curve specific to the first levels.
+- **Lighthouse level 30.** Costs and durations beyond level 10 are extrapolated from the prototype. To be balanced by simulation in week 17.

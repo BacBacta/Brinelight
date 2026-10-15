@@ -1,33 +1,33 @@
 import { OK, canPay, refuse, roundCost, type Check, type Cost, type Stock } from "./types.js";
 import { protoSeconds } from "./time.js";
 
-export type RaftBuildingId = "serre" | "fumoir" | "guet";
+export type RaftBuildingId = "greenhouse" | "smokehouse" | "watchtower";
 export type Raft = { hp: number; building: RaftBuildingId | null; level: number };
-/** Clé "q,r" en coordonnées hexagonales axiales. */
+/** Key "q,r" in axial hex coordinates. */
 export type Rafts = Record<string, Raft>;
 
 export const RAFT_BUILDINGS: Record<RaftBuildingId, { name: string; effect: string; base: Cost }> = {
-  serre: { name: "Serre à algues", effect: "+0,45 poisson par seconde prototype et par niveau", base: { bois: 200, huile: 80 } },
-  fumoir: { name: "Fumoir", effect: "−10 % de poisson mangé par niveau", base: { bois: 220, poisson: 100 } },
-  guet: { name: "Tour de guet", effect: "+5 % d'attaque des flottes par niveau", base: { bois: 260, huile: 120 } },
+  greenhouse: { name: "Kelp Greenhouse", effect: "+0.45 fish per prototype second per level", base: { wood: 200, oil: 80 } },
+  smokehouse: { name: "Smokehouse", effect: "−10% fish eaten per level", base: { wood: 220, fish: 100 } },
+  watchtower: { name: "Watchtower", effect: "+5% fleet attack per level", base: { wood: 260, oil: 120 } },
 };
 
 export const RAFT_BUILDING_MAX_LEVEL = 3;
 export const RAFT_BUILDING_MAX_COPIES = 2;
-/** Solidité sous laquelle un radeau tourne à moitié. */
+/** Condition below which a raft runs at half capacity. */
 export const RAFT_DAMAGED_BELOW = 60;
-/** Perte de solidité si la Brume frappe sans Phare poussé. */
-export const BRUME_RAFT_DAMAGE = 35;
+/** Condition lost when the Mist strikes and the Lighthouse was not stoked. */
+export const MIST_RAFT_DAMAGE = 35;
 
-/** Radeaux autorisés selon le niveau du Phare. Table du prototype jusqu'au niveau 10, plafond ensuite. */
+/** Rafts allowed by Lighthouse level. Prototype table up to level 10, capped after that. */
 const RAFT_CAP_TABLE = [0, 0, 0, 0, 6, 10, 14, 17, 25, 33, 39];
 export const RAFT_MAX = 39;
-export function raftCap(phare: number): number {
-  if (phare >= RAFT_CAP_TABLE.length) return RAFT_MAX;
-  return RAFT_CAP_TABLE[Math.max(0, phare)] ?? 0;
+export function raftCap(lighthouse: number): number {
+  if (lighthouse >= RAFT_CAP_TABLE.length) return RAFT_MAX;
+  return RAFT_CAP_TABLE[Math.max(0, lighthouse)] ?? 0;
 }
 
-/** Emplacements : couronnes 3 et 4 autour de l'île, sauf ceux occupés par le ponton. */
+/** Slots: rings 3 and 4 around the island, except those taken by the pier. */
 const PIER = new Set(["1,-3", "1,-4", "2,-4"]);
 export const RAFT_SLOTS: { key: string; q: number; r: number; ring: 3 | 4 }[] = (() => {
   const out: { key: string; q: number; r: number; ring: 3 | 4 }[] = [];
@@ -44,12 +44,12 @@ export const RAFT_SLOTS: { key: string; q: number; r: number; ring: 3 | 4 }[] = 
   return out;
 })();
 
-/** La seconde couronne ne s'ouvre qu'à partir du Phare niveau 8. */
-export const slotOpen = (ring: 3 | 4, phare: number): boolean => ring === 3 || phare >= 8;
+/** The outer ring only opens from Lighthouse level 8. */
+export const slotOpen = (ring: 3 | 4, lighthouse: number): boolean => ring === 3 || lighthouse >= 8;
 
-/** Coût du prochain radeau, selon le nombre déjà amarré. */
+/** Cost of the next raft, based on how many are already moored. */
 export function raftCost(owned: number): Cost {
-  return { bois: Math.round((350 * 1.18 ** owned) / 10) * 10, cord: 1 + Math.floor(owned / 3) };
+  return { wood: Math.round((350 * 1.18 ** owned) / 10) * 10, rope: 1 + Math.floor(owned / 3) };
 }
 export const RAFT_BUILD_TIME = protoSeconds(12);
 
@@ -59,30 +59,30 @@ export function raftBuildingCost(id: RaftBuildingId, level: number): Cost {
   return roundCost(raw);
 }
 
-export function canAddRaft(ctx: { rafts: Rafts; phare: number; slot: string; stock: Stock; yardBusy: boolean }): Check {
+export function canAddRaft(ctx: { rafts: Rafts; lighthouse: number; slot: string; stock: Stock; yardBusy: boolean }): Check {
   const slot = RAFT_SLOTS.find((s) => s.key === ctx.slot);
-  if (!slot) return refuse("Emplacement inconnu");
-  if (ctx.rafts[ctx.slot]) return refuse("Un radeau est déjà amarré ici");
-  if (!slotOpen(slot.ring, ctx.phare)) return refuse("La lumière du Phare ne porte pas encore jusqu'ici");
-  if (Object.keys(ctx.rafts).length >= raftCap(ctx.phare)) return refuse("Améliore le Phare pour amarrer plus de radeaux");
-  if (ctx.yardBusy) return refuse("Le chantier naval est occupé");
-  if (!canPay(ctx.stock, raftCost(Object.keys(ctx.rafts).length))) return refuse("Ressources insuffisantes");
+  if (!slot) return refuse("Unknown slot");
+  if (ctx.rafts[ctx.slot]) return refuse("A raft is already moored here");
+  if (!slotOpen(slot.ring, ctx.lighthouse)) return refuse("The Lighthouse's light doesn't reach this far yet");
+  if (Object.keys(ctx.rafts).length >= raftCap(ctx.lighthouse)) return refuse("Upgrade the Lighthouse to moor more rafts");
+  if (ctx.yardBusy) return refuse("The shipyard is busy");
+  if (!canPay(ctx.stock, raftCost(Object.keys(ctx.rafts).length))) return refuse("Not enough resources");
   return OK;
 }
 
 const efficiency = (r: Raft): number => (r.hp >= RAFT_DAMAGED_BELOW ? 1 : 0.5);
 
-/** Somme des niveaux d'un type de bâtiment de radeau, pondérée par la solidité. */
+/** Sum of the levels of one raft building type, weighted by condition. */
 export function raftEffect(rafts: Rafts, id: RaftBuildingId): number {
   return Object.values(rafts).reduce((sum, r) => sum + (r.building === id ? r.level * efficiency(r) : 0), 0);
 }
 
-/** Usure de la Brume : chaque radeau perd BRUME_RAFT_DAMAGE si le Phare n'a pas été poussé. */
-export function applyBrumeDamage(rafts: Rafts, held: boolean): Rafts {
+/** Mist wear: each raft loses MIST_RAFT_DAMAGE if the Lighthouse was not stoked. */
+export function applyMistDamage(rafts: Rafts, held: boolean): Rafts {
   if (held) return rafts;
   const out: Rafts = {};
-  for (const [k, r] of Object.entries(rafts)) out[k] = { ...r, hp: Math.max(0, r.hp - BRUME_RAFT_DAMAGE) };
+  for (const [k, r] of Object.entries(rafts)) out[k] = { ...r, hp: Math.max(0, r.hp - MIST_RAFT_DAMAGE) };
   return out;
 }
 
-export const repairCost = (r: Raft): Cost => ({ bois: (100 - r.hp) * 3 });
+export const repairCost = (r: Raft): Cost => ({ wood: (100 - r.hp) * 3 });

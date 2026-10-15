@@ -1,15 +1,15 @@
 import { OK, refuse, type Check } from "./types.js";
 
 /**
- * Plafond du confort payant. Ces valeurs sont publiques et inscrites au Registre de l'équité.
- * Le plafond est compté PAR COMPTE DE JEU, jamais par wallet.
+ * Cap on paid convenience. These values are public and recorded in the Fairness Ledger.
+ * The cap is counted PER GAME ACCOUNT, never per wallet.
  */
 export const COMFORT_CAP = {
-  /** USDC par mois et par compte. */
+  /** USDC per month per account. */
   monthUsdc: 100,
-  /** USDC par mois pour un compte mineur (achats intégrés des stores uniquement). */
+  /** USDC per month for a minor's account (in-app store purchases only). */
   monthUsdcMinor: 30,
-  /** Heures de confort par jour. */
+  /** Hours of convenience per day. */
   dayHours: 4,
 };
 
@@ -20,14 +20,14 @@ export function canBuyComfort(
   item: { priceUsdc: number; hours: number },
   account: { minor: boolean; payWithUsdc: boolean },
 ): Check {
-  if (account.minor && account.payWithUsdc) return refuse("Le paiement en USDC est réservé aux majeurs");
+  if (account.minor && account.payWithUsdc) return refuse("USDC payment is for adults only");
   const monthCap = account.minor ? COMFORT_CAP.monthUsdcMinor : COMFORT_CAP.monthUsdc;
-  if (spend.monthUsdc + item.priceUsdc > monthCap + 1e-9) return refuse(`Plafond mensuel de ${monthCap} USDC atteint`);
-  if (spend.dayHours + item.hours > COMFORT_CAP.dayHours) return refuse(`Plafond de ${COMFORT_CAP.dayHours} h de confort par jour atteint`);
+  if (spend.monthUsdc + item.priceUsdc > monthCap + 1e-9) return refuse(`You reached the monthly cap of ${monthCap} USDC`);
+  if (spend.dayHours + item.hours > COMFORT_CAP.dayHours) return refuse(`You reached the daily cap of ${COMFORT_CAP.dayHours} h of convenience`);
   return OK;
 }
 
-/** Avance maximale qu'un payeur peut acheter, en production par jour, pour un joueur actif `activeHours` h/j. */
+/** Maximum lead a payer can buy, in production per day, for a player active `activeHours` h/day. */
 export function maxPaidAdvance(activeHours = 1): number {
   const free = 24 + activeHours * 2;
   return (free + COMFORT_CAP.dayHours) / free - 1;

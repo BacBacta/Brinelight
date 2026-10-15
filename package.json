@@ -1,8 +1,8 @@
 {
-  "name": "projet-phare",
+  "name": "brinelight",
   "private": true,
   "version": "0.1.0",
-  "description": "Projet Phare : jeu de stratégie mobile et web, monde noyé, notarisé sur Solana",
+  "description": "Brinelight: a mobile and web strategy game in a drowned world, notarized on Solana",
   "type": "module",
   "workspaces": [
     "shared",

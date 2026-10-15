@@ -1,33 +1,33 @@
 import type { Rarity, TroopType } from "./types.js";
 
-export type CaptainClass = TroopType | "col" | "def" | "vit";
+export type CaptainClass = TroopType | "collect" | "defense" | "speed";
 export type CaptainId = "bran" | "isa" | "mira" | "tom" | "nera" | "sel";
 
 export const CAPTAINS: Record<CaptainId, { name: string; cls: CaptainClass; rarity: Rarity; skill: string }> = {
-  bran: { name: "Bran l'Abordeur", cls: "ab", rarity: "commandant", skill: "+15 % d'attaque des abordeurs" },
-  isa: { name: "Isa la Harponneuse", cls: "ha", rarity: "commandant", skill: "+15 % d'attaque des harponneurs" },
-  mira: { name: "Mira Œil-de-Lynx", cls: "ar", rarity: "amiral", skill: "+25 % d'attaque des arbalétriers" },
-  tom: { name: "Vieux Tom", cls: "col", rarity: "officier", skill: "+30 % de collecte" },
-  nera: { name: "Néra la Brumeuse", cls: "def", rarity: "amiral", skill: "−50 % de pertes en Grande Brume" },
-  sel: { name: "Sel le Navigateur", cls: "vit", rarity: "officier", skill: "+40 % de vitesse des flottes" },
+  bran: { name: "Bran the Boarder", cls: "boarders", rarity: "commander", skill: "+15% boarder attack" },
+  isa: { name: "Isa the Harpooner", cls: "harpooners", rarity: "commander", skill: "+15% harpooner attack" },
+  mira: { name: "Mira Lynx-Eye", cls: "crossbowmen", rarity: "admiral", skill: "+25% crossbowman attack" },
+  tom: { name: "Old Tom", cls: "collect", rarity: "officer", skill: "+30% gathering" },
+  nera: { name: "Nera of the Mist", cls: "defense", rarity: "admiral", skill: "−50% losses in the Great Mist" },
+  sel: { name: "Sel the Navigator", cls: "speed", rarity: "officer", skill: "+40% fleet speed" },
 };
 
-/** Probabilités publiées du recrutement gratuit, en pourcentage. Leur somme vaut 100. */
-export const RECRUIT_ODDS: Record<Rarity, number> = { amiral: 5, commandant: 25, officier: 70 };
+/** Published odds of the free recruitment, in percent. They add up to 100. */
+export const RECRUIT_ODDS: Record<Rarity, number> = { admiral: 5, commander: 25, officer: 70 };
 
-/** Rareté tirée à partir d'un nombre de 0 à 99 issu de la preuve d'aléa. */
+/** Rarity drawn from a number from 0 to 99 taken from the randomness proof. */
 export function rarityFromRoll(roll: number): Rarity {
-  if (!Number.isInteger(roll) || roll < 0 || roll > 99) throw new Error("Le tirage doit être un entier de 0 à 99");
-  if (roll < RECRUIT_ODDS.amiral) return "amiral";
-  if (roll < RECRUIT_ODDS.amiral + RECRUIT_ODDS.commandant) return "commandant";
-  return "officier";
+  if (!Number.isInteger(roll) || roll < 0 || roll > 99) throw new Error("The roll must be an integer from 0 to 99");
+  if (roll < RECRUIT_ODDS.admiral) return "admiral";
+  if (roll < RECRUIT_ODDS.admiral + RECRUIT_ODDS.commander) return "commander";
+  return "officer";
 }
 
 export const CAPTAIN_MAX_LEVEL = 20;
 export const FRAGMENTS_PER_STAR = 10;
 export const xpNeeded = (level: number): number => 80 * level;
 
-/** Ajoute de l'expérience et applique les passages de niveau. */
+/** Adds experience and applies level-ups. */
 export function addXp(c: { level: number; xp: number }, amount: number): { level: number; xp: number; levelsGained: number } {
   let { level, xp } = c;
   xp += amount;
@@ -40,14 +40,14 @@ export function addXp(c: { level: number; xp: number }, amount: number): { level
   return { level, xp, levelsGained: gained };
 }
 
-/** Facteur appliqué à la compétence : +4 % par niveau au-delà du premier. */
+/** Factor applied to the skill: +4% per level above the first. */
 export const skillFactor = (level: number): number => 1 + 0.04 * (level - 1);
 
-/** Bonus d'attaque d'un capitaine de combat sur sa classe de troupe. */
+/** Attack bonus of a combat captain on its troop class. */
 export function attackBonus(rarity: Rarity, level: number): number {
-  const base = rarity === "amiral" ? 0.25 : 0.15;
+  const base = rarity === "admiral" ? 0.25 : 0.15;
   return 1 + base * skillFactor(level);
 }
 
-/** Carnet de bord : de l'expérience contre des Perles, gagnées en jouant. */
-export const LOGBOOK = { perles: 50, xp: 40 };
+/** Logbook: experience in exchange for Pearls, earned by playing. */
+export const LOGBOOK = { pearls: 50, xp: 40 };

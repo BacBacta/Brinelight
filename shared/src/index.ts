@@ -1,4 +1,4 @@
-/** Règles du jeu partagées entre le client (affichage) et le serveur (décision). */
+/** Game rules shared between the client (display) and the server (decision). */
 export * from "./rules/types.js";
 export * from "./rules/time.js";
 export * from "./rules/buildings.js";

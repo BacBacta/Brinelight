@@ -3,7 +3,7 @@ import { totalTroops } from "./types.js";
 import type { Techs } from "./research.js";
 import type { Rafts } from "./rafts.js";
 
-const RARITY_POWER: Record<Rarity, number> = { officier: 150, commandant: 320, amiral: 650 };
+const RARITY_POWER: Record<Rarity, number> = { officer: 150, commander: 320, admiral: 650 };
 
 export type PowerState = {
   buildings: Buildings;
@@ -14,10 +14,10 @@ export type PowerState = {
   rafts: Rafts;
 };
 
-/** Puissance affichée : la mesure de progression comparée au classement. */
+/** Displayed Power: the progression measure compared on the leaderboard. */
 export function power(s: PowerState): number {
   let p = 0;
-  for (const [id, l] of Object.entries(s.buildings) as [BuildingId, number][]) p += (id === "phare" ? 320 : 110) * l * (1 + l * 0.4);
+  for (const [id, l] of Object.entries(s.buildings) as [BuildingId, number][]) p += (id === "lighthouse" ? 320 : 110) * l * (1 + l * 0.4);
   p += totalTroops(s.troops) * 4;
   p += totalTroops(s.veterans) * 8;
   for (const c of s.captains) p += RARITY_POWER[c.rarity] * c.stars * (1 + 0.05 * (c.level - 1));

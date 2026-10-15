@@ -1,41 +1,41 @@
 import { OK, canPay, refuse, roundCost, type BuildingId, type Buildings, type Check, type Cost, type Stock } from "./types.js";
 import { protoSeconds } from "./time.js";
 
-/** Niveau maximal du Phare dans le jeu complet (le prototype s'arrêtait à 10). */
-export const PHARE_MAX = 30;
-/** Nombre d'ouvriers : améliorations simultanées. */
+/** Maximum Lighthouse level in the full game (the prototype stopped at 10). */
+export const LIGHTHOUSE_MAX = 30;
+/** Number of builders: simultaneous upgrades. */
 export const BUILDERS = 2;
 
 type BuildingDef = {
   name: string;
   description: string;
-  /** Coût de base, multiplié par growth^niveau. */
+  /** Base cost, multiplied by growth^level. */
   base: Cost;
   growth: number;
-  /** Durée de base en secondes prototype, multipliée par timeGrowth^niveau. */
+  /** Base duration in prototype seconds, multiplied by timeGrowth^level. */
   baseTime: number;
   timeGrowth: number;
 };
 
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
-  phare: { name: "Phare", description: "Repousse la Brume et fixe le niveau maximal des autres bâtiments.", base: { bois: 180, huile: 120 }, growth: 1.62, baseTime: 9, timeGrowth: 1.55 },
-  raffinerie: { name: "Raffinerie", description: "Produit l'huile qui fait brûler le Phare.", base: { bois: 90, poisson: 40 }, growth: 1.6, baseTime: 6, timeGrowth: 1.5 },
-  pecherie: { name: "Pêcherie", description: "Nourrit les survivants et les équipages.", base: { bois: 80, huile: 30 }, growth: 1.6, baseTime: 6, timeGrowth: 1.5 },
-  chantier: { name: "Chantier", description: "Récupère et découpe le bois flotté.", base: { poisson: 70, huile: 30 }, growth: 1.6, baseTime: 6, timeGrowth: 1.5 },
-  abris: { name: "Abris", description: "Logent les survivants : plus d'abris, plus de bras.", base: { bois: 110, poisson: 60 }, growth: 1.6, baseTime: 7, timeGrowth: 1.5 },
-  caserne: { name: "Caserne", description: "Forme abordeurs, harponneurs et arbalétriers.", base: { bois: 140, huile: 60, poisson: 60 }, growth: 1.6, baseTime: 8, timeGrowth: 1.5 },
-  port: { name: "Port", description: "Chaque palier ajoute une flotte en mer et de la capacité de cale.", base: { bois: 150, huile: 80 }, growth: 1.6, baseTime: 8, timeGrowth: 1.5 },
-  observatoire: { name: "Observatoire", description: "Débloque les recherches.", base: { bois: 160, huile: 90 }, growth: 1.6, baseTime: 8, timeGrowth: 1.5 },
-  infirmerie: { name: "Infirmerie", description: "Soigne les blessés au retour des combats.", base: { bois: 120, poisson: 90 }, growth: 1.6, baseTime: 7, timeGrowth: 1.5 },
+  lighthouse: { name: "Lighthouse", description: "Pushes back the Mist and sets the maximum level of every other building.", base: { wood: 180, oil: 120 }, growth: 1.62, baseTime: 9, timeGrowth: 1.55 },
+  refinery: { name: "Refinery", description: "Makes the oil that keeps the Lighthouse burning.", base: { wood: 90, fish: 40 }, growth: 1.6, baseTime: 6, timeGrowth: 1.5 },
+  fishery: { name: "Fishery", description: "Feeds your survivors and crews.", base: { wood: 80, oil: 30 }, growth: 1.6, baseTime: 6, timeGrowth: 1.5 },
+  lumberyard: { name: "Lumberyard", description: "Salvages and cuts driftwood.", base: { fish: 70, oil: 30 }, growth: 1.6, baseTime: 6, timeGrowth: 1.5 },
+  shelters: { name: "Shelters", description: "House your survivors: more shelters, more hands.", base: { wood: 110, fish: 60 }, growth: 1.6, baseTime: 7, timeGrowth: 1.5 },
+  barracks: { name: "Barracks", description: "Trains boarders, harpooners and crossbowmen.", base: { wood: 140, oil: 60, fish: 60 }, growth: 1.6, baseTime: 8, timeGrowth: 1.5 },
+  harbor: { name: "Harbor", description: "Each tier adds a fleet at sea and more hold capacity.", base: { wood: 150, oil: 80 }, growth: 1.6, baseTime: 8, timeGrowth: 1.5 },
+  observatory: { name: "Observatory", description: "Unlocks research.", base: { wood: 160, oil: 90 }, growth: 1.6, baseTime: 8, timeGrowth: 1.5 },
+  infirmary: { name: "Infirmary", description: "Heals the wounded when they return from battle.", base: { wood: 120, fish: 90 }, growth: 1.6, baseTime: 7, timeGrowth: 1.5 },
 };
 
 export const BUILDING_IDS = Object.keys(BUILDINGS) as BuildingId[];
 
 export const STARTING_BUILDINGS: Buildings = {
-  phare: 2, raffinerie: 1, pecherie: 1, chantier: 1, abris: 1, caserne: 0, port: 0, observatoire: 0, infirmerie: 0,
+  lighthouse: 2, refinery: 1, fishery: 1, lumberyard: 1, shelters: 1, barracks: 0, harbor: 0, observatory: 0, infirmary: 0,
 };
 
-/** Coût pour passer du niveau `level` au niveau `level + 1`, arrondi à la dizaine. */
+/** Cost to go from level `level` to level `level + 1`, rounded to the nearest ten. */
 export function upgradeCost(id: BuildingId, level: number): Cost {
   const d = BUILDINGS[id];
   const raw: Cost = {};
@@ -43,32 +43,32 @@ export function upgradeCost(id: BuildingId, level: number): Cost {
   return roundCost(raw);
 }
 
-/** Durée réelle (secondes) pour passer du niveau `level` au niveau `level + 1`. */
+/** Real duration (seconds) to go from level `level` to level `level + 1`. */
 export function upgradeTime(id: BuildingId, level: number): number {
   const d = BUILDINGS[id];
   return Math.round(protoSeconds(d.baseTime * d.timeGrowth ** level));
 }
 
-/** Niveau maximal atteignable : le Phare plafonne tous les autres bâtiments. */
+/** Highest reachable level: the Lighthouse caps every other building. */
 export function maxLevel(id: BuildingId, buildings: Buildings): number {
-  return id === "phare" ? PHARE_MAX : buildings.phare;
+  return id === "lighthouse" ? LIGHTHOUSE_MAX : buildings.lighthouse;
 }
 
 export type UpgradeContext = {
   buildings: Buildings;
   stock: Stock;
-  /** Bâtiments déjà en chantier. */
+  /** Buildings already being upgraded. */
   queue: BuildingId[];
 };
 
-/** Le serveur appelle cette règle avant d'accepter toute amélioration. */
+/** The server calls this rule before accepting any upgrade. */
 export function canUpgrade(id: BuildingId, ctx: UpgradeContext): Check {
   const level = ctx.buildings[id];
   if (level >= maxLevel(id, ctx.buildings)) {
-    return refuse(id === "phare" ? "Le Phare est au niveau maximal" : "Améliore d'abord le Phare");
+    return refuse(id === "lighthouse" ? "The Lighthouse is at max level" : "Upgrade the Lighthouse first");
   }
-  if (ctx.queue.includes(id)) return refuse("Ce bâtiment est déjà en chantier");
-  if (ctx.queue.length >= BUILDERS) return refuse(`Tes ${BUILDERS} ouvriers sont occupés`);
-  if (!canPay(ctx.stock, upgradeCost(id, level))) return refuse("Ressources insuffisantes");
+  if (ctx.queue.includes(id)) return refuse("This building is already being upgraded");
+  if (ctx.queue.length >= BUILDERS) return refuse(`Your ${BUILDERS} builders are busy`);
+  if (!canPay(ctx.stock, upgradeCost(id, level))) return refuse("Not enough resources");
   return OK;
 }

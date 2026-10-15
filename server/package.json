@@ -1,5 +1,5 @@
 {
-  "name": "@phare/server",
+  "name": "@brinelight/server",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -8,7 +8,7 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "@phare/shared": "*",
+    "@brinelight/shared": "*",
     "fastify": "5.1.0"
   },
   "devDependencies": {
