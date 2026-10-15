@@ -9,6 +9,8 @@ import { createSheet } from "./sheet.js";
 export type City = {
   /** Shows the state: models, labels, queue and open sheet. */
   update(state: PlayerState): void;
+  /** Closes the open sheet, when you leave the city. */
+  closeSheet(): void;
 };
 
 /** The 9 buildings on their plots, their labels, their sheets and the builders' queue. */
@@ -30,7 +32,8 @@ export function createCity(
     },
   });
 
-  scene.onFrame((now) => {
+  scene.onFrame((now, view) => {
+    if (view !== "city") return;
     buildings.animate(now);
     labels.place();
   });
@@ -39,7 +42,7 @@ export function createCity(
   let down: { x: number; y: number } | null = null;
   canvas.addEventListener("pointerdown", (e) => (down = { x: e.clientX, y: e.clientY }));
   canvas.addEventListener("pointerup", (e) => {
-    if (!down) return;
+    if (!down || scene.view !== "city") return;
     const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8;
     down = null;
     if (moved) return;
@@ -55,6 +58,10 @@ export function createCity(
   });
 
   return {
+    closeSheet() {
+      sheet.close();
+      buildings.select(null);
+    },
     update(state) {
       buildings.refresh(state);
       labels.update(state);

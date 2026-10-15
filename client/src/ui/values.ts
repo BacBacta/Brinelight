@@ -1,4 +1,4 @@
-import { CAPTAINS, emptyTroops, oilAutonomy, power, storeCap, survivorCap, type CaptainId } from "@brinelight/shared";
+import { CAPTAINS, emptyTroops, oilAutonomy, power, storeCap, survivorCap, type CaptainId, type Troops } from "@brinelight/shared";
 import type { PlayerState } from "../state/index.js";
 
 /** Short amounts for the pills, as in the prototype: "520", "1.2 k", "12 k". */
@@ -27,12 +27,19 @@ export const fillRatio = (state: PlayerState, amount: number): number =>
 /** A pill turns red from this filling: production soon stops. */
 export const FULL_AT = 0.95;
 
+/** Your troops, at home and at sea: as in the prototype, a fleet at sea still counts in your Power. */
+const allTroops = (state: PlayerState): Troops =>
+  state.fleets.reduce(
+    (t, f) => ({ boarders: t.boarders + f.troops.boarders, harpooners: t.harpooners + f.troops.harpooners, crossbowmen: t.crossbowmen + f.troops.crossbowmen }),
+    state.troops,
+  );
+
 /** The city's Power, computed by power() from the shared rules. There are no veterans yet. */
 export function cityPower(state: PlayerState): number {
   const captains = (Object.entries(state.captains) as [CaptainId, { level: number; stars: number } | undefined][])
     .filter((e): e is [CaptainId, { level: number; stars: number }] => !!e[1])
     .map(([id, c]) => ({ rarity: CAPTAINS[id].rarity, stars: c.stars, level: c.level }));
-  return power({ buildings: state.buildings, troops: state.troops, veterans: emptyTroops(), captains, techs: state.techs, rafts: state.rafts });
+  return power({ buildings: state.buildings, troops: allTroops(state), veterans: emptyTroops(), captains, techs: state.techs, rafts: state.rafts });
 }
 
 export const survivorsText = (state: PlayerState): string => `${state.survivors}/${survivorCap(state.buildings.shelters)}`;

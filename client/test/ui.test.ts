@@ -1,6 +1,6 @@
 import { STARTING_BUILDINGS, emptyTroops, oilAutonomy, power, storeCap } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
-import { newPlayerState } from "../src/state/state.js";
+import { newPlayerState, sail } from "../src/state/state.js";
 import { NAV_ITEMS } from "../src/ui/nav.js";
 import { MAX_TOASTS, keepToasts } from "../src/ui/toast.js";
 import { FULL_AT, cityPower, fillRatio, longAmount, mistText, rateText, shortAmount, survivorsText } from "../src/ui/values.js";
@@ -48,6 +48,14 @@ describe("top bar values from the shared rules", () => {
     expect(cityPower(s)).toBe(expected);
   });
 
+  it("troops at sea still count in the Power", () => {
+    const s = newPlayerState();
+    const r = sail(s, "camp-1");
+    if (!r.ok) throw new Error(r.reason);
+    expect(r.state.troops.boarders).toBe(0);
+    expect(cityPower(r.state)).toBe(cityPower(s));
+  });
+
   it("survivors over the shelters' capacity", () => {
     expect(survivorsText(newPlayerState())).toBe("8/10");
   });
@@ -64,9 +72,9 @@ describe("top bar values from the shared rules", () => {
 });
 
 describe("menus and toasts", () => {
-  it("the bottom menu keeps all 5 buttons; only the city is ready", () => {
+  it("the bottom menu keeps all 5 buttons; the city and the sea are ready", () => {
     expect(NAV_ITEMS.map((n) => n.label)).toEqual(["City", "Sea", "Captains", "Alliance", "Shop"]);
-    expect(NAV_ITEMS.filter((n) => n.ready).map((n) => n.id)).toEqual(["city"]);
+    expect(NAV_ITEMS.filter((n) => n.ready).map((n) => n.id)).toEqual(["city", "sea"]);
   });
 
   it("at most 2 toasts at a time, the oldest goes first", () => {

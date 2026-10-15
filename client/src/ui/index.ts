@@ -5,7 +5,7 @@ import "@fontsource/nunito/800.css";
 import "@fontsource/nunito/900.css";
 import type { PlayerState } from "../state/index.js";
 import { createHud } from "./hud.js";
-import { createNav } from "./nav.js";
+import { createNav, type NavView } from "./nav.js";
 import { createToasts, type ToastKind } from "./toast.js";
 import "./style.css";
 
@@ -15,10 +15,10 @@ export type Ui = {
 };
 
 /** The game interface over the 3D view: top bar, Mist banner, bottom menu and toasts. */
-export function createUi(root: HTMLElement): Ui {
+export function createUi(root: HTMLElement, onView: (view: NavView) => void): Ui {
   const hud = createHud(root);
   const toasts = createToasts(root);
-  createNav(root, () => toasts.show("Coming soon", "", "~"));
+  createNav(root, () => toasts.show("Coming soon", "", "~"), onView);
   return {
     update: (state) => hud.update(state),
     toast: (text, kind, icon) => toasts.show(text, kind, icon),

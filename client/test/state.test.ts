@@ -1,7 +1,7 @@
-import { HOUR, OFFLINE_CAP, STARTING_BUILDINGS, STARTING_STOCK, netRates, storeCap, upgradeCost, upgradeTime } from "@brinelight/shared";
+import { ATTACK_STAY, HOUR, OFFLINE_CAP, leadOf, seaSite, travelTime, STARTING_BUILDINGS, STARTING_STOCK, netRates, storeCap, upgradeCost, upgradeTime } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
 import { SAVE_KEY, cleanQueue, loadGame, saveGame, type KeyValueStore } from "../src/state/save.js";
-import { advance, catchUp, elapse, newPlayerState, tick, upgrade } from "../src/state/state.js";
+import { advance, catchUp, elapse, newPlayerState, readReport, sail, tick, upgrade } from "../src/state/state.js";
 
 const memoryStore = (): KeyValueStore & { data: Map<string, string> } => {
   const data = new Map<string, string>();
@@ -271,5 +271,86 @@ describe("Pearls", () => {
     const loaded = loadGame(store, t0);
     expect(loaded.pearls).toBe(200);
     expect(loaded.stock.wood).toBe(700);
+  });
+});
+
+describe("fleets", () => {
+  const t0 = Date.UTC(2026, 9, 15, 12);
+  const trip = travelTime(seaSite("camp-1")!, {}, leadOf("tom", { tom: { level: 1 } }));
+  const sent = () => {
+    const r = sail(newPlayerState(), "camp-1");
+    if (!r.ok) throw new Error(r.reason);
+    return r.state;
+  };
+
+  it("a new city has no fleet, the starting sea and Old Tom in the lead", () => {
+    const s = newPlayerState();
+    expect(s.fleets).toEqual([]);
+    expect(s.lead).toBe("tom");
+    expect(s.world.camps["camp-1"]).toBe(1);
+  });
+
+  it("time away: the fleet sails, fights and comes back during 8 h of catch-up", () => {
+    const s0 = sent();
+    expect(s0.troops).toEqual({ boarders: 0, harpooners: 0, crossbowmen: 0 });
+    const after = catchUp(s0, OFFLINE_CAP);
+    expect(after.fleets).toEqual([]);
+    expect(after.troops).toEqual({ boarders: 13, harpooners: 13, crossbowmen: 13 });
+    expect(after.pearls).toBe(216);
+    expect(after.world.camps["camp-1"]).toBe(2);
+    expect(after.reports).toHaveLength(1);
+    expect(after.reports[0]).toMatchObject({ site: "camp-1", level: 1, win: true, read: false, losses: { boarders: 12, harpooners: 12, crossbowmen: 12 } });
+    // The loot comes back on top of 8 h of production.
+    expect(after.stock.rope).toBe(s0.stock.rope + 1);
+    expect(after.stock.wood).toBeCloseTo(advance({ ...s0, fleets: [] }, OFFLINE_CAP).stock.wood + 110);
+  });
+
+  it("live time in small frames gives the same result", () => {
+    let s = sent();
+    for (let i = 0; i < 2000; i++) s = advance(s, (2 * trip + ATTACK_STAY + 10) / 2000);
+    const once = advance(sent(), 2 * trip + ATTACK_STAY + 10);
+    expect(s.troops).toEqual(once.troops);
+    expect(s.pearls).toBe(once.pearls);
+    expect(s.reports).toEqual(once.reports);
+  });
+
+  it("research finished during the trip does not change the result", () => {
+    const s0 = sent();
+    const plain = advance(s0, 2 * trip + ATTACK_STAY);
+    const researched = advance({ ...s0, techs: { blades: 3, hulls: 3, sails: 3 } }, 2 * trip + ATTACK_STAY);
+    expect(researched.reports.map(({ read: _r, ...r }) => r)).toEqual(plain.reports.map(({ read: _r, ...r }) => r));
+    expect(researched.troops).toEqual(plain.troops);
+  });
+
+  it("a fleet at sea survives a save", () => {
+    const store = memoryStore();
+    const s = advance(sent(), 600);
+    saveGame(store, s, t0);
+    expect(loadGame(store, t0)).toEqual(s);
+  });
+
+  it("a bad fleet in the save is dropped, the rest of the city is kept", () => {
+    const store = memoryStore();
+    const s = advance(sent(), 600);
+    const bad = { ...s.fleets[0], site: "fish-1" };
+    store.data.set(SAVE_KEY, JSON.stringify({ v: 1, savedAt: t0, state: { ...s, fleets: [bad, s.fleets[0]] } }));
+    expect(loadGame(store, t0)).toEqual(s);
+  });
+
+  it("a save from before the sea loads with the starting sea", () => {
+    const store = memoryStore();
+    const { fleets: _f, world: _w, wounded: _wd, reports: _r, lead: _l, ...old } = newPlayerState();
+    store.data.set(SAVE_KEY, JSON.stringify({ v: 1, savedAt: t0, state: old }));
+    expect(loadGame(store, t0)).toEqual(newPlayerState());
+  });
+
+  it("reports are read one after another", () => {
+    let s = catchUp(sent(), OFFLINE_CAP);
+    s = readReport(s);
+    expect(s.reports.every((r) => r.read)).toBe(true);
+  });
+
+  it("a refusal keeps the reason from the shared rules", () => {
+    expect(sail(sent(), "wreck-1")).toEqual({ ok: false, reason: "Build the Harbor to send more fleets" });
   });
 });

@@ -7,7 +7,7 @@ import { progress, suggestedUpgrades } from "./suggest.js";
 /** Level labels above the buildings, as in the prototype. */
 export function createLabels(root: HTMLElement, scene: SceneHandle) {
   const layer = document.createElement("div");
-  layer.className = "labels";
+  layer.className = "labels city";
   layer.setAttribute("aria-hidden", "true");
   root.appendChild(layer);
   const els = {} as Record<BuildingId, { el: HTMLDivElement; key: string; bar: HTMLElement | null }>;

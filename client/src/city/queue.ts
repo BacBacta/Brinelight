@@ -1,9 +1,12 @@
-import { BUILDINGS, BUILDERS } from "@brinelight/shared";
+import { BUILDINGS, BUILDERS, seaSite, type Fleet } from "@brinelight/shared";
 import type { PlayerState } from "../state/index.js";
 import { formatTimeLeft } from "./format.js";
+import { fleetPosition } from "../sea/fleets.js";
 import { progress } from "./suggest.js";
 
-/** The builders' queue, top left: what is being built and how long is left. */
+const fleetLabel = (f: Fleet): string => `Fleet · ${f.phase === "back" ? "home" : (seaSite(f.site)?.name ?? "")}`;
+
+/** The builders' queue and the fleets at sea, top left: what is going on and how long is left. */
 export function createQueue(root: HTMLElement) {
   const el = document.createElement("div");
   el.className = "queue";
@@ -11,16 +14,13 @@ export function createQueue(root: HTMLElement) {
   root.appendChild(el);
   return {
     update(state: PlayerState, speed: number) {
-      el.hidden = state.queue.length === 0;
-      el.innerHTML = state.queue
-        .map(
-          (j) =>
-            `<div><span class="n">${BUILDINGS[j.id].name} Lv ${state.buildings[j.id] + 1}</span>` +
-            `<span class="pb"><i style="width:${(progress(j) * 100).toFixed(1)}%"></i></span>` +
-            // Time left on the real clock: in development, DEV_SPEED makes it shorter.
-            `<span class="t">${formatTimeLeft(j.left / speed)}</span></div>`,
-        )
-        .join("");
+      el.hidden = state.queue.length === 0 && state.fleets.length === 0;
+      // Time left on the real clock: in development, DEV_SPEED makes it shorter.
+      const row = (name: string, p: number, left: number) =>
+        `<div><span class="n">${name}</span><span class="pb"><i style="width:${(p * 100).toFixed(1)}%"></i></span><span class="t">${formatTimeLeft(left / speed)}</span></div>`;
+      el.innerHTML =
+        state.queue.map((j) => row(`${BUILDINGS[j.id].name} Lv ${state.buildings[j.id] + 1}`, progress(j), j.left)).join("") +
+        state.fleets.map((f) => row(fleetLabel(f), fleetPosition(f), f.left)).join("");
     },
   };
 }

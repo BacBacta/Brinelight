@@ -7,30 +7,38 @@ import { addCityLights } from "./lights.js";
 import { applyQualityStep, createQualityMonitor } from "./quality.js";
 import { createRenderer } from "./renderer.js";
 import { addCitySky } from "./sky.js";
+import { createSeaView } from "./sea.js";
 import { createWater } from "./water.js";
 
 export type { Kit } from "./island.js";
-export { hexX, hexZ, kitModel } from "./island.js";
-export { lighthouseScale } from "./lighthouse.js";
+export { hexGeometry, hexX, hexZ, kitModel } from "./island.js";
+export { createLighthouse, lighthouseScale } from "./lighthouse.js";
+
+export type View = "city" | "sea";
 
 export type ScreenPoint = { x: number; y: number; visible: boolean };
 
 export type SceneHandle = {
   /** Moves the camera back and resizes the Lighthouse for this level. */
   setLighthouseLevel(level: number): void;
-  /** Adds an object to the city. */
-  add(object: THREE.Object3D): void;
-  /** Objects under a screen point (client pixels), nearest first. */
+  /** Shows the city or the sea; only the shown view moves with your fingers. */
+  setView(view: View): void;
+  readonly view: View;
+  /** Adds an object to the city (default) or to the sea. */
+  add(object: THREE.Object3D, view?: View): void;
+  /** Objects under a screen point (client pixels) in the shown view, nearest first. */
   pick(clientX: number, clientY: number, targets: THREE.Object3D[]): THREE.Intersection[];
-  /** Screen position (CSS pixels) of a point of the city. */
+  /** Screen position (CSS pixels) of a point of the shown view. */
   project(x: number, y: number, z: number): ScreenPoint;
-  /** Called on every drawn frame, before rendering, with the scene clock in seconds. */
-  onFrame(cb: (now: number) => void): void;
+  /** Called on every drawn frame, before rendering, with the scene clock in seconds and the shown view. */
+  onFrame(cb: (now: number, view: View) => void): void;
   /** Stops the loop and removes the listeners. */
   dispose(): void;
 };
 
 export type SceneOptions = {
+  /** Where the sea camera first looks: your city on the sea map. */
+  home?: { x: number; z: number };
   /** Called once phare.glb is loaded, with its models. */
   onLoaded?: (kit: Kit) => void;
   onError?: (err: unknown) => void;
@@ -38,7 +46,7 @@ export type SceneOptions = {
 
 const KIT_URL = `${import.meta.env.BASE_URL}prototype/assets/phare.glb`;
 
-/** The city scene of the prototype, without buildings: island, sea, sky and Lighthouse. */
+/** The two views of the prototype: the city (island, Lighthouse) and the sea map. */
 export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}): SceneHandle {
   const renderer = createRenderer(canvas);
   const scene = new THREE.Scene();
@@ -54,10 +62,17 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   // Set by setLighthouseLevel before the first frame is drawn.
   let level = 0;
 
+  const sea = createSeaView(canvas);
+  sea.controls.enabled = false;
+  const home = options.home ?? { x: 0, z: 0 };
+  let view: View = "city";
+
   const layout = () => {
     renderer.setSize(innerWidth, innerHeight, false);
     frameCity(camera, controls, innerWidth / innerHeight, level);
+    sea.layout(innerWidth / innerHeight, home);
   };
+  const shown = () => (view === "city" ? { scene, camera, controls } : sea);
   addEventListener("resize", layout);
 
   let disposed = false;
@@ -77,7 +92,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     },
   );
 
-  const frameCallbacks: ((now: number) => void)[] = [];
+  const frameCallbacks: ((now: number, view: View) => void)[] = [];
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
   const v3 = new THREE.Vector3();
@@ -94,11 +109,16 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       applyQualityStep(renderer, sun, step);
       layout();
     }
-    water.setTime(now);
-    lighthouse.animate(now);
-    controls.update();
-    for (const cb of frameCallbacks) cb(now);
-    renderer.render(scene, camera);
+    const v = shown();
+    if (view === "city") {
+      water.setTime(now);
+      lighthouse.animate(now);
+    } else {
+      sea.water.setTime(now);
+    }
+    v.controls.update();
+    for (const cb of frameCallbacks) cb(now, view);
+    renderer.render(v.scene, v.camera);
   };
 
   const handle: SceneHandle = {
@@ -107,17 +127,25 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       lighthouse.group.scale.setScalar(lighthouseScale(l));
       layout();
     },
-    add(object) {
-      scene.add(object);
+    setView(v) {
+      view = v;
+      controls.enabled = v === "city";
+      sea.controls.enabled = v === "sea";
+    },
+    get view() {
+      return view;
+    },
+    add(object, v = "city") {
+      (v === "city" ? scene : sea.scene).add(object);
     },
     pick(clientX, clientY, targets) {
       const r = canvas.getBoundingClientRect();
       ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
-      raycaster.setFromCamera(ndc, camera);
+      raycaster.setFromCamera(ndc, shown().camera);
       return raycaster.intersectObjects(targets, true);
     },
     project(x, y, z) {
-      v3.set(x, y, z).project(camera);
+      v3.set(x, y, z).project(shown().camera);
       const r = canvas.getBoundingClientRect();
       return {
         x: r.left + ((v3.x + 1) / 2) * r.width,
@@ -134,13 +162,16 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       cancelAnimationFrame(frame);
       removeEventListener("resize", layout);
       controls.dispose();
-      scene.traverse((o) => {
-        const m = o as THREE.Mesh;
-        if (!m.isMesh) return;
-        m.geometry.dispose();
-        (Array.isArray(m.material) ? m.material : [m.material]).forEach((mat) => mat.dispose());
-      });
-      (scene.background as THREE.Texture | null)?.dispose();
+      sea.controls.dispose();
+      for (const sc of [scene, sea.scene]) {
+        sc.traverse((o) => {
+          const m = o as THREE.Mesh;
+          if (!m.isMesh) return;
+          m.geometry.dispose();
+          (Array.isArray(m.material) ? m.material : [m.material]).forEach((mat) => mat.dispose());
+        });
+        (sc.background as THREE.Texture | null)?.dispose();
+      }
       renderer.dispose();
     },
   };
