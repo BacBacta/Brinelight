@@ -7,11 +7,13 @@
  * GET  /me           the signed-in player.
  */
 import { randomBytes } from "node:crypto";
-import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { Config } from "../config.js";
 import { createNonce, createSession, deleteSession, findOrCreatePlayer, findPlayer, findSession, nonceRefusal, useNonce, type Db } from "../db/index.js";
+import { INVALID_REQUEST, SIGNED_OUT, refusal, type Refusal } from "../refusals.js";
 import { decodeAddress } from "./base58.js";
 import { verifyEd25519 } from "./ed25519.js";
+import { bearer } from "./session.js";
 import { STATEMENT, parseSignInMessage } from "./siws.js";
 
 export const NONCE_MS = 5 * 60_000;
@@ -23,21 +25,22 @@ export const MESSAGE_MAX_MS = 10 * 60_000;
 /** Sign-in requests allowed per minute and per player IP address. */
 export const AUTH_PER_MINUTE = 20;
 
+/** The refusals of sign-in, each with its stable code (see refusals.ts). */
 export const REFUSED = {
-  origin: "This page is not allowed to sign in to Brinelight",
-  request: "This sign-in request is not valid",
-  message: "This sign-in message is not valid",
-  address: "This message was signed for another wallet",
-  site: "This message was made for another site",
-  statement: "This message does not ask to sign in to Brinelight",
-  chain: "This message is for another Solana network",
-  clock: "This message was made at the wrong time. Check your device's clock",
-  expiry: "This message must expire within 10 minutes",
-  expired: "This sign-in has expired. Please try again",
-  signature: "This message was not signed by this wallet",
-  unknown: "This sign-in was not started here. Please try again",
-  used: "This sign-in was already used. Please try again",
-  session: "Please sign in again",
+  origin: refusal("origin_not_allowed", "This page is not allowed to sign in to Brinelight"),
+  request: INVALID_REQUEST,
+  message: refusal("invalid_message", "This sign-in message is not valid"),
+  address: refusal("wrong_wallet", "This message was signed for another wallet"),
+  site: refusal("wrong_site", "This message was made for another site"),
+  statement: refusal("wrong_statement", "This message does not ask to sign in to Brinelight"),
+  chain: refusal("wrong_network", "This message is for another Solana network"),
+  clock: refusal("wrong_time", "This message was made at the wrong time. Check your device's clock"),
+  expiry: refusal("expiry_too_long", "This message must expire within 10 minutes"),
+  expired: refusal("sign_in_expired", "This sign-in has expired. Please try again"),
+  signature: refusal("bad_signature", "This message was not signed by this wallet"),
+  unknown: refusal("unknown_nonce", "This sign-in was not started here. Please try again"),
+  used: refusal("nonce_used", "This sign-in was already used. Please try again"),
+  session: SIGNED_OUT,
 } as const;
 
 export type AuthOptions = { db: Db; config: Config; now: () => Date };
@@ -57,10 +60,6 @@ const readUtf8 = (bytes: Uint8Array): string | null => {
     return null;
   }
 };
-
-/** 32 random bytes in base64url: 43 characters. */
-const TOKEN = /^Bearer ([A-Za-z0-9_-]{43})$/;
-const bearer = (req: FastifyRequest): string | null => TOKEN.exec(req.headers.authorization ?? "")?.[1] ?? null;
 
 const verifyBody = {
   type: "object",
@@ -88,7 +87,7 @@ export async function authRoutes(app: FastifyInstance, { db, config, now }: Auth
     "/auth/verify",
     { config: limit, schema: { body: verifyBody } },
     async (req, reply) => {
-      const refuse = (code: number, error: string) => reply.code(code).send({ error });
+      const refuse = (status: number, why: Refusal) => reply.code(status).send(why);
       const origin = req.headers.origin;
       if (!origin || !config.allowedOrigins.includes(origin)) return refuse(403, REFUSED.origin);
 
@@ -138,7 +137,7 @@ export async function authRoutes(app: FastifyInstance, { db, config, now }: Auth
 
   app.post("/auth/logout", { config: limit }, async (req, reply) => {
     const token = bearer(req);
-    if (!token) return reply.code(401).send({ error: REFUSED.session });
+    if (!token) return reply.code(401).send(REFUSED.session);
     await deleteSession(db, token);
     return { ok: true };
   });
@@ -147,7 +146,7 @@ export async function authRoutes(app: FastifyInstance, { db, config, now }: Auth
     const token = bearer(req);
     const session = token ? await findSession(db, token, now()) : null;
     const player = session ? await findPlayer(db, session.playerId) : null;
-    if (!session || !player) return reply.code(401).send({ error: REFUSED.session });
+    if (!session || !player) return reply.code(401).send(REFUSED.session);
     return { player: { id: player.id, wallet: player.wallet }, expiresAt: session.expiresAt.toISOString() };
   });
 }

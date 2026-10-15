@@ -7,9 +7,11 @@ import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import Fastify, { type FastifyServerOptions } from "fastify";
 import { BUILDING_IDS, upgradeCost, upgradeTime, type BuildingId } from "@brinelight/shared";
-import { authRoutes, REFUSED } from "./auth/routes.js";
+import { authRoutes } from "./auth/routes.js";
+import { cityRoutes } from "./city/routes.js";
 import { loadConfig, type Config } from "./config.js";
 import type { Db } from "./db/index.js";
+import { INVALID_LEVEL, INVALID_REQUEST, SERVER_ERROR, TOO_MANY_REQUESTS, UNKNOWN_BUILDING } from "./refusals.js";
 
 export type AppOptions = {
   /** Without a database, only /health and /rules are served. */
@@ -22,8 +24,6 @@ export type AppOptions = {
 
 /** Never written to a log: the session token travels in this header. */
 export const REDACTED = ["req.headers.authorization", "headers.authorization"];
-
-export const TOO_MANY = "Too many sign-in attempts. Please wait a minute and try again";
 
 export async function buildApp(options: AppOptions = {}) {
   const config = options.config ?? loadConfig({});
@@ -42,14 +42,14 @@ export async function buildApp(options: AppOptions = {}) {
   });
   await app.register(rateLimit, {
     global: false,
-    errorResponseBuilder: () => ({ statusCode: 429, error: TOO_MANY }),
+    errorResponseBuilder: () => ({ statusCode: 429, ...TOO_MANY_REQUESTS }),
   });
 
   app.setErrorHandler((error: Error & { statusCode?: number; validation?: unknown }, req, reply) => {
-    if (error.statusCode === 429) return reply.code(429).send({ error: TOO_MANY });
-    if (error.validation || error.statusCode === 400 || error.statusCode === 415) return reply.code(400).send({ error: REFUSED.request });
+    if (error.statusCode === 429) return reply.code(429).send(TOO_MANY_REQUESTS);
+    if (error.validation || error.statusCode === 400 || error.statusCode === 415) return reply.code(400).send(INVALID_REQUEST);
     req.log.error(error);
-    return reply.code(500).send({ error: "Something went wrong on the server. Please try again" });
+    return reply.code(500).send(SERVER_ERROR);
   });
 
   app.get("/health", async () => ({ ok: true, service: "brinelight", version: "0.1.0" }));
@@ -57,12 +57,17 @@ export async function buildApp(options: AppOptions = {}) {
   app.get<{ Params: { id: string; level: string } }>("/rules/buildings/:id/:level", async (req, reply) => {
     const id = req.params.id as BuildingId;
     const level = Number(req.params.level);
-    if (!BUILDING_IDS.includes(id)) return reply.code(404).send({ error: "Unknown building" });
-    if (!Number.isInteger(level) || level < 0 || level > 60) return reply.code(400).send({ error: "Invalid level" });
+    if (!BUILDING_IDS.includes(id)) return reply.code(404).send(UNKNOWN_BUILDING);
+    if (!Number.isInteger(level) || level < 0 || level > 60) return reply.code(400).send(INVALID_LEVEL);
     return { id, level, cost: upgradeCost(id, level), seconds: upgradeTime(id, level) };
   });
 
-  if (options.db) await authRoutes(app, { db: options.db, config, now: options.now ?? (() => new Date()) });
+  if (options.db) {
+    const now = options.now ?? (() => new Date());
+    app.decorateRequest("playerId", "");
+    await authRoutes(app, { db: options.db, config, now });
+    await cityRoutes(app, { db: options.db, now });
+  }
 
   return app;
 }

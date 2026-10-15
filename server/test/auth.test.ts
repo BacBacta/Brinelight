@@ -2,11 +2,12 @@ import { generateKeyPairSync, sign, type KeyObject } from "node:crypto";
 import { Writable } from "node:stream";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { TOO_MANY, buildApp } from "../src/app.js";
+import { buildApp } from "../src/app.js";
 import { base58Encode } from "../src/auth/base58.js";
 import { AUTH_PER_MINUTE, REFUSED } from "../src/auth/routes.js";
 import { STATEMENT, formatSignInMessage } from "../src/auth/siws.js";
 import type { Config } from "../src/config.js";
+import { TOO_MANY_REQUESTS, type Refusal } from "../src/refusals.js";
 import { hashToken, openDatabase, schema, type Database, type Db } from "../src/db/index.js";
 
 const ORIGIN = "https://brinelight.pages.dev";
@@ -81,11 +82,11 @@ async function signIn(server: App, wallet = newWallet()) {
 const me = (server: App, token: string) => server.inject({ method: "GET", url: "/me", headers: { authorization: `Bearer ${token}` } });
 
 /** Signs in with a message changed by `change`, and expects this refusal. */
-async function expectRefused(change: Partial<Fields>, code: number, error: string) {
+async function expectRefused(change: Partial<Fields>, code: number, error: Refusal) {
   const server = await app();
   const res = await verify(server, signInBody(newWallet(), await getNonce(server), change));
   expect(res.statusCode).toBe(code);
-  expect(res.json()).toEqual({ error });
+  expect(res.json()).toEqual(error);
 }
 
 describe("sign-in", () => {
@@ -136,7 +137,7 @@ describe("refused signatures", () => {
     const other = signInBody(newWallet(), "x");
     const res = await verify(server, { ...body, signature: other.signature });
     expect(res.statusCode).toBe(401);
-    expect(res.json()).toEqual({ error: REFUSED.signature });
+    expect(res.json()).toEqual(REFUSED.signature);
   });
 
   it("a message changed after signing", async () => {
@@ -146,7 +147,7 @@ describe("refused signatures", () => {
     const changed = Buffer.from(text.replace(at(5 * MIN), at(6 * MIN))).toString("base64");
     const res = await verify(server, { ...body, signedMessage: changed });
     expect(res.statusCode).toBe(401);
-    expect(res.json()).toEqual({ error: REFUSED.signature });
+    expect(res.json()).toEqual(REFUSED.signature);
   });
 
   it("a message naming another wallet than the one that signed it", async () => {
@@ -156,7 +157,7 @@ describe("refused signatures", () => {
     const body = signInBody(signer, await getNonce(server), { address: named.address });
     const res = await verify(server, { ...body, address: named.address });
     expect(res.statusCode).toBe(401);
-    expect(res.json()).toEqual({ error: REFUSED.signature });
+    expect(res.json()).toEqual(REFUSED.signature);
   });
 
   it("an address in the request that is not the one in the message", async () => {
@@ -164,17 +165,17 @@ describe("refused signatures", () => {
     const body = signInBody(newWallet(), await getNonce(server));
     const res = await verify(server, { ...body, address: newWallet().address });
     expect(res.statusCode).toBe(400);
-    expect(res.json()).toEqual({ error: REFUSED.address });
+    expect(res.json()).toEqual(REFUSED.address);
   });
 
   it("a badly formed request: missing field, extra field, loose base64, bad UTF-8, bad message", async () => {
     const server = await app();
     const wallet = newWallet();
     const body = signInBody(wallet, await getNonce(server));
-    const bad = async (payload: unknown, error: string) => {
+    const bad = async (payload: unknown, error: Refusal) => {
       const res = await verify(server, payload);
       expect(res.statusCode).toBe(400);
-      expect(res.json()).toEqual({ error });
+      expect(res.json()).toEqual(error);
     };
     await bad({ address: body.address, signature: body.signature }, REFUSED.request);
     await bad({ ...body, extra: 1 }, REFUSED.request);
@@ -194,7 +195,7 @@ describe("refused nonces", () => {
     expect((await verify(server, body)).statusCode).toBe(200);
     const again = await verify(server, body);
     expect(again.statusCode).toBe(401);
-    expect(again.json()).toEqual({ error: REFUSED.used });
+    expect(again.json()).toEqual(REFUSED.used);
   });
 
   it("two sign-ins at the same time with the same nonce: only one gets a session", async () => {
@@ -210,7 +211,7 @@ describe("refused nonces", () => {
     const server = await app();
     const res = await verify(server, signInBody(newWallet(), "0123456789abcdef0123456789abcdef"));
     expect(res.statusCode).toBe(401);
-    expect(res.json()).toEqual({ error: REFUSED.unknown });
+    expect(res.json()).toEqual(REFUSED.unknown);
   });
 
   it("a nonce older than 5 minutes", async () => {
@@ -219,7 +220,7 @@ describe("refused nonces", () => {
     clock = new Date(T0.getTime() + 5 * MIN + 1000);
     const res = await verify(server, signInBody(newWallet(), nonce));
     expect(res.statusCode).toBe(401);
-    expect(res.json()).toEqual({ error: REFUSED.expired });
+    expect(res.json()).toEqual(REFUSED.expired);
   });
 
   it("a refused signature does not use the nonce", async () => {
@@ -248,7 +249,7 @@ describe("refused messages", () => {
     for (const origin of ["https://evil.example", null]) {
       const res = await verify(server, body, origin);
       expect(res.statusCode).toBe(403);
-      expect(res.json()).toEqual({ error: REFUSED.origin });
+      expect(res.json()).toEqual(REFUSED.origin);
     }
   });
 
@@ -256,7 +257,7 @@ describe("refused messages", () => {
     const server = await app();
     const res = await verify(server, signInBody(newWallet(), await getNonce(server)), "http://localhost:5173");
     expect(res.statusCode).toBe(400);
-    expect(res.json()).toEqual({ error: REFUSED.site });
+    expect(res.json()).toEqual(REFUSED.site);
   });
 
   it("another statement, version or chain", async () => {
@@ -274,7 +275,7 @@ describe("refused messages", () => {
     const server = await app();
     const noExpiry = await verify(server, signInBody(newWallet(), await getNonce(server), {}, (t) => t.split("\n").slice(0, -1).join("\n")));
     expect(noExpiry.statusCode).toBe(400);
-    expect(noExpiry.json()).toEqual({ error: REFUSED.message });
+    expect(noExpiry.json()).toEqual(REFUSED.message);
     await expectRefused({ expirationTime: at(-MIN) }, 400, REFUSED.expiry);
     await expectRefused({ expirationTime: at(10 * MIN + 1000) }, 400, REFUSED.expiry);
     await expectRefused({ issuedAt: at(-4 * MIN), expirationTime: at(-MIN) }, 401, REFUSED.expired);
@@ -290,7 +291,7 @@ describe("sessions", () => {
     clock = new Date(T0.getTime() + 31 * DAY);
     const res = await me(server, token);
     expect(res.statusCode).toBe(401);
-    expect(res.json()).toEqual({ error: REFUSED.session });
+    expect(res.json()).toEqual(REFUSED.session);
   });
 
   it("logging out ends the session", async () => {
@@ -307,7 +308,7 @@ describe("sessions", () => {
     for (const headers of [{}, { authorization: "Bearer" }, { authorization: "Basic abc" }, { authorization: `Bearer ${"A".repeat(43)}` }]) {
       const res = await server.inject({ method: "GET", url: "/me", headers });
       expect(res.statusCode).toBe(401);
-      expect(res.json()).toEqual({ error: REFUSED.session });
+      expect(res.json()).toEqual(REFUSED.session);
     }
   });
 });
@@ -326,7 +327,7 @@ describe("protections", () => {
     for (let i = 0; i < AUTH_PER_MINUTE; i++) expect((await getNonce(server)).length).toBe(32);
     const res = await server.inject({ method: "POST", url: "/auth/nonce", headers: { origin: ORIGIN } });
     expect(res.statusCode).toBe(429);
-    expect(res.json()).toEqual({ error: TOO_MANY });
+    expect(res.json()).toEqual(TOO_MANY_REQUESTS);
     expect((await server.inject({ method: "GET", url: "/health" })).statusCode).toBe(200);
   });
 

@@ -42,9 +42,17 @@ Sign-in is a sensitive area: add it to the protected areas of CLAUDE.md ("sign-i
 
 ## Task 4 · The city on the server
 
-- `GET /city` (signed in): the player's city, advanced to now with the server clock and the same offline rule as the client (`catchUp`, capped by `OFFLINE_CAP`). Created with `newPlayerState` on the first call.
-- `PUT /city` **temporary, removed in week 4**: the client sends its city with the version it started from. The server checks it with `parseState` and simple limits (levels within `maxLevel`, body under 64 KB), refuses an old version (409, "Your city changed on another device"), and saves.
+- `GET /city` (signed in) creates nothing:
+  - no city on the account: `{ city: null }`;
+  - otherwise `{ state, version, savedAt, asOf }`: the city advanced to `asOf`, the server time, with the same offline rule as the client (`catchUp`, capped by `OFFLINE_CAP`). Nothing is stored by a read.
+- `PUT /city` **temporary, removed in week 4**: the client sends `{ state, version }`.
+  - Version 0 creates the city (refused if the account already has one); version N replaces it only if N is the current version. Otherwise 409, "Your city changed on another device".
+  - The city is checked with `parseState`, nothing may be dropped on the way, and it must hold together: levels within `maxLevel`, no job on a building already at its highest level, no more fleets at sea than `fleetsMax(harbor)`.
+  - A body of 64 KB at most, and its own rate limit: 6 saves per minute and per player.
+  - A stored city that cannot be read is never replaced.
+
   This trusts the client, which goes against the rule "the server decides". It is accepted for one week only, so that the done-when of the week can be tested; week 4 replaces it with actions checked by the server. Write it in `docs/decisions.md` and in a comment above the route.
+- Every refusal returns `{ code, error }`: a stable `code` for the client (`signed_out`, `version_conflict`, `unreadable_city`, `invalid_city`, `city_too_large`, `too_many_saves`…), and `error` in English for the player. The sign-in routes too.
 - Done when: tests cover first visit, save, old version refused, bad city refused, time away computed by the server.
 
 ## Task 5 · Sign in from the game
@@ -52,6 +60,8 @@ Sign-in is a sensitive area: add it to the protected areas of CLAUDE.md ("sign-i
 - A "Profile" entry (top left, on the Power card) with "Sign in with your wallet". Playing without signing in stays possible, with the local save as today.
 - Find wallets with the Wallet Standard (`getWallets`) and use only the `solana:signIn` feature, never `solana:signMessage`. The `Origin` header only protects inside a browser: with `signMessage`, a fake site could get a "Brinelight" message signed and replay it from a script. With `solana:signIn`, the wallet itself checks the domain. A wallet without `signIn` shows: "Your wallet cannot sign in yet. Use Phantom, Solflare or Backpack."
 - On a phone without a wallet in the browser (Chrome Android), offer "Open in Phantom": a link that opens the game inside Phantom's browser.
+- The city from `GET /city` is already advanced to `asOf`: the client starts from there and adds no time away of its own.
+- Refusals: the client tests `code`, and shows `error` to the player.
 - After sign-in:
   - no city on the account: the local city is sent;
   - a city on the account and a local city: ask "Keep the city saved on your account, or replace it with this one?";
