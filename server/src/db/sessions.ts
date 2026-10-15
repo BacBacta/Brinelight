@@ -23,16 +23,20 @@ export async function deleteSession(db: Db, token: string): Promise<void> {
   await db.delete(sessions).where(eq(sessions.tokenHash, hashToken(token)));
 }
 
+/** Stores a nonce given at `now`; its "Issued At" is `now` too. */
 export async function createNonce(db: Db, nonce: string, now: Date, expiresAt: Date): Promise<void> {
-  await db.insert(authNonces).values({ nonce, createdAt: now, expiresAt });
+  await db.insert(authNonces).values({ nonce, createdAt: now, issuedAt: now, expiresAt });
 }
 
-/** Uses a nonce once: true only if it exists, is not used yet and has not expired at `now`. */
-export async function useNonce(db: Db, nonce: string, now: Date): Promise<boolean> {
+/**
+ * Uses a nonce once, in a single UPDATE: true only if it exists, was given with exactly this `issuedAt`,
+ * is not used yet and has not expired at `now`.
+ */
+export async function useNonce(db: Db, nonce: string, issuedAt: Date, now: Date): Promise<boolean> {
   const rows = await db
     .update(authNonces)
     .set({ usedAt: now })
-    .where(and(eq(authNonces.nonce, nonce), gt(authNonces.expiresAt, now), isNull(authNonces.usedAt)))
+    .where(and(eq(authNonces.nonce, nonce), eq(authNonces.issuedAt, issuedAt), gt(authNonces.expiresAt, now), isNull(authNonces.usedAt)))
     .returning({ nonce: authNonces.nonce });
   return rows.length === 1;
 }
@@ -52,9 +56,13 @@ export async function purgeExpired(db: Db, now: Date): Promise<{ nonces: number;
 }
 
 /** Why a nonce could not be used, read after `useNonce` refused it (never instead of it). */
-export async function nonceRefusal(db: Db, nonce: string, now: Date): Promise<"unknown" | "used" | "expired"> {
-  const [row] = await db.select({ usedAt: authNonces.usedAt, expiresAt: authNonces.expiresAt }).from(authNonces).where(eq(authNonces.nonce, nonce));
+export async function nonceRefusal(db: Db, nonce: string, issuedAt: Date, now: Date): Promise<"unknown" | "used" | "expired" | "issued"> {
+  const [row] = await db
+    .select({ usedAt: authNonces.usedAt, expiresAt: authNonces.expiresAt, issuedAt: authNonces.issuedAt })
+    .from(authNonces)
+    .where(eq(authNonces.nonce, nonce));
   if (!row) return "unknown";
   if (row.usedAt) return "used";
-  return row.expiresAt <= now ? "expired" : "used";
+  if (row.expiresAt <= now) return "expired";
+  return row.issuedAt.getTime() !== issuedAt.getTime() ? "issued" : "used";
 }

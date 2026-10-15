@@ -1,7 +1,7 @@
 /**
  * Wallet sign-in (Sign In With Solana) and sessions. Protected area: see CLAUDE.md.
  *
- * POST /auth/nonce   gives a single-use nonce, valid 5 minutes.
+ * POST /auth/nonce   gives a single-use nonce, valid 5 minutes, with the Issued At, chain and statement to sign.
  * POST /auth/verify  checks the signed message and opens a session; the token is returned once.
  * POST /auth/logout  closes the session of the token sent.
  * GET  /me           the signed-in player.
@@ -40,6 +40,7 @@ export const REFUSED = {
   signature: refusal("bad_signature", "This message was not signed by this wallet"),
   unknown: refusal("unknown_nonce", "This sign-in was not started here. Please try again"),
   used: refusal("nonce_used", "This sign-in was already used. Please try again"),
+  issued: refusal("wrong_issued_at", "This message does not match this sign-in. Please try again"),
   session: SIGNED_OUT,
 } as const;
 
@@ -80,7 +81,8 @@ export async function authRoutes(app: FastifyInstance, { db, config, now }: Auth
     const nonce = randomBytes(16).toString("hex");
     const expiresAt = new Date(at.getTime() + NONCE_MS);
     await createNonce(db, nonce, at, expiresAt);
-    return { nonce, expiresAt: expiresAt.toISOString() };
+    // The client passes these to the wallet as they are: no statement, network or clock of its own.
+    return { nonce, issuedAt: at.toISOString(), expiresAt: expiresAt.toISOString(), chainId: config.chainId, statement: STATEMENT };
   });
 
   app.post<{ Body: { address: string; signedMessage: string; signature: string } }>(
@@ -122,8 +124,9 @@ export async function authRoutes(app: FastifyInstance, { db, config, now }: Auth
       if (!key || !verifyEd25519(key, messageBytes, signatureBytes)) return refuse(401, REFUSED.signature);
 
       // Only now is the nonce used: a single UPDATE, so two sign-ins with the same nonce cannot both pass.
-      if (!(await useNonce(db, message.nonce, at))) {
-        const why = await nonceRefusal(db, message.nonce, at);
+      // The message must carry exactly the "Issued At" given with the nonce.
+      if (!(await useNonce(db, message.nonce, message.issuedAt, at))) {
+        const why = await nonceRefusal(db, message.nonce, message.issuedAt, at);
         return refuse(401, REFUSED[why]);
       }
 

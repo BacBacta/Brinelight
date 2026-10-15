@@ -10,6 +10,7 @@ import {
   findOrCreatePlayer,
   findSession,
   hashToken,
+  nonceRefusal,
   loadCity,
   openDatabase,
   purgeExpired,
@@ -155,11 +156,19 @@ describe("sessions and nonces", () => {
 
   it("a nonce is used once, and never after it expires", async () => {
     await createNonce(db, "n1", T0, later(5 * MIN));
-    expect(await useNonce(db, "n1", later(MIN))).toBe(true);
-    expect(await useNonce(db, "n1", later(2 * MIN))).toBe(false);
+    expect(await useNonce(db, "n1", T0, later(MIN))).toBe(true);
+    expect(await useNonce(db, "n1", T0, later(2 * MIN))).toBe(false);
     await createNonce(db, "n2", T0, later(5 * MIN));
-    expect(await useNonce(db, "n2", later(5 * MIN))).toBe(false);
-    expect(await useNonce(db, "unknown", T0)).toBe(false);
+    expect(await useNonce(db, "n2", T0, later(5 * MIN))).toBe(false);
+    expect(await useNonce(db, "unknown", T0, T0)).toBe(false);
+  });
+
+  it("a nonce is used only with the Issued At it was given with", async () => {
+    await createNonce(db, "n3", T0, later(5 * MIN));
+    expect(await useNonce(db, "n3", later(1), later(MIN))).toBe(false);
+    expect(await nonceRefusal(db, "n3", later(1), later(MIN))).toBe("issued");
+    expect(await useNonce(db, "n3", T0, later(MIN))).toBe(true);
+    expect(await nonceRefusal(db, "n3", T0, later(MIN))).toBe("used");
   });
 });
 
@@ -170,7 +179,7 @@ describe("purgeExpired", () => {
     await createNonce(db, "expired", T0, later(5 * MIN));
     await createNonce(db, "used-recently", T0, later(5 * MIN));
     await createNonce(db, "used-long-ago", T0, later(5 * MIN));
-    await useNonce(db, "used-long-ago", later(MIN));
+    await useNonce(db, "used-long-ago", T0, later(MIN));
     await createSession(db, "live", p.id, T0, later(30 * DAY));
     await createSession(db, "dead", p.id, T0, later(DAY));
 

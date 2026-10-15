@@ -67,7 +67,10 @@ Sign-in is a sensitive area: add it to the protected areas of CLAUDE.md ("sign-i
   - a city on the account and a local city: ask "Keep the city saved on your account, or replace it with this one?";
   - then save to the server every 30 s and when the page is hidden.
 - The session token is kept in localStorage this week (simple, works across domains). To be reviewed before payments (week 13), with a cookie on a shared domain. Write it in `docs/decisions.md`.
-- Server address from `VITE_API_URL`.
+- Server address from `VITE_API_URL`. Without it, the Profile says accounts are not open yet, and nothing goes on the network.
+- Saves to the account: every 30 s and when the page is hidden, only if the city changed. `version_conflict`: reload the account city and show "Your city changed on another device. We loaded the latest one."; `signed_out`: back to playing on the device, with "Please sign in again"; no network: keep the city on the device and try again later, without a message each time.
+- The city on the device is a backup copy: never erased by signing in. Signing out erases the token, not the city.
+- End-to-end test without a real wallet (`npm run e2e`): a test wallet with `solana:signIn`, the server on PGlite and the client in Chromium. Sign in, upgrade a building, reload: the city is found. Then `version_conflict` with two tabs. The CI job is not blocking this week.
 - Done when: with the server running locally, you sign in with a test wallet, play, reload, and find your city.
 
 ## Task 6 · Put the server online

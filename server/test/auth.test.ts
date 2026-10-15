@@ -188,6 +188,31 @@ describe("refused signatures", () => {
 });
 
 describe("refused nonces", () => {
+  it("the nonce comes with the Issued At, chain and statement to sign", async () => {
+    const server = await app();
+    const res = await server.inject({ method: "POST", url: "/auth/nonce", headers: { origin: ORIGIN } });
+    expect(res.json()).toEqual({
+      nonce: expect.stringMatching(/^[0-9a-f]{32}$/),
+      issuedAt: T0.toISOString(),
+      expiresAt: new Date(T0.getTime() + 5 * MIN).toISOString(),
+      chainId: "mainnet",
+      statement: STATEMENT,
+    });
+  });
+
+  it("a message with another Issued At than the one given with the nonce", async () => {
+    const server = await app();
+    const wallet = newWallet();
+    const nonce = await getNonce(server);
+    for (const issuedAt of [at(1), at(-1000), at(2 * MIN)]) {
+      const res = await verify(server, signInBody(wallet, nonce, { issuedAt }));
+      expect(res.statusCode).toBe(401);
+      expect(res.json()).toEqual(REFUSED.issued);
+    }
+    // The nonce is still unused: the right message signs in.
+    expect((await verify(server, signInBody(wallet, nonce))).statusCode).toBe(200);
+  });
+
   it("a nonce used once cannot sign in again", async () => {
     const server = await app();
     const wallet = newWallet();

@@ -37,7 +37,7 @@ export async function buildApp(options: AppOptions = {}) {
 
   await app.register(cors, {
     origin: config.allowedOrigins,
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "PUT"],
     allowedHeaders: ["Content-Type", "Authorization"],
   });
   await app.register(rateLimit, {

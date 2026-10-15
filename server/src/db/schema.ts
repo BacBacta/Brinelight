@@ -28,6 +28,8 @@ export const authNonces = pgTable(
   {
     nonce: text("nonce").primaryKey(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    /** The "Issued At" the server gives with the nonce; the signed message must carry exactly this time. */
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     usedAt: timestamp("used_at", { withTimezone: true }),
   },

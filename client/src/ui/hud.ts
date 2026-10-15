@@ -7,11 +7,11 @@ const RESOURCES = ["oil", "fish", "wood"] as const;
 const NAMES = { oil: "Oil", fish: "Fish", wood: "Driftwood" } as const;
 
 /** The top bar (Lighthouse level, Power, resources, Pearls) and the line under it (survivors, morale, Mist). */
-export function createHud(root: HTMLElement) {
+export function createHud(root: HTMLElement, onProfile?: () => void) {
   const hud = document.createElement("header");
   hud.className = "hud";
   hud.innerHTML =
-    `<div class="card lvl"><div class="av">${ICONS.lighthouse}<i data-k="level"></i></div><div><small>Power</small><b data-k="power"></b></div></div>` +
+    `<div class="card lvl" role="button" tabindex="0" aria-label="Profile"><div class="av">${ICONS.lighthouse}<i data-k="level"></i></div><div><small>Power</small><b data-k="power"></b></div></div>` +
     `<div class="res">` +
     RESOURCES.map((k) => `<div class="pill" data-r="${k}" title="${NAMES[k]}">${resourceIcon(k)}<span class="v"></span><small></small><i class="fill"><i></i></i></div>`).join("") +
     `<div class="pill" title="Pearls, earned by playing">${resourceIcon("pearl")}<span class="v" data-k="pearls"></span></div>` +
@@ -22,6 +22,10 @@ export function createHud(root: HTMLElement) {
     `<div class="card mor" title="Survivors and morale"><span class="ic surv">${ICONS.survivor}</span><span data-k="surv"></span><div class="bar"><i data-k="morale-bar"></i></div><span data-k="morale"></span></div>` +
     `<div class="card brume"><span data-k="mist"></span></div>`;
   root.append(hud, sub);
+  // The Power card opens the Profile: sign in with your wallet, or sign out.
+  const card = hud.querySelector<HTMLElement>(".lvl")!;
+  card.addEventListener("click", () => onProfile?.());
+  card.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && onProfile?.());
 
   const q = <T extends HTMLElement>(el: HTMLElement, sel: string) => el.querySelector<T>(sel)!;
   const set = (el: HTMLElement, text: string) => {
@@ -33,6 +37,10 @@ export function createHud(root: HTMLElement) {
   });
 
   return {
+    /** A small mark on the Power card while signed in. */
+    signedIn(on: boolean) {
+      card.classList.toggle("signed", on);
+    },
     update(state: PlayerState) {
       set(q(hud, '[data-k="level"]'), String(state.buildings.lighthouse));
       set(q(hud, '[data-k="power"]'), longAmount(cityPower(state)));

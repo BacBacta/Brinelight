@@ -4,9 +4,15 @@
  * with the 9 buildings, their sheets, the builders' queue, the top bar and the bottom menu,
  * and the sea view with its pirate camps, wrecks, fleets and combat reports.
  * The week 1 rules table stays available with ?rules.
+ * Week 3: sign in with your wallet (Profile, on the Power card) to keep your city on your account.
  * The reference prototype stays playable at /prototype/.
  */
 import { HOME, type BuildingId } from "@brinelight/shared";
+import type { Wallet } from "@wallet-standard/base";
+import { SYNC_EVERY_MS, createAccount, type Account } from "./account/index.js";
+import { apiUrl, createApi } from "./account/api.js";
+import { askWhichCity, createProfile } from "./account/profile.js";
+import { watchWallets } from "./account/wallets.js";
 import { createCity, type City } from "./city/index.js";
 import { showRules } from "./rules.js";
 import { forcedQuality, startScene, type View } from "./scene/index.js";
@@ -46,7 +52,11 @@ if (new URLSearchParams(location.search).has("rules")) {
     city?.closeSheet();
     sea?.closeSheet();
   };
-  const ui = createUi(app, showView);
+  const ui = createUi(app, showView, () => {
+    city?.closeSheet();
+    sea?.closeSheet();
+    profile.open();
+  });
   ui.update(state);
   if (opened.rejected) ui.toast("Your saved city could not be read. A copy was kept.", "bad", "!");
 
@@ -60,6 +70,7 @@ if (new URLSearchParams(location.search).has("rules")) {
     state = r.state;
     refresh();
     save();
+    account?.markChanged();
   };
   const startUpgrade = (id: BuildingId) => act(upgrade(state, id));
   const sendFleet = (site: string) => {
@@ -82,6 +93,7 @@ if (new URLSearchParams(location.search).has("rules")) {
           state = readReport(state);
           refresh();
           save();
+          account?.markChanged();
         },
         soon: () => ui.toast("Coming soon", "", "~"),
         speed: DEV_SPEED,
@@ -116,13 +128,81 @@ if (new URLSearchParams(location.search).has("rules")) {
     if (now - uiAt > 250 || changed) {
       uiAt = now;
       refresh();
-      if (changed) save();
+      if (changed) {
+        save();
+        account?.markChanged();
+      }
     }
   };
   frame = requestAnimationFrame(loop);
 
+  // The account: only with a server address. Without one, or without signing in, nothing goes on the network.
+  const server = apiUrl();
+  let wallets: readonly Wallet[] = [];
+  let signingIn = false;
+  const accountStore = (() => {
+    try {
+      return window.localStorage;
+    } catch {
+      return null;
+    }
+  })();
+  const account: Account | null = server
+    ? createAccount({
+        api: createApi(server),
+        store: accountStore,
+        getState: () => state,
+        setState: (s) => {
+          state = s;
+          refresh();
+          save();
+          showLighthouse();
+        },
+        toast: (text, kind = "") => ui.toast(text, kind, kind === "bad" ? "!" : "i"),
+        ask: () => askWhichCity(app),
+        nowMs: () => Date.now(),
+        onChange: () => {
+          ui.signedIn(!!account?.signedIn);
+          // Once signed in, the sheet goes away: what follows (the question about your city, a toast) needs the screen.
+          if (account?.signedIn) profile.close();
+          profile.refresh();
+        },
+      })
+    : null;
+  const profile = createProfile(app, {
+    view: () => ({ available: !!account, wallet: account?.wallet ?? null, wallets, busy: signingIn }),
+    signIn: async (wallet) => {
+      if (!account || signingIn) return;
+      signingIn = true;
+      profile.refresh();
+      const r = await account.signInWith(wallet, { host: location.host, origin: location.origin });
+      signingIn = false;
+      if (r.ok) profile.close();
+      else ui.toast(r.error, "bad", "!");
+      profile.refresh();
+    },
+    signOut: () => {
+      void account?.signOut();
+      profile.refresh();
+    },
+  });
+  if (account) {
+    watchWallets((w) => {
+      wallets = w;
+      profile.refresh();
+    });
+    ui.signedIn(account.signedIn);
+    void account.start();
+  }
+
   const saveTimer = setInterval(save, SAVE_EVERY_MS);
-  const onHide = () => document.visibilityState === "hidden" && save();
+  const syncTimer = setInterval(() => void account?.sync(), SYNC_EVERY_MS);
+  // The page is still alive when it is hidden: the city is saved here and on the account.
+  const onHide = () => {
+    if (document.visibilityState !== "hidden") return;
+    save();
+    void account?.sync({ hidden: true });
+  };
   document.addEventListener("visibilitychange", onHide);
   addEventListener("pagehide", save);
 
@@ -132,6 +212,7 @@ if (new URLSearchParams(location.search).has("rules")) {
     save();
     cancelAnimationFrame(frame);
     clearInterval(saveTimer);
+    clearInterval(syncTimer);
     document.removeEventListener("visibilitychange", onHide);
     removeEventListener("pagehide", save);
     scene.dispose();
