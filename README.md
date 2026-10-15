@@ -23,13 +23,17 @@ npm run dev:server   # http://localhost:8787/health
 | `server/` | Fastify server that will decide everything (week 3 onward) |
 | `client/` | Vite + three.js client; the prototype's 3D arrives here in week 2 |
 | `docs/` | Decisions and notes |
-| `.github/workflows/` | Tests on every commit, client deployment to Cloudflare Pages |
+| `.github/workflows/` | Tests on every commit (`npm run check`) |
 
 ## Deploying the client (Cloudflare Pages)
 
-1. Create a Cloudflare Pages project named `brinelight` (free plan).
-2. In the GitHub repository settings, add two secrets: `CLOUDFLARE_API_TOKEN` (a token with the "Cloudflare Pages: Edit" permission) and `CLOUDFLARE_ACCOUNT_ID`.
-3. Every commit on `main` that passes the tests deploys the client.
+The Cloudflare Pages project `brinelight` is connected to this GitHub repository and builds the client by itself:
+
+- build command: `npm run build`, output folder: `client/dist`;
+- every push to `main` publishes https://brinelight.pages.dev;
+- every other branch gets a preview URL, posted by the Cloudflare bot on its pull request.
+
+Cloudflare does not wait for the tests: check that the "check" job of GitHub Actions is green before merging into `main`.
 
 ## Working with a coding assistant
 

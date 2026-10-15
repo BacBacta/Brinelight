@@ -41,3 +41,9 @@ export function createQualityMonitor() {
     },
   };
 }
+
+/** A quality step forced with ?quality=0, 1 or 2 in the URL, to compare steps on the same phone; null otherwise. */
+export function forcedQuality(search: string): QualityStep | null {
+  const v = new URLSearchParams(search).get("quality");
+  return v === "0" || v === "1" || v === "2" ? (Number(v) as QualityStep) : null;
+}

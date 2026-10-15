@@ -1,0 +1,66 @@
+import type { Kit, SceneHandle } from "../scene/index.js";
+import type { PlayerState } from "../state/index.js";
+import { createFleetMarks } from "./fleets.js";
+import { createSeaLabels } from "./labels.js";
+import { createSeaMap } from "./map.js";
+import { createSeaSheet } from "./sheet.js";
+
+export type Sea = {
+  /** Labels, open sheet and unread reports follow the state. */
+  update(state: PlayerState): void;
+  closeSheet(): void;
+};
+
+/** The sea view: the map, your fleets, the sheets of camps and wrecks, and the combat reports. */
+export function createSea(
+  kit: Kit,
+  scene: SceneHandle,
+  canvas: HTMLCanvasElement,
+  root: HTMLElement,
+  game: { state(): PlayerState; sail(site: string): void; readReport(): void; soon(): void; speed: number },
+): Sea {
+  const map = createSeaMap(kit, (o) => scene.add(o, "sea"));
+  const marks = createFleetMarks(
+    (o) => scene.add(o, "sea"),
+    (o) => o.removeFromParent(),
+  );
+  const labels = createSeaLabels(root, scene);
+  const sheet = createSeaSheet(root, { sail: (id) => game.sail(id), closeReport: () => game.readReport() });
+
+  scene.onFrame((now, view) => {
+    if (view !== "sea") return;
+    map.animate(now);
+    marks.place(game.state().fleets, now);
+    labels.place();
+  });
+
+  // A tap opens a sheet; a drag moves the map and opens nothing.
+  let down: { x: number; y: number } | null = null;
+  canvas.addEventListener("pointerdown", (e) => (down = { x: e.clientX, y: e.clientY }));
+  canvas.addEventListener("pointerup", (e) => {
+    if (!down || scene.view !== "sea") return;
+    const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8;
+    down = null;
+    if (moved || sheet.showsReport) return;
+    const id = scene.pick(e.clientX, e.clientY, map.hits)[0]?.object.userData.site as string | undefined;
+    if (!id) return sheet.close();
+    if (id.startsWith("camp-") || id.startsWith("wreck-")) sheet.openSite(id, game.state(), game.speed);
+    else {
+      sheet.close();
+      game.soon();
+    }
+  });
+
+  return {
+    update(state) {
+      labels.update(state);
+      const unread = state.reports.find((r) => !r.read);
+      // An unread report opens by itself, one after another, wherever you are.
+      if (unread && !sheet.showsReport) sheet.openReport(unread, state, game.speed);
+      else sheet.update(state, game.speed);
+    },
+    closeSheet() {
+      if (!sheet.showsReport) sheet.close();
+    },
+  };
+}

@@ -7,12 +7,16 @@ export function lighthouseScale(level: number): number {
 
 export type Lighthouse = { group: THREE.Group; animate(seconds: number): void };
 
-/** The Lighthouse is built in code, as in the prototype: striped tower, lamp, two turning beams, a point light. */
-export function createLighthouse(): Lighthouse {
+/**
+ * The Lighthouse is built in code, as in the prototype: striped tower, lamp, two turning beams, a point light.
+ * At sea, the Lighthouses have no light of their own, and the Great Lighthouse is golden.
+ */
+export function createLighthouse(opts: { gold?: boolean; light?: boolean } = {}): Lighthouse {
+  const gold = opts.gold ?? false;
   const g = new THREE.Group();
   const stoneM = new THREE.MeshStandardMaterial({ color: "#B9B2A6", roughness: 0.9 });
   const whiteM = new THREE.MeshStandardMaterial({ color: "#F6F1E6", roughness: 0.6 });
-  const redM = new THREE.MeshStandardMaterial({ color: "#C8361E", roughness: 0.5, metalness: 0 });
+  const redM = new THREE.MeshStandardMaterial({ color: gold ? "#E9B22E" : "#C8361E", roughness: 0.5, metalness: gold ? 0.5 : 0 });
   const darkM = new THREE.MeshStandardMaterial({ color: "#2B3445", roughness: 0.6 });
   const add = (geo: THREE.BufferGeometry, mat: THREE.Material, y: number) => {
     const m = new THREE.Mesh(geo, mat);
@@ -49,9 +53,11 @@ export function createLighthouse(): Lighthouse {
   pivot.add(beam2);
   g.add(pivot);
 
-  const light = new THREE.PointLight("#FFD27A", 6, 9, 1.6);
-  light.position.y = top + 0.25;
-  g.add(light);
+  if (opts.light ?? true) {
+    const light = new THREE.PointLight("#FFD27A", 6, 9, 1.6);
+    light.position.y = top + 0.25;
+    g.add(light);
+  }
 
   return {
     group: g,

@@ -2,21 +2,34 @@ import { BUILDINGS, BUILDING_IDS, type BuildingId } from "@brinelight/shared";
 import { lighthouseScale, type SceneHandle } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 import { plotPosition } from "./buildings.js";
+import { layoutLabels, type LabelBox } from "./overlap.js";
 import { progress, suggestedUpgrades } from "./suggest.js";
 
 /** Level labels above the buildings, as in the prototype. */
 export function createLabels(root: HTMLElement, scene: SceneHandle) {
   const layer = document.createElement("div");
-  layer.className = "labels";
+  layer.className = "labels city";
   layer.setAttribute("aria-hidden", "true");
   root.appendChild(layer);
-  const els = {} as Record<BuildingId, { el: HTMLDivElement; key: string; bar: HTMLElement | null }>;
+  type Label = { el: HTMLDivElement; key: string; bar: HTMLElement | null; w: number; h: number; compactW?: number };
+  const els = {} as Record<BuildingId, Label>;
   for (const id of BUILDING_IDS) {
     const el = document.createElement("div");
     el.className = "bl";
     layer.appendChild(el);
-    els[id] = { el, key: "", bar: null };
+    els[id] = { el, key: "", bar: null, w: 0, h: 0 };
   }
+  /** Sizes are measured once per text change, and only when the label is shown. */
+  const measure = (L: Label) => {
+    L.el.classList.remove("compact");
+    L.w = L.el.offsetWidth;
+    L.h = L.el.offsetHeight;
+    if (L.el.querySelector(".nm")) {
+      L.el.classList.add("compact");
+      L.compactW = L.el.offsetWidth;
+      L.el.classList.remove("compact");
+    } else L.compactW = undefined;
+  };
   let lighthouseLevel = 0;
 
   return {
@@ -35,21 +48,32 @@ export function createLabels(root: HTMLElement, scene: SceneHandle) {
           const name = BUILDINGS[id].name;
           L.el.innerHTML =
             (up ? '<span class="up">↑</span>' : "") +
-            (level === 0 && !job ? `<b class="new">＋ ${name}</b>` : `<b>${name} <i>${level}</i></b>`) +
+            (level === 0 && !job ? `<b class="new">＋<span class="nm"> ${name}</span></b>` : `<b>${name} <i>${level}</i></b>`) +
             (job ? '<span class="pb"><i></i></span>' : "");
           L.bar = L.el.querySelector(".pb i");
+          L.w = 0;
         }
         if (job && L.bar) L.bar.style.width = `${(progress(job) * 100).toFixed(1)}%`;
       }
     },
-    /** Follows the camera: called on every frame. */
+    /** Follows the camera: called on every frame. Labels that would overlap are moved up or reduced (overlap.ts). */
     place() {
+      const boxes: (LabelBox & { id: BuildingId })[] = [];
       for (const id of BUILDING_IDS) {
         const { x, z } = plotPosition(id);
         const p = scene.project(x, id === "lighthouse" ? 3.3 * lighthouseScale(lighthouseLevel) : 1.9, z);
-        const el = els[id].el;
-        el.style.transform = `translate(${p.x.toFixed(1)}px,${p.y.toFixed(1)}px)`;
-        el.style.display = p.visible ? "" : "none";
+        const L = els[id];
+        L.el.style.display = p.visible ? "" : "none";
+        if (!p.visible) continue;
+        if (L.w === 0) measure(L);
+        boxes.push({ id, x: p.x, y: p.y, w: L.w, h: L.h, depth: p.depth, compactW: L.compactW });
+      }
+      const places = layoutLabels(boxes);
+      for (const b of boxes) {
+        const L = els[b.id];
+        const pl = places[b.id]!;
+        L.el.classList.toggle("compact", pl.compact);
+        L.el.style.transform = `translate(${b.x.toFixed(1)}px,${(b.y + pl.dy).toFixed(1)}px)`;
       }
     },
   };
