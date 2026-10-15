@@ -1,4 +1,4 @@
-import { BUILDING_IDS, type UpgradeJob } from "@brinelight/shared";
+import { BUILDERS, BUILDING_IDS, type UpgradeJob } from "@brinelight/shared";
 import { catchUp, newPlayerState } from "./state.js";
 import type { PlayerState } from "./types.js";
 
@@ -40,9 +40,7 @@ function readSave(store: KeyValueStore | null): SaveFile | null {
   try {
     const o: unknown = JSON.parse(store.getItem(SAVE_KEY) ?? "null");
     if (!isSaveFile(o)) return null;
-    // A save from before the build queue has none; a bad job is dropped, the rest of the city is kept.
-    const raw: unknown = (o.state as { queue?: unknown }).queue;
-    o.state.queue = Array.isArray(raw) ? raw.filter(isJob) : [];
+    o.state.queue = cleanQueue((o.state as { queue?: unknown }).queue);
     return o;
   } catch {
     return null;
@@ -52,6 +50,24 @@ function readSave(store: KeyValueStore | null): SaveFile | null {
 const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const hasNums = (o: unknown, keys: readonly string[]) => isObj(o) && keys.every((k) => isNum(o[k]));
+
+/**
+ * The build queue read from a save. A save from before the queue has none; a bad job is dropped,
+ * the rest of the city is kept. At most one job per building and BUILDERS jobs (the first ones),
+ * with `left` brought back between 0 and `duration`.
+ */
+export function cleanQueue(raw: unknown): UpgradeJob[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const out: UpgradeJob[] = [];
+  for (const j of raw) {
+    if (out.length >= BUILDERS) break;
+    if (!isJob(j) || seen.has(j.id)) continue;
+    seen.add(j.id);
+    out.push({ id: j.id, left: Math.min(Math.max(0, j.left), j.duration), duration: j.duration });
+  }
+  return out;
+}
 
 const isJob = (j: unknown): j is UpgradeJob =>
   isObj(j) && typeof j.id === "string" && (BUILDING_IDS as string[]).includes(j.id) && isNum(j.left) && isNum(j.duration) && j.duration > 0;

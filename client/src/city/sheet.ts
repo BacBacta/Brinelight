@@ -39,7 +39,7 @@ export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId
         .join("");
       body =
         `<div class="box"><h3>${level === 0 ? "Build" : `Upgrade to level ${level + 1}`}</h3>` +
-        `<div class="cost">${cost}</div><p class="small">Time: ${formatDuration(upgradeTime(id, level))}</p></div>` +
+        `<div class="cost">${cost}</div><p class="small">Time: ${formatDuration(upgradeTime(id, level) / speed)}</p></div>` +
         `<button class="b gold" data-act="upgrade" ${check.ok ? "" : "disabled"}>${level === 0 ? "Build" : "Upgrade"}</button>` +
         (check.ok ? "" : `<p class="why" role="status">${check.reason}</p>`);
     } else {

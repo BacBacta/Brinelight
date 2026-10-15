@@ -1,6 +1,6 @@
 import { HOUR, OFFLINE_CAP, STARTING_BUILDINGS, STARTING_STOCK, netRates, storeCap, upgradeCost, upgradeTime } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
-import { SAVE_KEY, loadGame, saveGame, type KeyValueStore } from "../src/state/save.js";
+import { SAVE_KEY, cleanQueue, loadGame, saveGame, type KeyValueStore } from "../src/state/save.js";
 import { advance, catchUp, elapse, newPlayerState, tick, upgrade } from "../src/state/state.js";
 
 const memoryStore = (): KeyValueStore & { data: Map<string, string> } => {
@@ -192,5 +192,53 @@ describe("buildings", () => {
     const { queue: _none, ...old } = newPlayerState();
     store.data.set(SAVE_KEY, JSON.stringify({ v: 1, savedAt: t0, state: old }));
     expect(loadGame(store, t0)).toEqual(newPlayerState());
+  });
+});
+
+describe("queue read from a save", () => {
+  it("keeps one job per building and at most BUILDERS jobs, the first ones", () => {
+    const raw = [
+      { id: "refinery", left: 100, duration: 3240 },
+      { id: "refinery", left: 50, duration: 3240 },
+      { id: "fishery", left: 200, duration: 3240 },
+      { id: "lumberyard", left: 300, duration: 3240 },
+    ];
+    expect(cleanQueue(raw)).toEqual([
+      { id: "refinery", left: 100, duration: 3240 },
+      { id: "fishery", left: 200, duration: 3240 },
+    ]);
+  });
+
+  it("brings left back between 0 and duration", () => {
+    const raw = [
+      { id: "refinery", left: 99_999, duration: 3240 },
+      { id: "fishery", left: -5, duration: 3240 },
+    ];
+    expect(cleanQueue(raw)).toEqual([
+      { id: "refinery", left: 3240, duration: 3240 },
+      { id: "fishery", left: 0, duration: 3240 },
+    ]);
+  });
+
+  it("a bad job does not take a builder's place", () => {
+    const raw = [{ id: "castle", left: 1, duration: 1 }, null, { id: "refinery", left: 1, duration: 10 }, { id: "fishery", left: 2, duration: 10 }];
+    expect(cleanQueue(raw).map((j) => j.id)).toEqual(["refinery", "fishery"]);
+  });
+
+  it("the cleaned queue is what loadGame gives back", () => {
+    const store = memoryStore();
+    const s = newPlayerState();
+    const raw = [
+      { id: "refinery", left: 99_999, duration: 3240 },
+      { id: "refinery", left: 10, duration: 3240 },
+      { id: "fishery", left: 200, duration: 3240 },
+      { id: "lumberyard", left: 300, duration: 3240 },
+    ];
+    const t0 = Date.UTC(2026, 9, 15, 12);
+    store.data.set(SAVE_KEY, JSON.stringify({ v: 1, savedAt: t0, state: { ...s, queue: raw } }));
+    expect(loadGame(store, t0).queue).toEqual([
+      { id: "refinery", left: 3240, duration: 3240 },
+      { id: "fishery", left: 200, duration: 3240 },
+    ]);
   });
 });

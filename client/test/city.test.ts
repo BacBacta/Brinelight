@@ -54,6 +54,11 @@ describe("formats", () => {
     expect(formatDuration(7800)).toBe("2 h 10 min");
   });
 
+  it("a duration sped up by DEV_SPEED (60) is shown in seconds", () => {
+    expect(formatDuration(3240 / 60)).toBe("54 s");
+    expect(formatDuration(7800 / 60)).toBe("2 min");
+  });
+
   it("progress stays between 0 and 1", () => {
     expect(progress({ left: 3240, duration: 3240 })).toBe(0);
     expect(progress({ left: 1620, duration: 3240 })).toBe(0.5);
