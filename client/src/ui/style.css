@@ -89,7 +89,7 @@ body.at-sea .build-badge:not([hidden]){display:inline-flex}
 .bl b{font-family:var(--f-d);font-weight:400;font-size:12.5px;background:rgba(6,16,36,.8);border:2px solid rgba(255,255,255,.25);border-radius:99px;padding:1px 8px;white-space:nowrap}
 .bl b i{font-style:normal;color:var(--gold)}
 .bl b.new{background:rgba(255,216,102,.2);border:2px dashed #FFD866;color:#FFE7A3}
-.bl.compact b.new .nm{display:none}
+.bl.compact b .nm{display:none}
 .bl .pb{width:60px;height:6px;border-radius:9px;background:rgba(0,0,0,.55);overflow:hidden;border:1px solid rgba(255,255,255,.3)}.bl .pb i{display:block;height:100%;background:linear-gradient(90deg,#3BC6FF,#7CFFD8)}
 .bl .up{width:22px;height:22px;border-radius:50%;background:var(--green);border:2px solid #fff;display:grid;place-items:center;font:900 13px var(--f-b);box-shadow:0 2px 0 rgba(0,0,0,.3);animation:bob 1s ease-in-out infinite}
 @keyframes bob{50%{transform:translateY(-3px)}}

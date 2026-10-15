@@ -14,7 +14,7 @@ import { createSea, type Sea } from "./sea/index.js";
 import { createFpsCounter } from "./ui/fps.js";
 import { fpsWanted } from "./ui/fpsMeter.js";
 import { createUi } from "./ui/index.js";
-import { DEV_SPEED, SAVE_EVERY_MS, browserStore, elapse, loadGame, readReport, sail, saveGame, upgrade, type ActionResult, type PlayerState } from "./state/index.js";
+import { DEV_SPEED, SAVE_EVERY_MS, browserStore, elapse, openSave, readReport, sail, saveGame, upgrade, type ActionResult, type PlayerState } from "./state/index.js";
 import "./style.css";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -28,7 +28,8 @@ if (new URLSearchParams(location.search).has("rules")) {
   const canvas = app.querySelector<HTMLCanvasElement>("#cv")!;
 
   const store = browserStore();
-  let state: PlayerState = loadGame(store, Date.now());
+  const opened = openSave(store, Date.now());
+  let state: PlayerState = opened.state;
   const save = () => saveGame(store, state, Date.now());
 
   let city: City | null = null;
@@ -47,6 +48,7 @@ if (new URLSearchParams(location.search).has("rules")) {
   };
   const ui = createUi(app, showView);
   ui.update(state);
+  if (opened.rejected) ui.toast("Your saved city could not be read. A copy was kept.", "bad", "!");
 
   /** An action from a sheet: applied, or refused with the reason of the shared rules in a toast. */
   const act = (r: ActionResult) => {

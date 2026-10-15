@@ -4,5 +4,5 @@
  */
 export { MAX_REPORTS, advance, catchUp, newPlayerState, parseState, readReport, sail, upgrade, type ActionResult, type PlayerState, type Report, type UpgradeResult } from "@brinelight/shared";
 export { AWAY_AFTER, elapse, tick } from "./time.js";
-export { SAVE_KEY, browserStore, loadGame, migrateSave, saveGame, type KeyValueStore } from "./save.js";
+export { REJECTED_KEY, SAVE_KEY, browserStore, loadGame, migrateSave, openSave, saveGame, type KeyValueStore, type OpenedSave } from "./save.js";
 export { DEV_SPEED, SAVE_EVERY_MS } from "./config.js";

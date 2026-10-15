@@ -1,6 +1,6 @@
 import { HOUR, OFFLINE_CAP, STARTING_PEARLS, advance, catchUp, leadOf, newPlayerState, sail, seaSite, startingSeaWorld, travelTime, upgrade } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
-import { SAVE_KEY, loadGame, migrateSave, saveGame, type KeyValueStore } from "../src/state/save.js";
+import { REJECTED_KEY, SAVE_KEY, loadGame, migrateSave, openSave, saveGame, type KeyValueStore } from "../src/state/save.js";
 import { elapse, tick } from "../src/state/time.js";
 
 const memoryStore = (): KeyValueStore & { data: Map<string, string> } => {
@@ -214,5 +214,48 @@ describe("migrateSave: old local saves", () => {
     const s = { ...advance(newPlayerState(), HOUR), pearls: -5 };
     store.data.set(SAVE_KEY, JSON.stringify({ v: 1, savedAt: t0, state: s }));
     expect(loadGame(store, t0)).toEqual(newPlayerState());
+  });
+});
+
+describe("a save that cannot be read", () => {
+  const t0 = Date.UTC(2026, 9, 15, 12);
+
+  it("is kept as it is under the rejected key, and a new city starts", () => {
+    const store = memoryStore();
+    const broken = JSON.stringify({ v: 1, savedAt: t0, state: { ...newPlayerState(), pearls: "lots" } });
+    store.data.set(SAVE_KEY, broken);
+    const r = openSave(store, t0);
+    expect(r.rejected).toBe(true);
+    expect(r.state).toEqual(newPlayerState());
+    expect(store.data.get(REJECTED_KEY)).toBe(broken);
+  });
+
+  it("covers broken JSON and saves from another version too", () => {
+    for (const raw of ["{not json", JSON.stringify({ v: 2, savedAt: t0, state: newPlayerState() })]) {
+      const store = memoryStore();
+      store.data.set(SAVE_KEY, raw);
+      expect(openSave(store, t0).rejected).toBe(true);
+      expect(store.data.get(REJECTED_KEY)).toBe(raw);
+    }
+  });
+
+  it("never overwrites a copy that is already there", () => {
+    const store = memoryStore();
+    store.data.set(REJECTED_KEY, "the first one");
+    store.data.set(SAVE_KEY, "{not json");
+    openSave(store, t0);
+    expect(store.data.get(REJECTED_KEY)).toBe("the first one");
+  });
+
+  it("no save, or a good save, is not a rejection", () => {
+    const store = memoryStore();
+    expect(openSave(store, t0).rejected).toBe(false);
+    saveGame(store, newPlayerState(), t0);
+    expect(openSave(store, t0).rejected).toBe(false);
+    expect(store.data.has(REJECTED_KEY)).toBe(false);
+  });
+
+  it("works without any storage", () => {
+    expect(openSave(null, t0)).toEqual({ state: newPlayerState(), rejected: false });
   });
 });
