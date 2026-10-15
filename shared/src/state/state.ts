@@ -1,27 +1,9 @@
-import {
-  OFFLINE_CAP,
-  STARTING_BUILDINGS,
-  STARTING_CAPTAIN,
-  STARTING_LEAD,
-  STARTING_MORALE,
-  STARTING_PEARLS,
-  STARTING_STOCK,
-  STARTING_SURVIVORS,
-  STARTING_TROOPS,
-  advanceFleets,
-  advanceQueue,
-  advanceStock,
-  emptyTroops,
-  leadOf,
-  netRates,
-  sendFleet,
-  startUpgrade,
-  startingSeaWorld,
-  storeCap,
-  type BuildingId,
-  type CombatReport,
-  type SeaState,
-} from "@brinelight/shared";
+/** The player's city and what changes it: pure, with no clock, no randomness and no DOM. */
+import { STARTING_BUILDINGS, advanceQueue, startUpgrade } from "../rules/buildings.js";
+import { advanceStock, netRates, storeCap } from "../rules/economy.js";
+import { advanceFleets, leadOf, sendFleet, startingSeaWorld, type CombatReport, type SeaState } from "../rules/sea.js";
+import { OFFLINE_CAP, STARTING_CAPTAIN, STARTING_LEAD, STARTING_MORALE, STARTING_PEARLS, STARTING_STOCK, STARTING_SURVIVORS, STARTING_TROOPS } from "../rules/start.js";
+import { emptyTroops, type BuildingId } from "../rules/types.js";
 import type { PlayerState } from "./types.js";
 
 /** Reports kept in the city; older ones are dropped. */
@@ -122,16 +104,6 @@ export function upgrade(state: PlayerState, id: BuildingId): UpgradeResult {
   return r.ok ? { ok: true, state: { ...state, stock: r.stock, queue: r.queue } } : r;
 }
 
-/** Live time: real seconds sped up by `speed` (DEV_SPEED in development). */
-export const tick = (state: PlayerState, realSeconds: number, speed: number): PlayerState => advance(state, realSeconds * speed);
-
-/** Time away: real seconds, never sped up, counted up to OFFLINE_CAP. */
+/** Time away: real seconds, never sped up, counted up to OFFLINE_CAP. Used by the client on load and by the server. */
 export const catchUp = (state: PlayerState, realSeconds: number): PlayerState =>
   advance(state, Math.min(Math.max(0, realSeconds), OFFLINE_CAP));
-
-/** A gap between two frames longer than this (real seconds) means the tab was hidden: it counts as time away. */
-export const AWAY_AFTER = 1;
-
-/** Advances the city by the real time since the last frame: live time when short, time away when longer than AWAY_AFTER. */
-export const elapse = (state: PlayerState, realSeconds: number, speed: number): PlayerState =>
-  realSeconds > AWAY_AFTER ? catchUp(state, realSeconds) : tick(state, realSeconds, speed);

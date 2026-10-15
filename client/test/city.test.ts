@@ -4,7 +4,7 @@ import { formatDuration, formatTimeLeft } from "../src/city/format.js";
 import { PLOTS, buildingModel, hasTower } from "../src/city/plots.js";
 import { buildBadge } from "../src/city/queue.js";
 import { progress, suggestedUpgrades } from "../src/city/suggest.js";
-import { newPlayerState, upgrade } from "../src/state/state.js";
+import { newPlayerState, upgrade } from "@brinelight/shared";
 
 describe("plots and models (prototype values)", () => {
   it("every building has its own plot", () => {
