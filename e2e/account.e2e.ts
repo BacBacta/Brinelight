@@ -3,6 +3,7 @@
  */
 import type { BrowserContext, Page } from "playwright-core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { HOUR, advance, newPlayerState, sail, type PlayerState } from "@brinelight/shared";
 import { PROFILE_TEXT } from "../client/src/account/profile.js";
 import { TEXT } from "../client/src/account/index.js";
 import { installFakeWallet, type TestWallet } from "./fakeWallet.js";
@@ -128,6 +129,65 @@ async function signedInPlayer() {
   await accountAt(token, 1);
   return { ...p, page, token };
 }
+
+describe("combat reports", () => {
+  /** A city whose fleets came back twice: two unread reports, r1 then r2. No need to wait for a fleet. */
+  const cityWithTwoReports = (): PlayerState => {
+    let city = newPlayerState();
+    for (let i = 0; i < 2; i++) {
+      const r = sail({ ...city, troops: { boarders: 25, harpooners: 25, crossbowmen: 25 } }, "camp-1");
+      if (!r.ok) throw new Error(r.reason);
+      city = advance(r.state, 8 * HOUR);
+    }
+    return city;
+  };
+  type Reports = { reports: { id: string; read: boolean }[] };
+  const reportsRead = async (page: Page) =>
+    (await page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? "null")?.state as Reports | null, SAVE_KEY))?.reports.map((r) => [r.id, r.read]);
+
+  it("closing a report marks that one read, and the newer one stays unread", async () => {
+    const city = cityWithTwoReports();
+    expect(city.reports.map((r) => [r.id, r.read])).toEqual([
+      ["r1", false],
+      ["r2", false],
+    ]);
+    const p = await newPlayer(false);
+    // The city is put in the save before the game starts, once (a reload would not put it back).
+    await p.context.addInitScript(
+      ({ key, file }) => {
+        if (sessionStorage.getItem("e2e-injected")) return;
+        localStorage.setItem(key, file);
+        sessionStorage.setItem("e2e-injected", "1");
+      },
+      { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: Date.now(), state: city }) },
+    );
+    const page = await openGame(p.context);
+
+    // The oldest unread report opens by itself.
+    const sheet = page.locator('.sheet[aria-label="Combat report"]:not([hidden])');
+    await sheet.waitFor();
+    await page.screenshot({ path: "e2e/.shots/shot-report.png" });
+    await sheet.locator('[data-act="close"]').click();
+
+    await expect.poll(() => reportsRead(page)).toEqual([
+      ["r1", true],
+      ["r2", false],
+    ]);
+    // The newer one opens next, still unread until you close it.
+    await sheet.waitFor();
+    expect(await reportsRead(page)).toEqual([
+      ["r1", true],
+      ["r2", false],
+    ]);
+    await sheet.locator('[data-act="close"]').click();
+    await expect.poll(() => reportsRead(page)).toEqual([
+      ["r1", true],
+      ["r2", true],
+    ]);
+    expect(p.apiCalls).toEqual([]);
+    await p.context.close();
+  });
+});
 
 describe("signed in", () => {
   it("signing in sends the city of this device; an upgrade is saved when the page is hidden; reloading finds the city", async () => {
