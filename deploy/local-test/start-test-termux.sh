@@ -88,7 +88,7 @@ if ((${#missing[@]})); then
   pkgs=()
   for t in "${missing[@]}"; do
     case "$t" in
-      node | npm) pkgs+=(nodejs) ;;
+      node | npm) pkgs+=(nodejs-lts) ;;
       *) pkgs+=("$t") ;;
     esac
   done
