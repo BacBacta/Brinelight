@@ -1,5 +1,7 @@
 # Week 4 · The server decides
 
+**Done (2026-10-16).** Checked on a real phone (Samsung Galaxy S22, Phantom), with the whole test running in Termux (`deploy/local-test/start-test-termux.sh`, 1000 times faster): sign-in, upgrades decided by the server and still there after a reload, research, a raft moored once the Lighthouse reached level 4, an action made offline and sent when the network came back. The game itself holds 60 FPS (minimum 60) in the city and at sea on brinelight.pages.dev; it stuttered only during the Termux test, where the same phone also ran the server, the database and two tunnels.
+
 Goal of the week (roadmap, phase 2): an action the rules refuse is refused by the server, even if the client is modified.
 The client stops sending its city (`PUT /city` disappears). It sends **actions** ("upgrade the Refinery", "send a fleet to this wreck"); the server applies them with the rules of `shared` and sends back the city.
 
