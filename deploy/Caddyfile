@@ -1,0 +1,11 @@
+# HTTPS for the game server. Caddy gets and renews the certificate of API_DOMAIN by itself (Let's Encrypt).
+{
+	email {$ACME_EMAIL}
+}
+
+{$API_DOMAIN} {
+	encode zstd gzip
+	# Caddy ignores any X-Forwarded-For sent by a player and writes the real address; the server trusts only Caddy.
+	reverse_proxy server:8787
+	header -Server
+}

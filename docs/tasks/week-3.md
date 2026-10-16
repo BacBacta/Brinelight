@@ -42,33 +42,51 @@ Sign-in is a sensitive area: add it to the protected areas of CLAUDE.md ("sign-i
 
 ## Task 4 · The city on the server
 
-- `GET /city` (signed in): the player's city, advanced to now with the server clock and the same offline rule as the client (`catchUp`, capped by `OFFLINE_CAP`). Created with `newPlayerState` on the first call.
-- `PUT /city` **temporary, removed in week 4**: the client sends its city with the version it started from. The server checks it with `parseState` and simple limits (levels within `maxLevel`, body under 64 KB), refuses an old version (409, "Your city changed on another device"), and saves.
+- `GET /city` (signed in) creates nothing:
+  - no city on the account: `{ city: null }`;
+  - otherwise `{ state, version, savedAt, asOf }`: the city advanced to `asOf`, the server time, with the same offline rule as the client (`catchUp`, capped by `OFFLINE_CAP`). Nothing is stored by a read.
+- `PUT /city` **temporary, removed in week 4**: the client sends `{ state, version }`.
+  - Version 0 creates the city (refused if the account already has one); version N replaces it only if N is the current version. Otherwise 409, "Your city changed on another device".
+  - The city is checked with `parseState`, nothing may be dropped on the way, and it must hold together: levels within `maxLevel`, no job on a building already at its highest level, no more fleets at sea than `fleetsMax(harbor)`.
+  - A body of 64 KB at most, and its own rate limit: 6 saves per minute and per player.
+  - A stored city that cannot be read is never replaced.
+
   This trusts the client, which goes against the rule "the server decides". It is accepted for one week only, so that the done-when of the week can be tested; week 4 replaces it with actions checked by the server. Write it in `docs/decisions.md` and in a comment above the route.
+- Every refusal returns `{ code, error }`: a stable `code` for the client (`signed_out`, `version_conflict`, `unreadable_city`, `invalid_city`, `city_too_large`, `too_many_saves`…), and `error` in English for the player. The sign-in routes too.
 - Done when: tests cover first visit, save, old version refused, bad city refused, time away computed by the server.
 
 ## Task 5 · Sign in from the game
 
 - A "Profile" entry (top left, on the Power card) with "Sign in with your wallet". Playing without signing in stays possible, with the local save as today.
-- Find wallets with the Wallet Standard (`getWallets`), use the `solana:signIn` feature, or `solana:signMessage` when the wallet does not have it.
+- Find wallets with the Wallet Standard (`getWallets`) and use only the `solana:signIn` feature, never `solana:signMessage`. The `Origin` header only protects inside a browser: with `signMessage`, a fake site could get a "Brinelight" message signed and replay it from a script. With `solana:signIn`, the wallet itself checks the domain. A wallet without `signIn` shows: "Your wallet cannot sign in yet. Use Phantom, Solflare or Backpack."
 - On a phone without a wallet in the browser (Chrome Android), offer "Open in Phantom": a link that opens the game inside Phantom's browser.
+- The city from `GET /city` is already advanced to `asOf`: the client starts from there and adds no time away of its own.
+- Refusals: the client tests `code`, and shows `error` to the player.
 - After sign-in:
   - no city on the account: the local city is sent;
   - a city on the account and a local city: ask "Keep the city saved on your account, or replace it with this one?";
   - then save to the server every 30 s and when the page is hidden.
 - The session token is kept in localStorage this week (simple, works across domains). To be reviewed before payments (week 13), with a cookie on a shared domain. Write it in `docs/decisions.md`.
-- Server address from `VITE_API_URL`.
+- Server address from `VITE_API_URL`. Without it, the Profile says accounts are not open yet, and nothing goes on the network.
+- Saves to the account: every 30 s and when the page is hidden, only if the city changed. `version_conflict`: reload the account city and show "Your city changed on another device. We loaded the latest one."; `signed_out`: back to playing on the device, with "Please sign in again"; no network: keep the city on the device and try again later, without a message each time.
+- The city on the device is a backup copy: never erased by signing in. Signing out erases the token, not the city.
+- End-to-end test without a real wallet (`npm run e2e`): a test wallet with `solana:signIn`, the server on PGlite and the client in Chromium. Sign in, upgrade a building, reload: the city is found. Then `version_conflict` with two tabs. The CI job is not blocking this week.
 - Done when: with the server running locally, you sign in with a test wallet, play, reload, and find your city.
 
 ## Task 6 · Put the server online
 
-Your part (Claude Code cannot do it): buy a domain (about €15 a year), rent a Hetzner CX22 server in Germany (about €5 a month), point the domain to it. The client can then move to `play.<domain>` and the server to `api.<domain>`.
+**Status: Ready, not deployed: the deploy kit is tested in CI; renting the server waits until week 7 at the latest.** Meanwhile, a real wallet can be tested from your computer through temporary tunnels (`docs/deploy.md`, "Test with a real wallet without a server").
+
+Your part (Claude Code cannot do it): buy a domain (about €15 a year), rent a Hetzner CX23 server (Ubuntu 24.04) in Germany (about €5 a month), point the domain to it. The client can then move to `play.<domain>` and the server to `api.<domain>`.
 
 Claude Code's part, in `deploy/` and `docs/deploy.md`:
 - Docker Compose: PostgreSQL, the server, and Caddy for automatic HTTPS.
 - A nightly database backup (`pg_dump`), kept 7 days.
 - A step-by-step guide to install, update and restore, written for a beginner.
 - No password or key in the repository: everything in a `.env` file on the server, described in `.env.example`.
+- Exact image versions (PostgreSQL 18.x, Caddy 2.x), updated on purpose; `ufw limit 22/tcp`; SSH by key only, no root login; automatic security updates.
+- The domain is `brinelight.xyz`, bought at Vercel, DNS kept at Vercel: `api` is an `A` record to the server (no proxy), `play` a `CNAME` to `brinelight.pages.dev`, added after the custom domain in Cloudflare Pages. Hetzner Backups on top of the nightly backups (the guide says why both).
+- The guide ends with "Be warned if the server goes down": a free monitor checks `https://api.<domain>/health` every 5 minutes and sends an e-mail.
 - Done when: you sign in with Phantom on your phone and on your computer, and see the same city on both.
 
 ## Not this week

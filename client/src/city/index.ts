@@ -35,7 +35,7 @@ export function createCity(
   scene.onFrame((now, view) => {
     if (view !== "city") return;
     buildings.animate(now);
-    labels.place();
+    labels.place(sheet.current);
   });
 
   // A tap opens a sheet; a drag turns the camera and opens nothing.

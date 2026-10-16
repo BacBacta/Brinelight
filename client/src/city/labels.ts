@@ -11,24 +11,23 @@ export function createLabels(root: HTMLElement, scene: SceneHandle) {
   layer.className = "labels city";
   layer.setAttribute("aria-hidden", "true");
   root.appendChild(layer);
-  type Label = { el: HTMLDivElement; key: string; bar: HTMLElement | null; w: number; h: number; compactW?: number };
+  type Label = { el: HTMLDivElement; key: string; bar: HTMLElement | null; w: number; h: number; compactW: number; compactH: number };
   const els = {} as Record<BuildingId, Label>;
   for (const id of BUILDING_IDS) {
     const el = document.createElement("div");
     el.className = "bl";
     layer.appendChild(el);
-    els[id] = { el, key: "", bar: null, w: 0, h: 0 };
+    els[id] = { el, key: "", bar: null, w: 0, h: 0, compactW: 0, compactH: 0 };
   }
   /** Sizes are measured once per text change, and only when the label is shown. */
   const measure = (L: Label) => {
     L.el.classList.remove("compact");
     L.w = L.el.offsetWidth;
     L.h = L.el.offsetHeight;
-    if (L.el.querySelector(".nm")) {
-      L.el.classList.add("compact");
-      L.compactW = L.el.offsetWidth;
-      L.el.classList.remove("compact");
-    } else L.compactW = undefined;
+    L.el.classList.add("compact");
+    L.compactW = L.el.offsetWidth;
+    L.compactH = L.el.offsetHeight;
+    L.el.classList.remove("compact");
   };
   let lighthouseLevel = 0;
 
@@ -48,7 +47,7 @@ export function createLabels(root: HTMLElement, scene: SceneHandle) {
           const name = BUILDINGS[id].name;
           L.el.innerHTML =
             (up ? '<span class="up">↑</span>' : "") +
-            (level === 0 && !job ? `<b class="new">＋<span class="nm"> ${name}</span></b>` : `<b>${name} <i>${level}</i></b>`) +
+            (level === 0 && !job ? `<b class="new">＋<span class="nm"> ${name}</span></b>` : `<b><span class="nm">${name} </span><i>${level}</i></b>`) +
             (job ? '<span class="pb"><i></i></span>' : "");
           L.bar = L.el.querySelector(".pb i");
           L.w = 0;
@@ -56,8 +55,11 @@ export function createLabels(root: HTMLElement, scene: SceneHandle) {
         if (job && L.bar) L.bar.style.width = `${(progress(job) * 100).toFixed(1)}%`;
       }
     },
-    /** Follows the camera: called on every frame. Labels that would overlap are moved up or reduced (overlap.ts). */
-    place() {
+    /**
+     * Follows the camera: called on every frame. Labels that would overlap are moved up a little or reduced
+     * to a badge (overlap.ts); the label of the selected building always keeps its full size.
+     */
+    place(selected: BuildingId | null) {
       const boxes: (LabelBox & { id: BuildingId })[] = [];
       for (const id of BUILDING_IDS) {
         const { x, z } = plotPosition(id);
@@ -66,9 +68,9 @@ export function createLabels(root: HTMLElement, scene: SceneHandle) {
         L.el.style.display = p.visible ? "" : "none";
         if (!p.visible) continue;
         if (L.w === 0) measure(L);
-        boxes.push({ id, x: p.x, y: p.y, w: L.w, h: L.h, depth: p.depth, compactW: L.compactW });
+        boxes.push({ id, x: p.x, y: p.y, w: L.w, h: L.h, depth: p.depth, compactW: L.compactW, compactH: L.compactH });
       }
-      const places = layoutLabels(boxes);
+      const places = layoutLabels(boxes, selected);
       for (const b of boxes) {
         const L = els[b.id];
         const pl = places[b.id]!;

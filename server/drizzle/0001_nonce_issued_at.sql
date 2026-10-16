@@ -1,0 +1,1 @@
+ALTER TABLE "auth_nonces" ADD COLUMN "issued_at" timestamp with time zone NOT NULL;

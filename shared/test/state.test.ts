@@ -1,12 +1,26 @@
-import { ATTACK_STAY, HOUR, OFFLINE_CAP, leadOf, seaSite, travelTime, STARTING_BUILDINGS, STARTING_STOCK, netRates, storeCap, upgradeCost, upgradeTime } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
-import { SAVE_KEY, cleanQueue, loadGame, saveGame, type KeyValueStore } from "../src/state/save.js";
-import { advance, catchUp, elapse, newPlayerState, readReport, sail, tick, upgrade } from "../src/state/state.js";
-
-const memoryStore = (): KeyValueStore & { data: Map<string, string> } => {
-  const data = new Map<string, string>();
-  return { data, getItem: (k) => data.get(k) ?? null, setItem: (k, v) => void data.set(k, v) };
-};
+import {
+  ATTACK_STAY,
+  HOUR,
+  OFFLINE_CAP,
+  STARTING_BUILDINGS,
+  STARTING_STOCK,
+  advance,
+  catchUp,
+  cleanQueue,
+  leadOf,
+  netRates,
+  newPlayerState,
+  parseState,
+  readReport,
+  sail,
+  seaSite,
+  storeCap,
+  travelTime,
+  upgrade,
+  upgradeCost,
+  upgradeTime,
+} from "../src/index.js";
 
 describe("new city", () => {
   it("starts from the shared starting values", () => {
@@ -44,88 +58,9 @@ describe("production", () => {
     s.buildings.refinery = 0;
     expect(advance(s, 1000 * HOUR).stock.oil).toBe(0);
   });
-
-  it("live time is sped up: 1 real minute at speed 60 is 1 hour", () => {
-    const s = newPlayerState();
-    expect(tick(s, 60, 60)).toEqual(advance(s, HOUR));
-  });
-});
-
-describe("save and time away", () => {
-  const t0 = Date.UTC(2026, 9, 15, 12);
-
-  it("saves under brinelight-client-v1 and loads the same city", () => {
-    const store = memoryStore();
-    const s = advance(newPlayerState(), 2 * HOUR);
-    saveGame(store, s, t0);
-    expect(store.data.has(SAVE_KEY)).toBe(true);
-    expect(loadGame(store, t0)).toEqual(s);
-  });
-
-  it("time away uses real elapsed time, never sped up", () => {
-    const store = memoryStore();
-    const s = newPlayerState();
-    saveGame(store, s, t0);
-    expect(loadGame(store, t0 + HOUR * 1000)).toEqual(advance(s, HOUR));
-  });
-
-  it("time away counts at most OFFLINE_CAP", () => {
-    const store = memoryStore();
-    const s = newPlayerState();
-    saveGame(store, s, t0);
-    expect(loadGame(store, t0 + 30 * HOUR * 1000)).toEqual(advance(s, OFFLINE_CAP));
-    expect(catchUp(s, 30 * HOUR)).toEqual(advance(s, OFFLINE_CAP));
-  });
-
-  it("a save from the future counts no time", () => {
-    const store = memoryStore();
-    const s = newPlayerState();
-    saveGame(store, s, t0);
-    expect(loadGame(store, t0 - HOUR * 1000)).toEqual(s);
-  });
-
-  it("starts a new city when the save is missing, corrupt or from another version", () => {
-    const store = memoryStore();
-    expect(loadGame(store, t0)).toEqual(newPlayerState());
-    store.data.set(SAVE_KEY, "{not json");
-    expect(loadGame(store, t0)).toEqual(newPlayerState());
-    store.data.set(SAVE_KEY, JSON.stringify({ v: 2, savedAt: t0, state: newPlayerState() }));
-    expect(loadGame(store, t0)).toEqual(newPlayerState());
-    store.data.set(SAVE_KEY, JSON.stringify({ v: 1, savedAt: t0, state: { ...newPlayerState(), stock: { oil: "lots" } } }));
-    expect(loadGame(store, t0)).toEqual(newPlayerState());
-  });
-
-  it("works without any storage", () => {
-    expect(() => saveGame(null, newPlayerState(), t0)).not.toThrow();
-    expect(loadGame(null, t0)).toEqual(newPlayerState());
-  });
-});
-
-describe("time between two frames", () => {
-  const s = newPlayerState();
-  const speed = 60;
-
-  it("16 ms is live time, sped up", () => {
-    expect(elapse(s, 0.016, speed)).toEqual(tick(s, 0.016, speed));
-    expect(elapse(s, 0.016, speed)).toEqual(advance(s, 0.016 * speed));
-  });
-
-  it("exactly 1 s is still live time", () => {
-    expect(elapse(s, 1, speed)).toEqual(advance(s, speed));
-  });
-
-  it("2 h with the tab hidden is time away: real time, not sped up", () => {
-    expect(elapse(s, 2 * HOUR, speed)).toEqual(advance(s, 2 * HOUR));
-  });
-
-  it("3 days with the tab hidden counts at most OFFLINE_CAP", () => {
-    expect(elapse(s, 3 * 24 * HOUR, speed)).toEqual(advance(s, OFFLINE_CAP));
-  });
 });
 
 describe("buildings", () => {
-  const t0 = Date.UTC(2026, 9, 15, 12);
-
   it("upgrading pays the shared cost and queues the shared duration", () => {
     const s = newPlayerState();
     const r = upgrade(s, "refinery");
@@ -165,34 +100,6 @@ describe("buildings", () => {
     expect(after.stock.oil).toBeCloseTo(expected.stock.oil);
     expect(after.stock.oil).toBeGreaterThan(catchUp(before, OFFLINE_CAP).stock.oil);
   });
-
-  it("the queue is saved and comes back on load", () => {
-    const store = memoryStore();
-    const r = upgrade(newPlayerState(), "refinery");
-    if (!r.ok) throw new Error(r.reason);
-    saveGame(store, r.state, t0);
-    expect(loadGame(store, t0)).toEqual(r.state);
-  });
-
-  it("a bad job in the save is dropped, the rest of the city is kept", () => {
-    const store = memoryStore();
-    const s = advance(newPlayerState(), HOUR);
-    const good = { id: "fishery", left: 100, duration: 3240 };
-    const file = {
-      v: 1,
-      savedAt: t0,
-      state: { ...s, queue: [good, { id: "castle", left: 10, duration: 10 }, { id: "refinery", left: "soon", duration: 10 }, null] },
-    };
-    store.data.set(SAVE_KEY, JSON.stringify(file));
-    expect(loadGame(store, t0)).toEqual({ ...s, queue: [good] });
-  });
-
-  it("a save from before the queue loads with an empty queue", () => {
-    const store = memoryStore();
-    const { queue: _none, ...old } = newPlayerState();
-    store.data.set(SAVE_KEY, JSON.stringify({ v: 1, savedAt: t0, state: old }));
-    expect(loadGame(store, t0)).toEqual(newPlayerState());
-  });
 });
 
 describe("queue read from a save", () => {
@@ -224,28 +131,9 @@ describe("queue read from a save", () => {
     const raw = [{ id: "castle", left: 1, duration: 1 }, null, { id: "refinery", left: 1, duration: 10 }, { id: "fishery", left: 2, duration: 10 }];
     expect(cleanQueue(raw).map((j) => j.id)).toEqual(["refinery", "fishery"]);
   });
-
-  it("the cleaned queue is what loadGame gives back", () => {
-    const store = memoryStore();
-    const s = newPlayerState();
-    const raw = [
-      { id: "refinery", left: 99_999, duration: 3240 },
-      { id: "refinery", left: 10, duration: 3240 },
-      { id: "fishery", left: 200, duration: 3240 },
-      { id: "lumberyard", left: 300, duration: 3240 },
-    ];
-    const t0 = Date.UTC(2026, 9, 15, 12);
-    store.data.set(SAVE_KEY, JSON.stringify({ v: 1, savedAt: t0, state: { ...s, queue: raw } }));
-    expect(loadGame(store, t0).queue).toEqual([
-      { id: "refinery", left: 3240, duration: 3240 },
-      { id: "fishery", left: 200, duration: 3240 },
-    ]);
-  });
 });
 
 describe("Pearls", () => {
-  const t0 = Date.UTC(2026, 9, 15, 12);
-
   it("a new city starts with the shared starting Pearls, apart from the stock", () => {
     const s = newPlayerState();
     expect(s.pearls).toBe(200);
@@ -256,26 +144,9 @@ describe("Pearls", () => {
     const s = { ...newPlayerState(), pearls: 1_000_000 };
     expect(advance(s, 1000 * HOUR).pearls).toBe(1_000_000);
   });
-
-  it("are saved and come back on load", () => {
-    const store = memoryStore();
-    const s = { ...newPlayerState(), pearls: 345 };
-    saveGame(store, s, t0);
-    expect(loadGame(store, t0).pearls).toBe(345);
-  });
-
-  it("a save from before the Pearls loads with 200", () => {
-    const store = memoryStore();
-    const { pearls: _none, ...old } = newPlayerState();
-    store.data.set(SAVE_KEY, JSON.stringify({ v: 1, savedAt: t0, state: { ...old, stock: { ...old.stock, wood: 700 } } }));
-    const loaded = loadGame(store, t0);
-    expect(loaded.pearls).toBe(200);
-    expect(loaded.stock.wood).toBe(700);
-  });
 });
 
 describe("fleets", () => {
-  const t0 = Date.UTC(2026, 9, 15, 12);
   const trip = travelTime(seaSite("camp-1")!, {}, leadOf("tom", { tom: { level: 1 } }));
   const sent = () => {
     const r = sail(newPlayerState(), "camp-1");
@@ -322,28 +193,6 @@ describe("fleets", () => {
     expect(researched.troops).toEqual(plain.troops);
   });
 
-  it("a fleet at sea survives a save", () => {
-    const store = memoryStore();
-    const s = advance(sent(), 600);
-    saveGame(store, s, t0);
-    expect(loadGame(store, t0)).toEqual(s);
-  });
-
-  it("a bad fleet in the save is dropped, the rest of the city is kept", () => {
-    const store = memoryStore();
-    const s = advance(sent(), 600);
-    const bad = { ...s.fleets[0], site: "fish-1" };
-    store.data.set(SAVE_KEY, JSON.stringify({ v: 1, savedAt: t0, state: { ...s, fleets: [bad, s.fleets[0]] } }));
-    expect(loadGame(store, t0)).toEqual(s);
-  });
-
-  it("a save from before the sea loads with the starting sea", () => {
-    const store = memoryStore();
-    const { fleets: _f, world: _w, wounded: _wd, reports: _r, lead: _l, ...old } = newPlayerState();
-    store.data.set(SAVE_KEY, JSON.stringify({ v: 1, savedAt: t0, state: old }));
-    expect(loadGame(store, t0)).toEqual(newPlayerState());
-  });
-
   it("reports are read one after another", () => {
     let s = catchUp(sent(), OFFLINE_CAP);
     s = readReport(s);
@@ -352,5 +201,94 @@ describe("fleets", () => {
 
   it("a refusal keeps the reason from the shared rules", () => {
     expect(sail(sent(), "wreck-1")).toEqual({ ok: false, reason: "Build the Harbor to send more fleets" });
+  });
+});
+
+/** A city as it travels as JSON (to the server, or into a save). */
+const json = (v: unknown): unknown => JSON.parse(JSON.stringify(v));
+
+describe("parseState: strict reading of a city", () => {
+  const playing = () => {
+    const r = sail(newPlayerState(), "camp-1");
+    if (!r.ok) throw new Error(r.reason);
+    const u = upgrade(advance(r.state, 600), "fishery");
+    if (!u.ok) throw new Error(u.reason);
+    return u.state;
+  };
+
+  it("reads back a city that went through JSON, unchanged", () => {
+    expect(parseState(json(newPlayerState()))).toEqual(newPlayerState());
+    const s = catchUp(playing(), 3 * HOUR);
+    expect(parseState(json(s))).toEqual(s);
+  });
+
+  it("refuses a city without Pearls instead of giving back 200", () => {
+    const { pearls: _p, ...noPearls } = newPlayerState();
+    expect(parseState(json(noPearls))).toBeNull();
+    expect(parseState(json({ ...newPlayerState(), pearls: -1 }))).toBeNull();
+  });
+
+  it("refuses a city without its sea instead of giving back full wrecks", () => {
+    const s = newPlayerState();
+    for (const key of ["world", "fleets", "wounded", "reports", "lead", "queue"] as const) {
+      const { [key]: _gone, ...rest } = s;
+      expect(parseState(json(rest)), key).toBeNull();
+    }
+  });
+
+  it("refuses a sea with a missing or invalid camp or wreck", () => {
+    const s = newPlayerState();
+    const { "camp-1": _c, ...camps } = s.world.camps;
+    expect(parseState(json({ ...s, world: { ...s.world, camps } }))).toBeNull();
+    expect(parseState(json({ ...s, world: { ...s.world, camps: { ...s.world.camps, "camp-1": 0 } } }))).toBeNull();
+    // More oil in a wreck than it ever holds.
+    expect(parseState(json({ ...s, world: { ...s.world, wrecks: { ...s.world.wrecks, "wreck-1": 99_999 } } }))).toBeNull();
+  });
+
+  it("refuses a bad report, or more reports than are kept", () => {
+    const s = catchUp(playing(), OFFLINE_CAP);
+    expect(parseState(json({ ...s, reports: [{ ...s.reports[0], win: "yes" }] }))).toBeNull();
+    expect(parseState(json({ ...s, reports: Array.from({ length: 21 }, () => s.reports[0]) }))).toBeNull();
+  });
+
+  it("refuses a city with a missing building, a wrong lead or a bad stock", () => {
+    const s = newPlayerState();
+    const { harbor: _h, ...buildings } = s.buildings;
+    expect(parseState(json({ ...s, buildings }))).toBeNull();
+    expect(parseState(json({ ...s, lead: "blackbeard" }))).toBeNull();
+    expect(parseState(json({ ...s, stock: { ...s.stock, oil: "lots" } }))).toBeNull();
+  });
+
+  it("still accepts no lead captain", () => {
+    expect(parseState(json({ ...newPlayerState(), lead: null }))?.lead).toBeNull();
+  });
+
+  it("drops a bad job or a bad fleet: the player can only lose, never gain", () => {
+    const s = playing();
+    const raw = json({
+      ...s,
+      queue: [{ id: "castle", left: 1, duration: 1 }, ...s.queue],
+      fleets: [{ ...s.fleets[0], site: "fish-1" }, ...s.fleets],
+    });
+    expect(parseState(raw)).toEqual(s);
+  });
+
+  it("brings time left back within bounds", () => {
+    const s = playing();
+    const raw = json({ ...s, queue: [{ ...s.queue[0], left: 1e9 }], fleets: [{ ...s.fleets[0], left: -50 }] });
+    const p = parseState(raw)!;
+    expect(p.queue[0]!.left).toBe(p.queue[0]!.duration);
+    expect(p.fleets[0]!.left).toBe(0);
+  });
+
+  it("keeps only the fields of a city", () => {
+    expect(parseState(json({ ...newPlayerState(), admin: true }))).not.toHaveProperty("admin");
+  });
+
+  it("never throws, whatever it is given", () => {
+    for (const raw of [null, undefined, 0, "city", [], {}, { buildings: null }, json({ ...newPlayerState(), fleets: [null, 1, "x"] })]) {
+      expect(() => parseState(raw)).not.toThrow();
+    }
+    expect(parseState({})).toBeNull();
   });
 });

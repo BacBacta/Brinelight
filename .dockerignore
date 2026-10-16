@@ -1,0 +1,15 @@
+# Only what the server image needs is sent to Docker.
+**/node_modules
+**/dist
+e2e
+client/src
+client/public
+client/test
+shared/test
+server/test
+.git
+.github
+docs
+**/.env
+**/.env.*
+deploy/backups

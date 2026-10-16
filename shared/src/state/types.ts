@@ -1,6 +1,12 @@
-import type { Buildings, CaptainId, CombatReport, Fleet, OwnedCaptain, Rafts, SeaWorld, Stock, Techs, Troops, UpgradeJob } from "@brinelight/shared";
+import type { CaptainId } from "../rules/captains.js";
+import type { Rafts } from "../rules/rafts.js";
+import type { Techs } from "../rules/research.js";
+import type { CombatReport, Fleet, SeaWorld } from "../rules/sea.js";
+import type { OwnedCaptain } from "../rules/start.js";
+import type { UpgradeJob } from "../rules/buildings.js";
+import type { Buildings, Stock, Troops } from "../rules/types.js";
 
-/** Everything the client knows about the player's city. Temporary: the server takes over in week 4. */
+/** Everything known about a player's city. The client and the server hold the same document. */
 export type PlayerState = {
   buildings: Buildings;
   stock: Stock;

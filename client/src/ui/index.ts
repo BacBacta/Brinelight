@@ -14,16 +14,19 @@ export type Ui = {
   toast(text: string, kind?: ToastKind, icon?: string): void;
   /** Switches to a view as if its menu button was tapped. */
   showView(view: NavView): void;
+  /** Marks the Power card while signed in. */
+  signedIn(on: boolean): void;
 };
 
 /** The game interface over the 3D view: top bar, Mist banner, bottom menu and toasts. */
-export function createUi(root: HTMLElement, onView: (view: NavView) => void): Ui {
-  const hud = createHud(root);
+export function createUi(root: HTMLElement, onView: (view: NavView) => void, onProfile?: () => void): Ui {
+  const hud = createHud(root, onProfile);
   const toasts = createToasts(root);
   const nav = createNav(root, () => toasts.show("Coming soon", "", "~"), onView);
   return {
     showView: (view) => nav.select(view),
     update: (state) => hud.update(state),
     toast: (text, kind, icon) => toasts.show(text, kind, icon),
+    signedIn: (on) => hud.signedIn(on),
   };
 }

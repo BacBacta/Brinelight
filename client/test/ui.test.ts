@@ -1,6 +1,6 @@
 import { STARTING_BUILDINGS, emptyTroops, oilAutonomy, power, storeCap } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
-import { newPlayerState, sail } from "../src/state/state.js";
+import { newPlayerState, sail } from "@brinelight/shared";
 import { NAV_ITEMS } from "../src/ui/nav.js";
 import { MAX_TOASTS, keepToasts } from "../src/ui/toast.js";
 import { FULL_AT, cityPower, fillRatio, longAmount, mistText, rateText, shortAmount, survivorsText } from "../src/ui/values.js";
