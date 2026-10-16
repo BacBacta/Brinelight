@@ -57,6 +57,12 @@ The 30 FPS goal is met on the Samsung Galaxy S22: 60 FPS with a minimum of 60, i
 
 This is a high-end phone. Before the beta, the same protocol must still be run on an entry-level Android phone (about 120 €), which is the phone the goal is about.
 
+## Rafts (week 4, task 6)
+
+Up to 39 rafts can sit around the island. Each part (deck, planks, free slots, their rings, the tap shapes) is one `InstancedMesh`, so rafts add about 5 draw calls whatever their number, plus one scaffolding model while the shipyard works (`client/test/rafts.test.ts` checks it with 39 rafts). Their bobbing moves the instances, without creating objects.
+
+To check on a phone, with `?fps`: a city with the Lighthouse at level 10 and its 39 rafts, in the city view, against the same city without rafts. The container has no graphics chip, so this measure is to be made on the phone.
+
 ## If a phone stays under 30 FPS
 
 From the simplest to the heaviest:

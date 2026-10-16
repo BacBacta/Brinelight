@@ -45,6 +45,10 @@ The rest of the guide is for later: updating, restoring, solving problems.
 
 On Windows, `deploy/local-test/START-TEST.bat` does all the steps below for you (double-click it; `STOP-TEST.bat` stops everything). It was used for the first Phantom test on 2026-10-16.
 
+To try research and rafts on your phone without waiting hours, double-click `START-TEST-FAST.bat` instead: the same test, with the account's city 60 times faster (the server's `DEV_SPEED=60`, so a 1 h 12 min raft takes about 1 min 12 s). The window shows the speed at start (`Game speed: 60 times faster than real time`), and again next to the game address. It is the parameter `-Speed` of `start-test.ps1` (1 by default, real time). Only a signed-in city is sped up: a city played without an account keeps real time. The server refuses any speed other than 1 in production, so this is for this local test only.
+
+By hand (the terminals below), the same is `DEV_SPEED=60` before `npm run dev:server` (PowerShell: `$env:DEV_SPEED="60"`).
+
 The server is not rented yet: it waits until it is really needed (week 7 at the latest, see `docs/decisions.md`). Until then, you can test signing in with Phantom on your phone from your own computer, for free, through two temporary Cloudflare tunnels. A tunnel gives a local program a public `https://….trycloudflare.com` address, with no account and nothing to configure.
 
 Everything stays on your computer: the database is in memory (PGlite) and is lost when you stop the server. That is fine for a test.
@@ -105,8 +109,8 @@ On Windows (PowerShell): `$env:VITE_API_URL="https://<API address>"; npm run bui
 1. Open the **game address** inside Phantom's browser (in Phantom: the browser tab, then type the address). In Chrome, the Profile also offers "Open in Phantom".
 2. Tap the Power card (top left), then "Sign in with your wallet", and approve in Phantom.
 3. Check:
-   - **the sign-in is accepted**: a toast says "Signed in. Your city is saved on your account.", and the Power card gets a green mark;
-   - **the city is found**: upgrade a building, wait a few seconds, then reload the page. The upgrade is still there. In terminal 3 you see `PUT /city` then `GET /city` with `statusCode` 200.
+   - **the sign-in is accepted**: a toast says "Signed in. Your city is saved on your account." (or "Your account has its own city…" if you played on this phone before signing in), and the Power card gets a green mark;
+   - **the city is found**: upgrade a building, then reload the page. The upgrade is still there. In terminal 3 you see `POST /city/actions` then `GET /city` with `statusCode` 200.
 4. If you have Phantom in a browser on your computer too, open the game address there and sign in with the same wallet: you see the same city.
 
 ### Stop everything

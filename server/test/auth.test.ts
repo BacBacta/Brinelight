@@ -11,7 +11,7 @@ import { TOO_MANY_REQUESTS, type Refusal } from "../src/refusals.js";
 import { hashToken, openDatabase, schema, type Database, type Db } from "../src/db/index.js";
 
 const ORIGIN = "https://brinelight.pages.dev";
-const CONFIG: Config = { allowedOrigins: [ORIGIN, "http://localhost:5173"], chainId: "mainnet", trustedProxy: null, databaseUrl: undefined };
+const CONFIG: Config = { allowedOrigins: [ORIGIN, "http://localhost:5173"], chainId: "mainnet", trustedProxy: null, databaseUrl: undefined, devSpeed: 1 };
 const T0 = new Date("2026-10-15T12:00:00.000Z");
 const MIN = 60_000;
 const DAY = 24 * 3600_000;

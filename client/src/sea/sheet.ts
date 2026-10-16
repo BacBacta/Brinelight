@@ -18,7 +18,7 @@ import { ODDS_TEXT, TROOP_NAMES, TROOP_TYPES, counterTip } from "./text.js";
 const HOLD_NOTE = { tom: " (Old Tom +30%)" } as Record<string, string>;
 
 /** The sheet of a camp or a wreck, and the combat reports. */
-export function createSeaSheet(root: HTMLElement, actions: { sail(site: string): void; closeReport(): void }) {
+export function createSeaSheet(root: HTMLElement, actions: { sail(site: string): void; closeReport(reportId: string): void }) {
   const el = document.createElement("section");
   el.className = "sheet card";
   el.hidden = true;
@@ -36,11 +36,12 @@ export function createSeaSheet(root: HTMLElement, actions: { sail(site: string):
   });
 
   const close = () => {
-    const wasReport = report !== null;
+    const shown = report;
     site = null;
     report = null;
     el.hidden = true;
-    if (wasReport) actions.closeReport();
+    // The report you saw is the one marked read, even if a newer one arrived meanwhile.
+    if (shown) actions.closeReport(shown.id);
   };
 
   const frame = (title: string, body: string) =>

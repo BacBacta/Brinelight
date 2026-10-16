@@ -1,4 +1,4 @@
-import { OK, canPay, refuse, roundCost, type Check, type Cost, type Stock } from "./types.js";
+import { OK, canPay, payCost, refuse, roundCost, type Check, type Cost, type Stock } from "./types.js";
 import { protoSeconds } from "./time.js";
 
 export type RaftBuildingId = "greenhouse" | "smokehouse" | "watchtower";
@@ -13,6 +13,8 @@ export const RAFT_BUILDINGS: Record<RaftBuildingId, { name: string; effect: stri
 };
 
 export const RAFT_BUILDING_MAX_LEVEL = 3;
+/** A raft's sturdiness when new or repaired (the prototype's 100). */
+export const RAFT_MAX_HP = 100;
 export const RAFT_BUILDING_MAX_COPIES = 2;
 /** Condition below which a raft runs at half capacity. */
 export const RAFT_DAMAGED_BELOW = 60;
@@ -85,4 +87,30 @@ export function applyMistDamage(rafts: Rafts, held: boolean): Rafts {
   return out;
 }
 
-export const repairCost = (r: Raft): Cost => ({ wood: (100 - r.hp) * 3 });
+export const repairCost = (r: Raft): Cost => ({ wood: (RAFT_MAX_HP - r.hp) * 3 });
+
+/**
+ * The work at the shipyard: one at a time. Today only a new raft (`kind: "raft"`); the same shape will take
+ * the other works of the prototype later (a building put on a raft, a building upgraded) with their own kind.
+ */
+export type YardJob = { slot: string; kind: "raft"; left: number; duration: number };
+
+export type StartRaft = { ok: true; stock: Stock; yard: YardJob } | { ok: false; reason: string };
+
+/** Starts a new raft on a slot: checked with canAddRaft, paid at once, moored after RAFT_BUILD_TIME. */
+export function startRaft(slot: string, ctx: { rafts: Rafts; lighthouse: number; stock: Stock; yard: YardJob | null }): StartRaft {
+  const check = canAddRaft({ rafts: ctx.rafts, lighthouse: ctx.lighthouse, slot, stock: ctx.stock, yardBusy: ctx.yard !== null });
+  if (!check.ok) return check;
+  return {
+    ok: true,
+    stock: payCost(ctx.stock, raftCost(Object.keys(ctx.rafts).length)),
+    yard: { slot, kind: "raft", left: RAFT_BUILD_TIME, duration: RAFT_BUILD_TIME },
+  };
+}
+
+/** Advances the work at the shipyard by `seconds` real seconds; once done, the new raft is moored on its slot. */
+export function advanceYard(rafts: Rafts, job: YardJob | null, seconds: number): { rafts: Rafts; yard: YardJob | null } {
+  if (!job) return { rafts, yard: null };
+  if (job.left > Math.max(0, seconds)) return { rafts, yard: { ...job, left: job.left - Math.max(0, seconds) } };
+  return { rafts: { ...rafts, [job.slot]: { hp: RAFT_MAX_HP, building: null, level: 0 } }, yard: null };
+}

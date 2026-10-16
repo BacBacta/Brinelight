@@ -15,6 +15,8 @@ npm run dev:client   # http://localhost:5173 (the prototype is at /prototype/)
 npm run dev:server   # http://localhost:8787/health
 ```
 
+Signed in, the city's time is the server's: `DEV_SPEED=60 npm run dev:server` runs it 60 times faster, as the client does on its own in development (refused in production).
+
 ## Layout
 
 | Folder | Role |

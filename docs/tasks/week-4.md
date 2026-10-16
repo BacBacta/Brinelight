@@ -10,7 +10,7 @@ Do the tasks in order, one per session. For each one: read CLAUDE.md, say what y
 Problem found while preparing the week: `catchUp` caps the whole time away at `OFFLINE_CAP` (8 h), timers included. As long as the client counted time, it went unnoticed. Once the server is the judge, a player away for 2 days would find a 20 h upgrade stuck at 8 h, and a fleet stuck at sea.
 
 - Timers (build queue, fleets) always advance by the full real time away. No cap, ever.
-- Production: **decision for the owner before coding** (balance value, CLAUDE.md rule 3):
+- Production: **decision for the owner before coding** (balance value, CLAUDE.md rule 3). **Decision: A (owner, 16 October).**
   - **A (recommended):** remove `OFFLINE_CAP`. Storage (`storeCap`) already limits what piles up; this is how most games of the genre work, and the open question of week 2 is closed.
   - **B:** keep a cap on production only. Then `advance` must split time: timers on the full time, production on the capped part, with the levels reached along the way. More code, more tests.
 - Update the tests, `docs/decisions.md` (close the open question) and the Week 3 test "20 h away is capped at 8 h".
@@ -39,6 +39,13 @@ Problem found while preparing the week: `catchUp` caps the whole time away at `O
 - Development speed (CLAUDE.md rule 4): `DEV_SPEED` read by the server only, refused when `NODE_ENV=production`, applied to the time it measures. `GET /city` and every action answer include `speed`, so the client shows the same pace as the server. This removes the week 3 limit "fewer resources after a reload in development".
 - Tests: every step above, two actions sent at the same moment (both applied once, in order), the same action sent twice (applied once, same answer), a refused action changes nothing, a new account gets a new city.
 
+**Done (16 October), with these changes approved by the owner:**
+- `applied_actions` keeps the outcome (applied, or refused with code and reason) and a SHA-256 of the action, not the answer with its city. A replay answers the same outcome with the current city and `"replayed": true`; the same id with other content is refused (409 `action_id_reused`).
+- A rule refusal is HTTP 422. Every answer that reads the database carries the city (`state`, `version`, `asOf`, `speed`); 413 `action_too_large` (body over 2 KB) and 429 `too_many_actions` never touch the database and carry none.
+- `PUT /city`, `readSentCity` and their tests stay until task 4, so that every commit stays green, end-to-end tests included. "A new account gets a new city at its first `GET /city`" moves to task 4: `ensureCity` is ready, and the first action already creates the city.
+- `DEV_SPEED` applies to the game time of the city only, never to sessions, nonces, rate limits or purges.
+- Two actions at the same moment are tested on a real PostgreSQL in the CI (job `postgres`), with a check that removing `FOR UPDATE` makes the test fail.
+
 ## Task 4 · The client sends actions
 
 - Signed in: each action is applied locally at once with `applyAction` (the screen reacts immediately), then sent. The server's answer **replaces** the local city.
@@ -47,8 +54,19 @@ Problem found while preparing the week: `catchUp` caps the whole time away at `O
 - Between two answers, the client advances the display with `tick` at the server's `speed`.
 - After sign-in: the account's city is shown. If a city was played on this device without an account, one message: "Your account has its own city. The city on this device stays here when you sign out."
 - Not signed in: nothing changes, the game is played locally as today.
-- Remove the week 3 sync code (`PUT /city`, the "one version ahead" guess, the keep/replace question).
+- Remove the week 3 sync code (`PUT /city`, `readSentCity` and their tests, the "one version ahead" guess, the keep/replace question).
+- `GET /city` creates the city of a new account with `ensureCity` (moved from task 3).
 - e2e: upgrade signed in → reload → the upgrade is there; upgrade refused by the server (resources edited in localStorage) → back to the server city with the toast; offline actions sent when back online.
+
+**First commit done (16 October): the client sends actions; `PUT /city` still exists but is no longer used.** Changes approved by the owner:
+- Server: `parseState` checks the city after catching up and after the action; refused, nothing is written and the answer is `server_error`.
+- One action on its way at a time. The city shown is the server's city plus the waiting actions, applied again with `applyAction`; it is never simply replaced while actions wait.
+- No answer, 429, `server_error` or an unknown code: the same action, same id, after 1, 2, 5, 10, 20, then 30 s (10 s per request); a `server_error` drops the action only after 3 minutes of errors in a row. 422: the server's city, the next actions again, a toast. 400, 409, 413: dropped, written to the console.
+- `signed_out` with waiting actions: kept; sent with their ids when the same account signs in again. Each account's copy is kept under its player's id, never sent with another token.
+- The session keeps the player's id (protected area, approved); week 3 sessions are forgotten.
+- Time shown: from `asOf`, the time since the answer (`performance.now()`) at the server's `speed`.
+
+**Second commit done (16 October): `PUT /city`, `readSentCity` (`check.ts`), `createCity`, `saveCity` and their tests are removed; `GET /city` makes the city of a new account at its first call, with `ensureCity`.**
 
 ## Task 5 · The cheat test
 
@@ -62,7 +80,12 @@ The checkpoint of the phase: "a modified client can neither create resources nor
 - a client with a faster clock (`DEV_SPEED` changed in the page): the server city does not move faster.
 - Done when: every case is refused or ignored, and the server city is exactly what the rules give.
 
-## Task 6 · Research and rafts (can slip to week 5)
+**Done (16 October), with these additions from the owner:**
+- `parseState` is stricter: whole numbers for levels, troops, survivors and Pearls; nothing below 0; resources and morale keep their decimals. Research, captains and rafts are read within the maximums of the rules; a missing id is level 0 or not owned yet.
+- `GET /city` and the 400 answer to an invalid action check the city with `parseState`, as the actions do.
+- Two more cases: an action id already used by another player; `playerId` and `__proto__` among the extra fields.
+
+## Task 6 · Research and rafts (done this week, by the owner's choice)
 
 The rules exist in `shared` (`canResearch`, `canAddRaft`…) but nothing in the game uses them yet.
 
@@ -70,6 +93,10 @@ The rules exist in `shared` (`canResearch`, `canAddRaft`…) but nothing in the 
 - Observatory sheet: the list of research, cost, time, and the refusal reason.
 - Raft slots appear around the island from Lighthouse level 4, as in the prototype; tapping a free slot shows its cost and docks a raft.
 - Tests in shared and server, one e2e scenario for research.
+
+**Research done (16 October, first commit).** One research at a time (`research` in the city), ended as an event of `advance`; costs, times and limits from the existing rules; action `research`; the Observatory sheet from the prototype, with one sentence on the Veteran Doctrine (it takes effect with troop training, week 5); `migrateSave` adds `research: null` to old local saves; works without an account; cheat cases (already in progress, Observatory too low, at its maximum, unknown); e2e: research started from the sheet, then done when its time is up. The function that puts a city for a test account lives in `e2e/harness.ts` only.
+
+**Rafts done (16 October, second commit).** One work at a time at the shipyard (`yard`, with a `kind` ready for the buildings on rafts later), ended as an event of `advance`; `RAFT_MAX_HP` defined once; costs, time and limits from the existing rules; action `dockRaft`; the slots around the island and the raft sheet from the prototype, drawn with `InstancedMesh` (up to 39 rafts); `migrateSave` adds `yard: null`; works without an account; cheat cases (slot taken, not lit, beyond the limit, shipyard busy, unknown); e2e: a lit slot tapped, the raft started, then moored by the server's clock.
 
 ## Not this week
 

@@ -17,7 +17,14 @@ export function createSea(
   scene: SceneHandle,
   canvas: HTMLCanvasElement,
   root: HTMLElement,
-  game: { state(): PlayerState; sail(site: string): void; readReport(): void; soon(): void; speed: number },
+  game: {
+    state(): PlayerState;
+    sail(site: string): void;
+    readReport(reportId: string): void;
+    soon(): void;
+    /** How much faster than real time the city runs: the server's speed when signed in. */
+    speed(): number;
+  },
 ): Sea {
   const map = createSeaMap(kit, (o) => scene.add(o, "sea"));
   const marks = createFleetMarks(
@@ -25,7 +32,7 @@ export function createSea(
     (o) => o.removeFromParent(),
   );
   const labels = createSeaLabels(root, scene);
-  const sheet = createSeaSheet(root, { sail: (id) => game.sail(id), closeReport: () => game.readReport() });
+  const sheet = createSeaSheet(root, { sail: (id) => game.sail(id), closeReport: (reportId) => game.readReport(reportId) });
 
   scene.onFrame((now, view) => {
     if (view !== "sea") return;
@@ -44,7 +51,7 @@ export function createSea(
     if (moved || sheet.showsReport) return;
     const id = scene.pick(e.clientX, e.clientY, map.hits)[0]?.object.userData.site as string | undefined;
     if (!id) return sheet.close();
-    if (id.startsWith("camp-") || id.startsWith("wreck-")) sheet.openSite(id, game.state(), game.speed);
+    if (id.startsWith("camp-") || id.startsWith("wreck-")) sheet.openSite(id, game.state(), game.speed());
     else {
       sheet.close();
       game.soon();
@@ -56,8 +63,8 @@ export function createSea(
       labels.update(state);
       const unread = state.reports.find((r) => !r.read);
       // An unread report opens by itself, one after another, wherever you are.
-      if (unread && !sheet.showsReport) sheet.openReport(unread, state, game.speed);
-      else sheet.update(state, game.speed);
+      if (unread && !sheet.showsReport) sheet.openReport(unread, state, game.speed());
+      else sheet.update(state, game.speed());
     },
     closeSheet() {
       if (!sheet.showsReport) sheet.close();

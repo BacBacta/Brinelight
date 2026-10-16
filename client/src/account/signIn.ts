@@ -3,7 +3,8 @@ import type { Wallet } from "@wallet-standard/base";
 import type { Api, ApiResult } from "./api.js";
 import { NO_SIGN_IN, signInFeature } from "./wallets.js";
 
-export type Session = { token: string; wallet: string; expiresAt: string };
+/** `playerId` names the account: its city is kept on this device under that id. */
+export type Session = { token: string; wallet: string; playerId: string; expiresAt: string };
 type Nonce = { nonce: string; issuedAt: string; expiresAt: string; chainId: string; statement: string };
 type Verified = { token: string; expiresAt: string; player: { id: string; wallet: string } };
 
@@ -44,5 +45,5 @@ export async function signIn(api: Api, wallet: Wallet, page: { host: string; ori
     body: { address: out.account.address, signedMessage: base64(out.signedMessage), signature: base64(out.signature) },
   });
   if (!v.ok) return v;
-  return { ok: true, data: { token: v.data.token, wallet: v.data.player.wallet, expiresAt: v.data.expiresAt } };
+  return { ok: true, data: { token: v.data.token, wallet: v.data.player.wallet, playerId: v.data.player.id, expiresAt: v.data.expiresAt } };
 }

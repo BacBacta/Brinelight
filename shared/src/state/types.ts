@@ -1,6 +1,6 @@
 import type { CaptainId } from "../rules/captains.js";
-import type { Rafts } from "../rules/rafts.js";
-import type { Techs } from "../rules/research.js";
+import type { Rafts, YardJob } from "../rules/rafts.js";
+import type { ResearchJob, Techs } from "../rules/research.js";
 import type { CombatReport, Fleet, SeaWorld } from "../rules/sea.js";
 import type { OwnedCaptain } from "../rules/start.js";
 import type { UpgradeJob } from "../rules/buildings.js";
@@ -20,6 +20,10 @@ export type PlayerState = {
   pearls: number;
   /** Upgrades in progress, in the order they were started. */
   queue: UpgradeJob[];
+  /** The research in progress at the Observatory: one at a time, null when none. */
+  research: ResearchJob | null;
+  /** The work at the shipyard (a new raft): one at a time, null when none. */
+  yard: YardJob | null;
   /** The captain at the head of your fleets. */
   lead: CaptainId | null;
   /** Fleets at sea, in the order they left. */
@@ -30,6 +34,9 @@ export type PlayerState = {
   wounded: Troops;
   /** The last combat reports, newest last. */
   reports: Report[];
+  /** How many reports this city has ever had: the next one is numbered reportSeq + 1. */
+  reportSeq: number;
 };
 
-export type Report = CombatReport & { read: boolean };
+/** A combat report, with a stable id ("r1", "r2"…) given in the order reports arrive, never reused. */
+export type Report = CombatReport & { id: string; read: boolean };
