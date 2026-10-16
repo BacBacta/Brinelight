@@ -1,0 +1,114 @@
+# Art direction
+
+The validated art direction of Brinelight. Every asset follows this page, or it does not go in.
+
+## Promise
+
+**"Keep the light on."** A drowned world, warm and inhabited. The danger is the Mist, not war.
+
+- Tone in three words: **Ghibli, tide, lantern.**
+- The test for any asset: *would survivors have built this from what the sea washes up?*
+
+## Palette
+
+| Role | Colors | Used for |
+| --- | --- | --- |
+| Navy | `#0C1F3A` / `#163A63` | Night, depth, frames |
+| Warm gold | `#FFC83A` / `#E09A12` | The Lighthouse's light, buttons, levels |
+| Cream | `#FFF4DA` | Canvas, paper, dry sand |
+| Turquoise | `#1FB5C4` | Shallow water, foam |
+| Driftwood | `#8C6B4A` / `#C9A77A` | All buildings, piers, rafts |
+| Verdigris copper | `#5E9E8C` | Metal details, the Lighthouse's and the Observatory's roofs |
+| Brick red | `#E2572F` | Pirates, refusals, the Mist striking |
+| Mist | `#8A6CFF` → `#B9B3D6` | The Mist |
+
+- Never more than three of these colors on one building.
+- No bright lawn grass: a drowned island has sand, dark rock and a few tufts.
+
+## Light
+
+Three states, with a fade between them.
+
+- **Calm day.** A cream-to-turquoise sky and a warm, low sun with long, soft shadows. The sea is turquoise near the island and navy far away. The Lighthouse is off.
+- **Mist.** A uniform grey-violet sky, with no shadows. Fog eats the sea from 20 m away, and the water turns leaden. The Lighthouse is on, its gold beam sweeping: it is the only warm point.
+- **Lighthouse night.** Deep navy with stars, and a cold blue light everywhere except around the Lighthouse. A gold trail of reflection runs on black water, and the windows glow cream.
+
+## Buildings
+
+- Each building is recognizable by its silhouette alone, at thumbnail size.
+- Three visual tiers (levels 1 to 3, 4 to 7, 8 and up): each tier grows and adds one element.
+- All stand on stilts or a rock plinth, never on grass.
+- A flag or a lantern on each building.
+- 300 to 1 500 triangles, with flat colors per face.
+
+| Building | Silhouette |
+| --- | --- |
+| Lighthouse | White conical tower with red bands, verdigris copper lantern |
+| Refinery | Round hooped vat, short copper chimney |
+| Fishery | Open hut on stilts, drying nets, upturned boat |
+| Lumberyard | Lean-to, bleached driftwood logs, circular saw |
+| Shelters | Cluster of huts and patched tents, washing line |
+| Barracks | Low palisade, training dummy, navy banner |
+| Harbor | L-shaped pier, bollards, boat, crane |
+| Observatory | Round turret, verdigris dome, telescope |
+| Infirmary | Low building, white cross on a cream canvas roof, awning with cots |
+
+## Captains
+
+- Painted bust portraits, in three-quarter view.
+- A plain background by rarity: copper for an officer, silver-blue for a commander, gold for an admiral.
+- Warm lantern light from below.
+- Stylized features that stay readable in a 48 px circle.
+- One consistent series.
+
+| Captain | Rarity, role | Portrait |
+| --- | --- | --- |
+| Tom | Officer, gathering | Sturdy, in his fifties, salt-and-pepper beard, yellow oilskin, rope and floats, a seagull |
+| Sel | Officer, speed | Young, head-scarf, spyglass, chart; looks at the horizon |
+| Bran | Commander, boarders | Broad, ginger beard, straps, grappling hook |
+| Isa | Commander, harpooners | Slim, braid, wave tattoos, tall harpoon |
+| Mira | Admiral, crossbowmen | Eye patch, amber eye, copper crossbow, navy cape |
+| Nera | Admiral, defense in the Mist | Grey hood, glowing lantern, mist around her; the only one who looks at the player |
+
+## Sea
+
+- A depth gradient, foam at the stilts, slow waves.
+- Wrecks are hulls and masts, not buildings.
+- Pirate camps are rafts around a black barge with a brick-red banner.
+- The Mist is a wall advancing from the horizon.
+
+## Interface
+
+Keep:
+- the navy, gold and cream palette;
+- Lilita One and Nunito;
+- rounded cards with thick borders;
+- short text in the second person;
+- the reason for a refusal, always shown.
+
+Add:
+- one consistent set of flat, two-tone icons;
+- the number that decides, on every upgrade sheet ("+12 wood/h");
+- a celebration at the end of works: floating gold text and a short sound, full screen for the Lighthouse;
+- ten short sounds in one family (wood and rope, not metal);
+- fewer 3D labels;
+- one motion at a time.
+
+## Brinelight is not
+
+- Generic medieval fantasy.
+- Grim post-apocalypse.
+- Pixel art.
+- Photo-realism.
+- Visual chaos.
+- Anything recognizable from another game or film.
+
+## Generated assets
+
+The captain portraits, and the nine building concepts and meshes, were generated on 2026-10-16 from this page (GPT Image and Meshy, through Higgsfield):
+
+- the portraits in `assets/captains/`;
+- the concepts in `assets/concepts/`;
+- the meshes in `assets/buildings/src/`.
+
+Every asset must follow this page, or it does not go in.

@@ -77,6 +77,44 @@ Measures in the container (Chromium, 412 × 915, pixel ratio 2.625, `?fps`, auto
 - Signed in, the client calls the server only to open the city (`GET /city`) and once per action: nothing is polled.
 - The signed-in cities have more draw calls because more buildings are built, not because of the account.
 
+## City buildings (week 5)
+
+The nine buildings now have their own models, generated from the art direction's concepts (`docs/art-direction.md`). `assets/buildings/make-buildings.py` (Python and Pillow, out of the build) makes the files the game serves from the originals in `assets/buildings/src/`. Each original has about 2 500 triangles and one 2048 px JPEG texture, and weighs 3.1 to 3.8 MB.
+
+The script makes three changes:
+- the texture becomes a 512 px WebP at quality 82 (`EXT_texture_webp`);
+- the geometry is quantized (`KHR_mesh_quantization`): positions on 16 bits (largest error 0.000014 model units), normals on 8 bits, texture coordinates on 16 bits;
+- identical vertices are welded, with 16-bit indices.
+
+| Building | File | Triangles | Vertices |
+| --- | --- | --- | --- |
+| Lighthouse | 142 kB | 2 451 | 5 038 |
+| Refinery | 143 kB | 2 485 | 5 053 |
+| Fishery | 135 kB | 2 270 | 5 106 |
+| Lumberyard | 162 kB | 2 369 | 5 355 |
+| Shelters | 153 kB | 2 384 | 5 272 |
+| Barracks | 162 kB | 2 404 | 5 408 |
+| Harbor | 154 kB | 2 427 | 5 341 |
+| Observatory | 160 kB | 2 511 | 5 165 |
+| Infirmary | 140 kB | 2 257 | 4 964 |
+| **Total** | **1 352 kB** | | |
+
+Each model is a single mesh with a single material: one draw call per building, plus its shadow.
+
+Measures in the container (Chromium, 412 × 915, quality 2, cache off). Each time is the median of 3 loads, until "Loading your city…" goes away. The new city has its starting buildings. The built city has all nine buildings, with the Lighthouse at level 4.
+
+| | Network | Load, new city | Load, built city | Downloaded | Draw calls (new / built) | Triangles (new / built) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Before (kit models) | local | 1.67 s | 1.71 s | 3.08 MB | 80 / 92 | 61.4 k / 62.3 k |
+| After (nine models) | local | 2.47 s | 2.37 s | 4.41 MB | 71 / 81 | 63.1 k / 62.5 k |
+| Before | 10 Mbit/s, 40 ms | 4.05 s | 4.03 s | 3.08 MB | | |
+| After | 10 Mbit/s, 40 ms | 5.25 s | 5.61 s | 4.41 MB | | |
+
+- The new models save 9 to 11 draw calls, with about as many triangles.
+- They cost 1.3 MB more to download, about 1.2 to 1.6 s at 10 Mbit/s, and some decoding time. The kit (`phare.glb`, 2.9 MB) still loads for the island, the scaffolding, the flags, the rafts and the sea.
+- To check on the phone with `?fps`.
+- If loading becomes too slow on the entry-level phone, the next step is a smaller kit holding only the models still used.
+
 ## Rafts (week 4, task 6)
 
 Up to 39 rafts can sit around the island. Each part (deck, planks, free slots, their rings, the tap shapes) is one `InstancedMesh`, so rafts add about 5 draw calls whatever their number, plus one scaffolding model while the shipyard works (`client/test/rafts.test.ts` checks it with 39 rafts). Their bobbing moves the instances, without creating objects.

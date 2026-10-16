@@ -181,6 +181,32 @@ describe("playing without signing in", () => {
 });
 
 describe("city labels", () => {
+  it("the nine building models: all loaded, each label just above its building, and a tap under it opens its sheet", async () => {
+    const base = newPlayerState();
+    const city = { ...base, buildings: { lighthouse: 4, refinery: 2, fishery: 2, lumberyard: 2, shelters: 1, barracks: 1, harbor: 1, observatory: 1, infirmary: 1 } };
+    const p = await newPlayer(false);
+    await p.context.addInitScript(({ key, file }) => localStorage.setItem(key, file), { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: Date.now(), state: city }) });
+    const models: string[] = [];
+    p.context.on("response", (r) => r.url().includes("/buildings/") && r.ok() && models.push(new URL(r.url()).pathname));
+    const page = await openGame(p.context);
+    expect(models.sort()).toEqual(["barracks", "fishery", "harbor", "infirmary", "lighthouse", "lumberyard", "observatory", "refinery", "shelters"].map((id) => `/buildings/${id}.glb`));
+    await page.waitForTimeout(1000);
+    await page.screenshot({ path: "e2e/.shots/shot-buildings.png" });
+    // Closer, every label has room at full size.
+    await page.mouse.move(206, 500);
+    await page.mouse.wheel(0, -600);
+    await page.waitForTimeout(1000);
+    const shown = () => page.evaluate(() => [...document.querySelectorAll<HTMLElement>(".labels.city .bl")].filter((e) => e.style.display !== "none" && !e.classList.contains("compact")).length);
+    await expect.poll(shown).toBe(9);
+    await page.screenshot({ path: "e2e/.shots/shot-buildings-near.png" });
+    // A tap just under each label lands on its building: the labels follow the models' heights.
+    for (const name of ["Lighthouse", "Refinery", "Fishery", "Lumberyard", "Shelters", "Barracks", "Harbor", "Observatory", "Infirmary"]) {
+      await openSheet(page, name);
+      await page.evaluate(() => document.querySelector<HTMLButtonElement>('.sheet:not(.profile):not([hidden]) [data-act="close"]')?.click());
+    }
+    await p.context.close();
+  });
+
   it("turning and zooming the camera: a label never covers another one (seen on the phone: a badge over \"Lighthouse 4\")", async () => {
     const base = newPlayerState();
     const city = { ...base, buildings: { ...base.buildings, lighthouse: 4, refinery: 2, fishery: 2, lumberyard: 2, shelters: 1, barracks: 1, harbor: 1, observatory: 1, infirmary: 1 } };

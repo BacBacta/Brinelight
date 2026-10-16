@@ -1,11 +1,17 @@
 import * as THREE from "three";
+import { BUILDING_FIX, type BuildingModel } from "./buildings.js";
 
 /** Size of the Lighthouse in the city: it grows with its level, up to 1.25 (prototype). */
 export function lighthouseScale(level: number): number {
   return Math.min(1.25, 0.82 + level * 0.045);
 }
 
-export type Lighthouse = { group: THREE.Group; animate(seconds: number): void };
+export type Lighthouse = {
+  group: THREE.Group;
+  animate(seconds: number): void;
+  /** In the city: the painted model takes the place of the tower built in code; the beams and the light stay, at its lantern. */
+  useModel(model: BuildingModel): void;
+};
 
 /**
  * The Lighthouse is built in code, as in the prototype: striped tower, lamp, two turning beams, a point light.
@@ -18,8 +24,10 @@ export function createLighthouse(opts: { gold?: boolean; light?: boolean } = {})
   const whiteM = new THREE.MeshStandardMaterial({ color: "#F6F1E6", roughness: 0.6 });
   const redM = new THREE.MeshStandardMaterial({ color: gold ? "#E9B22E" : "#C8361E", roughness: 0.5, metalness: gold ? 0.5 : 0 });
   const darkM = new THREE.MeshStandardMaterial({ color: "#2B3445", roughness: 0.6 });
+  const tower: THREE.Mesh[] = [];
   const add = (geo: THREE.BufferGeometry, mat: THREE.Material, y: number) => {
     const m = new THREE.Mesh(geo, mat);
+    tower.push(m);
     m.position.y = y;
     m.castShadow = true;
     m.receiveShadow = true;
@@ -37,7 +45,7 @@ export function createLighthouse(opts: { gold?: boolean; light?: boolean } = {})
   const top = 0.36 + h * segs;
   add(new THREE.CylinderGeometry(0.44, 0.44, 0.07, 18), darkM, top + 0.035);
   const lampM = new THREE.MeshStandardMaterial({ color: "#FFF3B0", emissive: "#FFD24A", emissiveIntensity: 2.2, transparent: true, opacity: 0.95 });
-  add(new THREE.CylinderGeometry(0.24, 0.24, 0.36, 12), lampM, top + 0.25);
+  const lamp = add(new THREE.CylinderGeometry(0.24, 0.24, 0.36, 12), lampM, top + 0.25);
   add(new THREE.ConeGeometry(0.33, 0.32, 12), redM, top + 0.59);
 
   const beamM = new THREE.MeshBasicMaterial({ color: "#FFE7A0", transparent: true, opacity: 0.14, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
@@ -53,8 +61,8 @@ export function createLighthouse(opts: { gold?: boolean; light?: boolean } = {})
   pivot.add(beam2);
   g.add(pivot);
 
-  if (opts.light ?? true) {
-    const light = new THREE.PointLight("#FFD27A", 6, 9, 1.6);
+  const light = (opts.light ?? true) ? new THREE.PointLight("#FFD27A", 6, 9, 1.6) : null;
+  if (light) {
     light.position.y = top + 0.25;
     g.add(light);
   }
@@ -64,6 +72,14 @@ export function createLighthouse(opts: { gold?: boolean; light?: boolean } = {})
     animate(now) {
       pivot.rotation.y = now;
       beamM.opacity = 0.12 * (1 + Math.sin(now * 6) * 0.05);
+    },
+    useModel(model) {
+      for (const m of tower) m.visible = m === lamp;
+      g.add(model.object);
+      const lantern = model.height * (BUILDING_FIX.lighthouse.lantern ?? 0.8);
+      lamp.position.y = lantern;
+      pivot.position.y = lantern;
+      if (light) light.position.y = lantern;
     },
   };
 }

@@ -132,10 +132,10 @@ if (new URLSearchParams(location.search).has("rules")) {
   const scene = startScene(canvas, {
     home: HOME,
     quality: forcedQuality(location.search),
-    onLoaded: (kit) => {
+    onLoaded: (kit, buildings) => {
       status.remove();
       fps?.modelsLoaded();
-      city = createCity(kit, scene, canvas, app, { state: () => state, upgrade: (building) => act({ type: "upgrade", building }), research: (tech) => act({ type: "research", tech }), train: (troop) => act({ type: "train", troop }), heal: () => act({ type: "heal" }), dockRaft: (slot) => act({ type: "dockRaft", slot }), toCity: () => ui.showView("city"), speed });
+      city = createCity(kit, buildings, scene, canvas, app, { state: () => state, upgrade: (building) => act({ type: "upgrade", building }), research: (tech) => act({ type: "research", tech }), train: (troop) => act({ type: "train", troop }), heal: () => act({ type: "heal" }), dockRaft: (slot) => act({ type: "dockRaft", slot }), toCity: () => ui.showView("city"), speed });
       sea = createSea(kit, scene, canvas, app, {
         state: () => state,
         sail: (site) => {
