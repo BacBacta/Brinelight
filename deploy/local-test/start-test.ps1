@@ -2,7 +2,7 @@
 # Starts two temporary Cloudflare tunnels, the server (in-memory database) and the game.
 # Everything stops when you press Enter at the end, or with STOP-TEST.bat.
 # Nothing is installed except cloudflared (with winget, the first time).
-# -Speed 60 (START-TEST-FAST.bat): the account's city runs 60 times faster (the server's DEV_SPEED), to try
+# -Speed 1000 (START-TEST-FAST.bat): the account's city runs 1000 times faster (the server's DEV_SPEED), to try
 # research and rafts without waiting hours. 1 by default: real time. A city played without an account is not sped up.
 param([ValidateRange(1, 3600)][int]$Speed = 1)
 $ErrorActionPreference = "Stop"

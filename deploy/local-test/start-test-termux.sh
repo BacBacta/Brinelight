@@ -3,13 +3,13 @@
 # Starts two temporary Cloudflare tunnels, the server (in-memory database) and the game, then opens
 # the game in Phantom's browser. Nothing is installed except git, Node.js and cloudflared (with pkg).
 #   bash deploy/local-test/start-test-termux.sh       real time
-#   bash deploy/local-test/start-test-termux.sh 60    the account's city runs 60 times faster (DEV_SPEED=60)
+#   bash deploy/local-test/start-test-termux.sh 1000  the account's city runs 1000 times faster (DEV_SPEED=1000)
 # Ctrl+C (in Termux: Volume down + C) stops everything. Also works on Linux and macOS, without the Termux parts.
 set -uo pipefail
 
 speed="${1:-1}"
 if ! [[ "$speed" =~ ^[0-9]+$ ]] || ((speed < 1 || speed > 3600)); then
-  echo "The speed must be a whole number from 1 to 3600 (60: 60 times faster)." >&2
+  echo "The speed must be a whole number from 1 to 3600 (1000: 1000 times faster)." >&2
   exit 1
 fi
 
