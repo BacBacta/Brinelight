@@ -10,3 +10,4 @@ e2e/.dist/
 e2e/.shots/
 deploy/.local-*
 deploy/.env
+deploy/local-test/logs/

@@ -1,5 +1,7 @@
 # Week 3 · Accounts, sign-in and the city in a database
 
+**Done (2026-10-16).** Week goal reached with a real wallet: Phantom on Android signed in through temporary tunnels, and the city was found again after a reload. The server rental waits (task 6, ready, not deployed).
+
 Goal of the week (roadmap, phase 2): a player signs in with their Solana wallet (Phantom) and finds their city on another device.
 This is the first week of the server. Actions are still decided by the client this week; the server becomes the judge in week 4.
 

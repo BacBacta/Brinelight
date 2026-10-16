@@ -43,6 +43,8 @@ The rest of the guide is for later: updating, restoring, solving problems.
 
 ## Test with a real wallet without a server
 
+On Windows, `deploy/local-test/START-TEST.bat` does all the steps below for you (double-click it; `STOP-TEST.bat` stops everything). It was used for the first Phantom test on 2026-10-16.
+
 The server is not rented yet: it waits until it is really needed (week 7 at the latest, see `docs/decisions.md`). Until then, you can test signing in with Phantom on your phone from your own computer, for free, through two temporary Cloudflare tunnels. A tunnel gives a local program a public `https://….trycloudflare.com` address, with no account and nothing to configure.
 
 Everything stays on your computer: the database is in memory (PGlite) and is lost when you stop the server. That is fine for a test.
