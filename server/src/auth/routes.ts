@@ -77,7 +77,8 @@ export async function authRoutes(app: FastifyInstance, { db, config, now }: Auth
   const limit = { rateLimit: { max: AUTH_PER_MINUTE, timeWindow: 60_000 } };
 
   app.post("/auth/nonce", { config: limit }, async () => {
-    const at = now();
+    // Whole seconds: a wallet may write the time back without its milliseconds. Times are compared as instants.
+    const at = new Date(Math.floor(now().getTime() / 1000) * 1000);
     const nonce = randomBytes(16).toString("hex");
     const expiresAt = new Date(at.getTime() + NONCE_MS);
     await createNonce(db, nonce, at, expiresAt);

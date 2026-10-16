@@ -200,6 +200,16 @@ describe("refused nonces", () => {
     });
   });
 
+  it("the Issued At is given in whole seconds, and the same time written without milliseconds is accepted", async () => {
+    clock = new Date(T0.getTime() + 750);
+    const server = await app();
+    const res = await server.inject({ method: "POST", url: "/auth/nonce", headers: { origin: ORIGIN } });
+    expect(res.json()).toMatchObject({ issuedAt: "2026-10-15T12:00:00.000Z", expiresAt: "2026-10-15T12:05:00.000Z" });
+    const body = signInBody(newWallet(), res.json().nonce, { issuedAt: "2026-10-15T12:00:00Z", expirationTime: "2026-10-15T12:05:00Z" });
+    expect(Buffer.from(body.signedMessage, "base64").toString()).toContain("Issued At: 2026-10-15T12:00:00Z\n");
+    expect((await verify(server, body)).statusCode).toBe(200);
+  });
+
   it("a message with another Issued At than the one given with the nonce", async () => {
     const server = await app();
     const wallet = newWallet();
