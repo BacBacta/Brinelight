@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { BUILDING_IDS } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
 import { PLOT_OUTLINE, createIsland } from "../src/scene/island.js";
-import { MODEL_IDS, SHORE_RADIUS, fitIsland, modelUrl } from "../src/scene/models.js";
+import { ISLAND_TURN, MODEL_IDS, SHORE_RADIUS, fitIsland, modelUrl } from "../src/scene/models.js";
 import { buildingUrl } from "../src/scene/buildings.js";
 
 const PUBLIC = fileURLToPath(new URL("../public", import.meta.url));
@@ -52,23 +52,35 @@ describe("the model files", () => {
 });
 
 describe("the island under the city", () => {
-  /** A stand-in for the island: off center, its flat top at 0.12 as make-models.py leaves it. */
+  /** A stand-in for the island: its meadow at y = 0 as make-models.py leaves it, off center, with a pine above it. */
   const islandModel = () => {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.36, 1.8));
-    mesh.position.set(0.3, 0.12 - 0.18, -0.2);
+    const ground = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.3, 1.8));
+    ground.position.set(0.3, -0.15, -0.2);
+    const pine = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.4, 0.1));
+    pine.position.set(-0.4, 0.2, 0.3);
     const g = new THREE.Group();
-    g.add(mesh);
+    g.add(ground, pine);
     return g;
   };
 
-  it("centered, its flat top at y = 0 where the buildings stand, its shore SHORE_RADIUS from the center", () => {
+  it("centered, its meadow at y = 0 where the buildings stand, its shore SHORE_RADIUS from the center, turned", () => {
     const island = fitIsland(islandModel());
     island.updateMatrixWorld(true);
+    // The meadow's corner stays on the ground; the pine stands above it.
+    const corner = new THREE.Vector3(0.3 + 0.95, 0, -0.2 + 0.9);
+    island.children[0]!.localToWorld(corner);
+    expect(corner.y).toBeCloseTo(0, 6);
     const box = new THREE.Box3().setFromObject(island);
-    expect(box.max.y).toBeCloseTo(0, 6);
-    expect((box.min.x + box.max.x) / 2).toBeCloseTo(0, 6);
-    expect((box.min.z + box.max.z) / 2).toBeCloseTo(0, 6);
-    expect(box.max.x - box.min.x).toBeCloseTo(2 * SHORE_RADIUS, 6);
+    expect(box.max.y).toBeGreaterThan(1);
+    expect(island.rotation.y).toBe(ISLAND_TURN);
+    // Unturned, the box is centered and SHORE_RADIUS wide on each side.
+    island.rotation.y = 0;
+    island.updateMatrixWorld(true);
+    const flat = new THREE.Box3().setFromObject(island.children[0]!.children[0]!);
+    expect((flat.min.x + flat.max.x) / 2).toBeCloseTo(0, 6);
+    expect((flat.min.z + flat.max.z) / 2).toBeCloseTo(0, 6);
+    expect(flat.max.x - flat.min.x).toBeCloseTo(2 * SHORE_RADIUS, 6);
+    expect(flat.max.y).toBeCloseTo(0, 6);
     // On ring 3: its tiles are 5.2 to 6 from the center.
     expect(SHORE_RADIUS).toBeGreaterThanOrEqual(5.2);
     expect(SHORE_RADIUS).toBeLessThanOrEqual(6);

@@ -9,8 +9,8 @@ Each model gets:
 - its texture as a WebP (512 px, 1 024 for the island), quality 82 (EXT_texture_webp);
 - its geometry quantized (KHR_mesh_quantization): positions on 16 bits, normals on 8 bits, texture coordinates on
   16 bits, then identical vertices welded and 16-bit indices. The decoding scale and offset go in the node's matrix.
-The island is flattened first: every vertex above FLATTEN is brought down to it, with its normal pointing up, so the
-plateau the buildings stand on is flat. three.js reads both extensions. The originals stay out of the client build.
+The island is flattened first (FLATTEN): the bumps of its meadow are brought down to the meadow, with their normals
+pointing up, and the meadow is moved to y = 0, where the buildings stand. three.js reads both extensions. The originals stay out of the client build.
 Needs Pillow only.
 """
 import io
@@ -30,9 +30,10 @@ BUILDINGS = ["lighthouse", "refinery", "fishery", "lumberyard", "shelters", "bar
 OTHERS = ["island", "raft", "wreck", "camp", "boat", "greenhouse", "smokehouse", "watchtower"]
 # Texture size, 512 px unless set here: the island is the largest thing on screen.
 TEXTURE = {"island": 1024}
-# Height (in the original's units) above which the island's vertices are flattened: the sand is at about 0.14, the
-# rocks of its rim rise to 0.23.
-FLATTEN = {"island": 0.12}
+# The island's meadow, and the height up to which its bumps (grass tufts, the edge of the meadow) are flattened onto
+# it, in the original's units. The meadow is flat at -0.07; above 0.08 stand its two windswept pines (up to 0.30),
+# which stay as they are.
+FLATTEN = {"island": {"ground": -0.07, "top": 0.08}}
 
 FLOAT, BYTE, SHORT, USHORT, UINT = 5126, 5120, 5122, 5123, 5125
 COUNTS = {"SCALAR": 1, "VEC2": 2, "VEC3": 3}
@@ -76,12 +77,13 @@ def convert(cid, src_dir, out_dir):
     indices = [i[0] for i in accessor(doc, binary, prim["indices"])]
     flattened = 0
     if cid in FLATTEN:
-        top = FLATTEN[cid]
+        ground, top = FLATTEN[cid]["ground"], FLATTEN[cid]["top"]
         for i, p in enumerate(positions):
-            if p[1] > top:
-                positions[i] = (p[0], top, p[2])
+            if ground < p[1] <= top:
+                positions[i] = (p[0], ground, p[2])
                 normals[i] = (0.0, 1.0, 0.0)
                 flattened += 1
+        positions = [(p[0], p[1] - ground, p[2]) for p in positions]
 
     # Positions: one uniform scale around the center of the box, so the model keeps its proportions.
     lo = [min(p[k] for p in positions) for k in range(3)]

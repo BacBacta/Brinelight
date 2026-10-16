@@ -32,7 +32,7 @@ export function kitModel(kit: Kit, name: string): THREE.Object3D {
 export const PLOT_OUTLINE = { color: "#FFF4DA", opacity: 0.55, inner: 0.98, outer: 1.08 } as const;
 
 /**
- * The empty island: the island model (fitted by fitIsland: shore on ring 3, flat top at y = 0), the outlines of the
+ * The empty island: the island model (fitted by fitIsland: shore on ring 3, meadow at y = 0), the outlines of the
  * 19 plots of rings 0 to 2 (one mesh), and the foam on ring 3, as in the prototype.
  */
 export function createIsland(model: THREE.Object3D): THREE.Group {

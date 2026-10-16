@@ -14,7 +14,7 @@ import { createWater } from "./water.js";
 
 export type { Kit } from "./island.js";
 export { BUILDING_FIX, buildingUrl, normalizeBuilding, type BuildingModel, type BuildingModels } from "./buildings.js";
-export { MODEL_IDS, SHORE_RADIUS, bakeModel, fitIsland, modelUrl, type Models } from "./models.js";
+export { ISLAND_TURN, MODEL_IDS, SHORE_RADIUS, bakeModel, fitIsland, modelUrl, type Models } from "./models.js";
 export { hexGeometry, hexX, hexZ, kitModel } from "./island.js";
 export { createLighthouse, lighthouseScale } from "./lighthouse.js";
 

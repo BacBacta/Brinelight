@@ -21,9 +21,10 @@ The validated art direction of Brinelight. Every asset follows this page, or it 
 | Verdigris copper | `#5E9E8C` | Metal details, the Lighthouse's and the Observatory's roofs |
 | Brick red | `#E2572F` | Pirates, refusals, the Mist striking |
 | Mist | `#8A6CFF` → `#B9B3D6` | The Mist |
+| Meadow | `#7FA36B` / `#5E8A4F` | The island, moss |
 
 - Never more than three of these colors on one building.
-- No bright lawn grass: a drowned island has sand, dark rock and a few tufts.
+- No neon lawn: a muted meadow green (#7FA36B, #5E8A4F), moss on dark rock, dune grass, sand, and a few windswept pines.
 
 ## Light
 
@@ -105,14 +106,13 @@ Add:
 
 ## Generated assets
 
-All generated on 2026-10-16 from this page (GPT Image and Meshy, through Higgsfield):
+Generated from this page (GPT Image and Meshy, through Higgsfield):
 
-- the six captain portraits, in `assets/captains/`;
-- the nine building concepts and meshes, in `assets/concepts/` and `assets/buildings/src/`;
-- the island, and seven objects: the raft, the wreck, the pirate camp, your boat, and the three buildings on rafts (Kelp Greenhouse, Smokehouse, Watchtower). Their concepts are in `assets/concepts/` and their meshes in `assets/models/src/`;
-- the icon sheet (24 icons, flat two-tone: a palette color with a night-blue outline), in `assets/icons/sheet.png`.
-
-The island follows "No bright lawn grass": sand, dark rock and a few tufts.
+- on 2026-10-16: the six captain portraits, in `assets/captains/`;
+- on 2026-10-16: the nine building concepts and meshes, in `assets/concepts/` and `assets/buildings/src/`;
+- on 2026-10-16: seven objects, the raft, the wreck, the pirate camp, your boat, and the three buildings on rafts (Kelp Greenhouse, Smokehouse, Watchtower). Their concepts are in `assets/concepts/` and their meshes in `assets/models/src/`;
+- on 2026-10-16: the icon sheet (24 icons, flat two-tone: a palette color with a night-blue outline), in `assets/icons/sheet.png`;
+- on 2026-10-17: the island, a green meadow on dark rock with moss, dune grass, a sandy corner and two windswept pines, in `assets/concepts/island.png` and `assets/models/src/island.glb`. It follows "No neon lawn". It replaces a first, sandy island, which looked too barren for an inhabited place.
 
 `assets/make-models.py` and `assets/icons/make-icons.py` make the files the game serves.
 

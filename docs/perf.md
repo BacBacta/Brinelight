@@ -117,11 +117,17 @@ Measures in the container (Chromium, 412 × 915, quality 2, cache off). Each tim
 
 ## The island, the sea's models and the icons (week 5)
 
-New models from the art direction, made by `assets/make-models.py` from `assets/models/src/`, with the same treatment as the buildings: a 512 px WebP texture (1 024 px for the island, the largest thing on screen), quantized geometry and welded vertices. Before quantizing, the island is flattened: its 2 183 vertices above 0.12 (the sand at about 0.14, the rocks of its rim up to 0.23) are brought down to 0.12.
+New models from the art direction, made by `assets/make-models.py` from `assets/models/src/`, with the same treatment as the buildings: a 512 px WebP texture (1 024 px for the island, the largest thing on screen), quantized geometry and welded vertices.
+
+Before quantizing, the island is flattened:
+- its meadow is flat at -0.07 in the original's units;
+- its 2 599 vertices between the meadow and 0.08 (grass tufts, the edge of the meadow) are brought down to it;
+- the meadow then moves to y = 0;
+- its two windswept pines (up to 0.30) stay as they are.
 
 | Model | Original | Served | Triangles | Loaded |
 | --- | --- | --- | --- | --- |
-| Island | 3 593 kB | 247 kB | 3 052 | yes |
+| Island | 3 666 kB | 242 kB | 3 038 | yes |
 | Raft | 3 290 kB | 101 kB | 1 384 | yes |
 | Wreck | 3 552 kB | 157 kB | 2 452 | yes |
 | Pirate camp | 3 639 kB | 167 kB | 2 930 | yes |
@@ -129,12 +135,12 @@ New models from the art direction, made by `assets/make-models.py` from `assets/
 | Kelp Greenhouse | 3 631 kB | 156 kB | 2 309 | not yet (week 5, task 4) |
 | Smokehouse | 3 071 kB | 145 kB | 2 332 | not yet (week 5, task 4) |
 | Watchtower | 3 491 kB | 151 kB | 2 498 | not yet (week 5, task 4) |
-| **Total** | | **1 244 kB** | | |
+| **Total** | | **1 239 kB** | | |
 
 The 24 icons (`assets/icons/make-icons.py`, from the sheet) weigh 256 kB in all, at 48 and 96 px.
 
 What changed on screen:
-- the island replaces the 19 grass tiles and the ring of sand;
+- the island replaces the 19 grass tiles and the ring of sand. Turned by 15°, its pines stand 2 or more from every building plot, and 96% of the 19 plots' area is on its meadow, 4% on sand (part of the Infirmary's plot and of an empty plot next to it), none on rock;
 - one raft model replaces the deck and the planks (still one InstancedMesh for up to 39 rafts);
 - at sea, a wreck model replaces the ruined house and the barrel, and the pirate camp floats as one model; your boat is one model;
 - the kit's flags on the buildings are gone.
@@ -144,7 +150,7 @@ Measures in the container (Chromium, 412 × 915, quality 2, cache off), on a cit
 | | Downloaded | Load, local | Load at 10 Mbit/s, 40 ms | City | Sea |
 | --- | --- | --- | --- | --- | --- |
 | Before (`7d5744c`) | 4.41 MB | 2.44 s | 5.50 s | 6 FPS, 83 calls, 62.8 k triangles | 10 FPS, 151 calls, 65.7 k triangles |
-| After | 5.20 MB | 2.57 s | 6.18 s | 6 FPS, 39 calls, 72.8 k triangles | 10 FPS, 135 calls, 68.0 k triangles |
+| After | 5.20 MB | 2.23 s | 6.14 s | 6 FPS, 39 calls, 72.8 k triangles | 12 FPS, 139 calls, 68.1 k triangles |
 
 - The city draws half as many calls: one island instead of 19 tiles and a sand ring, no more flags, and one raft mesh instead of two.
 - It downloads 0.8 MB more, about 0.7 s more at 10 Mbit/s.
@@ -152,7 +158,7 @@ Measures in the container (Chromium, 412 × 915, quality 2, cache off), on a cit
 
 ### Sources in `assets/`
 
-The originals (concepts, meshes, portraits, the icon sheet) take **90 MB** in `assets/` today, out of the client build. They stay in git while they are small; beyond **300 MB**, they will move out of git (Git LFS or a storage bucket).
+The originals (concepts, meshes, portraits, the icon sheet) take **90 MB** in `assets/` today (the first, sandy island was replaced by the green one, not kept), out of the client build. They stay in git while they are small; beyond **300 MB**, they will move out of git (Git LFS or a storage bucket).
 
 ## Rafts (week 4, task 6)
 

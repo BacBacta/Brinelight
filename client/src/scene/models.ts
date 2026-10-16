@@ -23,14 +23,20 @@ export async function loadModels(loader: GLTFLoader): Promise<Models> {
 
 /**
  * Where the island's shore falls: on ring 3 of the hex grid (its tiles are 5.2 to 6 from the center), a little inside
- * it so the rafts moored on ring 3 float off the rocks. Its flattened top then reaches about 4.3 from the center:
- * every building plot (the farthest at 3.5, with its model) stands on it.
+ * it so the rafts moored on ring 3 float off the rocks. Its meadow then reaches about 5 from the center: every plot of
+ * rings 0 to 2 stands on it.
  */
 export const SHORE_RADIUS = 5.6;
+/**
+ * The island's turn around its vertical axis: its two windswept pines then stand 2 or more from every building plot,
+ * and as far as they can from the raft slots (one stands on the edge of ring 3 whatever the turn).
+ */
+export const ISLAND_TURN = -Math.PI / 12;
 
 /**
- * The island under the city: centered, its flat top (flattened by make-models.py) at y = 0 where the buildings stand,
- * scaled so its widest side reaches SHORE_RADIUS from the center. Its sides go down into the sea.
+ * The island under the city: centered, its meadow (at y = 0 in the file: make-models.py puts it there) at y = 0 where
+ * the buildings stand, scaled so its widest side reaches SHORE_RADIUS from the center, and turned by ISLAND_TURN.
+ * Its pines stand above the meadow, and its sides go down into the sea.
  */
 export function fitIsland(model: THREE.Object3D): THREE.Object3D {
   model.updateMatrixWorld(true);
@@ -39,10 +45,14 @@ export function fitIsland(model: THREE.Object3D): THREE.Object3D {
   const center = box.getCenter(new THREE.Vector3());
   const fitted = new THREE.Group();
   fitted.add(model);
-  model.position.sub(new THREE.Vector3(center.x, box.max.y, center.z));
+  model.position.sub(new THREE.Vector3(center.x, 0, center.z));
   fitted.scale.setScalar((2 * SHORE_RADIUS) / Math.max(size.x, size.z));
+  fitted.rotation.y = ISLAND_TURN;
   fitted.traverse((m) => {
-    if ((m as THREE.Mesh).isMesh) m.receiveShadow = true;
+    if ((m as THREE.Mesh).isMesh) {
+      m.castShadow = true;
+      m.receiveShadow = true;
+    }
   });
   return fitted;
 }
