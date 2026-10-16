@@ -180,6 +180,42 @@ describe("playing without signing in", () => {
   });
 });
 
+describe("city labels", () => {
+  it("turning and zooming the camera: a label never covers another one (seen on the phone: a badge over \"Lighthouse 4\")", async () => {
+    const base = newPlayerState();
+    const city = { ...base, buildings: { ...base.buildings, lighthouse: 4, refinery: 2, fishery: 2, lumberyard: 2, shelters: 1, barracks: 1, harbor: 1, observatory: 1, infirmary: 1 } };
+    const p = await newPlayer(false);
+    await p.context.addInitScript(({ key, file }) => localStorage.setItem(key, file), { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: Date.now(), state: city }) });
+    const page = await openGame(p.context);
+    await page.waitForTimeout(1000);
+    const overlaps = () =>
+      page.evaluate(() => {
+        const shown = [...document.querySelectorAll<HTMLElement>(".labels.city .bl")].filter((e) => e.style.display !== "none").map((e) => ({ t: e.textContent, r: e.getBoundingClientRect() }));
+        const hits: string[] = [];
+        for (const [i, a] of shown.entries())
+          for (const b of shown.slice(i + 1)) if (a.r.left < b.r.right && b.r.left < a.r.right && a.r.top < b.r.bottom && b.r.top < a.r.bottom) hits.push(`${a.t} × ${b.t}`);
+        return hits;
+      });
+    const seen: string[] = [];
+    for (let step = 0; step < 24; step++) {
+      if (step > 0) {
+        // A short drag turns the camera; every fourth step zooms in or out.
+        await page.mouse.move(200, 600);
+        await page.mouse.down();
+        await page.mouse.move(200 + (step % 2 ? 60 : 40), 600 + ((step % 3) - 1) * 25, { steps: 5 });
+        await page.mouse.up();
+        if (step % 4 === 0) await page.mouse.wheel(0, step % 8 ? 300 : -300);
+        await page.waitForTimeout(400);
+      }
+      seen.push(...(await overlaps()).map((x) => `step ${step}: ${x}`));
+      // The view where the phone showed the defect: a badge used to sit over the end of "Lighthouse 4".
+      if (step === 12) await page.screenshot({ path: "e2e/.shots/shot-labels.png" });
+    }
+    expect(seen).toEqual([]);
+    await p.context.close();
+  });
+});
+
 describe("combat reports", () => {
   /** A city whose fleets came back twice: two unread reports, r1 then r2. No need to wait for a fleet. */
   const cityWithTwoReports = (): PlayerState => {

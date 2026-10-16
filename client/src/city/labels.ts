@@ -19,6 +19,11 @@ export function createLabels(root: HTMLElement, scene: SceneHandle) {
     layer.appendChild(el);
     els[id] = { el, key: "", bar: null, w: 0, h: 0, compactW: 0, compactH: 0 };
   }
+  // The game's font can arrive after a first measure (font-display: swap): sizes are measured again once it is there,
+  // or a label measured with the fallback font would be wider on screen than the layout thinks.
+  document.fonts?.addEventListener("loadingdone", () => {
+    for (const id of BUILDING_IDS) els[id].w = 0;
+  });
   /** Sizes are measured once per text change, and only when the label is shown. */
   const measure = (L: Label) => {
     L.el.classList.remove("compact");
@@ -75,6 +80,7 @@ export function createLabels(root: HTMLElement, scene: SceneHandle) {
         const L = els[b.id];
         const pl = places[b.id]!;
         L.el.classList.toggle("compact", pl.compact);
+        if (pl.hidden) L.el.style.display = "none";
         L.el.style.transform = `translate(${b.x.toFixed(1)}px,${(b.y + pl.dy).toFixed(1)}px)`;
       }
     },

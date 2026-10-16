@@ -14,8 +14,11 @@ export type LabelBox = {
   compactH: number;
 };
 
-/** Where a label ends up: moved up by `dy` pixels (zero or negative), and maybe reduced to its badge. */
-export type LabelPlace = { dy: number; compact: boolean };
+/**
+ * Where a label ends up: moved up by `dy` pixels (zero or negative), maybe reduced to its badge,
+ * or hidden when even its badge would cover another label.
+ */
+export type LabelPlace = { dy: number; compact: boolean; hidden: boolean };
 
 /** Space kept between two labels. */
 export const GAP = 2;
@@ -52,7 +55,8 @@ function lift(b: LabelBox, compact: boolean, placed: Rect[]): { dy: number; rect
 /**
  * Lays out the labels from the nearest to the farthest. A label that touches a nearer one moves up, by one label
  * height at most; if that is not enough, it becomes a badge (its level, or "+"), moved up the same way if needed.
- * A badge that still cannot fit stays on its anchor. The `pinned` label (the building you tapped) is laid out
+ * A badge that still cannot fit is hidden: a label never covers another one. It comes back as soon as the camera
+ * makes room, and its building can still be tapped. The `pinned` label (the building you tapped) is laid out
  * first and keeps its full size.
  */
 export function layoutLabels(boxes: readonly LabelBox[], pinned: string | null = null): Record<string, LabelPlace> {
@@ -64,12 +68,16 @@ export function layoutLabels(boxes: readonly LabelBox[], pinned: string | null =
     if (full || b.id === pinned) {
       const place = full ?? { dy: 0, rect: rectOf(b, 0, false) };
       placed.push(place.rect);
-      out[b.id] = { dy: place.dy, compact: false };
+      out[b.id] = { dy: place.dy, compact: false, hidden: false };
       continue;
     }
-    const small = lift(b, true, placed) ?? { dy: 0, rect: rectOf(b, 0, true) };
+    const small = lift(b, true, placed);
+    if (!small) {
+      out[b.id] = { dy: 0, compact: true, hidden: true };
+      continue;
+    }
     placed.push(small.rect);
-    out[b.id] = { dy: small.dy, compact: true };
+    out[b.id] = { dy: small.dy, compact: true, hidden: false };
   }
   return out;
 }
