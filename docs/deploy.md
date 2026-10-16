@@ -49,6 +49,8 @@ To try research and rafts on your phone without waiting hours, double-click `STA
 
 By hand (the terminals below), the same is `DEV_SPEED=60` before `npm run dev:server` (PowerShell: `$env:DEV_SPEED="60"`).
 
+On an Android phone, the whole test can run in Termux, with no computer: `deploy/local-test/start-test-termux.sh` does the same as `START-TEST.bat`, then opens the game in Phantom's browser. Once: `pkg install -y git nodejs cloudflared`, then `git clone https://github.com/BacBacta/Brinelight.git ~/Brinelight`. Each test: `cd ~/Brinelight && git pull --ff-only && bash deploy/local-test/start-test-termux.sh 60` (`60`: the account's city 60 times faster; without it, real time). Ctrl+C stops everything (in Termux: Volume down + C). The script keeps the phone awake while you are in Phantom (`termux-wake-lock`); if Android still closes Termux, set its battery use to "Unrestricted". The same script works on Linux and macOS.
+
 The server is not rented yet: it waits until it is really needed (week 7 at the latest, see `docs/decisions.md`). Until then, you can test signing in with Phantom on your phone from your own computer, for free, through two temporary Cloudflare tunnels. A tunnel gives a local program a public `https://….trycloudflare.com` address, with no account and nothing to configure.
 
 Everything stays on your computer: the database is in memory (PGlite) and is lost when you stop the server. That is fine for a test.
