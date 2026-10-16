@@ -83,7 +83,7 @@ Claude Code's part, in `deploy/` and `docs/deploy.md`:
 - A step-by-step guide to install, update and restore, written for a beginner.
 - No password or key in the repository: everything in a `.env` file on the server, described in `.env.example`.
 - Exact image versions (PostgreSQL 18.x, Caddy 2.x), updated on purpose; `ufw limit 22/tcp`; SSH by key only, no root login; automatic security updates.
-- `api.<domain>` in "DNS only" at Cloudflare, and Hetzner Backups on top of the nightly backups (the guide says why both).
+- The domain is `brinelight.xyz`, bought at Vercel, DNS kept at Vercel: `api` is an `A` record to the server (no proxy), `play` a `CNAME` to `brinelight.pages.dev`, added after the custom domain in Cloudflare Pages. Hetzner Backups on top of the nightly backups (the guide says why both).
 - The guide ends with "Be warned if the server goes down": a free monitor checks `https://api.<domain>/health` every 5 minutes and sends an e-mail.
 - Done when: you sign in with Phantom on your phone and on your computer, and see the same city on both.
 

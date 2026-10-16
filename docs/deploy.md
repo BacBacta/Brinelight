@@ -1,20 +1,22 @@
 # Putting Brinelight online
 
-This guide takes you from nothing to a game server online at `https://api.<your domain>`, with the game at `https://play.<your domain>`. It is written for a first time: copy each command, and compare with what you should see.
+This guide takes you from nothing to a game server online at `https://api.brinelight.xyz`, with the game at `https://play.brinelight.xyz`. It is written for a first time: copy each command, and compare with what you should see.
 
-Everywhere below, replace `example.com` with your domain and `203.0.113.10` with your server's IPv4 address.
+The domain `brinelight.xyz` was bought at Vercel, and its DNS stays at Vercel. Everywhere below, replace `203.0.113.10` with your server's IPv4 address.
+
+Only two names are used: `api.brinelight.xyz` (the server) and `play.brinelight.xyz` (the game). The bare domain `brinelight.xyz` is not used for now.
 
 ## What you will have
 
 ```
-Players ──https──> play.example.com  (Cloudflare Pages: the game itself)
-        ──https──> api.example.com   (your Hetzner server)
+Players ──https──> play.brinelight.xyz  (Cloudflare Pages: the game itself)
+        ──https──> api.brinelight.xyz   (your Hetzner server)
                      └─ Caddy  (HTTPS certificate, ports 80 and 443)
                           └─ game server  (not reachable from outside)
                                └─ PostgreSQL 18  (not reachable from outside, no Internet access)
 ```
 
-- Cost: the domain (about €15 a year), the Hetzner CX23 server (about €5 a month), and Hetzner Backups (20 % of the server price).
+- Cost: the domain (already bought), the Hetzner CX23 server (about €5 a month), and Hetzner Backups (20 % of the server price).
 - Everything on the server runs in Docker. The settings live in one file on the server, `deploy/.env`, never in the repository.
 
 ## The order
@@ -22,14 +24,14 @@ Players ──https──> play.example.com  (Cloudflare Pages: the game itself)
 | Step | Where | What |
 | --- | --- | --- |
 | 1 | Your computer | Create your SSH key |
-| 2 | Cloudflare | Buy the domain |
+| 2 | Vercel | The domain: already bought, nothing to do |
 | 3 | Hetzner | Create the server, with Backups |
-| 4 | Cloudflare | Point `api` to the server |
+| 4 | Vercel | Point `api` to the server |
 | 5 | Server | Prepare it, then close SSH to your key only |
 | 6 | Server | Download the game and fill in the settings |
 | 7 | Server | Start, and check |
 | 8 | Server | Nightly backups, and a test restore |
-| 9 | Cloudflare | `play.example.com` and the server address for the game |
+| 9 | Cloudflare, then Vercel | `play.brinelight.xyz` and the server address for the game |
 | 10 | Your phone and computer | The test of the week |
 | 11 | UptimeRobot | Be warned if the server goes down |
 
@@ -58,9 +60,9 @@ cat ~/.ssh/id_ed25519.pub
 
 You should see one line starting with `ssh-ed25519 AAAA…` and ending with `brinelight`. This line is the one you give to Hetzner.
 
-## 2. Buy the domain (Cloudflare)
+## 2. The domain (Vercel)
 
-In Cloudflare: **Domain Registration → Register Domains**. Its DNS is then managed by Cloudflare too, nothing else to do.
+`brinelight.xyz` is already bought at Vercel, and its DNS stays there: nothing to do. The records are added in steps 4 and 9.
 
 ## 3. Create the server (Hetzner)
 
@@ -75,24 +77,28 @@ In the Hetzner Cloud console: **Create Server**.
 
 Create it, then note its **IPv4** address (for example `203.0.113.10`).
 
-## 4. Point `api` to the server (Cloudflare)
+## 4. Point `api` to the server (Vercel)
 
-In Cloudflare: your domain → **DNS → Records → Add record**.
+In Vercel: **Domains → brinelight.xyz → Add record** (in the DNS records part).
 
-- Type `A`, name `api`, IPv4 address: the server's.
-- Proxy status: click the orange cloud so it becomes **grey: "DNS only"**.
+- Type: `A`.
+- Name: `api` only (Vercel adds `.brinelight.xyz` itself; do not type the whole name).
+- Value: the server's IPv4, for example `203.0.113.10`.
+- TTL: leave the default.
 
-Why "DNS only": Caddy, on the server, gets its HTTPS certificate directly, and sees the real address of each player (the sign-in limit counts per address). Behind Cloudflare's proxy, every player would arrive from a Cloudflare address.
+Vercel's DNS has no proxy: the name points straight to the server. That is what we want: Caddy, on the server, gets its HTTPS certificate directly, and sees the real address of each player (the sign-in limit counts per address).
 
 Do not add an `AAAA` (IPv6) record for `api`: through Docker, IPv6 players would all appear with the same address.
 
-Check, after a minute, from your computer:
+### Check the record
+
+After a few minutes, from your computer (macOS, Linux, or Windows with WSL):
 
 ```
-nslookup api.example.com
+dig +short api.brinelight.xyz
 ```
 
-It must answer the server's IPv4.
+It must print the server's IPv4, and only it. Without `dig` (Windows), use `nslookup api.brinelight.xyz`, or open **dnschecker.org**, type `api.brinelight.xyz`, type `A`: the map should show the server's IPv4 almost everywhere. A new record can take up to an hour to be seen everywhere.
 
 ## 5. Prepare the server
 
@@ -178,9 +184,9 @@ nano .env
 Fill in:
 
 ```
-API_DOMAIN=api.example.com
-ALLOWED_ORIGINS=https://play.example.com
-ACME_EMAIL=you@example.com
+API_DOMAIN=api.brinelight.xyz
+ALLOWED_ORIGINS=https://play.brinelight.xyz
+ACME_EMAIL=<your e-mail address>
 POSTGRES_PASSWORD=<the password printed above>
 SIWS_CHAIN_ID=mainnet
 ```
@@ -199,7 +205,7 @@ docker compose ps
 
 The first start takes a few minutes. After it, `docker compose ps` shows three lines: `db` (healthy), `server` (healthy) and `caddy` (running, with ports 80 and 443).
 
-Then, from your computer or your phone, open `https://api.example.com/health`. You should see:
+Then, from your computer or your phone, open `https://api.brinelight.xyz/health`. You should see:
 
 ```
 {"ok":true,"service":"brinelight","version":"0.1.0"}
@@ -253,21 +259,36 @@ Test restore OK. The temporary database was deleted; the live database was not t
 
 The numbers can differ a little if players signed up since the backup.
 
-## 9. The game on `play.example.com` (Cloudflare Pages)
+## 9. The game on `play.brinelight.xyz` (Cloudflare Pages, then Vercel)
 
-1. **Merge the pull request of the week into `main`**: `play.example.com` shows `main`.
-2. In Cloudflare: **Workers & Pages → brinelight → Custom domains → Set up a custom domain**: `play.example.com`.
-3. **Settings → Variables and Secrets**, for **Production** only: `VITE_API_URL` = `https://api.example.com`. Do not set it for Preview: branch previews then say "Accounts are not open yet", and never call the server.
-4. **Deployments**: retry the latest production deployment, so the game is built with the new address.
+Do it **in this order**. If the DNS record exists before Cloudflare Pages knows the name, the page answers with an error 522.
 
-Check: open `https://play.example.com`, tap the Power card (top left): the Profile offers "Sign in with your wallet".
+1. **Merge the pull request of the week into `main`**: `play.brinelight.xyz` shows `main`.
+2. **Cloudflare first**: **Workers & Pages → brinelight → Custom domains → Set up a domain**, type `play.brinelight.xyz`, and go on. Cloudflare shows that the domain is not on Cloudflare and asks for a `CNAME` record: leave the page open, the domain stays "Pending" (Inactive) until step 3 is done.
+3. **Vercel next**: **Domains → brinelight.xyz → Add record**:
+   - Type: `CNAME`.
+   - Name: `play` only.
+   - Value: `brinelight.pages.dev`.
+4. Back in Cloudflare, wait until the custom domain becomes **Active** (a few minutes; Cloudflare also makes its certificate).
+5. **Settings → Variables and Secrets**, for **Production** only: `VITE_API_URL` = `https://api.brinelight.xyz`. Do not set it for Preview: branch previews then say "Accounts are not open yet", and never call the server.
+6. **Deployments**: retry the latest production deployment, so the game is built with the server address.
 
-`brinelight.pages.dev` still shows the game, but signing in from there is refused: only `https://play.example.com` is allowed (`ALLOWED_ORIGINS`).
+### Check
+
+```
+dig +short play.brinelight.xyz
+```
+
+It must print `brinelight.pages.dev.` then addresses. Or on **dnschecker.org**: `play.brinelight.xyz`, type `CNAME`: `brinelight.pages.dev` everywhere.
+
+Then open `https://play.brinelight.xyz`, tap the Power card (top left): the Profile offers "Sign in with your wallet".
+
+`brinelight.pages.dev` still shows the game, but signing in from there is refused: only `https://play.brinelight.xyz` is allowed (`ALLOWED_ORIGINS`).
 
 ## 10. The test of the week
 
-1. On your phone, open the game **in Phantom's browser** (or open `https://play.example.com` in Chrome: the Profile offers "Open in Phantom"). Sign in, upgrade a building.
-2. On your computer, with Phantom installed in the browser, open `https://play.example.com` and sign in with the same wallet.
+1. On your phone, open the game **in Phantom's browser** (or open `https://play.brinelight.xyz` in Chrome: the Profile offers "Open in Phantom"). Sign in, upgrade a building.
+2. On your computer, with Phantom installed in the browser, open `https://play.brinelight.xyz` and sign in with the same wallet.
 3. You see the same city. Upgrade something else, go back to the phone, reload: it is there.
 
 ## 11. Be warned if the server goes down
@@ -279,7 +300,7 @@ With **UptimeRobot** (free plan), or Better Stack (free plan, same idea):
 1. Create an account at uptimerobot.com.
 2. **New monitor**:
    - Type: **Keyword** (it checks that the answer really says the server is fine).
-   - URL: `https://api.example.com/health`
+   - URL: `https://api.brinelight.xyz/health`
    - Keyword: `"ok":true`, alert when the keyword is **not** found.
    - Interval: **5 minutes**.
    - Alert contact: your e-mail.
@@ -337,11 +358,14 @@ In the Hetzner console: **Server → Backups → (a day) → Restore**. The serv
 
 ## Solving problems
 
-- **`https://api.example.com/health` does not answer**
+- **`https://api.brinelight.xyz/health` does not answer**
   - `docker compose ps`: is everything up? If not, `docker compose logs --tail 50 <service>`.
-  - The certificate: `docker compose logs caddy | tail -30`. Usual causes: the `A` record does not point to the server yet; the cloud is orange instead of grey; `API_DOMAIN` in `.env` is not exactly `api.example.com`.
+  - The certificate: `docker compose logs caddy | tail -30`. Usual causes: the `A` record does not point to the server yet (`dig +short api.brinelight.xyz`, or dnschecker.org); the record was typed as `api.brinelight.xyz` in Vercel's Name field instead of `api`, which gives `api.brinelight.xyz.brinelight.xyz`; `API_DOMAIN` in `.env` is not exactly `api.brinelight.xyz`.
+- **`https://play.brinelight.xyz` shows an error 522, or nothing**
+  - The custom domain must be **Active** in Cloudflare Pages (step 9). If the `CNAME` was added in Vercel before the custom domain was set up in Cloudflare, remove the custom domain in Cloudflare, add it again, and wait until it is Active.
+  - `dig +short play.brinelight.xyz` must show `brinelight.pages.dev.`.
 - **The game says the sign-in is refused**
-  - "This page is not allowed to sign in": `ALLOWED_ORIGINS` must be exactly `https://play.example.com`, with no final `/`. After a change: `docker compose up -d`.
+  - "This page is not allowed to sign in": `ALLOWED_ORIGINS` must be exactly `https://play.brinelight.xyz`, with no final `/`. After a change: `docker compose up -d`.
   - "This message was made at the wrong time": check the clock of the phone, and of the server (`timedatectl`).
 - **"Too many sign-in attempts"**: wait a minute.
 - **SSH refuses you**: use the Hetzner console (**Server → Console**), log in as `brinelight` with its password.
