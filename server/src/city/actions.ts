@@ -5,7 +5,7 @@
 import { parseAction } from "@brinelight/shared";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { requirePlayer } from "../auth/session.js";
-import { applyPlayerAction, cityAt, ensureCity, loadCity, type CityNow, type Db } from "../db/index.js";
+import { applyPlayerAction, checkedCityAt, ensureCity, loadCity, type CityNow, type Db } from "../db/index.js";
 import { SERVER_ERROR, refusal } from "../refusals.js";
 import { CITY_REFUSED } from "./routes.js";
 
@@ -30,16 +30,18 @@ export async function actionRoutes(app: FastifyInstance, { db, now, speed }: Act
   const cityBody = (c: CityNow) => ({ state: c.state, version: c.version, asOf: c.asOf.toISOString(), speed });
 
   /** The server's city as it is now, for an answer that applied nothing. Created if missing. */
-  const currentCity = async (req: FastifyRequest): Promise<CityNow | null> => {
+  const currentCity = async (req: FastifyRequest): Promise<CityNow | "unreadable" | "broken"> => {
     const at = now();
     await ensureCity(db, req.playerId, at);
     const loaded = await loadCity(db, req.playerId, req.log);
-    if (loaded.status !== "ok") return null;
-    return { state: cityAt(loaded.city, at, speed), version: loaded.city.version, asOf: at };
+    if (loaded.status !== "ok") return "unreadable";
+    const state = checkedCityAt(loaded.city, at, speed, req.playerId, req.log);
+    return state ? { state, version: loaded.city.version, asOf: at } : "broken";
   };
   const invalid = async (req: FastifyRequest, reply: FastifyReply) => {
     const city = await currentCity(req);
-    if (!city) return reply.code(409).send(CITY_REFUSED.unreadable);
+    if (city === "unreadable") return reply.code(409).send(CITY_REFUSED.unreadable);
+    if (city === "broken") return reply.code(500).send(SERVER_ERROR);
     return reply.code(400).send({ ...ACTION_REFUSED.invalid, ...cityBody(city) });
   };
 

@@ -411,4 +411,72 @@ describe("signed in", () => {
     expect((await copyOf(p.page, p.playerId))?.pending).toEqual([]);
     await p.context.close();
   });
+
+  it("a modified client (city edited, clock 1000 times faster, actions sent by hand) gets the server's city, as the rules make it", async () => {
+    const p = await newPlayer(true);
+    // The cheat: from the next load, this page's clocks run 1000 times faster.
+    await p.context.addInitScript(() => {
+      if (!localStorage.getItem("e2e-fast-clock")) return;
+      const perf = performance.now.bind(performance);
+      const start = perf();
+      const wall = Date.now();
+      performance.now = () => start + (perf() - start) * 1000;
+      Date.now = () => wall + (perf() - start) * 1000;
+    });
+    const page = await openGame(p.context);
+    await signIn(page);
+    await page.locator(".toast", { hasText: TEXT.signedIn }).waitFor();
+    const { token, playerId } = (await session(page))!;
+    await serverHas(token, []);
+    await expect.poll(async () => (await copyOf(page, playerId))?.server !== null, NET).toBe(true);
+
+    // The saved city edited: stock × 100, every level at 30; and the clock sped up.
+    await page.evaluate(
+      ({ key }) => {
+        const copy = JSON.parse(localStorage.getItem(key)!);
+        const state = copy.server.state;
+        for (const r of Object.keys(state.stock)) state.stock[r] *= 100;
+        for (const b of Object.keys(state.buildings)) state.buildings[b] = 30;
+        localStorage.setItem(key, JSON.stringify(copy));
+        localStorage.setItem("e2e-fast-clock", "1");
+      },
+      { key: `${CITY_KEY_PREFIX}${playerId}` },
+    );
+    await page.reload();
+    await page.waitForSelector(".labels.city .bl b");
+
+    // Actions sent by hand, past the game's own rules: one carrying the edited city, one plain.
+    const sent = await page.evaluate(
+      async ({ api, token, key }) => {
+        const post = async (body: unknown) => {
+          const res = await fetch(`${api}/city/actions`, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify(body) });
+          return { status: res.status, body: await res.json() };
+        };
+        const edited = JSON.parse(localStorage.getItem(key)!).server.state;
+        const withCity = await post({ action: { id: crypto.randomUUID(), type: "upgrade", building: "harbor" }, state: edited });
+        const plain = await post({ action: { id: crypto.randomUUID(), type: "upgrade", building: "refinery" } });
+        return [withCity, plain];
+      },
+      { api: API, token, key: `${CITY_KEY_PREFIX}${playerId}` },
+    );
+    expect(sent.map((r) => r.status)).toEqual([400, 200]);
+    for (const r of sent) {
+      expect(r.body.state.buildings.refinery).toBeLessThan(30);
+      expect(r.body.state.stock.oil).toBeLessThan(1000);
+    }
+
+    // A few real seconds later, by a clock 1000 times faster: the server's upgrade has moved by those seconds only.
+    await page.waitForTimeout(3000);
+    const server = await serverHas(token, ["refinery"]);
+    const job = server.state.queue[0] as Job & { left: number; duration: number };
+    expect(job.duration - job.left).toBeLessThan(60);
+    expect(server.state.buildings.refinery).toBe(1);
+    expect(Math.max(...Object.values(server.state.stock))).toBeLessThan(1000);
+    // Shown again, the page takes the server's city: the edit is gone.
+    await show(page);
+    await expect.poll(async () => (await copyOf(page, playerId))?.server?.state.buildings.refinery, NET).toBe(1);
+    await expect.poll(() => shownJobs(page), NET).toEqual(["Refinery"]);
+    await page.screenshot({ path: "e2e/.shots/shot-cheat.png" });
+    await p.context.close();
+  });
 });

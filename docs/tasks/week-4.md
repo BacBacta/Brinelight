@@ -80,6 +80,11 @@ The checkpoint of the phase: "a modified client can neither create resources nor
 - a client with a faster clock (`DEV_SPEED` changed in the page): the server city does not move faster.
 - Done when: every case is refused or ignored, and the server city is exactly what the rules give.
 
+**Done (16 October), with these additions from the owner:**
+- `parseState` is stricter: whole numbers for levels, troops, survivors and Pearls; nothing below 0; resources and morale keep their decimals. Research, captains and rafts are read within the maximums of the rules; a missing id is level 0 or not owned yet.
+- `GET /city` and the 400 answer to an invalid action check the city with `parseState`, as the actions do.
+- Two more cases: an action id already used by another player; `playerId` and `__proto__` among the extra fields.
+
 ## Task 6 · Research and rafts (can slip to week 5)
 
 The rules exist in `shared` (`canResearch`, `canAddRaft`…) but nothing in the game uses them yet.

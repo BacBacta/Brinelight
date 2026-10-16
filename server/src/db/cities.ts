@@ -45,3 +45,14 @@ export const gameSeconds = (savedAt: Date, now: Date, speed: number): number => 
 
 /** A stored city advanced to `now`, as the server shows it. Nothing is stored. */
 export const cityAt = (city: StoredCity, now: Date, speed: number): PlayerState => catchUp(city.state, gameSeconds(city.savedAt, now, speed));
+
+/**
+ * A stored city advanced to `now`, checked with parseState before it is sent. Null when refused (the rules made it
+ * invalid on the way): logged with the player id only, never the city. Nothing is stored.
+ */
+export function checkedCityAt(city: StoredCity, now: Date, speed: number, playerId: string, log?: DbLog): PlayerState | null {
+  const state = cityAt(city, now, speed);
+  if (parseState(state)) return state;
+  log?.error({ playerId }, "City refused by parseState after catching up");
+  return null;
+}

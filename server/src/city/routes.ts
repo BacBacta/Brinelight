@@ -5,7 +5,7 @@
  */
 import type { FastifyInstance } from "fastify";
 import { requirePlayer } from "../auth/session.js";
-import { cityAt, ensureCity, loadCity, type Db } from "../db/index.js";
+import { checkedCityAt, ensureCity, loadCity, type Db } from "../db/index.js";
 import { SERVER_ERROR, refusal } from "../refusals.js";
 
 export const CITY_REFUSED = {
@@ -29,9 +29,12 @@ export async function cityRoutes(app: FastifyInstance, { db, now, speed }: CityO
     const loaded = await loadCity(db, req.playerId, req.log);
     if (loaded.status === "unreadable") return reply.code(409).send(CITY_REFUSED.unreadable);
     if (loaded.status === "missing") return reply.code(500).send(SERVER_ERROR);
+    // A city the rules made invalid while catching up is never sent.
+    const state = checkedCityAt(loaded.city, asOf, speed, req.playerId, req.log);
+    if (!state) return reply.code(500).send(SERVER_ERROR);
     const { version, savedAt } = loaded.city;
     return {
-      state: cityAt(loaded.city, asOf, speed),
+      state,
       version,
       savedAt: savedAt.toISOString(),
       asOf: asOf.toISOString(),

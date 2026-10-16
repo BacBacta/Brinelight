@@ -267,6 +267,35 @@ describe("a city the rules would make invalid", () => {
     expect(all).toContain('"action":"upgrade"');
     for (const word of ['"buildings"', '"stock"', '"fleets"', '"state"']) expect(all, word).not.toContain(word);
   });
+
+  it("GET /city and the answer to an invalid action check it too: 500 server_error, nothing sent or stored, the player id logged", async () => {
+    const lines: string[] = [];
+    const stream = new Writable({
+      write(chunk, _enc, done) {
+        lines.push(String(chunk));
+        done();
+      },
+    });
+    const server = await app({ logger: { level: "info", stream } });
+    const { id, token } = await player();
+    const sent = sail(newPlayerState(), "camp-1");
+    if (!sent.ok) throw new Error(sent.reason);
+    const city = { ...sent.state, reportSeq: MAX_REPORT_SEQ };
+    await putCity(id, city, 4);
+    setClock(8 * HOUR_MS);
+
+    const read = await server.inject({ method: "GET", url: "/city", headers: { authorization: `Bearer ${token}` } });
+    expect(read.statusCode).toBe(500);
+    expect(read.json()).toEqual(SERVER_ERROR);
+    const invalid = await send(server, token, { action: { ...upgradeOf("refinery"), at: 1 } });
+    expect(invalid.statusCode).toBe(500);
+    expect(invalid.json()).toEqual(SERVER_ERROR);
+    expect(await stored(id)).toMatchObject({ state: json(city), version: 4, savedAt: T0 });
+    const all = lines.join("");
+    expect(all.match(/City refused by parseState after catching up/g)).toHaveLength(2);
+    expect(all).toContain(`"playerId":"${id}"`);
+    for (const word of ['"buildings"', '"stock"', '"fleets"', '"state"']) expect(all, word).not.toContain(word);
+  });
 });
 
 describe("DEV_SPEED", () => {
