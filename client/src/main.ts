@@ -89,8 +89,8 @@ if (new URLSearchParams(location.search).has("rules")) {
       sea = createSea(kit, scene, canvas, app, {
         state: () => state,
         sail: sendFleet,
-        readReport: () => {
-          state = readReport(state);
+        readReport: (reportId) => {
+          state = readReport(state, reportId);
           refresh();
           save();
           account?.markChanged();

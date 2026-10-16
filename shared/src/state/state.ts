@@ -28,6 +28,7 @@ export function newPlayerState(): PlayerState {
     world: startingSeaWorld(),
     wounded: emptyTroops(),
     reports: [],
+    reportSeq: 0,
   };
 }
 
@@ -51,16 +52,22 @@ const seaState = (s: PlayerState): SeaState => ({
   world: s.world,
 });
 
-const withSea = (s: PlayerState, sea: SeaState, reports: CombatReport[] = []): PlayerState => ({
-  ...s,
-  troops: sea.troops,
-  stock: sea.stock,
-  pearls: sea.pearls,
-  wounded: sea.wounded,
-  fleets: sea.fleets,
-  world: sea.world,
-  reports: reports.length ? [...s.reports, ...reports.map((r) => ({ ...r, read: false }))].slice(-MAX_REPORTS) : s.reports,
-});
+/** Puts the sea back into the city. New reports get the next ids, in the order they arrive: no clock, no randomness. */
+function withSea(s: PlayerState, sea: SeaState, reports: CombatReport[] = []): PlayerState {
+  let seq = s.reportSeq;
+  const added = reports.map((r) => ({ ...r, id: `r${++seq}`, read: false }));
+  return {
+    ...s,
+    troops: sea.troops,
+    stock: sea.stock,
+    pearls: sea.pearls,
+    wounded: sea.wounded,
+    fleets: sea.fleets,
+    world: sea.world,
+    reports: added.length ? [...s.reports, ...added].slice(-MAX_REPORTS) : s.reports,
+    reportSeq: seq,
+  };
+}
 
 /**
  * Advances the city by `seconds` of game time. Time is cut at each finished upgrade and at each step
@@ -89,9 +96,12 @@ export function sail(state: PlayerState, siteId: string): ActionResult {
   return r.ok ? { ok: true, state: withSea(state, r.state) } : r;
 }
 
-/** Marks the oldest unread report as read. */
-export function readReport(state: PlayerState): PlayerState {
-  const i = state.reports.findIndex((r) => !r.read);
+/**
+ * Marks the report you read. A report that is gone (only the last ones are kept) or already read
+ * changes nothing: it is not a mistake of the player.
+ */
+export function readReport(state: PlayerState, reportId: string): PlayerState {
+  const i = state.reports.findIndex((r) => r.id === reportId && !r.read);
   if (i < 0) return state;
   return { ...state, reports: state.reports.map((r, j) => (j === i ? { ...r, read: true } : r)) };
 }

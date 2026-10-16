@@ -203,6 +203,28 @@ describe("migrateSave: old local saves", () => {
     expect(s.world).toEqual(startingSeaWorld());
   });
 
+  it("numbers the reports of a save from before report ids: r1, r2… in their order", () => {
+    let city = newPlayerState();
+    for (let i = 0; i < 3; i++) {
+      const r = sail({ ...city, troops: { boarders: 25, harpooners: 25, crossbowmen: 25 } }, "camp-1");
+      if (!r.ok) throw new Error(r.reason);
+      city = advance(r.state, 8 * HOUR);
+    }
+    const { reportSeq: _seq, ...rest } = JSON.parse(JSON.stringify(city));
+    const old = { ...rest, reports: rest.reports.map(({ id: _id, ...r }: { id: string }) => r) };
+    const s = migrateSave(old)!;
+    expect(s.reports.map((r) => r.id)).toEqual(["r1", "r2", "r3"]);
+    expect(s.reportSeq).toBe(3);
+    expect(s).toEqual(city);
+  });
+
+  it("keeps a save that already has report ids as it is", () => {
+    const r = sail(newPlayerState(), "camp-1");
+    if (!r.ok) throw new Error(r.reason);
+    const city = advance(r.state, 8 * HOUR);
+    expect(migrateSave(JSON.parse(JSON.stringify(city)))).toEqual(city);
+  });
+
   it("does not repair a field that exists but is invalid: parseState refuses it", () => {
     expect(migrateSave({ ...newPlayerState(), pearls: "lots" })).toBeNull();
     expect(migrateSave({ ...newPlayerState(), world: { camps: {}, wrecks: {} } })).toBeNull();

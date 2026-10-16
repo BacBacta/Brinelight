@@ -17,7 +17,7 @@ export function createSea(
   scene: SceneHandle,
   canvas: HTMLCanvasElement,
   root: HTMLElement,
-  game: { state(): PlayerState; sail(site: string): void; readReport(): void; soon(): void; speed: number },
+  game: { state(): PlayerState; sail(site: string): void; readReport(reportId: string): void; soon(): void; speed: number },
 ): Sea {
   const map = createSeaMap(kit, (o) => scene.add(o, "sea"));
   const marks = createFleetMarks(
@@ -25,7 +25,7 @@ export function createSea(
     (o) => o.removeFromParent(),
   );
   const labels = createSeaLabels(root, scene);
-  const sheet = createSeaSheet(root, { sail: (id) => game.sail(id), closeReport: () => game.readReport() });
+  const sheet = createSeaSheet(root, { sail: (id) => game.sail(id), closeReport: (reportId) => game.readReport(reportId) });
 
   scene.onFrame((now, view) => {
     if (view !== "sea") return;

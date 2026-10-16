@@ -69,7 +69,8 @@ const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object
 /**
  * Brings an old local save up to date, then reads it with the strict parseState of the shared rules.
  * Only fields that did not exist in older saves are filled in: the Pearls (week 2, task 4), the build queue
- * (task 3) and the sea (task 5). A field that exists but is invalid is not repaired: parseState refuses it.
+ * (task 3), the sea (task 5), and the report ids with their counter (week 4: reports kept in a save without
+ * ids are numbered r1, r2… in their order). A field that exists but is invalid is not repaired: parseState refuses it.
  * These repairs live only in the client; the server never fills anything in.
  */
 export function migrateSave(raw: unknown): PlayerState | null {
@@ -82,6 +83,11 @@ export function migrateSave(raw: unknown): PlayerState | null {
   if (!("world" in s)) s.world = startingSeaWorld();
   if (!("wounded" in s)) s.wounded = emptyTroops();
   if (!("reports" in s)) s.reports = [];
+  if (!("reportSeq" in s) && Array.isArray(s.reports)) {
+    const reports: unknown[] = s.reports;
+    s.reports = reports.map((r, i) => (isObj(r) && !("id" in r) ? { ...r, id: `r${i + 1}` } : r));
+    s.reportSeq = reports.length;
+  }
   return parseState(s);
 }
 

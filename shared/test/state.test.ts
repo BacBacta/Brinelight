@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ATTACK_STAY,
   HOUR,
+  MAX_REPORTS,
   STARTING_BUILDINGS,
   STARTING_STOCK,
   advance,
@@ -19,6 +20,7 @@ import {
   upgrade,
   upgradeCost,
   upgradeTime,
+  type PlayerState,
 } from "../src/index.js";
 
 describe("new city", () => {
@@ -246,14 +248,70 @@ describe("fleets", () => {
     expect(researched.troops).toEqual(plain.troops);
   });
 
-  it("reports are read one after another", () => {
-    let s = catchUp(sent(), 8 * HOUR);
-    s = readReport(s);
-    expect(s.reports.every((r) => r.read)).toBe(true);
+  it("reading a report marks that one only; a report gone or already read changes nothing", () => {
+    const s = catchUp(sent(), 8 * HOUR);
+    const read = readReport(s, "r1");
+    expect(read.reports.every((r) => r.read)).toBe(true);
+    expect(readReport(read, "r1")).toBe(read);
+    expect(readReport(s, "r99")).toBe(s);
   });
 
   it("a refusal keeps the reason from the shared rules", () => {
     expect(sail(sent(), "wreck-1")).toEqual({ ok: false, reason: "Build the Harbor to send more fleets" });
+  });
+});
+
+describe("report ids", () => {
+  const FULL = { boarders: 25, harpooners: 25, crossbowmen: 25 };
+  /** Sends a fleet to camp-1 with full troops, and brings it back with its report. */
+  const raid = (s: PlayerState): PlayerState => {
+    const r = sail({ ...s, troops: { ...FULL } }, "camp-1");
+    if (!r.ok) throw new Error(r.reason);
+    return advance(r.state, 8 * HOUR);
+  };
+
+  it("a new city has no report and a counter at 0", () => {
+    expect(newPlayerState().reportSeq).toBe(0);
+  });
+
+  it("reports are numbered r1, r2… in the order they arrive", () => {
+    const s = raid(raid(newPlayerState()));
+    expect(s.reports.map((r) => r.id)).toEqual(["r1", "r2"]);
+    expect(s.reportSeq).toBe(2);
+  });
+
+  it("two fleets coming back in the same stretch of time get different ids", () => {
+    let s: PlayerState = { ...newPlayerState(), buildings: { ...newPlayerState().buildings, harbor: 2 } };
+    for (const site of ["camp-1", "camp-2"]) {
+      const r = sail({ ...s, troops: { ...FULL } }, site);
+      if (!r.ok) throw new Error(r.reason);
+      s = r.state;
+    }
+    expect(s.fleets).toHaveLength(2);
+    const after = advance(s, 8 * HOUR);
+    expect(after.reports.map((r) => r.id)).toEqual(["r1", "r2"]);
+    expect(after.reports.map((r) => r.site).sort()).toEqual(["camp-1", "camp-2"]);
+  });
+
+  it("the same ids, whether time passes at once or in 2000 small steps", () => {
+    const start = sail(newPlayerState(), "camp-1");
+    if (!start.ok) throw new Error(start.reason);
+    let s = start.state;
+    for (let i = 0; i < 2000; i++) s = advance(s, (8 * HOUR) / 2000);
+    const once = advance(start.state, 8 * HOUR);
+    expect(once.reports).toHaveLength(1);
+    expect(s.reports.map((r) => r.id)).toEqual(once.reports.map((r) => r.id));
+    expect(s.reportSeq).toBe(once.reportSeq);
+  });
+
+  it("only the last 20 reports are kept, and an id is never used again", () => {
+    let s = newPlayerState();
+    for (let i = 0; i < 21; i++) s = raid(s);
+    expect(s.reports).toHaveLength(MAX_REPORTS);
+    expect(s.reports[0]!.id).toBe("r2");
+    expect(s.reports.at(-1)!.id).toBe("r21");
+    expect(s.reportSeq).toBe(21);
+    expect(raid(s).reports.at(-1)!.id).toBe("r22");
   });
 });
 
@@ -296,6 +354,21 @@ describe("parseState: strict reading of a city", () => {
     expect(parseState(json({ ...s, world: { ...s.world, camps: { ...s.world.camps, "camp-1": 0 } } }))).toBeNull();
     // More oil in a wreck than it ever holds.
     expect(parseState(json({ ...s, world: { ...s.world, wrecks: { ...s.world.wrecks, "wreck-1": 99_999 } } }))).toBeNull();
+  });
+
+  it("refuses a report without a good id, ids used twice, or a counter below an id", () => {
+    const s = catchUp(playing(), 8 * HOUR);
+    const r = s.reports[0]!;
+    const { id: _id, ...noId } = r;
+    expect(parseState(json({ ...s, reports: [noId] }))).toBeNull();
+    for (const id of ["1", "r0", "r01", "R1", "r1234567890", ""]) expect(parseState(json({ ...s, reports: [{ ...r, id }] })), id).toBeNull();
+    expect(parseState(json({ ...s, reports: [r, { ...r }] }))).toBeNull();
+    expect(parseState(json({ ...s, reportSeq: 0 }))).toBeNull();
+    const { reportSeq: _seq, ...noSeq } = s;
+    expect(parseState(json(noSeq))).toBeNull();
+    for (const reportSeq of [-1, 1.5, "1", 1_000_000_000]) expect(parseState(json({ ...s, reportSeq })), String(reportSeq)).toBeNull();
+    expect(parseState(json({ ...s, reportSeq: 999_999_999 }))?.reportSeq).toBe(999_999_999);
+    expect(parseState(json({ ...s, reportSeq: 7 }))?.reportSeq).toBe(7);
   });
 
   it("refuses a bad report, or more reports than are kept", () => {

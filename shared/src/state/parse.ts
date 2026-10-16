@@ -88,8 +88,16 @@ function parseWorld(raw: unknown): SeaWorld | null {
   return world;
 }
 
+/** "r1", "r2"…: the id a report gets when it arrives (at most 9 digits). */
+export const REPORT_ID = /^r[1-9][0-9]{0,8}$/;
+/** The highest report counter: one more report would need a 10-digit id. */
+export const MAX_REPORT_SEQ = 999_999_999;
+const reportNumber = (id: string): number => Number(id.slice(1));
+
 const isReport = (r: unknown): r is Report =>
   isObj(r) &&
+  typeof r.id === "string" &&
+  REPORT_ID.test(r.id) &&
   typeof r.site === "string" &&
   !!seaSite(r.site) &&
   typeof r.win === "boolean" &&
@@ -130,10 +138,17 @@ export function parseState(raw: unknown): PlayerState | null {
       !isTroops(s.wounded) ||
       !Array.isArray(s.reports) ||
       s.reports.length > MAX_REPORTS ||
-      !s.reports.every(isReport)
+      !s.reports.every(isReport) ||
+      !isNum(s.reportSeq) ||
+      !Number.isInteger(s.reportSeq) ||
+      s.reportSeq < 0 ||
+      s.reportSeq > MAX_REPORT_SEQ
     ) {
       return null;
     }
+    // Report ids are all different, and none is above the counter.
+    const ids = (s.reports as Report[]).map((r) => r.id);
+    if (new Set(ids).size !== ids.length || ids.some((id) => reportNumber(id) > (s.reportSeq as number))) return null;
     const world = parseWorld(s.world);
     if (!world) return null;
     const buildings = s.buildings as PlayerState["buildings"];
@@ -153,6 +168,7 @@ export function parseState(raw: unknown): PlayerState | null {
       world,
       wounded: { ...s.wounded },
       reports: s.reports.map((r) => ({ ...r })),
+      reportSeq: s.reportSeq,
     };
   } catch {
     return null;

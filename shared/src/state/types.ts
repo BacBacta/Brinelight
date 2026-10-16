@@ -30,6 +30,9 @@ export type PlayerState = {
   wounded: Troops;
   /** The last combat reports, newest last. */
   reports: Report[];
+  /** How many reports this city has ever had: the next one is numbered reportSeq + 1. */
+  reportSeq: number;
 };
 
-export type Report = CombatReport & { read: boolean };
+/** A combat report, with a stable id ("r1", "r2"…) given in the order reports arrive, never reused. */
+export type Report = CombatReport & { id: string; read: boolean };
