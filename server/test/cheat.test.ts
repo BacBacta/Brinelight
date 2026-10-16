@@ -5,7 +5,7 @@
  * applyAction for each accepted action), and the server's city is compared with it after every case.
  */
 import { randomBytes, randomUUID } from "node:crypto";
-import { RAFT_BUILD_TIME, RAFT_MAX_HP, RAFT_SLOTS, applyAction, catchUp, emptyTroops, newPlayerState, raftCap, trainTime, type GameAction, type PlayerState } from "@brinelight/shared";
+import { RAFT_BUILD_TIME, RAFT_MAX_HP, RAFT_SLOTS, applyAction, catchUp, emptyTroops, healTime, newPlayerState, raftCap, totalTroops, trainTime, type GameAction, type PlayerState } from "@brinelight/shared";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
@@ -340,5 +340,49 @@ describe("a modified client cannot change the rules", () => {
     expect(p.ref.now().troops).toEqual({ ...emptyTroops(), crossbowmen: 20 });
     expect(p.ref.now().training).toBeNull();
     await expectApplied(server, p, action({ type: "sail", site: "camp-1" }));
+  });
+  it("healing: no Infirmary, no wounded, one already underway, not enough fish, a field the server does not expect", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const wounded = { boarders: 12, harpooners: 5, crossbowmen: 3 };
+    const infirmary = { ...base, buildings: { ...base.buildings, infirmary: 1 }, wounded, stock: { oil: 9000, fish: 9000, wood: 9000, rope: 3 } };
+
+    await expectRefused(server, await player({ ...infirmary, buildings: base.buildings }), action({ type: "heal" }), "Build the Infirmary first");
+    await expectRefused(server, await player({ ...infirmary, wounded: emptyTroops() }), action({ type: "heal" }), "No wounded to heal");
+    const poor = await player({ ...infirmary, stock: { oil: 9000, fish: 39, wood: 9000, rope: 3 } });
+    await expectRefused(server, poor, action({ type: "heal" }), "Not enough resources");
+
+    const p = await player(infirmary);
+    for (const extra of [{ count: 500 }, { wounded: { boarders: 60, harpooners: 0, crossbowmen: 0 } }, { troop: "boarders" }]) await expectInvalid(server, p, { action: { ...action({ type: "heal" }), ...extra } });
+    await expectApplied(server, p, action({ type: "heal" }));
+    // The wounded the server had, never a number a client chose.
+    expect(p.ref.now().healing?.wounded).toEqual(wounded);
+    later(1000);
+    await expectRefused(server, p, action({ type: "heal" }), "No wounded to heal");
+    const busy = await player({ ...p.ref.now(), wounded: { boarders: 1, harpooners: 0, crossbowmen: 0 } });
+    await expectRefused(server, busy, action({ type: "heal" }), "Healing is already underway");
+  });
+
+  it("from battle to ranks: the wounded of a fleet are healed, and the server decides when they are back", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const p = await player({ ...base, buildings: { ...base.buildings, infirmary: 1 } });
+    await expectApplied(server, p, action({ type: "sail", site: "camp-1" }));
+    // The fleet fights and comes home on the server's clock.
+    later(8 * 3600_000);
+    await expectRules(server, p);
+    const back = p.ref.now();
+    const saved = totalTroops(back.wounded);
+    expect(back.fleets).toEqual([]);
+    expect(saved).toBeGreaterThan(0);
+    await expectApplied(server, p, action({ type: "heal" }));
+    // Whole milliseconds: the healing time can hold a fraction of a second.
+    later(Math.ceil(healTime(saved) * 1000) - 1000);
+    await expectRules(server, p);
+    expect(totalTroops(p.ref.now().troops)).toBe(totalTroops(back.troops));
+    later(1000);
+    await expectRules(server, p);
+    expect(totalTroops(p.ref.now().troops)).toBe(totalTroops(back.troops) + saved);
+    expect(p.ref.now().healing).toBeNull();
   });
 });

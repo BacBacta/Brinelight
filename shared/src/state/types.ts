@@ -1,6 +1,7 @@
 import type { CaptainId } from "../rules/captains.js";
 import type { Rafts, YardJob } from "../rules/rafts.js";
 import type { ResearchJob, Techs } from "../rules/research.js";
+import type { HealingJob } from "../rules/healing.js";
 import type { TrainingJob } from "../rules/training.js";
 import type { CombatReport, Fleet, SeaWorld } from "../rules/sea.js";
 import type { OwnedCaptain } from "../rules/start.js";
@@ -27,13 +28,15 @@ export type PlayerState = {
   yard: YardJob | null;
   /** The work at the Barracks (a batch of new soldiers): one at a time, null when none. */
   training: TrainingJob | null;
+  /** The healing at the Infirmary: the wounded being healed, out of the beds; one at a time, null when none. */
+  healing: HealingJob | null;
   /** The captain at the head of your fleets. */
   lead: CaptainId | null;
   /** Fleets at sea, in the order they left. */
   fleets: Fleet[];
   /** Pirate camp levels and what is left in each wreck. */
   world: SeaWorld;
-  /** Wounded resting in the Infirmary (healing comes later). */
+  /** Wounded resting in the Infirmary's beds, not being healed yet. */
   wounded: Troops;
   /** The last combat reports, newest last. */
   reports: Report[];

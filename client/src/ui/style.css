@@ -130,6 +130,7 @@ body.at-sea .labels.city,body:not(.at-sea) .labels.sea{display:none}
 .brh{margin:6px 0 0;font-family:var(--f-d);font-weight:400;font-size:16px}
 .dots{color:var(--gold);font-size:11px;letter-spacing:1px;margin-left:4px}
 .b.sm{padding:6px 10px 8px;font-size:14px;border-radius:10px}
+.b.green{background:linear-gradient(180deg,#6BE07A,#2E9D45)}
 .in-progress{font-size:12.5px;color:#9FE6FF;margin-top:6px}
 .kv span.no{color:#FF9A86}.kv span.ok{color:#9FE6A9}
 /* The Barracks: the soldiers of each type in a badge of its color, as in the prototype */

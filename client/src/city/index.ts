@@ -26,6 +26,7 @@ export function createCity(
     upgrade(id: BuildingId): void;
     research(tech: TechId): void;
     train(troop: TroopType): void;
+    heal(): void;
     dockRaft(slot: string): void;
     toCity(): void;
     /** How much faster than real time the city runs: the server's speed when signed in. */
@@ -40,6 +41,7 @@ export function createCity(
     upgrade: (id) => game.upgrade(id),
     research: (tech) => game.research(tech),
     train: (troop) => game.train(troop),
+    heal: () => game.heal(),
     close: () => {
       sheet.close();
       buildings.select(null);

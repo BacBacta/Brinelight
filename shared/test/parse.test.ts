@@ -13,6 +13,7 @@ import {
   parseState,
   readReport,
   research,
+  heal,
   sail,
   train,
   upgrade,
@@ -42,6 +43,7 @@ function wholeFields(s: PlayerState): [string, number][] {
   for (const [id, c] of Object.entries(s.captains)) out.push([`captains.${id}.level`, c!.level], [`captains.${id}.stars`, c!.stars]);
   for (const [k, r] of Object.entries(s.rafts)) out.push([`rafts.${k}.level`, r.level]);
   if (s.training) out.push(["training.count", s.training.count]);
+  if (s.healing) troops("healing.wounded", s.healing.wounded);
   for (const [id, v] of Object.entries(s.world.camps)) out.push([`camps.${id}`, v]);
   s.fleets.forEach((f, i) => {
     troops(`fleets.${i}.troops`, f.troops);
@@ -58,12 +60,13 @@ function wholeFields(s: PlayerState): [string, number][] {
 
 describe("parseState: whole numbers, nothing below 0", () => {
   it("the rules never give a decimal where a whole number is required: a long game, time cut at odd lengths", () => {
-    let s: PlayerState = { ...richCity(), buildings: { ...richCity().buildings, observatory: 2, barracks: 1 } };
+    let s: PlayerState = { ...richCity(), buildings: { ...richCity().buildings, observatory: 2, barracks: 1, infirmary: 1 } };
     const camps = SEA_SITES.filter((x) => x.kind === "camp").map((x) => x.id);
     const wrecks = SEA_SITES.filter((x) => x.kind === "wreck").map((x) => x.id);
     const steps = [0.37, 13.1, 600.5, 2.3 * HOUR, 0.001, 7.77 * HOUR, 1.7 * 24 * HOUR, 59.9, 3.3 * HOUR, 4 * 24 * HOUR];
     let checked = 0;
     let trained = 0;
+    let healed = 0;
     for (let round = 0; round < 40; round++) {
       for (const id of BUILDING_IDS) {
         const r = upgrade(s, id);
@@ -75,6 +78,11 @@ describe("parseState: whole numbers, nothing below 0", () => {
       if (drilled.ok) {
         s = drilled.state;
         trained++;
+      }
+      const cared = heal(s);
+      if (cared.ok) {
+        s = cared.state;
+        healed++;
       }
       const to = round % 3 === 2 ? wrecks[round % wrecks.length]! : camps[round % camps.length]!;
       const sent = sail(round % 5 === 0 ? { ...s, troops: { boarders: 40, harpooners: 31, crossbowmen: 27 } } : s, to);
@@ -98,6 +106,8 @@ describe("parseState: whole numbers, nothing below 0", () => {
     expect(checked).toBeGreaterThan(1000);
     // Training too: batches started, and some finished along the way.
     expect(trained).toBeGreaterThan(3);
+    // Healing too: wounded from the battles were healed.
+    expect(healed).toBeGreaterThan(1);
     // Research too: some finished along the way.
     expect(Object.values(s.techs).reduce((a, b) => a + (b ?? 0), 0)).toBeGreaterThan(richCity().techs.blades! + richCity().techs.sails!);
   });

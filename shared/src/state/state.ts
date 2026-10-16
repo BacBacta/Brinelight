@@ -1,6 +1,7 @@
 /** The player's city and what changes it: pure, with no clock, no randomness and no DOM. */
 import { STARTING_BUILDINGS, advanceQueue, startUpgrade } from "../rules/buildings.js";
 import { advanceStock, netRates, storeCap } from "../rules/economy.js";
+import { advanceHealing, startHealing } from "../rules/healing.js";
 import { advanceYard, startRaft } from "../rules/rafts.js";
 import { advanceResearch, startResearch, type TechId } from "../rules/research.js";
 import { advanceFleets, leadOf, sendFleet, startingSeaWorld, type CombatReport, type SeaState } from "../rules/sea.js";
@@ -29,6 +30,7 @@ export function newPlayerState(): PlayerState {
     research: null,
     yard: null,
     training: null,
+    healing: null,
     lead: STARTING_LEAD,
     fleets: [],
     world: startingSeaWorld(),
@@ -77,21 +79,22 @@ function withSea(s: PlayerState, sea: SeaState, reports: CombatReport[] = []): P
 
 /**
  * Advances the city by `seconds` of game time. Time is cut at each finished upgrade, at the end of the research,
- * at the end of the shipyard's work, at the end of a training and at each step of a fleet, so production, storage and fleets follow the new state from the exact moment it changes.
+ * at the end of the shipyard's work, at the end of a training or a healing, and at each step of a fleet, so production, storage and fleets follow the new state from the exact moment it changes.
  */
 export function advance(state: PlayerState, seconds: number): PlayerState {
   let s = state;
   let rest = seconds;
   while (rest > 0) {
-    const ends = [...s.queue.map((j) => j.left), ...(s.research ? [s.research.left] : []), ...(s.yard ? [s.yard.left] : []), ...(s.training ? [s.training.left] : []), ...s.fleets.map((f) => f.left)];
+    const ends = [...s.queue.map((j) => j.left), ...(s.research ? [s.research.left] : []), ...(s.yard ? [s.yard.left] : []), ...(s.training ? [s.training.left] : []), ...(s.healing ? [s.healing.left] : []), ...s.fleets.map((f) => f.left)];
     const next = Math.min(rest, ...ends.map((left) => Math.max(0, left)));
     s = produce(s, next);
     const q = advanceQueue(s.buildings, s.queue, next);
     const r = advanceResearch(s.techs, s.research, next);
     const y = advanceYard(s.rafts, s.yard, next);
-    // The new soldiers join the troops in the city before the fleets move: a fleet at sea never gets them.
+    // The new and the healed soldiers join the troops in the city before the fleets move: a fleet at sea never gets them.
     const t = advanceTraining(s.troops, s.training, next);
-    s = { ...s, buildings: q.buildings, queue: q.queue, techs: r.techs, research: r.research, rafts: y.rafts, yard: y.yard, troops: t.troops, training: t.training };
+    const hl = advanceHealing(t.troops, s.healing, next);
+    s = { ...s, buildings: q.buildings, queue: q.queue, techs: r.techs, research: r.research, rafts: y.rafts, yard: y.yard, troops: hl.troops, training: t.training, healing: hl.healing };
     const f = advanceFleets(seaState(s), next);
     s = withSea(s, f.state, f.reports);
     rest -= next;
@@ -141,6 +144,12 @@ export function dockRaft(state: PlayerState, slot: string): ActionResult {
 export function train(state: PlayerState, troop: TroopType): ActionResult {
   const r = startTraining(troop, { barracks: state.buildings.barracks, stock: state.stock, training: state.training });
   return r.ok ? { ok: true, state: { ...state, stock: r.stock, training: r.training } } : r;
+}
+
+/** Starts healing every wounded in the Infirmary with the shared rule; a refusal comes with its reason. */
+export function heal(state: PlayerState): ActionResult {
+  const r = startHealing({ infirmary: state.buildings.infirmary, wounded: state.wounded, stock: state.stock, healing: state.healing });
+  return r.ok ? { ok: true, state: { ...state, stock: r.stock, wounded: r.wounded, healing: r.healing } } : r;
 }
 
 /**

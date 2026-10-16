@@ -594,6 +594,45 @@ describe("signed in", () => {
     await p.context.close();
   });
 
+  it("healing at the Infirmary: started from its sheet, found again after a reload, and the soldiers back in the city by the server's clock", async () => {
+    const p = await signedInPlayer();
+    const base = newPlayerState();
+    const wounded = { boarders: 12, harpooners: 5, crossbowmen: 3 };
+    await h.putCity(p.playerId, { ...base, buildings: { ...base.buildings, infirmary: 1 }, wounded, stock: { oil: 5000, fish: 5000, wood: 5000, rope: 3 } });
+    await show(p.page);
+    await expect.poll(async () => ((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.buildings.infirmary, NET).toBe(1);
+    await p.page.locator(".labels.city .bl", { hasText: "Infirmary" }).first().waitFor();
+    await openSheet(p.page, "Infirmary");
+    await expect.poll(() => p.page.locator(".sheet", { hasText: "Beds in use" }).textContent(), NET).toContain("20 / 60");
+    await p.page.screenshot({ path: "e2e/.shots/shot-infirmary.png" });
+    await p.page.locator('[data-act="heal"]').click();
+    await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).healing?.wounded, NET).toEqual(wounded);
+    await expect.poll(() => p.page.locator(".queue .n", { hasText: "Healing · 20 wounded" }).count(), NET).toBe(1);
+
+    // Reloaded: the healing is the server's, and still there.
+    await p.page.reload();
+    await p.page.waitForSelector(".labels.city .bl b");
+    await expect.poll(() => p.page.locator(".queue .n", { hasText: "Healing · 20 wounded" }).count(), NET).toBe(1);
+    await openSheet(p.page, "Infirmary");
+    await expect.poll(() => p.page.locator(".sheet", { hasText: "Healing: 20 soldiers" }).count(), NET).toBe(1);
+    await p.page.screenshot({ path: "e2e/.shots/shot-healing.png" });
+
+    // 3 seconds from its end: the server brings the soldiers back on its own clock, the sheet follows.
+    const now = (await serverCity(p.token))!.state as unknown as PlayerState;
+    await h.putCity(p.playerId, { ...now, healing: { ...now.healing!, left: 3 } });
+    await show(p.page);
+    await p.page.waitForTimeout(4000);
+    const done = (await serverCity(p.token))!.state as unknown as PlayerState;
+    expect(done.troops).toEqual({ boarders: now.troops.boarders + 12, harpooners: now.troops.harpooners + 5, crossbowmen: now.troops.crossbowmen + 3 });
+    expect(done.healing).toBeNull();
+    await show(p.page);
+    await expect.poll(() => p.page.locator(".sheet", { hasText: "No wounded." }).count(), NET).toBe(1);
+    await expect.poll(() => p.page.locator(".queue .n", { hasText: "Healing" }).count(), NET).toBe(0);
+    await p.page.screenshot({ path: "e2e/.shots/shot-healed.png" });
+    expect(p.problems).toEqual([]);
+    await p.context.close();
+  });
+
   it("a raft: a lit slot tapped around the island, the raft started from its sheet, then moored by the server's clock", async () => {
     const p = await signedInPlayer();
     const base = newPlayerState();

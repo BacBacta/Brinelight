@@ -30,6 +30,8 @@ Do the tasks in order, one per session. For each one: read CLAUDE.md, say what y
 - During a healing, new wounded take the free beds, as in the prototype: the beds count only the wounded not being healed.
 - Infirmary sheet as in the prototype: wounded by type, beds in use, battle losses saved, "Heal N wounded · X fish".
 
+**Done (16 October).** One healing at a time (`healing` in the city), ended as an event of `advance`; the prototype's values (2 fish per wounded, n × 0.12 + 2 prototype seconds); all the wounded at once, out of the beds as soon as the healing starts; refusals "Build the Infirmary first", "No wounded to heal", "Healing is already underway", "Not enough resources"; action `heal` with no field; the Infirmary sheet from the prototype (beds at this level and the next, wounded by type, beds in use, losses saved, "Heal N wounded · X fish"), the queue row "Healing · N wounded"; `migrateSave` adds `healing: null`; works without an account; cheat cases and the whole path on the server (a fleet's wounded, healed, back in the city by the server's clock); e2e: healing started from the sheet, found again after a reload, then the soldiers back. The combat report now says "no Infirmary: all losses died" without an Infirmary, as in the prototype.
+
 ## Task 3 · Veterans
 
 - As in the prototype: the Veteran Doctrine research and Barracks level 3; promote 10 soldiers of one type for 60 fish and 40 oil, in 6 prototype seconds, in the same slot as training (one or the other).

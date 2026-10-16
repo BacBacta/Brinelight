@@ -17,6 +17,38 @@ import { ODDS_TEXT, TROOP_NAMES, TROOP_TYPES, counterTip } from "./text.js";
 
 const HOLD_NOTE = { tom: " (Old Tom +30%)" } as Record<string, string>;
 
+export const REPORT_TEXT = {
+  /** No Infirmary when the report is read (the prototype's words). */
+  none: "no Infirmary: all losses died",
+  /** An Infirmary, but no free bed. */
+  full: "no free bed in the Infirmary: all losses died",
+} as const;
+
+/**
+ * A combat report. With no wounded saved, it says why: no Infirmary in your city when you read it, or no free bed.
+ * Pure: tested without a browser.
+ */
+export function reportHtml(r: Report, infirmary: boolean): string {
+  const name = seaSite(r.site)?.name ?? "";
+  const lost = TROOP_TYPES.reduce((a, k) => a + r.losses[k], 0);
+  const hurt = TROOP_TYPES.reduce((a, k) => a + r.wounded[k], 0);
+  const rows = TROOP_TYPES.map((k) => {
+    const adv = r.sent[k] > 0 && r.enemy[BEATS[k]] > 0 ? ' <span class="adv">+20%</span>' : "";
+    return `<tr><td>${TROOP_NAMES[k]}${adv}</td><td>${r.sent[k]}</td><td class="l">${r.losses[k] ? `−${r.losses[k]}` : "0"}</td><td>${r.enemy[k]}</td></tr>`;
+  }).join("");
+  return (
+    `<div class="verd ${r.win ? "easy" : "hard"}">${r.win ? "Victory" : "Defeat"} · ${name} level ${r.level}</div>` +
+    `<div class="vs"><i style="width:${((r.attack / (r.attack + r.defense)) * 100).toFixed(1)}%;background:#3BC6FF"></i><i style="flex:1;background:#FF7A5A"></i></div>` +
+    `<div class="row" style="justify-content:space-between;font-size:12px;font-weight:900"><span style="color:#9FD8FF">Your strength ${Math.round(r.attack)}</span><span style="color:#FF9A86">Pirates ${Math.round(r.defense)}</span></div>` +
+    `<table class="rep"><tr><th></th><th>Sent</th><th>Losses</th><th>Pirates</th></tr>${rows}</table>` +
+    `<div class="tx">` +
+    (lost ? `<div><span>Wounded in the Infirmary</span><span>${hurt ? `${hurt} of ${lost} losses, to heal` : infirmary ? REPORT_TEXT.full : REPORT_TEXT.none}</span></div>` : "") +
+    (r.loot ? `<div><span>Loot</span><span>+${r.loot.oil} oil, +${r.loot.wood} wood, +${r.loot.pearls} Pearls, +${r.loot.rope} rope</span></div>` : `<div><span>Tip</span><span>${counterTip(r.enemy)}</span></div>`) +
+    `</div>` +
+    `<p class="p" style="font-size:11.5px">Combat is deterministic: Boarders beat Harpooners, Harpooners beat Crossbowmen, Crossbowmen beat Boarders (+20%). Your fleet brings the survivors${r.loot ? " and the loot" : ""} home.</p>`
+  );
+}
+
 /** The sheet of a camp or a wreck, and the combat reports. */
 export function createSeaSheet(root: HTMLElement, actions: { sail(site: string): void; closeReport(reportId: string): void }) {
   const el = document.createElement("section");
@@ -83,34 +115,14 @@ export function createSeaSheet(root: HTMLElement, actions: { sail(site: string):
     );
   };
 
-  const reportHtml = (r: Report): string => {
-    const name = seaSite(r.site)?.name ?? "";
-    const lost = TROOP_TYPES.reduce((a, k) => a + r.losses[k], 0);
-    const hurt = TROOP_TYPES.reduce((a, k) => a + r.wounded[k], 0);
-    const rows = TROOP_TYPES.map((k) => {
-      const adv = r.sent[k] > 0 && r.enemy[BEATS[k]] > 0 ? ' <span class="adv">+20%</span>' : "";
-      return `<tr><td>${TROOP_NAMES[k]}${adv}</td><td>${r.sent[k]}</td><td class="l">${r.losses[k] ? `−${r.losses[k]}` : "0"}</td><td>${r.enemy[k]}</td></tr>`;
-    }).join("");
-    return (
-      `<div class="verd ${r.win ? "easy" : "hard"}">${r.win ? "Victory" : "Defeat"} · ${name} level ${r.level}</div>` +
-      `<div class="vs"><i style="width:${((r.attack / (r.attack + r.defense)) * 100).toFixed(1)}%;background:#3BC6FF"></i><i style="flex:1;background:#FF7A5A"></i></div>` +
-      `<div class="row" style="justify-content:space-between;font-size:12px;font-weight:900"><span style="color:#9FD8FF">Your strength ${Math.round(r.attack)}</span><span style="color:#FF9A86">Pirates ${Math.round(r.defense)}</span></div>` +
-      `<table class="rep"><tr><th></th><th>Sent</th><th>Losses</th><th>Pirates</th></tr>${rows}</table>` +
-      `<div class="tx">` +
-      (lost ? `<div><span>Wounded in the Infirmary</span><span>${hurt ? `${hurt} of ${lost} losses, to heal` : "no free bed in the Infirmary: all losses died"}</span></div>` : "") +
-      (r.loot ? `<div><span>Loot</span><span>+${r.loot.oil} oil, +${r.loot.wood} wood, +${r.loot.pearls} Pearls, +${r.loot.rope} rope</span></div>` : `<div><span>Tip</span><span>${counterTip(r.enemy)}</span></div>`) +
-      `</div>` +
-      `<p class="p" style="font-size:11.5px">Combat is deterministic: Boarders beat Harpooners, Harpooners beat Crossbowmen, Crossbowmen beat Boarders (+20%). Your fleet brings the survivors${r.loot ? " and the loot" : ""} home.</p>`
-    );
-  };
-
   const render = (state: PlayerState, speed: number) => {
     if (report) {
-      const k = `r|${JSON.stringify(report)}`;
+      const infirmary = state.buildings.infirmary > 0;
+      const k = `r|${infirmary}|${JSON.stringify(report)}`;
       if (k === key) return;
       key = k;
       el.setAttribute("aria-label", "Combat report");
-      el.innerHTML = frame("Combat report", reportHtml(report));
+      el.innerHTML = frame("Combat report", reportHtml(report, infirmary));
       return;
     }
     if (!site) return;

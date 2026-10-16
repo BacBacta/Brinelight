@@ -1,5 +1,6 @@
 import { emptyTroops, type Rarity, type TroopType, type Troops } from "./types.js";
 import { attackBonus, type CaptainClass } from "./captains.js";
+import { woundedSaved } from "./healing.js";
 
 /** Each troop type beats the next: boarders > harpooners > crossbowmen > boarders. */
 export const BEATS: Record<TroopType, TroopType> = { boarders: "harpooners", harpooners: "crossbowmen", crossbowmen: "boarders" };
@@ -82,7 +83,7 @@ export function resolveCombat(input: CombatInput): CombatResult {
   const vets = input.veterans ?? emptyTroops();
   const losses = emptyTroops(), veteranLosses = emptyTroops(), wounded = emptyTroops();
   const survivors = emptyTroops(), veteranSurvivors = emptyTroops();
-  const saveRate = 0.5 + 0.1 * (input.techs?.stretchers ?? 0);
+  const saveRate = woundedSaved(input.techs?.stretchers ?? 0);
   let room = input.hospital ? Math.max(0, input.hospital.capacity - input.hospital.occupied) : 0;
   for (const k of TYPES) {
     losses[k] = Math.round(input.troops[k] * lossRate);

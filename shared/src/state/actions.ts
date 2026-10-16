@@ -9,7 +9,7 @@ import { TECHS, type TechId } from "../rules/research.js";
 import { seaSite } from "../rules/sea.js";
 import type { BuildingId, TroopType } from "../rules/types.js";
 import { REPORT_ID } from "./parse.js";
-import { dockRaft, readReport, research, sail, train, upgrade, type ActionResult } from "./state.js";
+import { dockRaft, heal, readReport, research, sail, train, upgrade, type ActionResult } from "./state.js";
 import type { PlayerState } from "./types.js";
 
 /** Every action carries an id made by the client (a UUID), so the server never applies it twice. */
@@ -19,7 +19,8 @@ export type GameAction =
   | { id: string; type: "readReport"; reportId: string }
   | { id: string; type: "research"; tech: TechId }
   | { id: string; type: "dockRaft"; slot: string }
-  | { id: string; type: "train"; troop: TroopType };
+  | { id: string; type: "train"; troop: TroopType }
+  | { id: string; type: "heal" };
 
 export type GameActionType = GameAction["type"];
 
@@ -34,6 +35,7 @@ const FIELDS: Record<GameActionType, readonly string[]> = {
   research: ["tech"],
   dockRaft: ["slot"],
   train: ["troop"],
+  heal: [],
 };
 
 const SLOTS = new Set(RAFT_SLOTS.map((s) => s.key));
@@ -61,6 +63,8 @@ export function applyAction(state: PlayerState, action: GameAction): ActionResul
       return dockRaft(state, action.slot);
     case "train":
       return train(state, action.troop);
+    case "heal":
+      return heal(state);
   }
 }
 
@@ -105,6 +109,9 @@ export function parseAction(raw: unknown): GameAction | null {
         const troop = o.troop;
         return shortText(troop) && Object.prototype.hasOwnProperty.call(BEATS, troop) ? { id, type: t, troop: troop as TroopType } : null;
       }
+      case "heal":
+        // No field: every wounded of the city is healed, never a number a client chose.
+        return { id, type: t };
     }
   } catch {
     return null;

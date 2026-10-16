@@ -1,8 +1,9 @@
 import { BUILDERS, BUILDING_IDS, LIGHTHOUSE_MAX, type UpgradeJob } from "../rules/buildings.js";
 import { CAPTAINS, CAPTAIN_MAX_LEVEL, type CaptainId } from "../rules/captains.js";
+import type { HealingJob } from "../rules/healing.js";
 import { RAFT_BUILDINGS, RAFT_BUILDING_MAX_LEVEL, RAFT_MAX_HP, RAFT_SLOTS, type Rafts, type YardJob } from "../rules/rafts.js";
 import { TECHS, techLevel, type ResearchJob, type TechId, type Techs } from "../rules/research.js";
-import { ATTACK_STAY, COLLECT_STAY, SEA_SITES, fleetsMax, seaSite, type Fleet, type SeaWorld } from "../rules/sea.js";
+import { ATTACK_STAY, COLLECT_STAY, SEA_SITES, fleetsMax, hospitalCapacity, seaSite, type Fleet, type SeaWorld } from "../rules/sea.js";
 import { TRAIN_PER_LEVEL, type TrainingJob } from "../rules/training.js";
 import type { Troops } from "../rules/types.js";
 import { MAX_REPORTS } from "./state.js";
@@ -147,6 +148,20 @@ function parseTraining(raw: unknown, barracks: number): TrainingJob | null | und
   return { kind, troop: troop as TrainingJob["troop"], count, left: Math.min(Math.max(0, left), duration), duration };
 }
 
+/**
+ * The healing at the Infirmary: none (null), or wounded by type (whole numbers, at least one, no more than the
+ * Infirmary's beds), with its time left brought back between 0 and its duration. Anything else refuses the city.
+ */
+function parseHealing(raw: unknown, infirmary: number): HealingJob | null | undefined {
+  if (raw === null) return null;
+  if (!isObj(raw) || Object.keys(raw).sort().join() !== "duration,left,wounded") return undefined;
+  const { wounded, left, duration } = raw;
+  if (!isTroops(wounded) || Object.keys(wounded).length !== TROOPS.length) return undefined;
+  const count = TROOPS.reduce((a, k) => a + wounded[k], 0);
+  if (count < 1 || count > hospitalCapacity(infirmary) || !isNum(left) || !isNum(duration) || duration <= 0) return undefined;
+  return { wounded: { ...wounded }, left: Math.min(Math.max(0, left), duration), duration };
+}
+
 /** Camp levels and wrecks: every camp and every wreck of the map, each with a valid value. */
 function parseWorld(raw: unknown): SeaWorld | null {
   if (!isObj(raw) || !isObj(raw.camps) || !isObj(raw.wrecks)) return null;
@@ -235,6 +250,8 @@ export function parseState(raw: unknown): PlayerState | null {
     const buildings = s.buildings as PlayerState["buildings"];
     const training = parseTraining(s.training, buildings.barracks);
     if (training === undefined) return null;
+    const healing = parseHealing(s.healing, buildings.infirmary);
+    if (healing === undefined) return null;
     return {
       buildings: { ...buildings },
       stock: { ...(s.stock as PlayerState["stock"]) },
@@ -249,6 +266,7 @@ export function parseState(raw: unknown): PlayerState | null {
       research,
       yard,
       training,
+      healing,
       lead: s.lead as CaptainId | null,
       fleets: cleanFleets(s.fleets, buildings.harbor),
       world,
