@@ -2,6 +2,8 @@
 
 This guide takes you from nothing to a game server online at `https://api.brinelight.xyz`, with the game at `https://play.brinelight.xyz`. It is written for a first time: copy each command, and compare with what you should see.
 
+**The server is not rented yet**: steps 1 to 11 wait until week 7 at the latest. To test with a real wallet meanwhile, see "Test with a real wallet without a server" just below.
+
 The domain `brinelight.xyz` was bought at Vercel, and its DNS stays at Vercel. Everywhere below, replace `203.0.113.10` with your server's IPv4 address.
 
 Only two names are used: `api.brinelight.xyz` (the server) and `play.brinelight.xyz` (the game). The bare domain `brinelight.xyz` is not used for now.
@@ -38,6 +40,85 @@ Players ──https──> play.brinelight.xyz  (Cloudflare Pages: the game itse
 The rest of the guide is for later: updating, restoring, solving problems.
 
 ---
+
+## Test with a real wallet without a server
+
+The server is not rented yet: it waits until it is really needed (week 7 at the latest, see `docs/decisions.md`). Until then, you can test signing in with Phantom on your phone from your own computer, for free, through two temporary Cloudflare tunnels. A tunnel gives a local program a public `https://….trycloudflare.com` address, with no account and nothing to configure.
+
+Everything stays on your computer: the database is in memory (PGlite) and is lost when you stop the server. That is fine for a test.
+
+### Once: install cloudflared
+
+- macOS: `brew install cloudflared`
+- Windows: `winget install --id Cloudflare.cloudflared`
+- Linux: the `.deb` or the binary from github.com/cloudflare/cloudflared/releases
+
+### Each test: five terminals, in this order
+
+In the repository folder, after `npm install`.
+
+**1. Tunnel for the server.** In terminal 1:
+
+```
+cloudflared tunnel --url http://127.0.0.1:8787
+```
+
+After a few seconds it prints an address like `https://tall-river-word-word.trycloudflare.com`. That is the **API address**. Keep the terminal open.
+
+**2. Tunnel for the game.** In terminal 2:
+
+```
+cloudflared tunnel --url http://127.0.0.1:4173
+```
+
+It prints another address: the **game address**.
+
+**3. The server**, allowed to be called only from the game address. In terminal 3 (macOS, Linux):
+
+```
+ALLOWED_ORIGINS=https://<game address> TRUSTED_PROXY=127.0.0.1 npm run dev:server
+```
+
+On Windows (PowerShell):
+
+```
+$env:ALLOWED_ORIGINS="https://<game address>"; $env:TRUSTED_PROXY="127.0.0.1"; npm run dev:server
+```
+
+The game address goes without a final `/`. `TRUSTED_PROXY` tells the server that the tunnel, on your own computer, is the only one allowed to say who the player is.
+
+**4. The game, built with the API address.** In terminal 4 (macOS, Linux):
+
+```
+VITE_API_URL=https://<API address> npm run build
+npm run preview -w client -- --host 127.0.0.1
+```
+
+On Windows (PowerShell): `$env:VITE_API_URL="https://<API address>"; npm run build`, then the same `npm run preview` line.
+
+**5. Check the server through its tunnel.** In terminal 5, or in any browser: `https://<API address>/health` must answer `{"ok":true,…}`.
+
+### On your phone
+
+1. Open the **game address** inside Phantom's browser (in Phantom: the browser tab, then type the address). In Chrome, the Profile also offers "Open in Phantom".
+2. Tap the Power card (top left), then "Sign in with your wallet", and approve in Phantom.
+3. Check:
+   - **the sign-in is accepted**: a toast says "Signed in. Your city is saved on your account.", and the Power card gets a green mark;
+   - **the city is found**: upgrade a building, wait a few seconds, then reload the page. The upgrade is still there. In terminal 3 you see `PUT /city` then `GET /city` with `statusCode` 200.
+4. If you have Phantom in a browser on your computer too, open the game address there and sign in with the same wallet: you see the same city.
+
+### Stop everything
+
+Press `Ctrl+C` in each terminal. The two addresses stop working at once, and the test accounts and cities are gone. Do not share the addresses while the test runs: anyone who has them can reach your computer's server.
+
+### If it fails
+
+Send Claude Code:
+
+- **the exact message shown in the game** (a toast or the Profile). Each one belongs to one refusal code, for example "This message was made for another site" is `wrong_site`, "This page is not allowed to sign in to Brinelight" is `origin_not_allowed`, "This message does not match this sign-in. Please try again" is `wrong_issued_at`, "This sign-in message is not valid" is `invalid_message`;
+- **the last 30 lines of terminal 3** (the server). They never contain your session token, nor anything secret.
+
+Never send your wallet's recovery phrase or private key: neither Claude Code nor the game ever needs them.
 
 ## 1. Create your SSH key (on your computer)
 

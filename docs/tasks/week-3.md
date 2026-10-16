@@ -75,6 +75,8 @@ Sign-in is a sensitive area: add it to the protected areas of CLAUDE.md ("sign-i
 
 ## Task 6 · Put the server online
 
+**Status: Ready, not deployed: the deploy kit is tested in CI; renting the server waits until week 7 at the latest.** Meanwhile, a real wallet can be tested from your computer through temporary tunnels (`docs/deploy.md`, "Test with a real wallet without a server").
+
 Your part (Claude Code cannot do it): buy a domain (about €15 a year), rent a Hetzner CX23 server (Ubuntu 24.04) in Germany (about €5 a month), point the domain to it. The client can then move to `play.<domain>` and the server to `api.<domain>`.
 
 Claude Code's part, in `deploy/` and `docs/deploy.md`:
