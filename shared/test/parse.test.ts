@@ -12,6 +12,7 @@ import {
   newPlayerState,
   parseState,
   readReport,
+  research,
   sail,
   upgrade,
   type PlayerState,
@@ -55,7 +56,7 @@ function wholeFields(s: PlayerState): [string, number][] {
 
 describe("parseState: whole numbers, nothing below 0", () => {
   it("the rules never give a decimal where a whole number is required: a long game, time cut at odd lengths", () => {
-    let s = richCity();
+    let s: PlayerState = { ...richCity(), buildings: { ...richCity().buildings, observatory: 2 } };
     const camps = SEA_SITES.filter((x) => x.kind === "camp").map((x) => x.id);
     const wrecks = SEA_SITES.filter((x) => x.kind === "wreck").map((x) => x.id);
     const steps = [0.37, 13.1, 600.5, 2.3 * HOUR, 0.001, 7.77 * HOUR, 1.7 * 24 * HOUR, 59.9, 3.3 * HOUR, 4 * 24 * HOUR];
@@ -65,6 +66,8 @@ describe("parseState: whole numbers, nothing below 0", () => {
         const r = upgrade(s, id);
         if (r.ok) s = r.state;
       }
+      const studied = research(s, (Object.keys(TECHS) as (keyof typeof TECHS)[])[round % 10]!);
+      if (studied.ok) s = studied.state;
       const to = round % 3 === 2 ? wrecks[round % wrecks.length]! : camps[round % camps.length]!;
       const sent = sail(round % 5 === 0 ? { ...s, troops: { boarders: 40, harpooners: 31, crossbowmen: 27 } } : s, to);
       if (sent.ok) s = sent.state;
@@ -85,6 +88,8 @@ describe("parseState: whole numbers, nothing below 0", () => {
     expect(s.reports.some((r) => r.loot)).toBe(true);
     expect(Object.values(s.stock).some((v) => !Number.isInteger(v))).toBe(true);
     expect(checked).toBeGreaterThan(1000);
+    // Research too: some finished along the way.
+    expect(Object.values(s.techs).reduce((a, b) => a + (b ?? 0), 0)).toBeGreaterThan(richCity().techs.blades! + richCity().techs.sails!);
   });
 
   it("reads research, captains and rafts within the bounds of the rules; a missing id is level 0 or not owned yet", () => {

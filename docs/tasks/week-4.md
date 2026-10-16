@@ -85,7 +85,7 @@ The checkpoint of the phase: "a modified client can neither create resources nor
 - `GET /city` and the 400 answer to an invalid action check the city with `parseState`, as the actions do.
 - Two more cases: an action id already used by another player; `playerId` and `__proto__` among the extra fields.
 
-## Task 6 · Research and rafts (can slip to week 5)
+## Task 6 · Research and rafts (done this week, by the owner's choice)
 
 The rules exist in `shared` (`canResearch`, `canAddRaft`…) but nothing in the game uses them yet.
 
@@ -93,6 +93,8 @@ The rules exist in `shared` (`canResearch`, `canAddRaft`…) but nothing in the 
 - Observatory sheet: the list of research, cost, time, and the refusal reason.
 - Raft slots appear around the island from Lighthouse level 4, as in the prototype; tapping a free slot shows its cost and docks a raft.
 - Tests in shared and server, one e2e scenario for research.
+
+**Research done (16 October, first commit).** One research at a time (`research` in the city), ended as an event of `advance`; costs, times and limits from the existing rules; action `research`; the Observatory sheet from the prototype, with one sentence on the Veteran Doctrine (it takes effect with troop training, week 5); `migrateSave` adds `research: null` to old local saves; works without an account; cheat cases (already in progress, Observatory too low, at its maximum, unknown); e2e: research started from the sheet, then done when its time is up. The function that puts a city for a test account lives in `e2e/harness.ts` only.
 
 ## Not this week
 

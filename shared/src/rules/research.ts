@@ -1,4 +1,4 @@
-import { OK, canPay, refuse, type Check, type Cost, type Stock } from "./types.js";
+import { OK, canPay, payCost, refuse, type Check, type Cost, type Stock } from "./types.js";
 import { protoSeconds } from "./time.js";
 
 export type TechId = "refining" | "nets" | "saws" | "warehouses" | "sails" | "holds" | "blades" | "hulls" | "stretchers" | "veterans";
@@ -46,4 +46,25 @@ export function canResearch(id: TechId, ctx: { techs: Techs; observatory: number
   if (ctx.observatory < need) return refuse(`Observatory level ${need} required`);
   if (!canPay(ctx.stock, techCost(id, level))) return refuse("Not enough resources");
   return OK;
+}
+
+/** The research in progress: one at a time. `left` and `duration` in real seconds. */
+export type ResearchJob = { id: TechId; left: number; duration: number };
+
+export type StartResearch = { ok: true; stock: Stock; research: ResearchJob } | { ok: false; reason: string };
+
+/** Starts the next level of a research: checked with canResearch, paid at once. */
+export function startResearch(id: TechId, ctx: { techs: Techs; observatory: number; stock: Stock; research: ResearchJob | null }): StartResearch {
+  const check = canResearch(id, { techs: ctx.techs, observatory: ctx.observatory, busy: ctx.research !== null, stock: ctx.stock });
+  if (!check.ok) return check;
+  const level = techLevel(ctx.techs, id);
+  const duration = techTime(id, level);
+  return { ok: true, stock: payCost(ctx.stock, techCost(id, level)), research: { id, left: duration, duration } };
+}
+
+/** Advances the research in progress by `seconds` real seconds; once done, its level goes up by one. */
+export function advanceResearch(techs: Techs, job: ResearchJob | null, seconds: number): { techs: Techs; research: ResearchJob | null } {
+  if (!job) return { techs, research: null };
+  if (job.left > Math.max(0, seconds)) return { techs, research: { ...job, left: job.left - Math.max(0, seconds) } };
+  return { techs: { ...techs, [job.id]: techLevel(techs, job.id) + 1 }, research: null };
 }

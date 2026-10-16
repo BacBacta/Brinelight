@@ -8,7 +8,8 @@ import { chromium, type Browser } from "playwright-core";
 import { build, preview, type PreviewServer } from "vite";
 import { buildApp } from "../server/src/app.js";
 import { loadConfig } from "../server/src/config.js";
-import { openDatabase, type Database } from "../server/src/db/index.js";
+import { sql } from "drizzle-orm";
+import { openDatabase, schema, type Database } from "../server/src/db/index.js";
 
 export const API = "http://127.0.0.1:8797";
 const API_BEHIND = 8798;
@@ -18,7 +19,15 @@ export const GAME = "http://127.0.0.1:4173";
 const CLIENT = fileURLToPath(new URL("../client", import.meta.url));
 const OUT = fileURLToPath(new URL("./.dist", import.meta.url));
 
-export type Harness = { browser: Browser; close(): Promise<void> };
+export type Harness = {
+  browser: Browser;
+  /**
+   * Tests only: puts a city for a test account straight into the database this harness opened itself, saved now,
+   * one version up. Never a server route, option or setting: nothing of it can exist in production.
+   */
+  putCity(playerId: string, state: unknown): Promise<void>;
+  close(): Promise<void>;
+};
 
 /** How long the relay holds each action (POST /city/actions) before passing it on: a slow server. 0: not held. */
 let actionDelayMs = 0;
@@ -42,6 +51,13 @@ export async function startHarness(): Promise<Harness> {
   const browser = await chromium.launch();
   return {
     browser,
+    async putCity(playerId, state) {
+      const savedAt = new Date();
+      await database.db
+        .insert(schema.cities)
+        .values({ playerId, state, version: 1, savedAt })
+        .onConflictDoUpdate({ target: schema.cities.playerId, set: { state, savedAt, version: sql`${schema.cities.version} + 1` } });
+    },
     async close() {
       const step = async (name: string, f: () => Promise<unknown>) => {
         const t = Date.now();

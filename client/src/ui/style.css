@@ -121,3 +121,13 @@ body.at-sea .labels.city,body:not(.at-sea) .labels.sea{display:none}
 .profile .b{width:100%;text-decoration:none}
 .profile .b[disabled]{opacity:.6}
 .profile .wallet img{width:24px;height:24px;border-radius:6px}
+/* Lists in sheets (the Observatory's research), as in the prototype */
+.list{display:grid;gap:6px}
+.it{display:flex;gap:10px;align-items:center;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.08);border-radius:14px;padding:8px 10px}
+.it .tt{flex:1;min-width:0}
+.tt b{display:block;font-size:14.5px}
+.tt small{display:block;color:var(--soft);font-size:12px;font-weight:700}
+.brh{margin:6px 0 0;font-family:var(--f-d);font-weight:400;font-size:16px}
+.dots{color:var(--gold);font-size:11px;letter-spacing:1px;margin-left:4px}
+.b.sm{padding:6px 10px 8px;font-size:14px;border-radius:10px}
+.in-progress{font-size:12.5px;color:#9FE6FF;margin-top:6px}

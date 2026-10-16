@@ -1,6 +1,6 @@
 import type { CaptainId } from "../rules/captains.js";
 import type { Rafts } from "../rules/rafts.js";
-import type { Techs } from "../rules/research.js";
+import type { ResearchJob, Techs } from "../rules/research.js";
 import type { CombatReport, Fleet, SeaWorld } from "../rules/sea.js";
 import type { OwnedCaptain } from "../rules/start.js";
 import type { UpgradeJob } from "../rules/buildings.js";
@@ -20,6 +20,8 @@ export type PlayerState = {
   pearls: number;
   /** Upgrades in progress, in the order they were started. */
   queue: UpgradeJob[];
+  /** The research in progress at the Observatory: one at a time, null when none. */
+  research: ResearchJob | null;
   /** The captain at the head of your fleets. */
   lead: CaptainId | null;
   /** Fleets at sea, in the order they left. */

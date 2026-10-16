@@ -1,7 +1,7 @@
 import { BUILDERS, BUILDING_IDS, LIGHTHOUSE_MAX, type UpgradeJob } from "../rules/buildings.js";
 import { CAPTAINS, CAPTAIN_MAX_LEVEL, type CaptainId } from "../rules/captains.js";
 import { RAFT_BUILDINGS, RAFT_BUILDING_MAX_LEVEL, RAFT_SLOTS } from "../rules/rafts.js";
-import { TECHS } from "../rules/research.js";
+import { TECHS, techLevel, type ResearchJob, type TechId, type Techs } from "../rules/research.js";
 import { ATTACK_STAY, COLLECT_STAY, SEA_SITES, fleetsMax, seaSite, type Fleet, type SeaWorld } from "../rules/sea.js";
 import type { Troops } from "../rules/types.js";
 import { MAX_REPORTS } from "./state.js";
@@ -106,6 +106,19 @@ export function cleanFleets(raw: readonly unknown[], harbor: number): Fleet[] {
     .map((f) => ({ ...f, left: Math.min(Math.max(0, f.left), longest(f)) }));
 }
 
+/**
+ * The research in progress: none (null), or a known research below its maximum, with its time left brought
+ * back between 0 and its duration (as for the build queue). Anything else refuses the city.
+ */
+function parseResearch(raw: unknown, techs: Techs): ResearchJob | null | undefined {
+  if (raw === null) return null;
+  if (!isObj(raw) || Object.keys(raw).sort().join() !== "duration,id,left") return undefined;
+  const { id, left, duration } = raw;
+  if (typeof id !== "string" || !has(TECHS, id) || !isNum(left) || !isNum(duration) || duration <= 0) return undefined;
+  if (techLevel(techs, id as TechId) >= TECHS[id as TechId].max) return undefined;
+  return { id: id as TechId, left: Math.min(Math.max(0, left), duration), duration };
+}
+
 /** Camp levels and wrecks: every camp and every wreck of the map, each with a valid value. */
 function parseWorld(raw: unknown): SeaWorld | null {
   if (!isObj(raw) || !isObj(raw.camps) || !isObj(raw.wrecks)) return null;
@@ -187,6 +200,8 @@ export function parseState(raw: unknown): PlayerState | null {
     if (new Set(ids).size !== ids.length || ids.some((id) => reportNumber(id) > (s.reportSeq as number))) return null;
     const world = parseWorld(s.world);
     if (!world) return null;
+    const research = parseResearch(s.research, s.techs as Techs);
+    if (research === undefined) return null;
     const buildings = s.buildings as PlayerState["buildings"];
     return {
       buildings: { ...buildings },
@@ -199,6 +214,7 @@ export function parseState(raw: unknown): PlayerState | null {
       morale: s.morale,
       pearls: s.pearls,
       queue: cleanQueue(s.queue),
+      research,
       lead: s.lead as CaptainId | null,
       fleets: cleanFleets(s.fleets, buildings.harbor),
       world,

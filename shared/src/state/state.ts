@@ -1,6 +1,7 @@
 /** The player's city and what changes it: pure, with no clock, no randomness and no DOM. */
 import { STARTING_BUILDINGS, advanceQueue, startUpgrade } from "../rules/buildings.js";
 import { advanceStock, netRates, storeCap } from "../rules/economy.js";
+import { advanceResearch, startResearch, type TechId } from "../rules/research.js";
 import { advanceFleets, leadOf, sendFleet, startingSeaWorld, type CombatReport, type SeaState } from "../rules/sea.js";
 import { STARTING_CAPTAIN, STARTING_LEAD, STARTING_MORALE, STARTING_PEARLS, STARTING_STOCK, STARTING_SURVIVORS, STARTING_TROOPS } from "../rules/start.js";
 import { emptyTroops, type BuildingId } from "../rules/types.js";
@@ -23,6 +24,7 @@ export function newPlayerState(): PlayerState {
     morale: STARTING_MORALE,
     pearls: STARTING_PEARLS,
     queue: [],
+    research: null,
     lead: STARTING_LEAD,
     fleets: [],
     world: startingSeaWorld(),
@@ -70,17 +72,19 @@ function withSea(s: PlayerState, sea: SeaState, reports: CombatReport[] = []): P
 }
 
 /**
- * Advances the city by `seconds` of game time. Time is cut at each finished upgrade and at each step
- * of a fleet, so production, storage and fleets follow the new state from the exact moment it changes.
+ * Advances the city by `seconds` of game time. Time is cut at each finished upgrade, at the end of the research
+ * and at each step of a fleet, so production, storage and fleets follow the new state from the exact moment it changes.
  */
 export function advance(state: PlayerState, seconds: number): PlayerState {
   let s = state;
   let rest = seconds;
   while (rest > 0) {
-    const next = Math.min(rest, ...s.queue.map((j) => Math.max(0, j.left)), ...s.fleets.map((f) => Math.max(0, f.left)));
+    const ends = [...s.queue.map((j) => j.left), ...(s.research ? [s.research.left] : []), ...s.fleets.map((f) => f.left)];
+    const next = Math.min(rest, ...ends.map((left) => Math.max(0, left)));
     s = produce(s, next);
     const q = advanceQueue(s.buildings, s.queue, next);
-    s = { ...s, buildings: q.buildings, queue: q.queue };
+    const r = advanceResearch(s.techs, s.research, next);
+    s = { ...s, buildings: q.buildings, queue: q.queue, techs: r.techs, research: r.research };
     const f = advanceFleets(seaState(s), next);
     s = withSea(s, f.state, f.reports);
     rest -= next;
@@ -112,6 +116,12 @@ export type UpgradeResult = ActionResult;
 export function upgrade(state: PlayerState, id: BuildingId): UpgradeResult {
   const r = startUpgrade(id, state);
   return r.ok ? { ok: true, state: { ...state, stock: r.stock, queue: r.queue } } : r;
+}
+
+/** Starts the next level of a research at the Observatory with the shared rule; a refusal comes with its reason. */
+export function research(state: PlayerState, id: TechId): ActionResult {
+  const r = startResearch(id, { techs: state.techs, observatory: state.buildings.observatory, stock: state.stock, research: state.research });
+  return r.ok ? { ok: true, state: { ...state, stock: r.stock, research: r.research } } : r;
 }
 
 /**

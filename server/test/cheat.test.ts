@@ -259,4 +259,24 @@ describe("a modified client cannot change the rules", () => {
     expect(again.json().version).toBe(2);
     for (const p of [a, b, c]) await expectRules(server, p);
   });
+
+  it("research: one already in progress, the Observatory too low, at its maximum, or unknown", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const observatory = { ...base, buildings: { ...base.buildings, observatory: 1 }, stock: { oil: 9000, fish: 9000, wood: 9000, rope: 3 } };
+    const p = await player(observatory);
+    await expectApplied(server, p, action({ type: "research", tech: "refining" }));
+    later(1000);
+    await expectRefused(server, p, action({ type: "research", tech: "nets" }), "Research is already in progress");
+    await expectRefused(server, p, action({ type: "research", tech: "refining" }), "Research is already in progress");
+
+    const low = await player({ ...observatory, buildings: { ...observatory.buildings, observatory: 1 } });
+    await expectRefused(server, low, action({ type: "research", tech: "warehouses" }), "Observatory level 2 required");
+    const done = await player({ ...observatory, techs: { veterans: 1 } });
+    await expectRefused(server, done, action({ type: "research", tech: "veterans" }), "This research is at max level");
+    for (const tech of ["teleport", "toString", "__proto__"]) await expectInvalid(server, done, { action: { ...action({ type: "research", tech: "nets" }), tech } });
+    // Without an Observatory at all.
+    const none = await player();
+    await expectRefused(server, none, action({ type: "research", tech: "refining" }), "Observatory level 1 required");
+  });
 });

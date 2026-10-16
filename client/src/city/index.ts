@@ -1,4 +1,4 @@
-import type { BuildingId } from "@brinelight/shared";
+import type { BuildingId, TechId } from "@brinelight/shared";
 import type { Kit, SceneHandle } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 import { createCityBuildings } from "./buildings.js";
@@ -22,6 +22,7 @@ export function createCity(
   game: {
     state(): PlayerState;
     upgrade(id: BuildingId): void;
+    research(tech: TechId): void;
     toCity(): void;
     /** How much faster than real time the city runs: the server's speed when signed in. */
     speed(): number;
@@ -32,6 +33,7 @@ export function createCity(
   const queue = createQueue(root, () => game.toCity());
   const sheet = createSheet(root, {
     upgrade: (id) => game.upgrade(id),
+    research: (tech) => game.research(tech),
     close: () => {
       sheet.close();
       buildings.select(null);

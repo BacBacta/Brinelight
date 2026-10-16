@@ -64,6 +64,18 @@ async function openGame(context: BrowserContext): Promise<Page> {
   return page;
 }
 
+/** Taps a building in the 3D view, just under its label, until its sheet opens. */
+async function openSheet(page: Page, name: string): Promise<void> {
+  await page.waitForTimeout(300);
+  const label = page.locator(".labels.city .bl", { hasText: name }).first();
+  const box = (await label.boundingBox())!;
+  for (const dy of [30, 45, 60, 20]) {
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height + dy);
+    if (await page.locator(".sheet:not(.profile)", { hasText: name }).isVisible()) return;
+  }
+  throw new Error(`Could not open the sheet of ${name}`);
+}
+
 /** Taps a building in the 3D view, just under its label, and upgrades it from its sheet. */
 async function upgradeBuilding(page: Page, name: string): Promise<void> {
   await page.waitForTimeout(300);
@@ -477,6 +489,32 @@ describe("signed in", () => {
     await expect.poll(async () => (await copyOf(page, playerId))?.server?.state.buildings.refinery, NET).toBe(1);
     await expect.poll(() => shownJobs(page), NET).toEqual(["Refinery"]);
     await page.screenshot({ path: "e2e/.shots/shot-cheat.png" });
+    await p.context.close();
+  });
+
+  it("research at the Observatory: started from its sheet, applied by the server, and done when its time is up", async () => {
+    const p = await signedInPlayer();
+    // The account's city gets an Observatory (straight in the test database: the e2e harness only).
+    const base = newPlayerState();
+    await h.putCity(p.playerId, { ...base, buildings: { ...base.buildings, observatory: 1 }, stock: { oil: 5000, fish: 5000, wood: 5000, rope: 3 } });
+    await show(p.page);
+    await p.page.locator(".labels.city .bl", { hasText: "Observatory" }).first().waitFor();
+    await openSheet(p.page, "Observatory");
+    await p.page.locator('[data-act="research"][data-tech="refining"]').click();
+    await expect.poll(async () => (await serverCity(p.token) as { state: { research: { id: string } | null } } | null)?.state.research?.id, NET).toBe("refining");
+    await expect.poll(() => p.page.locator(".sheet", { hasText: "In progress: Refining" }).count(), NET).toBe(1);
+    await p.page.screenshot({ path: "e2e/.shots/shot-research.png" });
+
+    // The same research, 3 seconds from its end: the server finishes it on its own clock, the screen follows.
+    const now = (await serverCity(p.token))!.state as unknown as PlayerState;
+    await h.putCity(p.playerId, { ...now, research: { ...now.research!, left: 3 } });
+    await show(p.page);
+    await p.page.waitForTimeout(4000);
+    const done = (await serverCity(p.token))!.state as unknown as PlayerState;
+    expect(done.techs).toEqual({ refining: 1 });
+    expect(done.research).toBeNull();
+    await show(p.page);
+    await expect.poll(() => p.page.locator('[data-tech-row="refining"] .dots').textContent(), NET).toBe("●○○");
     await p.context.close();
   });
 });
