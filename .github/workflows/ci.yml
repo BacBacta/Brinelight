@@ -37,3 +37,34 @@ jobs:
           name: e2e-screenshots
           path: e2e/.shots/
           if-no-files-found: ignore
+
+  deploy:
+    # The online setup (deploy/): scripts checked, then the whole stack started as on the server, with a local certificate.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck deploy/*.sh
+      - name: Start the stack
+        working-directory: deploy
+        run: |
+          {
+            echo "API_DOMAIN=localhost"
+            echo "ALLOWED_ORIGINS=https://play.example.test"
+            echo "ACME_EMAIL=ci@example.com"
+            echo "POSTGRES_PASSWORD=$(openssl rand -hex 32)"
+          } > .env
+          docker compose up -d --build --wait --wait-timeout 180
+      - name: Check it
+        working-directory: deploy
+        run: |
+          curl -fsSk https://localhost/health
+          # The database and the game server are never reachable from outside.
+          for port in 5432 8787; do
+            if (exec 3<>/dev/tcp/127.0.0.1/$port) 2>/dev/null; then echo "Port $port is open, it must not be"; exit 1; fi
+          done
+          # A backup, then a test restore of it.
+          BACKUP_DIR="$RUNNER_TEMP/backups" sudo -E ./backup.sh
+          BACKUP_DIR="$RUNNER_TEMP/backups" sudo -E ./restore.sh test
+      - if: failure()
+        working-directory: deploy
+        run: docker compose logs --tail 100

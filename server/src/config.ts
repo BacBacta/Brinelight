@@ -9,7 +9,15 @@ export type Config = {
   databaseUrl: string | undefined;
 };
 
+/**
+ * Reads the settings. In production (NODE_ENV=production) the server refuses to start without DATABASE_URL
+ * and ALLOWED_ORIGINS: without a database address it would keep the cities in memory and lose them on restart.
+ */
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
+  if (env.NODE_ENV === "production") {
+    const missing = ["DATABASE_URL", "ALLOWED_ORIGINS"].filter((k) => !env[k]?.trim());
+    if (missing.length) throw new Error(`Missing setting in production: ${missing.join(", ")}`);
+  }
   const origins = (env.ALLOWED_ORIGINS ?? "http://localhost:5173")
     .split(",")
     .map((o) => o.trim())

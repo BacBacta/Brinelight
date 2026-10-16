@@ -75,13 +75,16 @@ Sign-in is a sensitive area: add it to the protected areas of CLAUDE.md ("sign-i
 
 ## Task 6 · Put the server online
 
-Your part (Claude Code cannot do it): buy a domain (about €15 a year), rent a Hetzner CX22 server in Germany (about €5 a month), point the domain to it. The client can then move to `play.<domain>` and the server to `api.<domain>`.
+Your part (Claude Code cannot do it): buy a domain (about €15 a year), rent a Hetzner CX23 server (Ubuntu 24.04) in Germany (about €5 a month), point the domain to it. The client can then move to `play.<domain>` and the server to `api.<domain>`.
 
 Claude Code's part, in `deploy/` and `docs/deploy.md`:
 - Docker Compose: PostgreSQL, the server, and Caddy for automatic HTTPS.
 - A nightly database backup (`pg_dump`), kept 7 days.
 - A step-by-step guide to install, update and restore, written for a beginner.
 - No password or key in the repository: everything in a `.env` file on the server, described in `.env.example`.
+- Exact image versions (PostgreSQL 18.x, Caddy 2.x), updated on purpose; `ufw limit 22/tcp`; SSH by key only, no root login; automatic security updates.
+- `api.<domain>` in "DNS only" at Cloudflare, and Hetzner Backups on top of the nightly backups (the guide says why both).
+- The guide ends with "Be warned if the server goes down": a free monitor checks `https://api.<domain>/health` every 5 minutes and sends an e-mail.
 - Done when: you sign in with Phantom on your phone and on your computer, and see the same city on both.
 
 ## Not this week

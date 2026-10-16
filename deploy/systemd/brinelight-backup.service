@@ -1,0 +1,9 @@
+[Unit]
+Description=Brinelight: back up the database
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+# The path is written by install-backup.sh.
+ExecStart=__DEPLOY_DIR__/backup.sh
