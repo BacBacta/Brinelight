@@ -5,7 +5,7 @@
  * applyAction for each accepted action), and the server's city is compared with it after every case.
  */
 import { randomBytes, randomUUID } from "node:crypto";
-import { applyAction, catchUp, newPlayerState, type GameAction, type PlayerState } from "@brinelight/shared";
+import { RAFT_BUILD_TIME, RAFT_MAX_HP, RAFT_SLOTS, applyAction, catchUp, newPlayerState, raftCap, type GameAction, type PlayerState } from "@brinelight/shared";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
@@ -278,5 +278,33 @@ describe("a modified client cannot change the rules", () => {
     // Without an Observatory at all.
     const none = await player();
     await expectRefused(server, none, action({ type: "research", tech: "refining" }), "Observatory level 1 required");
+  });
+
+  it("rafts: a slot already taken, a slot the Lighthouse does not light yet, beyond its limit, the shipyard busy, an unknown slot", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const inner = RAFT_SLOTS.filter((s) => s.ring === 3).map((s) => s.key);
+    const outer = RAFT_SLOTS.filter((s) => s.ring === 4).map((s) => s.key);
+    const lit = { ...base, buildings: { ...base.buildings, lighthouse: 4 }, stock: { oil: 9000, fish: 9000, wood: 9000, rope: 50 } };
+    const sound = { hp: RAFT_MAX_HP, building: null, level: 0 };
+
+    const p = await player({ ...lit, rafts: { [inner[0]!]: sound } });
+    await expectRefused(server, p, action({ type: "dockRaft", slot: inner[0]! }), "A raft is already moored here");
+    await expectRefused(server, p, action({ type: "dockRaft", slot: outer[0]! }), "The Lighthouse's light doesn't reach this far yet");
+    await expectApplied(server, p, action({ type: "dockRaft", slot: inner[1]! }));
+    later(1000);
+    await expectRefused(server, p, action({ type: "dockRaft", slot: inner[2]! }), "The shipyard is busy");
+
+    const full = await player({ ...lit, rafts: Object.fromEntries(inner.slice(0, raftCap(4)).map((k) => [k, sound])) });
+    await expectRefused(server, full, action({ type: "dockRaft", slot: inner[raftCap(4)]! }), "Upgrade the Lighthouse to moor more rafts");
+    for (const slot of ["0,0", "1,-3", "toString", "__proto__"]) await expectInvalid(server, full, { action: { ...action({ type: "dockRaft", slot: inner[0]! }), slot } });
+
+    // The raft being built is moored by the server's clock, not before.
+    later(RAFT_BUILD_TIME * 1000 - 2000);
+    await expectRules(server, p);
+    expect(p.ref.now().rafts[inner[1]!]).toBeUndefined();
+    later(1000);
+    await expectRules(server, p);
+    expect(p.ref.now().rafts[inner[1]!]).toEqual(sound);
   });
 });

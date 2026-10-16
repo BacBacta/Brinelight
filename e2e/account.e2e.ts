@@ -4,7 +4,9 @@
  */
 import type { BrowserContext, Page } from "playwright-core";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { HOUR, advance, newPlayerState, sail, type PlayerState } from "@brinelight/shared";
+import * as THREE from "three";
+import { HOUR, RAFT_SLOTS, advance, newPlayerState, sail, type PlayerState } from "@brinelight/shared";
+import { frameCity } from "../client/src/scene/camera.js";
 import { CITY_KEY_PREFIX } from "../client/src/account/actions.js";
 import { PROFILE_TEXT } from "../client/src/account/profile.js";
 import { TEXT } from "../client/src/account/index.js";
@@ -517,4 +519,58 @@ describe("signed in", () => {
     await expect.poll(() => p.page.locator('[data-tech-row="refining"] .dots').textContent(), NET).toBe("●○○");
     await p.context.close();
   });
+
+  it("a raft: a lit slot tapped around the island, the raft started from its sheet, then moored by the server's clock", async () => {
+    const p = await signedInPlayer();
+    const base = newPlayerState();
+    await h.putCity(p.playerId, { ...base, buildings: { ...base.buildings, lighthouse: 4 }, stock: { oil: 5000, fish: 5000, wood: 5000, rope: 20 } });
+    await show(p.page);
+    await expect.poll(async () => (await copyOf(p.page, p.playerId))?.server?.state.buildings.lighthouse, NET).toBe(4);
+    await p.page.waitForTimeout(500);
+
+    // Where a slot of the first ring is on screen, from the game's own starting camera for this Lighthouse level.
+    const { slot, x, y } = slotOnScreen(4);
+    await p.page.mouse.click(x, y);
+    const sheet = p.page.locator(".raft-sheet:not([hidden])");
+    await sheet.waitFor();
+    await expect(sheet.textContent()).resolves.toContain("You can moor a raft here");
+    await p.page.screenshot({ path: "e2e/.shots/shot-raft-slot.png" });
+    await sheet.locator('[data-act="dock"]').click();
+    await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).yard?.slot, NET).toBe(slot);
+    await expect.poll(() => p.page.locator(".queue .n", { hasText: "Shipyard · raft" }).count(), NET).toBe(1);
+
+    // 3 seconds from the end of the work: the server moors the raft on its own clock.
+    const now = (await serverCity(p.token))!.state as unknown as PlayerState;
+    await h.putCity(p.playerId, { ...now, yard: { ...now.yard!, left: 3 } });
+    await show(p.page);
+    await p.page.waitForTimeout(4000);
+    const done = (await serverCity(p.token))!.state as unknown as PlayerState;
+    expect(done.rafts).toEqual({ [slot]: { hp: 100, building: null, level: 0 } });
+    await show(p.page);
+    await expect.poll(async () => ((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.rafts[slot], NET).toEqual(done.rafts[slot]);
+    await p.page.waitForTimeout(500);
+    await p.page.mouse.click(x, y);
+    await expect.poll(() => p.page.locator(".raft-sheet:not([hidden])").textContent(), NET).toContain("Sturdiness");
+    await p.page.screenshot({ path: "e2e/.shots/shot-raft.png" });
+    await p.context.close();
+  });
 });
+
+/**
+ * Where a lit slot of the first ring is on the 412 × 915 screen, with the game's starting camera (frameCity) for this
+ * Lighthouse level: the one lowest on screen that stays clear of the top bar and the bottom menu.
+ */
+function slotOnScreen(lighthouse: number): { slot: string; x: number; y: number } {
+  const [w, hgt] = [412, 915];
+  const camera = new THREE.PerspectiveCamera(40, w / hgt, 0.1, 200);
+  const target = new THREE.Vector3();
+  frameCity(camera, { target, update: () => camera.lookAt(target) } as unknown as Parameters<typeof frameCity>[1], w / hgt, lighthouse);
+  camera.updateMatrixWorld();
+  const shown = RAFT_SLOTS.filter((s) => s.ring === 3).map((s) => {
+    const v = new THREE.Vector3(2 * (s.q + s.r / 2), 0, 1.732 * s.r).project(camera);
+    return { slot: s.key, x: ((v.x + 1) / 2) * w, y: ((1 - v.y) / 2) * hgt };
+  });
+  const clear = shown.filter((p) => p.x > 40 && p.x < w - 40 && p.y > 200 && p.y < hgt - 140).sort((a, b) => b.y - a.y);
+  if (!clear[0]) throw new Error("No raft slot clear on screen");
+  return clear[0];
+}

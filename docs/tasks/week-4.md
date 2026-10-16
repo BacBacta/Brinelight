@@ -96,6 +96,8 @@ The rules exist in `shared` (`canResearch`, `canAddRaft`…) but nothing in the 
 
 **Research done (16 October, first commit).** One research at a time (`research` in the city), ended as an event of `advance`; costs, times and limits from the existing rules; action `research`; the Observatory sheet from the prototype, with one sentence on the Veteran Doctrine (it takes effect with troop training, week 5); `migrateSave` adds `research: null` to old local saves; works without an account; cheat cases (already in progress, Observatory too low, at its maximum, unknown); e2e: research started from the sheet, then done when its time is up. The function that puts a city for a test account lives in `e2e/harness.ts` only.
 
+**Rafts done (16 October, second commit).** One work at a time at the shipyard (`yard`, with a `kind` ready for the buildings on rafts later), ended as an event of `advance`; `RAFT_MAX_HP` defined once; costs, time and limits from the existing rules; action `dockRaft`; the slots around the island and the raft sheet from the prototype, drawn with `InstancedMesh` (up to 39 rafts); `migrateSave` adds `yard: null`; works without an account; cheat cases (slot taken, not lit, beyond the limit, shipyard busy, unknown); e2e: a lit slot tapped, the raft started, then moored by the server's clock.
+
 ## Not this week
 
 Training troops (no rule in `shared` yet: to add from the prototype, week 5), the Mist and the Leviathan on the server (week 7), multiplayer (weeks 8 to 12), renting the server (week 7 at the latest).

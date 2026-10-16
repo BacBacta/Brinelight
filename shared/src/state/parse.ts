@@ -1,6 +1,6 @@
 import { BUILDERS, BUILDING_IDS, LIGHTHOUSE_MAX, type UpgradeJob } from "../rules/buildings.js";
 import { CAPTAINS, CAPTAIN_MAX_LEVEL, type CaptainId } from "../rules/captains.js";
-import { RAFT_BUILDINGS, RAFT_BUILDING_MAX_LEVEL, RAFT_SLOTS } from "../rules/rafts.js";
+import { RAFT_BUILDINGS, RAFT_BUILDING_MAX_LEVEL, RAFT_MAX_HP, RAFT_SLOTS, type Rafts, type YardJob } from "../rules/rafts.js";
 import { TECHS, techLevel, type ResearchJob, type TechId, type Techs } from "../rules/research.js";
 import { ATTACK_STAY, COLLECT_STAY, SEA_SITES, fleetsMax, seaSite, type Fleet, type SeaWorld } from "../rules/sea.js";
 import type { Troops } from "../rules/types.js";
@@ -41,7 +41,7 @@ const isRafts = (r: unknown) =>
       isObj(v) &&
       isNum(v.hp) &&
       v.hp >= 0 &&
-      v.hp <= 100 &&
+      v.hp <= RAFT_MAX_HP &&
       (v.building === null || (typeof v.building === "string" && has(RAFT_BUILDINGS, v.building))) &&
       isLevel(v.level, RAFT_BUILDING_MAX_LEVEL),
   );
@@ -117,6 +117,19 @@ function parseResearch(raw: unknown, techs: Techs): ResearchJob | null | undefin
   if (typeof id !== "string" || !has(TECHS, id) || !isNum(left) || !isNum(duration) || duration <= 0) return undefined;
   if (techLevel(techs, id as TechId) >= TECHS[id as TechId].max) return undefined;
   return { id: id as TechId, left: Math.min(Math.max(0, left), duration), duration };
+}
+
+/**
+ * The work at the shipyard: none (null), or a new raft (the only kind today) on a known slot with no raft yet,
+ * with its time left brought back between 0 and its duration. Anything else refuses the city.
+ */
+function parseYard(raw: unknown, rafts: Rafts): YardJob | null | undefined {
+  if (raw === null) return null;
+  if (!isObj(raw) || Object.keys(raw).sort().join() !== "duration,kind,left,slot") return undefined;
+  const { slot, kind, left, duration } = raw;
+  if (kind !== "raft" || typeof slot !== "string" || !SLOTS.has(slot) || has(rafts, slot)) return undefined;
+  if (!isNum(left) || !isNum(duration) || duration <= 0) return undefined;
+  return { slot, kind, left: Math.min(Math.max(0, left), duration), duration };
 }
 
 /** Camp levels and wrecks: every camp and every wreck of the map, each with a valid value. */
@@ -202,6 +215,8 @@ export function parseState(raw: unknown): PlayerState | null {
     if (!world) return null;
     const research = parseResearch(s.research, s.techs as Techs);
     if (research === undefined) return null;
+    const yard = parseYard(s.yard, s.rafts as Rafts);
+    if (yard === undefined) return null;
     const buildings = s.buildings as PlayerState["buildings"];
     return {
       buildings: { ...buildings },
@@ -215,6 +230,7 @@ export function parseState(raw: unknown): PlayerState | null {
       pearls: s.pearls,
       queue: cleanQueue(s.queue),
       research,
+      yard,
       lead: s.lead as CaptainId | null,
       fleets: cleanFleets(s.fleets, buildings.harbor),
       world,
