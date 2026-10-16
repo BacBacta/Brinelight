@@ -66,6 +66,8 @@ Problem found while preparing the week: `catchUp` caps the whole time away at `O
 - The session keeps the player's id (protected area, approved); week 3 sessions are forgotten.
 - Time shown: from `asOf`, the time since the answer (`performance.now()`) at the server's `speed`.
 
+**Second commit done (16 October): `PUT /city`, `readSentCity` (`check.ts`), `createCity`, `saveCity` and their tests are removed; `GET /city` makes the city of a new account at its first call, with `ensureCity`.**
+
 ## Task 5 · The cheat test
 
 The checkpoint of the phase: "a modified client can neither create resources nor speed up time". Make it a test that runs in CI (`server/test/cheat.test.ts`, plus one e2e scenario):

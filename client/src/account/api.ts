@@ -18,7 +18,7 @@ export type CallOptions = {
 };
 
 export type Api = {
-  call<T>(method: "GET" | "POST" | "PUT", path: string, options?: CallOptions): Promise<ApiResult<T>>;
+  call<T>(method: "GET" | "POST", path: string, options?: CallOptions): Promise<ApiResult<T>>;
 };
 
 /** The server address, from VITE_API_URL; none means the game is played without accounts. */
@@ -26,7 +26,7 @@ export const apiUrl = (): string | null => (import.meta.env.VITE_API_URL as stri
 
 export function createApi(base: string, fetchFn: typeof fetch = (...a) => fetch(...a)): Api {
   return {
-    async call<T>(method: "GET" | "POST" | "PUT", path: string, options: CallOptions = {}) {
+    async call<T>(method: "GET" | "POST", path: string, options: CallOptions = {}) {
       const headers: Record<string, string> = {};
       if (options.token) headers.authorization = `Bearer ${options.token}`;
       if (options.body !== undefined) headers["content-type"] = "application/json";

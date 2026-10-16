@@ -2,11 +2,10 @@ import { advance, newPlayerState } from "@brinelight/shared";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
-  CHANGED_ELSEWHERE,
   UNREADABLE,
-  createCity,
   createNonce,
   createSession,
+  ensureCity,
   findOrCreatePlayer,
   findSession,
   hashToken,
@@ -14,7 +13,6 @@ import {
   loadCity,
   openDatabase,
   purgeExpired,
-  saveCity,
   schema,
   useNonce,
   type Database,
@@ -68,11 +66,11 @@ describe("players", () => {
 });
 
 describe("cities", () => {
-  it("writes and reads a city, unchanged, at version 1", async () => {
+  it("reads a stored city, unchanged, with its version and save time", async () => {
     const p = await findOrCreatePlayer(db, WALLET, T0);
     const city = advance(newPlayerState(), 3600);
-    expect(await createCity(db, p.id, city, T0)).toEqual({ ok: true, version: 1 });
-    expect(await loadCity(db, p.id)).toEqual({ status: "ok", city: { state: city, version: 1, savedAt: T0 } });
+    await db.insert(schema.cities).values({ playerId: p.id, state: city, version: 3, savedAt: T0 });
+    expect(await loadCity(db, p.id)).toEqual({ status: "ok", city: { state: city, version: 3, savedAt: T0 } });
   });
 
   it("a player with no city has none", async () => {
@@ -80,38 +78,19 @@ describe("cities", () => {
     expect(await loadCity(db, p.id)).toEqual({ status: "missing" });
   });
 
-  it("each save raises the version by one", async () => {
+  it("ensureCity makes a new city at version 1 for a player who has none, and never touches an existing one", async () => {
     const p = await findOrCreatePlayer(db, WALLET, T0);
-    await createCity(db, p.id, newPlayerState(), T0);
-    expect(await saveCity(db, p.id, advance(newPlayerState(), 60), 1, later(MIN))).toEqual({ ok: true, version: 2 });
-    expect(await saveCity(db, p.id, advance(newPlayerState(), 120), 2, later(2 * MIN))).toEqual({ ok: true, version: 3 });
-    const loaded = await loadCity(db, p.id);
-    expect(loaded.status === "ok" && loaded.city.version).toBe(3);
-  });
-
-  it("refuses a save from an old version: two devices cannot overwrite each other", async () => {
-    const p = await findOrCreatePlayer(db, WALLET, T0);
-    await createCity(db, p.id, newPlayerState(), T0);
-    const phone = advance(newPlayerState(), 600);
-    const laptop = advance(newPlayerState(), 60);
-    expect(await saveCity(db, p.id, phone, 1, later(MIN))).toEqual({ ok: true, version: 2 });
-    expect(await saveCity(db, p.id, laptop, 1, later(2 * MIN))).toEqual({ ok: false, reason: CHANGED_ELSEWHERE });
-    const loaded = await loadCity(db, p.id);
-    expect(loaded.status === "ok" && loaded.city.state).toEqual(phone);
-  });
-
-  it("refuses an invalid city at write time, and a second first city", async () => {
-    const p = await findOrCreatePlayer(db, WALLET, T0);
-    const { pearls: _p, ...noPearls } = newPlayerState();
-    expect(await createCity(db, p.id, noPearls, T0)).toEqual({ ok: false, reason: "This city is not valid" });
-    await createCity(db, p.id, newPlayerState(), T0);
-    expect(await createCity(db, p.id, newPlayerState(), T0)).toEqual({ ok: false, reason: CHANGED_ELSEWHERE });
-    expect(await saveCity(db, p.id, { ...newPlayerState(), pearls: -1 }, 1, T0)).toEqual({ ok: false, reason: "This city is not valid" });
+    await ensureCity(db, p.id, T0);
+    expect(await loadCity(db, p.id)).toEqual({ status: "ok", city: { state: newPlayerState(), version: 1, savedAt: T0 } });
+    const played = advance(newPlayerState(), 600);
+    await db.update(schema.cities).set({ state: played, version: 5, savedAt: later(MIN) });
+    await ensureCity(db, p.id, later(DAY));
+    expect(await loadCity(db, p.id)).toEqual({ status: "ok", city: { state: played, version: 5, savedAt: later(MIN) } });
   });
 
   it("a stored city that parseState refuses is reported, logged with the player id only, and left intact", async () => {
     const p = await findOrCreatePlayer(db, WALLET, T0);
-    await createCity(db, p.id, newPlayerState(), T0);
+    await ensureCity(db, p.id, T0);
     // The stored document gets damaged (by hand, or by an old server).
     const broken = { ...newPlayerState(), world: { camps: {}, wrecks: {} } };
     await db.update(schema.cities).set({ state: broken });
@@ -127,7 +106,7 @@ describe("cities", () => {
 
   it("deleting a player deletes their city and sessions", async () => {
     const p = await findOrCreatePlayer(db, WALLET, T0);
-    await createCity(db, p.id, newPlayerState(), T0);
+    await ensureCity(db, p.id, T0);
     await createSession(db, "token", p.id, T0, later(DAY));
     await db.delete(schema.players);
     expect(await db.select().from(schema.cities)).toEqual([]);

@@ -535,14 +535,15 @@ describe("the account's actions", () => {
     expect(queued(server.state)).toEqual(["fishery", "refinery"]);
   });
 
-  it("an account the server has no city for yet ({ city: null }): a new city that does not move until the first action", async () => {
+  it("before the server's first answer, with no copy on this device: a new city that does not move", async () => {
     const server = fakeServer();
-    const t = queueSetup({ ...server.routes, "GET /city": () => ok({ city: null }) });
-    await t.q.start();
+    const answer = held<ApiResult<unknown>>();
+    const t = queueSetup({ ...server.routes, "GET /city": () => answer.promise });
+    void t.q.start();
     expect(t.q.hasCity).toBe(false);
     await t.clock.pass(HOUR * 1000);
     expect(t.q.city()).toEqual(newPlayerState());
-    t.q.act(UP_REFINERY);
+    answer.release(ok(server.city()));
     await flush();
     expect(t.q.hasCity).toBe(true);
   });

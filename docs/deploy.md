@@ -105,8 +105,8 @@ On Windows (PowerShell): `$env:VITE_API_URL="https://<API address>"; npm run bui
 1. Open the **game address** inside Phantom's browser (in Phantom: the browser tab, then type the address). In Chrome, the Profile also offers "Open in Phantom".
 2. Tap the Power card (top left), then "Sign in with your wallet", and approve in Phantom.
 3. Check:
-   - **the sign-in is accepted**: a toast says "Signed in. Your city is saved on your account.", and the Power card gets a green mark;
-   - **the city is found**: upgrade a building, wait a few seconds, then reload the page. The upgrade is still there. In terminal 3 you see `PUT /city` then `GET /city` with `statusCode` 200.
+   - **the sign-in is accepted**: a toast says "Signed in. Your city is saved on your account." (or "Your account has its own city…" if you played on this phone before signing in), and the Power card gets a green mark;
+   - **the city is found**: upgrade a building, then reload the page. The upgrade is still there. In terminal 3 you see `POST /city/actions` then `GET /city` with `statusCode` 200.
 4. If you have Phantom in a browser on your computer too, open the game address there and sign in with the same wallet: you see the same city.
 
 ### Stop everything

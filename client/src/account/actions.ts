@@ -103,7 +103,7 @@ export type CityQueue = ReturnType<typeof createCityQueue>;
 
 export function createCityQueue(deps: QueueDeps) {
   const { api, store, token, playerId, timers } = deps;
-  /** Null until the server has sent a city: the account may have none yet. */
+  /** Null until the server has sent a city (none kept on this device yet). */
   let server: ServerCity | null = null;
   /** When the server's city was received: on the forward-only clock, and on this device's clock (for the copy). */
   let receivedMono = deps.mono();
@@ -150,7 +150,7 @@ export function createCityQueue(deps: QueueDeps) {
   };
 
   function city(): PlayerState {
-    // No city on the server yet: the new city it will make at the first action, which does not move until then.
+    // Before the server's first answer, with no copy on this device: a new city, which does not move until then.
     const base = server ? advance(server.state, (Math.max(0, deps.mono() - receivedMono) / 1000) * server.speed) : newPlayerState();
     // An action the rules refuse on the latest city stays in the queue, not on screen: the server will decide.
     return pending.reduce((s, p) => {
@@ -269,10 +269,8 @@ export function createCityQueue(deps: QueueDeps) {
     busy = false;
     if (!active) return;
     if (r.ok) {
-      // Until GET /city makes the city itself (week 4, task 4), an account without one answers { city: null }.
-      const none = isObj(r.data) && r.data.city === null;
       const c = readServerCity(r.data);
-      if (none || c) {
+      if (c) {
         take(c);
         wantCity = false;
         refetch = false;
