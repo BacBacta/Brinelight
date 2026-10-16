@@ -22,6 +22,8 @@ Do the tasks in order, one per session. For each one: read CLAUDE.md, say what y
 - e2e: train signed in, reload, the training is there; a city whose training ends in a few seconds (the harness's `putCity`, as for research) shows the new soldiers on the server and on screen.
 - Done when: a player who lost all their troops at sea trains new ones, and the server decides.
 
+**Done (16 October).** One training at a time (`training` in the city, with a `kind` ready for the veterans), ended as an event of `advance`; the prototype's values (Barracks level × 20 soldiers, 3 fish and 2 wood each, n × 0.25 + 3 prototype seconds) and refusals; action `train` (the troop type only); the Barracks sheet from the prototype, the queue row "20 harpooners"; `migrateSave` adds `training: null`; works without an account; cheat cases (no Barracks, already underway, not enough resources, unknown troop type, a number of soldiers sent) and the done-when case on the server; e2e: training started from the sheet, found again after a reload, then the soldiers in the city by the server's clock. No message at the end of a work yet: it will come for research, shipyard and training together (open question).
+
 ## Task 2 · Heal the wounded at the Infirmary
 
 - As in the prototype: Infirmary level 1 or more, at least one wounded, one healing at a time; all the wounded at once, 2 fish per wounded, (n × 0.12 + 2) prototype seconds. When it ends, they go back to the troops in the city.

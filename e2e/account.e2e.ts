@@ -520,6 +520,44 @@ describe("signed in", () => {
     await p.context.close();
   });
 
+  it("training at the Barracks: started from its sheet, found again after a reload, and the soldiers join the city by the server's clock", async () => {
+    const p = await signedInPlayer();
+    const base = newPlayerState();
+    await h.putCity(p.playerId, { ...base, buildings: { ...base.buildings, barracks: 1 }, stock: { oil: 5000, fish: 5000, wood: 5000, rope: 3 } });
+    await show(p.page);
+    await p.page.locator(".labels.city .bl", { hasText: "Barracks" }).first().waitFor();
+    await openSheet(p.page, "Barracks");
+    await expect.poll(() => p.page.locator('[data-troop-row="harpooners"] .ph').textContent(), NET).toBe("25");
+    await p.page.screenshot({ path: "e2e/.shots/shot-barracks.png" });
+    await p.page.locator('[data-act="train"][data-troop="harpooners"]').click();
+    await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).training?.troop, NET).toBe("harpooners");
+    await expect.poll(() => p.page.locator(".queue .n", { hasText: "20 harpooners" }).count(), NET).toBe(1);
+
+    // Reloaded: the training is the server's, and still there.
+    await p.page.reload();
+    await p.page.waitForSelector(".labels.city .bl b");
+    await expect.poll(() => p.page.locator(".queue .n", { hasText: "20 harpooners" }).count(), NET).toBe(1);
+    expect(((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState).training).toMatchObject({ kind: "train", troop: "harpooners", count: 20 });
+    await openSheet(p.page, "Barracks");
+    await expect.poll(() => p.page.locator(".sheet", { hasText: "In progress: 20 harpooners" }).count(), NET).toBe(1);
+    await p.page.screenshot({ path: "e2e/.shots/shot-training.png" });
+
+    // 3 seconds from its end: the server adds the soldiers to the city on its own clock, the sheet follows.
+    const now = (await serverCity(p.token))!.state as unknown as PlayerState;
+    await h.putCity(p.playerId, { ...now, training: { ...now.training!, left: 3 } });
+    await show(p.page);
+    await p.page.waitForTimeout(4000);
+    const done = (await serverCity(p.token))!.state as unknown as PlayerState;
+    expect(done.troops).toEqual({ ...now.troops, harpooners: now.troops.harpooners + 20 });
+    expect(done.training).toBeNull();
+    await show(p.page);
+    await expect.poll(() => p.page.locator('[data-troop-row="harpooners"] .ph').textContent(), NET).toBe(String(now.troops.harpooners + 20));
+    await expect.poll(() => p.page.locator(".queue .n", { hasText: "harpooners" }).count(), NET).toBe(0);
+    await p.page.screenshot({ path: "e2e/.shots/shot-trained.png" });
+    expect(p.problems).toEqual([]);
+    await p.context.close();
+  });
+
   it("a raft: a lit slot tapped around the island, the raft started from its sheet, then moored by the server's clock", async () => {
     const p = await signedInPlayer();
     const base = newPlayerState();

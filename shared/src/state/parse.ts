@@ -3,6 +3,7 @@ import { CAPTAINS, CAPTAIN_MAX_LEVEL, type CaptainId } from "../rules/captains.j
 import { RAFT_BUILDINGS, RAFT_BUILDING_MAX_LEVEL, RAFT_MAX_HP, RAFT_SLOTS, type Rafts, type YardJob } from "../rules/rafts.js";
 import { TECHS, techLevel, type ResearchJob, type TechId, type Techs } from "../rules/research.js";
 import { ATTACK_STAY, COLLECT_STAY, SEA_SITES, fleetsMax, seaSite, type Fleet, type SeaWorld } from "../rules/sea.js";
+import { TRAIN_PER_LEVEL, type TrainingJob } from "../rules/training.js";
 import type { Troops } from "../rules/types.js";
 import { MAX_REPORTS } from "./state.js";
 import type { PlayerState, Report } from "./types.js";
@@ -132,6 +133,20 @@ function parseYard(raw: unknown, rafts: Rafts): YardJob | null | undefined {
   return { slot, kind, left: Math.min(Math.max(0, left), duration), duration };
 }
 
+/**
+ * The work at the Barracks: none (null), or a batch of a known troop type (the only kind today), a whole number
+ * of soldiers no larger than the Barracks' batch, with its time left brought back between 0 and its duration.
+ * Anything else refuses the city.
+ */
+function parseTraining(raw: unknown, barracks: number): TrainingJob | null | undefined {
+  if (raw === null) return null;
+  if (!isObj(raw) || Object.keys(raw).sort().join() !== "count,duration,kind,left,troop") return undefined;
+  const { kind, troop, count, left, duration } = raw;
+  if (kind !== "train" || typeof troop !== "string" || !(TROOPS as readonly string[]).includes(troop)) return undefined;
+  if (!isWhole(count, 1, barracks * TRAIN_PER_LEVEL) || !isNum(left) || !isNum(duration) || duration <= 0) return undefined;
+  return { kind, troop: troop as TrainingJob["troop"], count, left: Math.min(Math.max(0, left), duration), duration };
+}
+
 /** Camp levels and wrecks: every camp and every wreck of the map, each with a valid value. */
 function parseWorld(raw: unknown): SeaWorld | null {
   if (!isObj(raw) || !isObj(raw.camps) || !isObj(raw.wrecks)) return null;
@@ -218,6 +233,8 @@ export function parseState(raw: unknown): PlayerState | null {
     const yard = parseYard(s.yard, s.rafts as Rafts);
     if (yard === undefined) return null;
     const buildings = s.buildings as PlayerState["buildings"];
+    const training = parseTraining(s.training, buildings.barracks);
+    if (training === undefined) return null;
     return {
       buildings: { ...buildings },
       stock: { ...(s.stock as PlayerState["stock"]) },
@@ -231,6 +248,7 @@ export function parseState(raw: unknown): PlayerState | null {
       queue: cleanQueue(s.queue),
       research,
       yard,
+      training,
       lead: s.lead as CaptainId | null,
       fleets: cleanFleets(s.fleets, buildings.harbor),
       world,

@@ -5,7 +5,7 @@
  * applyAction for each accepted action), and the server's city is compared with it after every case.
  */
 import { randomBytes, randomUUID } from "node:crypto";
-import { RAFT_BUILD_TIME, RAFT_MAX_HP, RAFT_SLOTS, applyAction, catchUp, newPlayerState, raftCap, type GameAction, type PlayerState } from "@brinelight/shared";
+import { RAFT_BUILD_TIME, RAFT_MAX_HP, RAFT_SLOTS, applyAction, catchUp, emptyTroops, newPlayerState, raftCap, trainTime, type GameAction, type PlayerState } from "@brinelight/shared";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
@@ -306,5 +306,39 @@ describe("a modified client cannot change the rules", () => {
     later(1000);
     await expectRules(server, p);
     expect(p.ref.now().rafts[inner[1]!]).toEqual(sound);
+  });
+  it("training: no Barracks, one already underway, not enough resources, an unknown troop type, a number of soldiers sent", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const barracks = { ...base, buildings: { ...base.buildings, barracks: 2 }, stock: { oil: 9000, fish: 9000, wood: 9000, rope: 3 } };
+
+    await expectRefused(server, await player(), action({ type: "train", troop: "boarders" }), "Build the Barracks first");
+    const poor = await player({ ...barracks, stock: { oil: 9000, fish: 119, wood: 9000, rope: 3 } });
+    await expectRefused(server, poor, action({ type: "train", troop: "boarders" }), "Not enough resources");
+
+    const p = await player(barracks);
+    for (const troop of ["archers", "toString", "__proto__", ""]) await expectInvalid(server, p, { action: { ...action({ type: "train", troop: "boarders" }), troop } });
+    await expectInvalid(server, p, { action: { ...action({ type: "train", troop: "boarders" }), count: 5000 } });
+    await expectApplied(server, p, action({ type: "train", troop: "harpooners" }));
+    later(1000);
+    await expectRefused(server, p, action({ type: "train", troop: "crossbowmen" }), "Training is already underway");
+    // The batch the server set: Barracks level × 20, never what a client would like.
+    expect(p.ref.now().training).toMatchObject({ troop: "harpooners", count: 40 });
+  });
+
+  it("done when: a player who lost all their troops at sea trains new ones, and the server decides when they arrive", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const p = await player({ ...base, buildings: { ...base.buildings, barracks: 1 }, troops: emptyTroops() });
+    await expectRefused(server, p, action({ type: "sail", site: "camp-1" }), "You do not have enough troops");
+    await expectApplied(server, p, action({ type: "train", troop: "crossbowmen" }));
+    later(trainTime(20) * 1000 - 1000);
+    await expectRules(server, p);
+    expect(p.ref.now().troops).toEqual(emptyTroops());
+    later(1000);
+    await expectRules(server, p);
+    expect(p.ref.now().troops).toEqual({ ...emptyTroops(), crossbowmen: 20 });
+    expect(p.ref.now().training).toBeNull();
+    await expectApplied(server, p, action({ type: "sail", site: "camp-1" }));
   });
 });

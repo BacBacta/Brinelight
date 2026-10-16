@@ -5,7 +5,8 @@ import { advanceYard, startRaft } from "../rules/rafts.js";
 import { advanceResearch, startResearch, type TechId } from "../rules/research.js";
 import { advanceFleets, leadOf, sendFleet, startingSeaWorld, type CombatReport, type SeaState } from "../rules/sea.js";
 import { STARTING_CAPTAIN, STARTING_LEAD, STARTING_MORALE, STARTING_PEARLS, STARTING_STOCK, STARTING_SURVIVORS, STARTING_TROOPS } from "../rules/start.js";
-import { emptyTroops, type BuildingId } from "../rules/types.js";
+import { advanceTraining, startTraining } from "../rules/training.js";
+import { emptyTroops, type BuildingId, type TroopType } from "../rules/types.js";
 import type { PlayerState } from "./types.js";
 
 /** Reports kept in the city; older ones are dropped. */
@@ -27,6 +28,7 @@ export function newPlayerState(): PlayerState {
     queue: [],
     research: null,
     yard: null,
+    training: null,
     lead: STARTING_LEAD,
     fleets: [],
     world: startingSeaWorld(),
@@ -75,19 +77,21 @@ function withSea(s: PlayerState, sea: SeaState, reports: CombatReport[] = []): P
 
 /**
  * Advances the city by `seconds` of game time. Time is cut at each finished upgrade, at the end of the research,
- * at the end of the shipyard's work and at each step of a fleet, so production, storage and fleets follow the new state from the exact moment it changes.
+ * at the end of the shipyard's work, at the end of a training and at each step of a fleet, so production, storage and fleets follow the new state from the exact moment it changes.
  */
 export function advance(state: PlayerState, seconds: number): PlayerState {
   let s = state;
   let rest = seconds;
   while (rest > 0) {
-    const ends = [...s.queue.map((j) => j.left), ...(s.research ? [s.research.left] : []), ...(s.yard ? [s.yard.left] : []), ...s.fleets.map((f) => f.left)];
+    const ends = [...s.queue.map((j) => j.left), ...(s.research ? [s.research.left] : []), ...(s.yard ? [s.yard.left] : []), ...(s.training ? [s.training.left] : []), ...s.fleets.map((f) => f.left)];
     const next = Math.min(rest, ...ends.map((left) => Math.max(0, left)));
     s = produce(s, next);
     const q = advanceQueue(s.buildings, s.queue, next);
     const r = advanceResearch(s.techs, s.research, next);
     const y = advanceYard(s.rafts, s.yard, next);
-    s = { ...s, buildings: q.buildings, queue: q.queue, techs: r.techs, research: r.research, rafts: y.rafts, yard: y.yard };
+    // The new soldiers join the troops in the city before the fleets move: a fleet at sea never gets them.
+    const t = advanceTraining(s.troops, s.training, next);
+    s = { ...s, buildings: q.buildings, queue: q.queue, techs: r.techs, research: r.research, rafts: y.rafts, yard: y.yard, troops: t.troops, training: t.training };
     const f = advanceFleets(seaState(s), next);
     s = withSea(s, f.state, f.reports);
     rest -= next;
@@ -131,6 +135,12 @@ export function research(state: PlayerState, id: TechId): ActionResult {
 export function dockRaft(state: PlayerState, slot: string): ActionResult {
   const r = startRaft(slot, { rafts: state.rafts, lighthouse: state.buildings.lighthouse, stock: state.stock, yard: state.yard });
   return r.ok ? { ok: true, state: { ...state, stock: r.stock, yard: r.yard } } : r;
+}
+
+/** Starts a batch of soldiers at the Barracks with the shared rule; a refusal comes with its reason. */
+export function train(state: PlayerState, troop: TroopType): ActionResult {
+  const r = startTraining(troop, { barracks: state.buildings.barracks, stock: state.stock, training: state.training });
+  return r.ok ? { ok: true, state: { ...state, stock: r.stock, training: r.training } } : r;
 }
 
 /**

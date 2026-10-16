@@ -6,6 +6,7 @@
  * The week 1 rules table stays available with ?rules.
  * Week 3: sign in with your wallet (Profile, on the Power card) to keep your city on your account.
  * Week 4: signed in, every action is sent to the server, which decides; the city shown is the server's.
+ * Week 5: troops are trained at the Barracks.
  * The reference prototype stays playable at /prototype/.
  */
 import { HOME, applyAction, type GameAction } from "@brinelight/shared";
@@ -29,7 +30,7 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 
 /** What the screen shows: changes here open a report, refresh a sheet, and save the city of this device. */
 const signature = (s: PlayerState): string =>
-  `${s.queue.map((j) => j.id).join()}|${s.research?.id ?? ""}|${JSON.stringify(s.techs)}|${s.yard?.slot ?? ""}|${Object.keys(s.rafts).length}|${s.reports.map((r) => `${r.id}${r.read ? "+" : "-"}`).join()}|${s.fleets.map((f) => f.phase).join()}`;
+  `${s.queue.map((j) => j.id).join()}|${s.research?.id ?? ""}|${JSON.stringify(s.techs)}|${s.yard?.slot ?? ""}|${Object.keys(s.rafts).length}|${s.training?.troop ?? ""}|${JSON.stringify(s.troops)}|${s.reports.map((r) => `${r.id}${r.read ? "+" : "-"}`).join()}|${s.fleets.map((f) => f.phase).join()}`;
 
 if (new URLSearchParams(location.search).has("rules")) {
   showRules(app);
@@ -134,7 +135,7 @@ if (new URLSearchParams(location.search).has("rules")) {
     onLoaded: (kit) => {
       status.remove();
       fps?.modelsLoaded();
-      city = createCity(kit, scene, canvas, app, { state: () => state, upgrade: (building) => act({ type: "upgrade", building }), research: (tech) => act({ type: "research", tech }), dockRaft: (slot) => act({ type: "dockRaft", slot }), toCity: () => ui.showView("city"), speed });
+      city = createCity(kit, scene, canvas, app, { state: () => state, upgrade: (building) => act({ type: "upgrade", building }), research: (tech) => act({ type: "research", tech }), train: (troop) => act({ type: "train", troop }), dockRaft: (slot) => act({ type: "dockRaft", slot }), toCity: () => ui.showView("city"), speed });
       sea = createSea(kit, scene, canvas, app, {
         state: () => state,
         sail: (site) => {

@@ -4,6 +4,7 @@ export * from "./rules/time.js";
 export * from "./rules/buildings.js";
 export * from "./rules/research.js";
 export * from "./rules/rafts.js";
+export * from "./rules/training.js";
 export * from "./rules/economy.js";
 export * from "./rules/captains.js";
 export * from "./rules/combat.js";

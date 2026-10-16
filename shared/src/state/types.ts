@@ -1,6 +1,7 @@
 import type { CaptainId } from "../rules/captains.js";
 import type { Rafts, YardJob } from "../rules/rafts.js";
 import type { ResearchJob, Techs } from "../rules/research.js";
+import type { TrainingJob } from "../rules/training.js";
 import type { CombatReport, Fleet, SeaWorld } from "../rules/sea.js";
 import type { OwnedCaptain } from "../rules/start.js";
 import type { UpgradeJob } from "../rules/buildings.js";
@@ -24,6 +25,8 @@ export type PlayerState = {
   research: ResearchJob | null;
   /** The work at the shipyard (a new raft): one at a time, null when none. */
   yard: YardJob | null;
+  /** The work at the Barracks (a batch of new soldiers): one at a time, null when none. */
+  training: TrainingJob | null;
   /** The captain at the head of your fleets. */
   lead: CaptainId | null;
   /** Fleets at sea, in the order they left. */

@@ -3,12 +3,13 @@
  * Pure: no clock and no randomness. The server advances the city to now before applying an action.
  */
 import { BUILDING_IDS } from "../rules/buildings.js";
+import { BEATS } from "../rules/combat.js";
 import { RAFT_SLOTS } from "../rules/rafts.js";
 import { TECHS, type TechId } from "../rules/research.js";
 import { seaSite } from "../rules/sea.js";
-import type { BuildingId } from "../rules/types.js";
+import type { BuildingId, TroopType } from "../rules/types.js";
 import { REPORT_ID } from "./parse.js";
-import { dockRaft, readReport, research, sail, upgrade, type ActionResult } from "./state.js";
+import { dockRaft, readReport, research, sail, train, upgrade, type ActionResult } from "./state.js";
 import type { PlayerState } from "./types.js";
 
 /** Every action carries an id made by the client (a UUID), so the server never applies it twice. */
@@ -17,7 +18,8 @@ export type GameAction =
   | { id: string; type: "sail"; site: string }
   | { id: string; type: "readReport"; reportId: string }
   | { id: string; type: "research"; tech: TechId }
-  | { id: string; type: "dockRaft"; slot: string };
+  | { id: string; type: "dockRaft"; slot: string }
+  | { id: string; type: "train"; troop: TroopType };
 
 export type GameActionType = GameAction["type"];
 
@@ -31,6 +33,7 @@ const FIELDS: Record<GameActionType, readonly string[]> = {
   readReport: ["reportId"],
   research: ["tech"],
   dockRaft: ["slot"],
+  train: ["troop"],
 };
 
 const SLOTS = new Set(RAFT_SLOTS.map((s) => s.key));
@@ -56,12 +59,14 @@ export function applyAction(state: PlayerState, action: GameAction): ActionResul
       return research(state, action.tech);
     case "dockRaft":
       return dockRaft(state, action.slot);
+    case "train":
+      return train(state, action.troop);
   }
 }
 
 /**
  * Reads an action sent by a client. Strict: an object with exactly the fields of its type, a UUID id,
- * a known building, site or report id. Anything else gives null. Never throws.
+ * a known building, site, report id, research, slot or troop type. Anything else gives null. Never throws.
  */
 export function parseAction(raw: unknown): GameAction | null {
   try {
@@ -94,6 +99,11 @@ export function parseAction(raw: unknown): GameAction | null {
       case "dockRaft": {
         const slot = o.slot;
         return shortText(slot, 8) && SLOTS.has(slot) ? { id, type: t, slot } : null;
+      }
+      case "train": {
+        // The troop type only: the number of soldiers is the rule's, never the client's.
+        const troop = o.troop;
+        return shortText(troop) && Object.prototype.hasOwnProperty.call(BEATS, troop) ? { id, type: t, troop: troop as TroopType } : null;
       }
     }
   } catch {
