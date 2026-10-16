@@ -1,5 +1,4 @@
 import type { CaptainId } from "./captains.js";
-import { HOUR } from "./time.js";
 import type { Stock, Troops } from "./types.js";
 
 /** Starting values of a new city, taken from the prototype. */
@@ -18,6 +17,3 @@ export const STARTING_CAPTAIN: { id: CaptainId } & OwnedCaptain = { id: "tom", l
 
 /** The captain at the head of your fleets at the start: Old Tom. */
 export const STARTING_LEAD: CaptainId = STARTING_CAPTAIN.id;
-
-/** Longest absence counted when the player comes back, in real seconds. */
-export const OFFLINE_CAP = 8 * HOUR;

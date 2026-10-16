@@ -10,7 +10,7 @@ Do the tasks in order, one per session. For each one: read CLAUDE.md, say what y
 Problem found while preparing the week: `catchUp` caps the whole time away at `OFFLINE_CAP` (8 h), timers included. As long as the client counted time, it went unnoticed. Once the server is the judge, a player away for 2 days would find a 20 h upgrade stuck at 8 h, and a fleet stuck at sea.
 
 - Timers (build queue, fleets) always advance by the full real time away. No cap, ever.
-- Production: **decision for the owner before coding** (balance value, CLAUDE.md rule 3):
+- Production: **decision for the owner before coding** (balance value, CLAUDE.md rule 3). **Decision: A (owner, 16 October).**
   - **A (recommended):** remove `OFFLINE_CAP`. Storage (`storeCap`) already limits what piles up; this is how most games of the genre work, and the open question of week 2 is closed.
   - **B:** keep a cap on production only. Then `advance` must split time: timers on the full time, production on the capped part, with the levels reached along the way. More code, more tests.
 - Update the tests, `docs/decisions.md` (close the open question) and the Week 3 test "20 h away is capped at 8 h".

@@ -2,7 +2,7 @@
 import { STARTING_BUILDINGS, advanceQueue, startUpgrade } from "../rules/buildings.js";
 import { advanceStock, netRates, storeCap } from "../rules/economy.js";
 import { advanceFleets, leadOf, sendFleet, startingSeaWorld, type CombatReport, type SeaState } from "../rules/sea.js";
-import { OFFLINE_CAP, STARTING_CAPTAIN, STARTING_LEAD, STARTING_MORALE, STARTING_PEARLS, STARTING_STOCK, STARTING_SURVIVORS, STARTING_TROOPS } from "../rules/start.js";
+import { STARTING_CAPTAIN, STARTING_LEAD, STARTING_MORALE, STARTING_PEARLS, STARTING_STOCK, STARTING_SURVIVORS, STARTING_TROOPS } from "../rules/start.js";
 import { emptyTroops, type BuildingId } from "../rules/types.js";
 import type { PlayerState } from "./types.js";
 
@@ -104,6 +104,9 @@ export function upgrade(state: PlayerState, id: BuildingId): UpgradeResult {
   return r.ok ? { ok: true, state: { ...state, stock: r.stock, queue: r.queue } } : r;
 }
 
-/** Time away: real seconds, never sped up, counted up to OFFLINE_CAP. Used by the client on load and by the server. */
-export const catchUp = (state: PlayerState, realSeconds: number): PlayerState =>
-  advance(state, Math.min(Math.max(0, realSeconds), OFFLINE_CAP));
+/**
+ * Time away: real seconds, never sped up, counted in full. Upgrades and fleets run the whole time;
+ * production stops at storage (and a falling resource at 0). A negative time counts as none.
+ * Used by the client on load and by the server.
+ */
+export const catchUp = (state: PlayerState, realSeconds: number): PlayerState => advance(state, Math.max(0, realSeconds));

@@ -1,4 +1,4 @@
-import { HOUR, OFFLINE_CAP, STARTING_PEARLS, advance, catchUp, leadOf, newPlayerState, sail, seaSite, startingSeaWorld, travelTime, upgrade } from "@brinelight/shared";
+import { HOUR, STARTING_PEARLS, advance, catchUp, leadOf, newPlayerState, sail, seaSite, startingSeaWorld, travelTime, upgrade } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
 import { REJECTED_KEY, SAVE_KEY, loadGame, migrateSave, openSave, saveGame, type KeyValueStore } from "../src/state/save.js";
 import { elapse, tick } from "../src/state/time.js";
@@ -33,12 +33,12 @@ describe("save and time away", () => {
     expect(loadGame(store, t0 + HOUR * 1000)).toEqual(advance(s, HOUR));
   });
 
-  it("time away counts at most OFFLINE_CAP", () => {
+  it("30 h away count in full", () => {
     const store = memoryStore();
     const s = newPlayerState();
     saveGame(store, s, t0);
-    expect(loadGame(store, t0 + 30 * HOUR * 1000)).toEqual(advance(s, OFFLINE_CAP));
-    expect(catchUp(s, 30 * HOUR)).toEqual(advance(s, OFFLINE_CAP));
+    expect(loadGame(store, t0 + 30 * HOUR * 1000)).toEqual(advance(s, 30 * HOUR));
+    expect(catchUp(s, 30 * HOUR)).toEqual(advance(s, 30 * HOUR));
   });
 
   it("a save from the future counts no time", () => {
@@ -82,8 +82,8 @@ describe("time between two frames", () => {
     expect(elapse(s, 2 * HOUR, speed)).toEqual(advance(s, 2 * HOUR));
   });
 
-  it("3 days with the tab hidden counts at most OFFLINE_CAP", () => {
-    expect(elapse(s, 3 * 24 * HOUR, speed)).toEqual(advance(s, OFFLINE_CAP));
+  it("3 days with the tab hidden count in full, never sped up", () => {
+    expect(elapse(s, 3 * 24 * HOUR, speed)).toEqual(advance(s, 3 * 24 * HOUR));
   });
 });
 

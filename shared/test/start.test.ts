@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { OFFLINE_CAP, STARTING_CAPTAIN, STARTING_LEAD, STARTING_MORALE, STARTING_PEARLS, STARTING_STOCK, STARTING_SURVIVORS, STARTING_TROOPS } from "../src/index.js";
+import { STARTING_CAPTAIN, STARTING_LEAD, STARTING_MORALE, STARTING_PEARLS, STARTING_STOCK, STARTING_SURVIVORS, STARTING_TROOPS } from "../src/index.js";
 
 describe("starting values (prototype)", () => {
   it("stock: 380 oil, 420 fish, 520 wood, 3 rope", () => {
@@ -25,9 +25,5 @@ describe("starting values (prototype)", () => {
 
   it("lead captain: Old Tom", () => {
     expect(STARTING_LEAD).toBe("tom");
-  });
-
-  it("offline cap: 8 real hours", () => {
-    expect(OFFLINE_CAP).toBe(8 * 3600);
   });
 });

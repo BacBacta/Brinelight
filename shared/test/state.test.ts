@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   ATTACK_STAY,
   HOUR,
-  OFFLINE_CAP,
   STARTING_BUILDINGS,
   STARTING_STOCK,
   advance,
@@ -93,12 +92,13 @@ describe("buildings", () => {
     if (!r.ok) throw new Error(r.reason);
     const d = upgradeTime("refinery", 1);
     const before = { ...r.state, queue: [] }; // same city, level 1 all along
-    const after = catchUp(r.state, OFFLINE_CAP);
+    const away = 8 * HOUR;
+    const after = catchUp(r.state, away);
     expect(after.buildings.refinery).toBe(2);
     // Up to the end of the job, level 1; then level 2 for the rest of the 8 h.
-    const expected = advance({ ...advance(before, d), buildings: { ...before.buildings, refinery: 2 } }, OFFLINE_CAP - d);
+    const expected = advance({ ...advance(before, d), buildings: { ...before.buildings, refinery: 2 } }, away - d);
     expect(after.stock.oil).toBeCloseTo(expected.stock.oil);
-    expect(after.stock.oil).toBeGreaterThan(catchUp(before, OFFLINE_CAP).stock.oil);
+    expect(after.stock.oil).toBeGreaterThan(catchUp(before, away).stock.oil);
   });
 });
 
@@ -133,6 +133,59 @@ describe("queue read from a save", () => {
   });
 });
 
+describe("long time away", () => {
+  const DAYS_3 = 3 * 24 * HOUR;
+
+  it("a 20 h upgrade started before 3 days away is finished", () => {
+    // Barracks 8 to 9 takes 20.5 h, so the Lighthouse must be above 8.
+    const cap = storeCap(10);
+    const city = { ...newPlayerState(), buildings: { ...STARTING_BUILDINGS, lighthouse: 10, barracks: 8 }, stock: { oil: cap, fish: cap, wood: cap, rope: 50 } };
+    expect(upgradeTime("barracks", 8)).toBeGreaterThan(20 * HOUR);
+    const r = upgrade(city, "barracks");
+    if (!r.ok) throw new Error(r.reason);
+    const after = catchUp(r.state, DAYS_3);
+    expect(after.buildings.barracks).toBe(9);
+    expect(after.queue).toEqual([]);
+  });
+
+  it("a fleet sent before 3 days away is back with its loot", () => {
+    const r = sail(newPlayerState(), "camp-1");
+    if (!r.ok) throw new Error(r.reason);
+    const after = catchUp(r.state, DAYS_3);
+    expect(after.fleets).toEqual([]);
+    expect(after.troops).toEqual({ boarders: 13, harpooners: 13, crossbowmen: 13 });
+    expect(after.pearls).toBe(216);
+    expect(after.stock.rope).toBe(r.state.stock.rope + 1);
+    expect(after.reports).toHaveLength(1);
+    expect(after.reports[0]).toMatchObject({ site: "camp-1", win: true, read: false });
+  });
+
+  it("3 days away produce in full, and a long absence stops production at storage", () => {
+    const s = newPlayerState();
+    const cap = storeCap(s.buildings.lighthouse, s.techs);
+    const rates = netRates(s);
+    const after = catchUp(s, DAYS_3);
+    for (const k of ["oil", "fish", "wood"] as const) {
+      expect(after.stock[k], k).toBeCloseTo(Math.min(cap, Math.max(0, s.stock[k] + (rates[k] * DAYS_3) / 3600)));
+    }
+    // 60 days fill the storage; longer still changes nothing.
+    const full = catchUp(s, 60 * 24 * HOUR);
+    for (const k of ["oil", "fish", "wood"] as const) if (rates[k] > 0) expect(full.stock[k], k).toBe(cap);
+    expect(catchUp(s, 120 * 24 * HOUR).stock).toEqual(full.stock);
+  });
+
+  it("a resource that falls stops at 0 instead of going below", () => {
+    const hungry = { ...newPlayerState(), survivors: 200 };
+    expect(netRates(hungry).fish).toBeLessThan(0);
+    expect(catchUp(hungry, DAYS_3).stock.fish).toBe(0);
+  });
+
+  it("a negative time away changes nothing", () => {
+    const s = newPlayerState();
+    expect(catchUp(s, -5 * HOUR)).toEqual(s);
+  });
+});
+
 describe("Pearls", () => {
   it("a new city starts with the shared starting Pearls, apart from the stock", () => {
     const s = newPlayerState();
@@ -164,7 +217,7 @@ describe("fleets", () => {
   it("time away: the fleet sails, fights and comes back during 8 h of catch-up", () => {
     const s0 = sent();
     expect(s0.troops).toEqual({ boarders: 0, harpooners: 0, crossbowmen: 0 });
-    const after = catchUp(s0, OFFLINE_CAP);
+    const after = catchUp(s0, 8 * HOUR);
     expect(after.fleets).toEqual([]);
     expect(after.troops).toEqual({ boarders: 13, harpooners: 13, crossbowmen: 13 });
     expect(after.pearls).toBe(216);
@@ -173,7 +226,7 @@ describe("fleets", () => {
     expect(after.reports[0]).toMatchObject({ site: "camp-1", level: 1, win: true, read: false, losses: { boarders: 12, harpooners: 12, crossbowmen: 12 } });
     // The loot comes back on top of 8 h of production.
     expect(after.stock.rope).toBe(s0.stock.rope + 1);
-    expect(after.stock.wood).toBeCloseTo(advance({ ...s0, fleets: [] }, OFFLINE_CAP).stock.wood + 110);
+    expect(after.stock.wood).toBeCloseTo(advance({ ...s0, fleets: [] }, 8 * HOUR).stock.wood + 110);
   });
 
   it("live time in small frames gives the same result", () => {
@@ -194,7 +247,7 @@ describe("fleets", () => {
   });
 
   it("reports are read one after another", () => {
-    let s = catchUp(sent(), OFFLINE_CAP);
+    let s = catchUp(sent(), 8 * HOUR);
     s = readReport(s);
     expect(s.reports.every((r) => r.read)).toBe(true);
   });
@@ -246,7 +299,7 @@ describe("parseState: strict reading of a city", () => {
   });
 
   it("refuses a bad report, or more reports than are kept", () => {
-    const s = catchUp(playing(), OFFLINE_CAP);
+    const s = catchUp(playing(), 8 * HOUR);
     expect(parseState(json({ ...s, reports: [{ ...s.reports[0], win: "yes" }] }))).toBeNull();
     expect(parseState(json({ ...s, reports: Array.from({ length: 21 }, () => s.reports[0]) }))).toBeNull();
   });

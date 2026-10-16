@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { LIGHTHOUSE_MAX, OFFLINE_CAP, catchUp, newPlayerState, sail, upgrade, type PlayerState } from "@brinelight/shared";
+import { LIGHTHOUSE_MAX, catchUp, newPlayerState, sail, storeCap, upgrade, type PlayerState } from "@brinelight/shared";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
@@ -67,14 +67,19 @@ describe("GET /city", () => {
     expect(res.json().state.stock).not.toEqual(json(city.stock));
   });
 
-  it("time away is capped by OFFLINE_CAP", async () => {
+  it("20 h away count in full: the upgrade started before is finished", async () => {
     const server = await app();
     const { token } = await player();
-    const city = newPlayerState();
-    await putCity(server, token, { state: city, version: 0 });
+    const up = upgrade(newPlayerState(), "refinery");
+    if (!up.ok) throw new Error(up.reason);
+    await putCity(server, token, { state: up.state, version: 0 });
     setClock(20 * HOUR);
-    expect((await getCity(server, token)).json().state).toEqual(json(catchUp(city, OFFLINE_CAP)));
-    expect(OFFLINE_CAP).toBeLessThan(20 * 3600);
+    const state = (await getCity(server, token)).json().state;
+    // catchUp takes seconds (HOUR here is in milliseconds).
+    expect(state).toEqual(json(catchUp(up.state, 20 * 3600)));
+    expect(state.buildings.refinery).toBe(2);
+    expect(state.queue).toEqual([]);
+    expect(state.stock.wood).toBeLessThanOrEqual(storeCap(state.buildings.lighthouse, state.techs));
   });
 
   it("reading twice gives the same city: nothing is stored by a read", async () => {
