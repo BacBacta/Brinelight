@@ -39,7 +39,7 @@ Three states, with a fade between them.
 - Three visual tiers (levels 1 to 3, 4 to 7, 8 and up): each tier grows and adds one element.
 - All stand on stilts or a rock plinth, never on grass.
 - A flag or a lantern on each building.
-- 300 to 1 500 triangles, with flat colors per face.
+- Up to 2 500 triangles per building, with flat colors per face.
 
 | Building | Silhouette |
 | --- | --- |
@@ -105,10 +105,15 @@ Add:
 
 ## Generated assets
 
-The captain portraits, and the nine building concepts and meshes, were generated on 2026-10-16 from this page (GPT Image and Meshy, through Higgsfield):
+All generated on 2026-10-16 from this page (GPT Image and Meshy, through Higgsfield):
 
-- the portraits in `assets/captains/`;
-- the concepts in `assets/concepts/`;
-- the meshes in `assets/buildings/src/`.
+- the six captain portraits, in `assets/captains/`;
+- the nine building concepts and meshes, in `assets/concepts/` and `assets/buildings/src/`;
+- the island, and seven objects: the raft, the wreck, the pirate camp, your boat, and the three buildings on rafts (Kelp Greenhouse, Smokehouse, Watchtower). Their concepts are in `assets/concepts/` and their meshes in `assets/models/src/`;
+- the icon sheet (24 icons, flat two-tone: a palette color with a night-blue outline), in `assets/icons/sheet.png`.
+
+The island follows "No bright lawn grass": sand, dark rock and a few tufts.
+
+`assets/make-models.py` and `assets/icons/make-icons.py` make the files the game serves.
 
 Every asset must follow this page, or it does not go in.

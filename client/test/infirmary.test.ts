@@ -1,6 +1,7 @@
 import { applyAction, emptyTroops, healTime, newPlayerState, type PlayerState, type Report } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
 import { INFIRMARY_TEXT, bedsHtml, healingName, infirmaryHtml } from "../src/city/infirmary.js";
+import { ICONS } from "../src/ui/icons.js";
 import { REPORT_TEXT, reportHtml } from "../src/sea/sheet.js";
 import { SAVE_KEY, openSave, saveGame, type KeyValueStore } from "../src/state/save.js";
 
@@ -26,8 +27,10 @@ describe("the Infirmary sheet", () => {
 
   it("the wounded by type, the beds in use, the losses saved, and the button that heals them all", () => {
     const html = infirmaryHtml({ ...withWounded(), techs: { stretchers: 2 } }, 1);
-    expect(html).toContain("<h4>Wounded</h4>");
-    expect(html).toContain("<span>Boarders</span><span>12</span><span>Harpooners</span><span>5</span><span>Crossbowmen</span><span>3</span>");
+    expect(html).toContain(`<h4 class="with-icon">${ICONS.wounded}Wounded</h4>`);
+    expect(html).toContain(
+      `<span class="with-icon">${ICONS.boarders}Boarders</span><span>12</span><span class="with-icon">${ICONS.harpooners}Harpooners</span><span>5</span><span class="with-icon">${ICONS.crossbowmen}Crossbowmen</span><span>3</span>`,
+    );
     expect(html).toContain("<span>Beds in use</span><span>20 / 60</span>");
     expect(html).toContain("<span>Battle losses saved</span><span>70%</span>");
     expect(html).toContain('data-act="heal" aria-disabled="false"');

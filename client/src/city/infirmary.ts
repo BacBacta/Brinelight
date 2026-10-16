@@ -5,6 +5,7 @@
 import { canHeal, healCost, hospitalCapacity, maxLevel, totalTroops, woundedSaved, type Buildings } from "@brinelight/shared";
 import type { PlayerState } from "../state/index.js";
 import { TROOP_NAMES, TROOP_TYPES } from "../sea/text.js";
+import { ICONS } from "../ui/icons.js";
 import { formatAmount, formatTimeLeft } from "./format.js";
 
 export const INFIRMARY_TEXT = {
@@ -28,7 +29,7 @@ export function infirmaryHtml(state: PlayerState, speed: number): string {
   const job = state.healing;
   const check = canHeal({ infirmary: state.buildings.infirmary, wounded: w, busy: job !== null, stock: state.stock });
   const kv =
-    TROOP_TYPES.map((k) => `<span>${TROOP_NAMES[k]}</span><span>${w[k]}</span>`).join("") +
+    TROOP_TYPES.map((k) => `<span class="with-icon">${ICONS[k]}${TROOP_NAMES[k]}</span><span>${w[k]}</span>`).join("") +
     `<span>Beds in use</span><span>${n} / ${hospitalCapacity(state.buildings.infirmary)}</span>` +
     `<span>Battle losses saved</span><span>${Math.round(woundedSaved(state.techs.stretchers ?? 0) * 100)}%</span>`;
   let action: string;
@@ -39,5 +40,5 @@ export function infirmaryHtml(state: PlayerState, speed: number): string {
       `<button class="b green" data-act="heal" aria-disabled="${!check.ok}" style="margin-top:8px;width:100%">Heal ${n} wounded · ${formatAmount(healCost(n).fish!)} fish</button>` +
       (check.ok ? "" : `<p class="why">${check.reason}</p>`);
   else action = `<p class="p" style="margin-top:6px">${INFIRMARY_TEXT.none}</p>`;
-  return `<div class="box"><h4>Wounded</h4><div class="kv">${kv}</div>${action}<p class="p" style="font-size:12px;margin-top:6px">${INFIRMARY_TEXT.note}</p></div>`;
+  return `<div class="box"><h4 class="with-icon">${ICONS.wounded}Wounded</h4><div class="kv">${kv}</div>${action}<p class="p" style="font-size:12px;margin-top:6px">${INFIRMARY_TEXT.note}</p></div>`;
 }

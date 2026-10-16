@@ -1,5 +1,5 @@
 /**
- * The nine building models of the city (client/public/buildings, made by assets/buildings/make-buildings.py from
+ * The nine building models of the city (client/public/buildings, made by assets/make-models.py from
  * the art direction's concepts). One visual tier for now: the same model at every level.
  * Each model is brought to its tile when it loads: centered, standing on y = 0, scaled to fit, turned to the camera.
  */

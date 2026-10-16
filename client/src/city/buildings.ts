@@ -2,9 +2,9 @@ import * as THREE from "three";
 import { BUILDING_IDS, type BuildingId } from "@brinelight/shared";
 import { hexX, hexZ, kitModel, lighthouseScale, type BuildingModels, type Kit } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
-import { PLOTS, SKIN } from "./plots.js";
+import { PLOTS } from "./plots.js";
 
-type Plot = { group: THREE.Group; hit: THREE.Mesh; key: string; flag: THREE.Object3D | null };
+type Plot = { group: THREE.Group; hit: THREE.Mesh; key: string };
 
 export type CityBuildings = {
   /** Invisible shapes used to know which building was tapped. */
@@ -13,8 +13,6 @@ export type CityBuildings = {
   refresh(state: PlayerState): void;
   /** Shows the yellow ring under a building, or hides it. */
   select(id: BuildingId | null): void;
-  /** Flags waving. */
-  animate(now: number): void;
 };
 
 export const plotPosition = (id: BuildingId) => {
@@ -38,7 +36,7 @@ export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: T
     hit.userData.building = id;
     group.add(hit);
     add(group);
-    plots[id] = { group, hit, key: "", flag: null };
+    plots[id] = { group, hit, key: "" };
   });
 
   const ringGeo = new THREE.RingGeometry(1.02, 1.2, 6, 1);
@@ -52,15 +50,9 @@ export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: T
   const rebuild = (id: Exclude<BuildingId, "lighthouse">, level: number, working: boolean) => {
     const p = plots[id];
     p.group.children.filter((c) => c !== p.hit).forEach((c) => p.group.remove(c));
-    p.flag = null;
     if (level > 0) {
       // One visual tier for now: the building's own model at every level.
       p.group.add(models[id].object.clone(true));
-      const f = kitModel(kit, `flag_${SKIN}`);
-      f.scale.setScalar(2.4);
-      f.position.set(0.72, 0, 0.4);
-      p.group.add(f);
-      p.flag = f;
     }
     if (level === 0 || working) {
       const s = kitModel(kit, "building_scaffolding");
@@ -88,12 +80,6 @@ export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: T
       if (id) {
         const { x, z } = plotPosition(id);
         ring.position.set(x, 0.04, z);
-      }
-    },
-    animate(now) {
-      for (const id of BUILDING_IDS) {
-        const p = plots[id];
-        if (p.flag) p.flag.rotation.z = Math.sin(now * 2 + p.group.position.x) * 0.06;
       }
     },
   };

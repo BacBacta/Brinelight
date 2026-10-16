@@ -1,11 +1,12 @@
 /**
- * The training part of the Barracks sheet, as in the prototype: the three troop types with the soldiers in your city,
+ * The training part of the Barracks sheet, as in the prototype: the three troop types (their icon, and the soldiers in your city),
  * what each one beats, a "+N" button for a batch of the Barracks' size, and the cost per soldier.
  * Pure: tested without a browser.
  */
 import { BEATS, TRAIN_COST, canTrain, trainBatch, type TroopType } from "@brinelight/shared";
 import type { PlayerState } from "../state/index.js";
 import { TROOP_NAMES, TROOP_TYPES } from "../sea/text.js";
+import { ICONS } from "../ui/icons.js";
 import { formatTimeLeft } from "./format.js";
 
 /** The prototype's colors for each troop type. */
@@ -25,7 +26,7 @@ export function trainingHtml(state: PlayerState, speed: number): string {
   const rows = TROOP_TYPES.map((k) => {
     const c = TROOP_COLORS[k];
     return (
-      `<div class="it" data-troop-row="${k}"><div class="ph" style="background:${c}33;color:${c}">${state.troops[k]}</div>` +
+      `<div class="it" data-troop-row="${k}"><div class="ph troop" style="background:${c}33;color:${c}">${ICONS[k]}<b>${state.troops[k]}</b></div>` +
       `<div class="tt"><b>${TROOP_NAMES[k]}</b><small>Beat ${TROOP_NAMES[BEATS[k]].toLowerCase()}</small></div>` +
       // Still tappable when refused: the tap shows the reason in a toast, as for an upgrade.
       `<button class="b sm" data-act="train" data-troop="${k}" aria-disabled="${!check.ok}">+${n}</button></div>`

@@ -1,4 +1,4 @@
-import type { Kit, SceneHandle } from "../scene/index.js";
+import type { Kit, Models, SceneHandle } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 import { createFleetMarks } from "./fleets.js";
 import { createSeaLabels } from "./labels.js";
@@ -14,6 +14,7 @@ export type Sea = {
 /** The sea view: the map, your fleets, the sheets of camps and wrecks, and the combat reports. */
 export function createSea(
   kit: Kit,
+  models: Models,
   scene: SceneHandle,
   canvas: HTMLCanvasElement,
   root: HTMLElement,
@@ -26,8 +27,9 @@ export function createSea(
     speed(): number;
   },
 ): Sea {
-  const map = createSeaMap(kit, (o) => scene.add(o, "sea"));
+  const map = createSeaMap(kit, models, (o) => scene.add(o, "sea"));
   const marks = createFleetMarks(
+    models.boat,
     (o) => scene.add(o, "sea"),
     (o) => o.removeFromParent(),
   );

@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { loadBuildings, type BuildingModels } from "./buildings.js";
+import { fitIsland, loadModels, type Models } from "./models.js";
 import { createCamera, createControls, frameCity } from "./camera.js";
 import { createIsland, type Kit } from "./island.js";
 import { createLighthouse, lighthouseScale } from "./lighthouse.js";
@@ -13,6 +14,7 @@ import { createWater } from "./water.js";
 
 export type { Kit } from "./island.js";
 export { BUILDING_FIX, buildingUrl, normalizeBuilding, type BuildingModel, type BuildingModels } from "./buildings.js";
+export { MODEL_IDS, SHORE_RADIUS, bakeModel, fitIsland, modelUrl, type Models } from "./models.js";
 export { hexGeometry, hexX, hexZ, kitModel } from "./island.js";
 export { createLighthouse, lighthouseScale } from "./lighthouse.js";
 
@@ -51,8 +53,8 @@ export type SceneOptions = {
   quality?: QualityStep | null;
   /** Where the sea camera first looks: your city on the sea map. */
   home?: { x: number; z: number };
-  /** Called once phare.glb and the nine building models are loaded. */
-  onLoaded?: (kit: Kit, buildings: BuildingModels) => void;
+  /** Called once phare.glb, the nine buildings and the other models are loaded. */
+  onLoaded?: (kit: Kit, buildings: BuildingModels, models: Models) => void;
   onError?: (err: unknown) => void;
 };
 
@@ -88,16 +90,17 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   addEventListener("resize", layout);
 
   let disposed = false;
-  // One loader: the kit (island, scaffolding, flags, sea) and the nine buildings, in parallel; the city shows once all are there.
+  // One loader: the kit (scaffolding, the sea's other sites), the nine buildings and the other models, in parallel;
+  // the city shows once all are there.
   const loader = new GLTFLoader();
-  Promise.all([loader.loadAsync(KIT_URL), loadBuildings(loader)]).then(
-    ([gltf, buildings]) => {
+  Promise.all([loader.loadAsync(KIT_URL), loadBuildings(loader), loadModels(loader)]).then(
+    ([gltf, buildings, models]) => {
       if (disposed) return;
       const kit: Kit = {};
       gltf.scenes.forEach((sc) => (kit[sc.name] = sc));
-      scene.add(createIsland(kit));
+      scene.add(createIsland(fitIsland(models.island)));
       lighthouse.useModel(buildings.lighthouse);
-      options.onLoaded?.(kit, buildings);
+      options.onLoaded?.(kit, buildings, models);
     },
     (err: unknown) => {
       console.error(err);

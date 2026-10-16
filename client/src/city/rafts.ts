@@ -1,11 +1,13 @@
 /**
- * The raft slots around the island, as in the prototype: moored rafts (deck and planks), the slot the shipyard
- * works on (scaffolding), and the free slots the Lighthouse lights (a golden hex that pulses).
+ * The raft slots around the island, as in the prototype: moored rafts (the raft model of the art direction), the slot
+ * the shipyard works on (scaffolding), and the free slots the Lighthouse lights (a golden hex that pulses).
  * Up to 39 rafts: each part is one InstancedMesh, so the number of draw calls never grows with the rafts.
+ * The buildings on rafts (client/public/models: greenhouse, smokehouse, watchtower) are not shown yet: the shipyard's
+ * task (week 5, task 4) will add them here, one InstancedMesh per kind, placed on the rafts that carry them.
  */
 import * as THREE from "three";
 import { RAFT_DAMAGED_BELOW, RAFT_SLOTS, raftCap, slotOpen } from "@brinelight/shared";
-import { hexX, hexZ, kitModel, type Kit } from "../scene/index.js";
+import { bakeModel, hexX, hexZ, kitModel, type Kit } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 
 export type RaftSlotView = "raft" | "damaged" | "building" | "free";
@@ -44,15 +46,29 @@ export type CityRafts = {
 };
 
 const MAX = RAFT_SLOTS.length;
-const PLANKS = 3;
+/** A raft's widest side, close to its slot (a tile is 2 wide), and where its bottom sits: the barrels in the water. */
+export const RAFT_WIDTH = 1.75;
+const RAFT_BOTTOM = -0.62;
 
-export function createCityRafts(kit: Kit, add: (o: THREE.Object3D) => void): CityRafts {
-  const deckGeo = new THREE.CylinderGeometry(1.1, 1.14, 0.22, 6);
-  deckGeo.rotateY(Math.PI / 6);
-  const deck = new THREE.InstancedMesh(deckGeo, new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.9 }), MAX);
+/** The raft model as one geometry, centered on its slot, its bottom at y = 0 and RAFT_WIDTH wide. */
+export function raftGeometry(model: THREE.Object3D): { geometry: THREE.BufferGeometry; material: THREE.Material } {
+  const { geometry, material } = bakeModel(model);
+  geometry.computeBoundingBox();
+  const box = geometry.boundingBox!;
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  geometry.translate(-center.x, -box.min.y, -center.z);
+  const s = RAFT_WIDTH / Math.max(size.x, size.z);
+  geometry.scale(s, s, s);
+  geometry.computeBoundingSphere();
+  return { geometry, material };
+}
+
+export function createCityRafts(kit: Kit, model: THREE.Object3D, add: (o: THREE.Object3D) => void): CityRafts {
+  const raftParts = raftGeometry(model);
+  const deck = new THREE.InstancedMesh(raftParts.geometry, raftParts.material, MAX);
   deck.castShadow = true;
   deck.receiveShadow = true;
-  const planks = new THREE.InstancedMesh(new THREE.BoxGeometry(1.7, 0.03, 0.12), new THREE.MeshStandardMaterial({ color: "#7A5130", roughness: 0.9 }), MAX * PLANKS);
   const ghostGeo = new THREE.CircleGeometry(1.05, 6);
   ghostGeo.rotateX(-Math.PI / 2);
   ghostGeo.rotateY(Math.PI / 6);
@@ -66,7 +82,7 @@ export function createCityRafts(kit: Kit, add: (o: THREE.Object3D) => void): Cit
   const scaffold = kitModel(kit, "building_scaffolding");
   scaffold.scale.setScalar(0.8);
   scaffold.visible = false;
-  const meshes = [deck, planks, ghost, ring, hit];
+  const meshes = [deck, ghost, ring, hit];
   for (const m of meshes) {
     m.count = 0;
     m.frustumCulled = false;
@@ -74,8 +90,9 @@ export function createCityRafts(kit: Kit, add: (o: THREE.Object3D) => void): Cit
   }
   add(scaffold);
 
-  const sound = new THREE.Color("#A8743F");
-  const damaged = new THREE.Color("#5E4A36");
+  // Multiplies the raft's texture: a damaged raft looks darker.
+  const sound = new THREE.Color("#FFFFFF");
+  const damaged = new THREE.Color("#7A6A5A");
   const m4 = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
@@ -89,15 +106,10 @@ export function createCityRafts(kit: Kit, add: (o: THREE.Object3D) => void): Cit
   const placeRafts = (now: number) => {
     afloat.forEach((r, i) => {
       const y = Math.sin(now * 1.3 + r.bob) * 0.04;
-      deck.setMatrixAt(i, m4.compose(p.set(r.x, y - 0.13, r.z), q.identity(), one));
-      for (let k = 0; k < PLANKS; k++) {
-        q.setFromAxisAngle(up, r.tilt);
-        const off = new THREE.Vector3(0, 0, (k - 1) * 0.42).applyQuaternion(q);
-        planks.setMatrixAt(i * PLANKS + k, m4.compose(p.set(r.x + off.x, y - 0.01, r.z + off.z), q, one));
-      }
+      q.setFromAxisAngle(up, r.tilt);
+      deck.setMatrixAt(i, m4.compose(p.set(r.x, RAFT_BOTTOM + y, r.z), q, one));
     });
     deck.instanceMatrix.needsUpdate = true;
-    planks.instanceMatrix.needsUpdate = true;
   };
 
   return {
@@ -135,7 +147,6 @@ export function createCityRafts(kit: Kit, add: (o: THREE.Object3D) => void): Cit
         hitSlots.push(s.key);
       }
       deck.count = afloat.length;
-      planks.count = afloat.length * PLANKS;
       ghost.count = free;
       ring.count = free;
       hit.count = hitSlots.length;

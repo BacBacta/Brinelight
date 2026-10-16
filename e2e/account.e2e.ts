@@ -207,6 +207,42 @@ describe("city labels", () => {
     await p.context.close();
   });
 
+  it("the island, the rafts, the sea's wrecks, camps and boat, and the icons: the models of the art direction", async () => {
+    const base = newPlayerState();
+    const inner = RAFT_SLOTS.filter((x) => x.ring === 3).map((x) => x.key);
+    let city: PlayerState = {
+      ...base,
+      buildings: { lighthouse: 6, refinery: 2, fishery: 2, lumberyard: 2, shelters: 1, barracks: 1, harbor: 1, observatory: 1, infirmary: 1 },
+      rafts: Object.fromEntries(inner.slice(0, 10).map((k, i) => [k, { hp: i === 2 ? 40 : 100, building: null, level: 0 }])),
+    };
+    const sent = sail(city, "camp-1");
+    if (!sent.ok) throw new Error(sent.reason);
+    city = advance(sent.state, 200);
+    const p = await newPlayer(false);
+    await p.context.addInitScript(({ key, file }) => localStorage.setItem(key, file), { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: Date.now(), state: city }) });
+    const models: string[] = [];
+    p.context.on("response", (r) => r.url().includes("/models/") && r.ok() && models.push(new URL(r.url()).pathname));
+    const page = await openGame(p.context);
+    // The buildings on rafts wait for the shipyard's task: not loaded.
+    expect(models.sort()).toEqual(["boat", "camp", "island", "raft", "wreck"].map((id) => `/models/${id}.glb`));
+    await page.waitForTimeout(1000);
+    await page.screenshot({ path: "e2e/.shots/shot-island.png" });
+    await page.screenshot({ path: "e2e/.shots/shot-hud.png", clip: { x: 0, y: 0, width: 412, height: 140 } });
+    // The top bar (Lighthouse, oil, fish, wood, Pearls, survivors) and the bottom menu (five views): every icon loaded.
+    const icons = await page.evaluate(() => [...document.querySelectorAll<HTMLImageElement>("img.icon")].map((i) => i.complete && i.naturalWidth > 0));
+    expect(icons.length).toBeGreaterThanOrEqual(11);
+    expect(icons.every(Boolean)).toBe(true);
+    await page.locator('.nav button[data-v="sea"]').click();
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: "e2e/.shots/shot-sea.png" });
+    await page.mouse.move(206, 500);
+    // Farther out: wrecks and camps around your city.
+    await page.mouse.wheel(0, 1500);
+    await page.waitForTimeout(1000);
+    await page.screenshot({ path: "e2e/.shots/shot-sea-far.png" });
+    await p.context.close();
+  });
+
   it("turning and zooming the camera: a label never covers another one (seen on the phone: a badge over \"Lighthouse 4\")", async () => {
     const base = newPlayerState();
     const city = { ...base, buildings: { ...base.buildings, lighthouse: 4, refinery: 2, fishery: 2, lumberyard: 2, shelters: 1, barracks: 1, harbor: 1, observatory: 1, infirmary: 1 } };

@@ -1,5 +1,5 @@
 import type { BuildingId, TechId, TroopType } from "@brinelight/shared";
-import { lighthouseScale, type BuildingModels, type Kit, type SceneHandle } from "../scene/index.js";
+import { lighthouseScale, type BuildingModels, type Kit, type Models, type SceneHandle } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 import { createCityBuildings } from "./buildings.js";
 import { createLabels } from "./labels.js";
@@ -22,6 +22,7 @@ const LABEL_GAP = 0.25;
 export function createCity(
   kit: Kit,
   models: BuildingModels,
+  others: Models,
   scene: SceneHandle,
   canvas: HTMLCanvasElement,
   root: HTMLElement,
@@ -38,7 +39,7 @@ export function createCity(
   },
 ): City {
   const buildings = createCityBuildings(kit, models, (o) => scene.add(o));
-  const rafts = createCityRafts(kit, (o) => scene.add(o));
+  const rafts = createCityRafts(kit, others.raft, (o) => scene.add(o));
   // Labels float just above each model; the Lighthouse's grows with its level.
   const labels = createLabels(root, scene, (id, lighthouse) =>
     id === "lighthouse" ? (models.lighthouse.height + LABEL_GAP) * lighthouseScale(lighthouse) : models[id].height + LABEL_GAP,
@@ -58,7 +59,6 @@ export function createCity(
 
   scene.onFrame((now, view) => {
     if (view !== "city") return;
-    buildings.animate(now);
     rafts.animate(now);
     labels.place(sheet.current);
   });

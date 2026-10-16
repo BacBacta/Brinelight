@@ -1,6 +1,7 @@
 import { applyAction, newPlayerState, trainTime, type GameAction, type PlayerState } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
 import { TRAINING_TEXT, TROOP_COLORS, batchName, trainingHtml } from "../src/city/training.js";
+import { ICONS } from "../src/ui/icons.js";
 import { SAVE_KEY, openSave, saveGame, type KeyValueStore } from "../src/state/save.js";
 
 const memoryStore = (): KeyValueStore & { data: Map<string, string> } => {
@@ -19,7 +20,10 @@ describe("the Barracks sheet", () => {
     const html = trainingHtml({ ...withBarracks(3), troops: { boarders: 25, harpooners: 7, crossbowmen: 0 } }, 1);
     expect(html).toContain("<h4>Train</h4>");
     expect(html.match(/data-troop-row=/g)).toHaveLength(3);
-    expect(html).toContain(`<div class="ph" style="background:${TROOP_COLORS.harpooners}33;color:${TROOP_COLORS.harpooners}">7</div>`);
+    // Each type's icon from the art direction's sheet, with the soldiers in your city.
+    expect(html).toContain(`<div class="ph troop" style="background:${TROOP_COLORS.harpooners}33;color:${TROOP_COLORS.harpooners}">${ICONS.harpooners}<b>7</b></div>`);
+    expect(html).toContain(ICONS.boarders);
+    expect(html).toContain(ICONS.crossbowmen);
     expect(html).toContain("<b>Boarders</b><small>Beat harpooners</small>");
     expect(html).toContain("<b>Harpooners</b><small>Beat crossbowmen</small>");
     expect(html).toContain("<b>Crossbowmen</b><small>Beat boarders</small>");

@@ -79,7 +79,7 @@ Measures in the container (Chromium, 412 × 915, pixel ratio 2.625, `?fps`, auto
 
 ## City buildings (week 5)
 
-The nine buildings now have their own models, generated from the art direction's concepts (`docs/art-direction.md`). `assets/buildings/make-buildings.py` (Python and Pillow, out of the build) makes the files the game serves from the originals in `assets/buildings/src/`. Each original has about 2 500 triangles and one 2048 px JPEG texture, and weighs 3.1 to 3.8 MB.
+The nine buildings now have their own models, generated from the art direction's concepts (`docs/art-direction.md`). `assets/make-models.py` (Python and Pillow, out of the build; first named `assets/buildings/make-buildings.py`) makes the files the game serves from the originals in `assets/buildings/src/`. Each original has about 2 500 triangles and one 2048 px JPEG texture, and weighs 3.1 to 3.8 MB.
 
 The script makes three changes:
 - the texture becomes a 512 px WebP at quality 82 (`EXT_texture_webp`);
@@ -113,7 +113,46 @@ Measures in the container (Chromium, 412 × 915, quality 2, cache off). Each tim
 - The new models save 9 to 11 draw calls, with about as many triangles.
 - They cost 1.3 MB more to download, about 1.2 to 1.6 s at 10 Mbit/s, and some decoding time. The kit (`phare.glb`, 2.9 MB) still loads for the island, the scaffolding, the flags, the rafts and the sea.
 - To check on the phone with `?fps`.
-- If loading becomes too slow on the entry-level phone, the next step is a smaller kit holding only the models still used.
+- A smaller kit, holding only the models still used, is planned for week 6, so that `phare.glb` no longer loads in full.
+
+## The island, the sea's models and the icons (week 5)
+
+New models from the art direction, made by `assets/make-models.py` from `assets/models/src/`, with the same treatment as the buildings: a 512 px WebP texture (1 024 px for the island, the largest thing on screen), quantized geometry and welded vertices. Before quantizing, the island is flattened: its 2 183 vertices above 0.12 (the sand at about 0.14, the rocks of its rim up to 0.23) are brought down to 0.12.
+
+| Model | Original | Served | Triangles | Loaded |
+| --- | --- | --- | --- | --- |
+| Island | 3 593 kB | 247 kB | 3 052 | yes |
+| Raft | 3 290 kB | 101 kB | 1 384 | yes |
+| Wreck | 3 552 kB | 157 kB | 2 452 | yes |
+| Pirate camp | 3 639 kB | 167 kB | 2 930 | yes |
+| Boat | 3 012 kB | 119 kB | 1 965 | yes |
+| Kelp Greenhouse | 3 631 kB | 156 kB | 2 309 | not yet (week 5, task 4) |
+| Smokehouse | 3 071 kB | 145 kB | 2 332 | not yet (week 5, task 4) |
+| Watchtower | 3 491 kB | 151 kB | 2 498 | not yet (week 5, task 4) |
+| **Total** | | **1 244 kB** | | |
+
+The 24 icons (`assets/icons/make-icons.py`, from the sheet) weigh 256 kB in all, at 48 and 96 px.
+
+What changed on screen:
+- the island replaces the 19 grass tiles and the ring of sand;
+- one raft model replaces the deck and the planks (still one InstancedMesh for up to 39 rafts);
+- at sea, a wreck model replaces the ruined house and the barrel, and the pirate camp floats as one model; your boat is one model;
+- the kit's flags on the buildings are gone.
+
+Measures in the container (Chromium, 412 × 915, quality 2, cache off), on a city with all nine buildings, the Lighthouse at level 6, six rafts and a fleet at sea. Each load time is the median of 3 loads, until "Loading your city…" goes away. FPS, draw calls and triangles are read with `?fps` 12 s after the city, then the sea, shows.
+
+| | Downloaded | Load, local | Load at 10 Mbit/s, 40 ms | City | Sea |
+| --- | --- | --- | --- | --- | --- |
+| Before (`7d5744c`) | 4.41 MB | 2.44 s | 5.50 s | 6 FPS, 83 calls, 62.8 k triangles | 10 FPS, 151 calls, 65.7 k triangles |
+| After | 5.20 MB | 2.57 s | 6.18 s | 6 FPS, 39 calls, 72.8 k triangles | 10 FPS, 135 calls, 68.0 k triangles |
+
+- The city draws half as many calls: one island instead of 19 tiles and a sand ring, no more flags, and one raft mesh instead of two.
+- It downloads 0.8 MB more, about 0.7 s more at 10 Mbit/s.
+- The container's FPS only shows that nothing got slower; the phone's numbers decide.
+
+### Sources in `assets/`
+
+The originals (concepts, meshes, portraits, the icon sheet) take **90 MB** in `assets/` today, out of the client build. They stay in git while they are small; beyond **300 MB**, they will move out of git (Git LFS or a storage bucket).
 
 ## Rafts (week 4, task 6)
 
