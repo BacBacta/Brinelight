@@ -126,6 +126,8 @@ describe("parseState: whole numbers, nothing below 0", () => {
     ["an unknown research", { ...s, techs: { teleport: 1 } }],
     ["a research above its maximum", { ...s, techs: { blades: TECHS.blades.max + 1 } }],
     ["a research level in decimals", { ...s, techs: { blades: 1.5 } }],
+    ["a lead captain inherited from Object (toString)", { ...s, lead: "toString" }],
+    ["a lead captain inherited from Object (constructor)", { ...s, lead: "constructor" }],
     ["an unknown captain", { ...s, captains: { ...s.captains, blackbeard: { level: 1, xp: 0, stars: 1 } } }],
     [`a captain above level ${CAPTAIN_MAX_LEVEL}`, { ...s, captains: { tom: { level: CAPTAIN_MAX_LEVEL + 1, xp: 0, stars: 1 } } }],
     ["a captain at level 0", { ...s, captains: { tom: { level: 0, xp: 0, stars: 1 } } }],

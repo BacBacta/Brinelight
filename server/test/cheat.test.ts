@@ -77,14 +77,14 @@ const send = (server: App, token: string, body: unknown, headers: Record<string,
 async function expectRules(server: App, p: { token: string; ref: Reference }) {
   const res = await server.inject({ method: "GET", url: "/city", headers: { authorization: `Bearer ${p.token}` } });
   expect(res.statusCode).toBe(200);
-  expect(res.json()).toMatchObject({ state: json(p.ref.now()), version: p.ref.version });
+  expectCity(res.json(), p.ref);
 }
 /** An action the rules refuse: 422, the rule's reason word for word, the server's city unchanged, and sent back. */
 async function expectRefused(server: App, p: { token: string; ref: Reference }, a: GameAction, reason: string) {
   expect(p.ref.apply(a)).toEqual({ ok: false, reason });
   const res = await send(server, p.token, { action: a });
   expect(res.statusCode).toBe(422);
-  expect(res.json()).toMatchObject({ code: "rule_refused", error: reason, state: json(p.ref.now()), version: p.ref.version });
+  expectCity(res.json(), p.ref, { code: "rule_refused", error: reason });
   await expectRules(server, p);
 }
 /** An action the rules accept: 200, the city of the rules. */
@@ -92,14 +92,22 @@ async function expectApplied(server: App, p: { token: string; ref: Reference }, 
   expect(p.ref.apply(a).ok).toBe(true);
   const res = await send(server, p.token, { action: a });
   expect(res.statusCode).toBe(200);
-  expect(res.json()).toMatchObject({ state: json(p.ref.now()), version: p.ref.version });
+  expectCity(res.json(), p.ref);
 }
 /** A request the server cannot read: 400 with its own city, nothing applied. */
 async function expectInvalid(server: App, p: { token: string; ref: Reference }, body: unknown) {
   const res = await send(server, p.token, body);
   expect(res.statusCode, typeof body === "string" ? body : JSON.stringify(body)).toBe(400);
-  expect(res.json()).toMatchObject({ ...ACTION_REFUSED.invalid, state: json(p.ref.now()), version: p.ref.version });
+  expectCity(res.json(), p.ref, { ...ACTION_REFUSED.invalid });
   await expectRules(server, p);
+}
+/**
+ * An answer carries exactly the reference city: `state` compared strictly (a field the server added would fail),
+ * the rest of the answer (code, error, version) as given.
+ */
+function expectCity(body: Record<string, unknown>, ref: Reference, rest: Record<string, unknown> = {}) {
+  expect(body.state).toEqual(json(ref.now()));
+  expect(body).toMatchObject({ version: ref.version, ...rest });
 }
 const appliedIds = async (playerId: string) => (await db.select().from(schema.appliedActions).where(eq(schema.appliedActions.playerId, playerId))).length;
 
@@ -197,7 +205,7 @@ describe("a modified client cannot change the rules", () => {
       const rules = p.ref.apply(a);
       const res = await send(server, p.token, { action: a });
       expect(res.statusCode).toBe(rules.ok ? 200 : 422);
-      expect(res.json()).toMatchObject({ state: json(p.ref.now()), version: p.ref.version });
+      expectCity(res.json(), p.ref);
     }
     // The edited city itself, sent along: never read.
     await expectInvalid(server, p, { action: action({ type: "upgrade", building: "harbor" }), state: edited });
@@ -239,7 +247,8 @@ describe("a modified client cannot change the rules", () => {
     const res = await send(server, b.token, { action: other });
     expect(res.statusCode).toBe(200);
     expect(res.json()).not.toHaveProperty("replayed");
-    expect(res.json()).toMatchObject({ state: json(b.ref.now()), version: 2 });
+    expectCity(res.json(), b.ref);
+    expect(res.json().version).toBe(2);
     expect(res.json().state.queue.map((j: { id: string }) => j.id)).toEqual(["fishery"]);
     // The very same action under the same id: still applied for b, as b's own.
     const c = await player();

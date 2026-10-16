@@ -172,7 +172,7 @@ export function parseState(raw: unknown): PlayerState | null {
       s.morale < 0 ||
       !isWhole(s.pearls) ||
       !Array.isArray(s.queue) ||
-      !(s.lead === null || (typeof s.lead === "string" && s.lead in CAPTAINS)) ||
+      !(s.lead === null || (typeof s.lead === "string" && has(CAPTAINS, s.lead))) ||
       !Array.isArray(s.fleets) ||
       !isTroops(s.wounded) ||
       !Array.isArray(s.reports) ||
