@@ -58,6 +58,14 @@ Problem found while preparing the week: `catchUp` caps the whole time away at `O
 - `GET /city` creates the city of a new account with `ensureCity` (moved from task 3).
 - e2e: upgrade signed in → reload → the upgrade is there; upgrade refused by the server (resources edited in localStorage) → back to the server city with the toast; offline actions sent when back online.
 
+**First commit done (16 October): the client sends actions; `PUT /city` still exists but is no longer used.** Changes approved by the owner:
+- Server: `parseState` checks the city after catching up and after the action; refused, nothing is written and the answer is `server_error`.
+- One action on its way at a time. The city shown is the server's city plus the waiting actions, applied again with `applyAction`; it is never simply replaced while actions wait.
+- No answer, 429, `server_error` or an unknown code: the same action, same id, after 1, 2, 5, 10, 20, then 30 s (10 s per request); a `server_error` drops the action only after 3 minutes of errors in a row. 422: the server's city, the next actions again, a toast. 400, 409, 413: dropped, written to the console.
+- `signed_out` with waiting actions: kept; sent with their ids when the same account signs in again. Each account's copy is kept under its player's id, never sent with another token.
+- The session keeps the player's id (protected area, approved); week 3 sessions are forgotten.
+- Time shown: from `asOf`, the time since the answer (`performance.now()`) at the server's `speed`.
+
 ## Task 5 · The cheat test
 
 The checkpoint of the phase: "a modified client can neither create resources nor speed up time". Make it a test that runs in CI (`server/test/cheat.test.ts`, plus one e2e scenario):

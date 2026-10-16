@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { Writable } from "node:stream";
-import { applyAction, catchUp, newPlayerState, upgrade, upgradeTime, type GameAction, type PlayerState } from "@brinelight/shared";
+import { HOUR, MAX_REPORT_SEQ, applyAction, catchUp, newPlayerState, parseState, sail, upgrade, upgradeTime, type GameAction, type PlayerState } from "@brinelight/shared";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp, type AppOptions } from "../src/app.js";
@@ -8,7 +8,7 @@ import { ACTIONS_PER_MINUTE, ACTION_MAX_BYTES, ACTION_REFUSED } from "../src/cit
 import { CITY_REFUSED } from "../src/city/routes.js";
 import { loadConfig } from "../src/config.js";
 import { createSession, findOrCreatePlayer, openDatabase, purgeOldActions, schema, type Database, type Db } from "../src/db/index.js";
-import { SIGNED_OUT } from "../src/refusals.js";
+import { SERVER_ERROR, SIGNED_OUT } from "../src/refusals.js";
 
 const T0 = new Date("2026-10-15T12:00:00.000Z");
 const SECOND = 1000;
@@ -233,6 +233,39 @@ describe("POST /city/actions", () => {
     const res = await server.inject({ method: "GET", url: "/city", headers: { authorization: `Bearer ${token}` } });
     expect(res.json().state.buildings.refinery).toBe(2);
     expect(res.json().state.queue).toEqual([]);
+  });
+});
+
+describe("a city the rules would make invalid", () => {
+  it("after catching up: 500 server_error, nothing written, the incident logged without the city", async () => {
+    const lines: string[] = [];
+    const stream = new Writable({
+      write(chunk, _enc, done) {
+        lines.push(String(chunk));
+        done();
+      },
+    });
+    const server = await app({ logger: { level: "info", stream } });
+    const { id, token } = await player();
+    // A fleet on its way, and the report counter at its highest: the report it brings back would get an id parseState refuses.
+    const sent = sail(newPlayerState(), "camp-1");
+    if (!sent.ok) throw new Error(sent.reason);
+    const city = { ...sent.state, reportSeq: MAX_REPORT_SEQ };
+    expect(parseState(json(city))).not.toBeNull();
+    expect(parseState(json(catchUp(city, 8 * HOUR)))).toBeNull();
+    await putCity(id, city, 4);
+    setClock(8 * HOUR_MS);
+
+    const res = await send(server, token, { action: upgradeOf("refinery") });
+    expect(res.statusCode).toBe(500);
+    expect(res.json()).toEqual(SERVER_ERROR);
+    expect(await stored(id)).toMatchObject({ state: json(city), version: 4, savedAt: T0 });
+    expect(await appliedCount(id)).toBe(0);
+    const all = lines.join("");
+    expect(all).toContain("City refused by parseState after catching up");
+    expect(all).toContain(`"playerId":"${id}"`);
+    expect(all).toContain('"action":"upgrade"');
+    for (const word of ['"buildings"', '"stock"', '"fleets"', '"state"']) expect(all, word).not.toContain(word);
   });
 });
 

@@ -1,18 +1,21 @@
 /**
  * Sign in from the game, end to end: the real server (PGlite), the built client in Chromium, and a test wallet.
+ * Signed in, every action goes to the server, which decides; the city shown is the server's.
  */
 import type { BrowserContext, Page } from "playwright-core";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { HOUR, advance, newPlayerState, sail, type PlayerState } from "@brinelight/shared";
+import { CITY_KEY_PREFIX } from "../client/src/account/actions.js";
 import { PROFILE_TEXT } from "../client/src/account/profile.js";
 import { TEXT } from "../client/src/account/index.js";
 import { installFakeWallet, type TestWallet } from "./fakeWallet.js";
-import { API, GAME, startHarness, type Harness } from "./harness.js";
+import { API, GAME, holdActions, startHarness, type Harness } from "./harness.js";
 
 const SAVE_KEY = "brinelight-client-v1";
 const ACCOUNT_KEY = "brinelight-account-v1";
 type Job = { id: string };
-type City = { buildings: Record<string, number>; queue: Job[] };
+type City = { buildings: Record<string, number>; queue: Job[]; stock: Record<string, number> };
+type Copy = { v: 1; server: { state: City; version: number; asOf: string; speed: number } | null; receivedAt: number; pending: { action: { id: string }; firstSentAt: number | null }[] };
 
 let h: Harness;
 beforeAll(async () => {
@@ -21,16 +24,25 @@ beforeAll(async () => {
 afterAll(async () => {
   await h?.close();
 });
+/** Every browser profile is closed after its test, even a failed one: a page left open keeps drawing and slows the next tests. */
+const contexts: BrowserContext[] = [];
+afterEach(async () => {
+  holdActions(0);
+  await Promise.all(contexts.splice(0).map((c) => c.close().catch(() => undefined)));
+});
 
 /** A browser profile of its own (its own localStorage); with a test wallet when asked. */
-async function newPlayer(withWallet: boolean): Promise<{ context: BrowserContext; wallet: TestWallet | null; apiCalls: string[]; problems: string[] }> {
+async function newPlayer(withWallet: boolean): Promise<{ context: BrowserContext; wallet: TestWallet | null; apiCalls: string[]; actionIds: string[]; problems: string[] }> {
   const context = await h.browser.newContext({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 1 });
+  contexts.push(context);
   const wallet = withWallet ? await installFakeWallet(context) : null;
   const apiCalls: string[] = [];
+  const actionIds: string[] = [];
   const problems: string[] = [];
   context.on("request", (r) => {
     if (!r.url().startsWith(API)) return;
     apiCalls.push(`${r.method()} ${new URL(r.url()).pathname}`);
+    if (r.method() === "POST" && r.url().endsWith("/city/actions")) actionIds.push((JSON.parse(r.postData() ?? "{}") as { action: { id: string } }).action.id);
   });
   // A keepalive request still on its way when the page goes is reported "ERR_ABORTED" by the page, though the
   // server gets it (the tests check the server). Anything else, and any CORS refusal, is a problem.
@@ -39,7 +51,7 @@ async function newPlayer(withWallet: boolean): Promise<{ context: BrowserContext
     if (r.url().startsWith(API) && why !== "net::ERR_ABORTED") problems.push(`failed ${r.method()} ${r.url()} ${why}`);
   });
   context.on("console", (m) => /CORS|blocked|keepalive|preflight/i.test(m.text()) && problems.push(m.text()));
-  return { context, wallet, apiCalls, problems };
+  return { context, wallet, apiCalls, actionIds, problems };
 }
 
 /** Opens the game and waits for the city and its labels. */
@@ -71,35 +83,70 @@ async function upgradeBuilding(page: Page, name: string): Promise<void> {
 }
 
 const localCity = (page: Page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? "null")?.state as City | null, SAVE_KEY);
-const session = (page: Page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? "null") as { token: string; version: number } | null, ACCOUNT_KEY);
+const session = (page: Page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? "null") as { token: string; wallet: string; playerId: string } | null, ACCOUNT_KEY);
+/** The account's city kept on this device, for a player. */
+const copyOf = (page: Page, playerId: string) => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? "null") as Copy | null, `${CITY_KEY_PREFIX}${playerId}`);
+/** The buildings in the builders' queue on screen (top left), by name. */
+const shownJobs = (page: Page) =>
+  page.evaluate(() =>
+    [...document.querySelectorAll(".queue .n")]
+      .map((e) => e.textContent ?? "")
+      .filter((t) => !t.startsWith("Fleet"))
+      .map((t) => t.replace(/ Lv \d+$/, ""))
+      .sort(),
+  );
 
-async function accountCity(token: string): Promise<{ state: City; version: number } | { city: null }> {
+/** The account's city on the server (null while it has none). */
+async function serverCity(token: string): Promise<{ state: City; version: number } | null> {
   const res = await fetch(`${API}/city`, { headers: { authorization: `Bearer ${token}` } });
-  return res.json();
+  const body = (await res.json()) as { state?: City; version?: number };
+  return body.state ? (body as { state: City; version: number }) : null;
 }
-/** Waits until the account city has reached at least this version. */
-async function accountAt(token: string, version: number): Promise<{ state: City; version: number }> {
-  for (let i = 0; i < 50; i++) {
-    const c = await accountCity(token);
-    if ("version" in c && c.version >= version) return c;
+/** Waits until the account's city on the server has exactly these upgrades in its queue (sorted ids). */
+async function serverHas(token: string, jobs: string[]): Promise<{ state: City; version: number }> {
+  let last: unknown = null;
+  for (let i = 0; i < 75; i++) {
+    const c = await serverCity(token);
+    last = c?.state.queue;
+    if (c && queued(c.state).join() === jobs.join()) return c;
     await new Promise((r) => setTimeout(r, 200));
   }
-  throw new Error(`The account city never reached version ${version}`);
+  throw new Error(`The account city never had ${jobs.join(", ")} (last: ${JSON.stringify(last)})`);
 }
-/** As when you switch apps: the page is hidden, and saves. */
+/** As when you switch apps: the page is hidden. */
 const hide = (page: Page) =>
   page.evaluate(() => {
     Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
     document.dispatchEvent(new Event("visibilitychange"));
     Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
   });
+/** As when you come back to the app: the page is shown again. */
+const show = (page: Page) => page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
 
 async function signIn(page: Page): Promise<void> {
   await page.locator(".hud .lvl").click();
   await page.locator('.profile [data-act="sign-in"]').click();
 }
+async function signOut(page: Page): Promise<void> {
+  await page.locator(".hud .lvl").click();
+  await page.locator('.profile [data-act="sign-out"]').click();
+  await page.locator(".toast", { hasText: TEXT.signedOut }).waitFor();
+  await page.locator('.profile [data-act="close"]').click();
+}
 
 const queued = (c: City | null) => (c?.queue ?? []).map((j) => j.id).sort();
+/** For a poll that waits on the network (an answer, a retry): longer than the default second. */
+const NET = { timeout: 15_000, interval: 100 };
+
+/** A new player with a test wallet, signed in, on a city never played on this device. */
+async function signedInPlayer() {
+  const p = await newPlayer(true);
+  const page = await openGame(p.context);
+  await signIn(page);
+  await page.locator(".toast", { hasText: TEXT.signedIn }).waitFor();
+  const s = (await session(page))!;
+  return { ...p, page, token: s.token, playerId: s.playerId };
+}
 
 describe("playing without signing in", () => {
   it("works as before: the city is saved on this device, and nothing goes to the server", async () => {
@@ -118,17 +165,6 @@ describe("playing without signing in", () => {
     await p.context.close();
   });
 });
-
-/** A new player with a test wallet, signed in: the account starts with the (untouched) city of this device. */
-async function signedInPlayer() {
-  const p = await newPlayer(true);
-  const page = await openGame(p.context);
-  await signIn(page);
-  await page.locator(".toast", { hasText: TEXT.signedIn }).waitFor();
-  const token = (await session(page))!.token;
-  await accountAt(token, 1);
-  return { ...p, page, token };
-}
 
 describe("combat reports", () => {
   /** A city whose fleets came back twice: two unread reports, r1 then r2. No need to wait for a fleet. */
@@ -190,111 +226,189 @@ describe("combat reports", () => {
 });
 
 describe("signed in", () => {
-  it("signing in sends the city of this device; an upgrade is saved when the page is hidden; reloading finds the city", async () => {
+  it("the account has its own city: one message; an upgrade goes to the server, and is found again after a reload", async () => {
     const p = await newPlayer(true);
     const page = await openGame(p.context);
     await page.locator(".hud .lvl").click();
     await page.screenshot({ path: "e2e/.shots/shot-profile-sign-in.png" });
     await page.locator('.profile [data-act="close"]').click();
+    // Played on this device first: that city stays here, and never goes to the account.
     await upgradeBuilding(page, "Refinery");
     await signIn(page);
-    await page.locator(".toast", { hasText: TEXT.signedIn }).waitFor();
-    const token = (await session(page))!.token;
-    expect(queued((await accountAt(token, 1)).state)).toEqual(["refinery"]);
+    await page.locator(".toast", { hasText: TEXT.ownCity }).waitFor();
+    await page.screenshot({ path: "e2e/.shots/shot-own-city.png" });
+    const { token, playerId } = (await session(page))!;
+    await expect.poll(() => shownJobs(page), NET).toEqual([]);
 
     await upgradeBuilding(page, "Fishery");
-    await hide(page);
-    const saved = await accountAt(token, 2);
-    expect(queued(saved.state)).toEqual(["fishery", "refinery"]);
+    await expect.poll(() => shownJobs(page), NET).toEqual(["Fishery"]);
+    await serverHas(token, ["fishery"]);
+    expect(queued(await localCity(page))).toEqual(["refinery"]);
 
-    // The city on this device is removed: after a reload, it can only come from the account.
-    await page.evaluate((k) => localStorage.removeItem(k), SAVE_KEY);
     await page.reload();
     await page.waitForSelector(".labels.city .bl b");
-    await expect.poll(async () => queued(await localCity(page))).toEqual(["fishery", "refinery"]);
-    // Only one device here: no conflict message.
-    await page.waitForTimeout(500);
-    const why = `${await page.evaluate((k) => localStorage.getItem(k), ACCOUNT_KEY)} ${p.apiCalls.join(", ")}`;
-    expect(await page.locator(".toast", { hasText: TEXT.conflict }).count(), why).toBe(0);
+    await expect.poll(() => shownJobs(page), NET).toEqual(["Fishery"]);
+    expect((await copyOf(page, playerId))?.pending).toEqual([]);
+    expect(queued(await localCity(page))).toEqual(["refinery"]);
     await page.screenshot({ path: "e2e/.shots/shot-signed-in.png" });
     expect(p.problems).toEqual([]);
     await p.context.close();
   });
 
-  it("the save made as the page goes away (fetch keepalive, with Authorization) passes CORS and reaches the server", async () => {
+  it("an action sent as the page goes away (fetch keepalive, with Authorization) passes CORS and reaches the server, once", async () => {
     const p = await signedInPlayer();
-    // Chromium keeps a CORS check 5 s (no Access-Control-Max-Age): past that, the save needs a new, slow preflight.
+    // Chromium keeps a CORS check 5 s (no Access-Control-Max-Age): past that, the action needs a new, slow preflight.
     await p.page.waitForTimeout(6000);
     await upgradeBuilding(p.page, "Refinery");
     // A real navigation away, no help from the test: the page is hidden and unloaded, so only a keepalive request can finish.
     await p.page.goto("about:blank");
-    expect(queued((await accountAt(p.token, 2)).state)).toEqual(["refinery"]);
-    // The page never got the answer; coming back, it recognizes its own save: no conflict message.
+    const first = await serverHas(p.token, ["refinery"]);
+    // The page never got the answer: back, it sends the action again with the same id, and the server applies nothing twice.
     const back = await openGame(p.context);
-    await expect.poll(async () => (await session(back))?.version).toBe(2);
-    expect(await back.locator(".toast", { hasText: TEXT.conflict }).count(), p.apiCalls.join(", ")).toBe(0);
+    await expect.poll(async () => (await copyOf(back, p.playerId))?.pending.length, NET).toBe(0);
+    expect(p.actionIds).toHaveLength(2);
+    expect(new Set(p.actionIds).size).toBe(1);
+    expect((await serverCity(p.token))?.version).toBe(first.version);
+    await expect.poll(() => shownJobs(back), NET).toEqual(["Refinery"]);
     expect(p.problems).toEqual([]);
     await p.context.close();
   });
 
-  it("two tabs: the one that saves on an old version loads the latest city, with a message", async () => {
+  it("two tabs: an action in each, both applied by the server; each tab shows both", async () => {
     const p = await signedInPlayer();
     const a = p.page;
     const b = await openGame(p.context);
     await upgradeBuilding(a, "Refinery");
-    await hide(a);
-    await accountAt(p.token, 2);
-
+    await serverHas(p.token, ["refinery"]);
     await upgradeBuilding(b, "Fishery");
-    await hide(b);
-    await b.locator(".toast", { hasText: TEXT.conflict }).waitFor();
-    await b.screenshot({ path: "e2e/.shots/shot-conflict.png" });
-    const latest = await accountAt(p.token, 2);
-    expect(latest.version).toBe(2);
-    expect(queued(latest.state)).toEqual(["refinery"]);
-    await expect.poll(async () => queued(await localCity(b))).toEqual(["refinery"]);
+    await serverHas(p.token, ["fishery", "refinery"]);
+    await expect.poll(() => shownJobs(b), NET).toEqual(["Fishery", "Refinery"]);
+    // The other tab learns it when it is shown again.
+    await show(a);
+    await expect.poll(() => shownJobs(a), NET).toEqual(["Fishery", "Refinery"]);
     expect(p.problems).toEqual([]);
     await p.context.close();
   });
 
-  it("signing out forgets the session, never the city", async () => {
+  it("signing out shows the city of this device again; the account's city stays on this device", async () => {
     const p = await signedInPlayer();
     await upgradeBuilding(p.page, "Refinery");
-    await p.page.locator(".hud .lvl").click();
-    await p.page.locator('.profile [data-act="sign-out"]').click();
-    await p.page.locator(".toast", { hasText: TEXT.signedOut }).waitFor();
+    await serverHas(p.token, ["refinery"]);
+    await signOut(p.page);
     expect(await session(p.page)).toBeNull();
+    await expect.poll(() => shownJobs(p.page), NET).toEqual([]);
+    expect(queued((await copyOf(p.page, p.playerId))?.server?.state ?? null)).toEqual(["refinery"]);
     await hide(p.page);
-    expect(queued(await localCity(p.page))).toEqual(["refinery"]);
+    expect(queued(await localCity(p.page))).toEqual([]);
     await p.context.close();
   });
-});
 
-describe("an account city and a city on this device", () => {
-  it("you choose; replacing asks for a confirmation, then sends this city", async () => {
-    const p = await newPlayer(true);
-    const page = await openGame(p.context);
-    await signIn(page);
-    await page.locator(".toast", { hasText: TEXT.signedIn }).waitFor();
-    const token = (await session(page))!.token;
-    await accountAt(token, 1);
-    // Signed out, the city is played on this device; then the same wallet signs in again.
-    await page.locator(".hud .lvl").click();
-    await page.locator('.profile [data-act="sign-out"]').click();
-    await page.locator('.profile [data-act="close"]').click();
-    await upgradeBuilding(page, "Harbor");
-    await signIn(page);
-    const dialog = page.locator(".modal");
-    await dialog.waitFor();
-    await expect(dialog.textContent()).resolves.toContain(PROFILE_TEXT.ask);
-    await page.screenshot({ path: "e2e/.shots/shot-choice.png" });
-    await dialog.locator('[data-act="replace"]').click();
-    await expect(dialog.textContent()).resolves.toContain(PROFILE_TEXT.lost);
-    await page.screenshot({ path: "e2e/.shots/shot-confirm.png" });
-    await dialog.locator('[data-act="confirm"]').click();
-    const newToken = (await session(page))!.token;
-    const replaced = await accountAt(newToken, 2);
-    expect(queued(replaced.state)).toEqual(["harbor"]);
+  it("two upgrades tapped quickly with a slow server: both stay on screen, without flickering, until the server has both", async () => {
+    const p = await signedInPlayer();
+    holdActions(1500);
+    try {
+      // Every frame, the number of upgrades on screen.
+      await p.page.evaluate(() => {
+        const w = window as unknown as { __jobs: number[] };
+        w.__jobs = [];
+        const frame = () => {
+          w.__jobs.push([...document.querySelectorAll(".queue .n")].filter((e) => !(e.textContent ?? "").startsWith("Fleet")).length);
+          requestAnimationFrame(frame);
+        };
+        requestAnimationFrame(frame);
+      });
+      await upgradeBuilding(p.page, "Refinery");
+      await upgradeBuilding(p.page, "Fishery");
+      await serverHas(p.token, ["fishery", "refinery"]);
+      await expect.poll(async () => (await copyOf(p.page, p.playerId))?.pending.length, NET).toBe(0);
+      await p.page.waitForTimeout(500);
+      const jobs = await p.page.evaluate(() => (window as unknown as { __jobs: number[] }).__jobs);
+      const drops = jobs.filter((n, i) => n < Math.max(...jobs.slice(0, i + 1)));
+      expect(jobs.at(-1)).toBe(2);
+      expect(Math.max(...jobs)).toBe(2);
+      expect(drops, `on screen, frame after frame: ${jobs.join("")}`).toEqual([]);
+      // The second action left only once the first had its answer.
+      expect(p.actionIds).toHaveLength(2);
+    } finally {
+      holdActions(0);
+    }
+    await p.context.close();
+  });
+
+  it("offline: the actions wait on this device, then leave in order when the network is back", async () => {
+    const p = await signedInPlayer();
+    await p.context.setOffline(true);
+    await upgradeBuilding(p.page, "Refinery");
+    await upgradeBuilding(p.page, "Fishery");
+    await expect.poll(() => shownJobs(p.page), NET).toEqual(["Fishery", "Refinery"]);
+    expect((await copyOf(p.page, p.playerId))?.pending).toHaveLength(2);
+    await p.page.screenshot({ path: "e2e/.shots/shot-offline.png" });
+    expect(queued((await serverCity(p.token))?.state ?? null)).toEqual([]);
+    await p.context.setOffline(false);
+    await show(p.page);
+    const city = await serverHas(p.token, ["fishery", "refinery"]);
+    expect(city.state.queue.map((j) => j.id)).toEqual(["refinery", "fishery"]);
+    await expect.poll(async () => (await copyOf(p.page, p.playerId))?.pending.length, NET).toBe(0);
+    await expect.poll(() => shownJobs(p.page), NET).toEqual(["Fishery", "Refinery"]);
+    await p.context.close();
+  });
+
+  it("a city edited in localStorage: the server refuses the action, the city goes back to the server's, with the reason", async () => {
+    const p = await signedInPlayer();
+    await upgradeBuilding(p.page, "Refinery");
+    await upgradeBuilding(p.page, "Fishery");
+    await serverHas(p.token, ["fishery", "refinery"]);
+    await expect.poll(async () => (await copyOf(p.page, p.playerId))?.pending.length, NET).toBe(0);
+    // The server cannot be reached while the copy is edited (builders free, stock × 100) and the page reloaded.
+    await p.page.route(`${API}/**`, (r) => r.abort("internetdisconnected"));
+    await p.page.evaluate((k) => {
+      const copy = JSON.parse(localStorage.getItem(k)!);
+      const state = copy.server.state;
+      state.queue = [];
+      for (const r of Object.keys(state.stock)) state.stock[r] *= 100;
+      localStorage.setItem(k, JSON.stringify(copy));
+    }, `${CITY_KEY_PREFIX}${p.playerId}`);
+    await p.page.reload();
+    await p.page.waitForSelector(".labels.city .bl b");
+    await expect.poll(() => shownJobs(p.page), NET).toEqual([]);
+    await upgradeBuilding(p.page, "Lumberyard");
+    await expect.poll(() => shownJobs(p.page), NET).toEqual(["Lumberyard"]);
+    await p.page.unroute(`${API}/**`);
+    await show(p.page);
+    await p.page.locator(".toast", { hasText: "Your 2 builders are busy" }).waitFor({ timeout: 15_000 });
+    await expect.poll(() => shownJobs(p.page), NET).toEqual(["Fishery", "Refinery"]);
+    await p.page.screenshot({ path: "e2e/.shots/shot-refused.png" });
+    const server = await serverHas(p.token, ["fishery", "refinery"]);
+    const copy = (await copyOf(p.page, p.playerId))!;
+    expect(copy.pending).toEqual([]);
+    // The server's stock, not the edited one (× 100): equal, give or take what was produced since its answer.
+    for (const [r, v] of Object.entries(server.state.stock)) expect(copy.server!.state.stock[r], r).toBeCloseTo(v, 0);
+    await p.context.close();
+  });
+
+  it("a session that ended with actions waiting: they are kept, and leave with their ids once you sign in again", async () => {
+    const p = await signedInPlayer();
+    await p.context.setOffline(true);
+    await upgradeBuilding(p.page, "Refinery");
+    await expect.poll(() => shownJobs(p.page), NET).toEqual(["Refinery"]);
+    // The session ends on the server meanwhile (as when it expires).
+    expect((await fetch(`${API}/auth/logout`, { method: "POST", headers: { authorization: `Bearer ${p.token}` } })).status).toBe(200);
+    await p.context.setOffline(false);
+    await show(p.page);
+    await p.page.locator(".toast", { hasText: TEXT.signInAgain }).waitFor({ timeout: 15_000 });
+    await p.page.screenshot({ path: "e2e/.shots/shot-session-ended.png" });
+    expect(await session(p.page)).toBeNull();
+    expect((await copyOf(p.page, p.playerId))?.pending).toHaveLength(1);
+    await expect.poll(() => shownJobs(p.page), NET).toEqual([]);
+
+    await signIn(p.page);
+    await p.page.locator(".toast", { hasText: TEXT.signedIn }).waitFor();
+    const again = (await session(p.page))!;
+    expect(again.playerId).toBe(p.playerId);
+    await serverHas(again.token, ["refinery"]);
+    await expect.poll(() => shownJobs(p.page), NET).toEqual(["Refinery"]);
+    expect(new Set(p.actionIds).size).toBe(1);
+    expect((await copyOf(p.page, p.playerId))?.pending).toEqual([]);
     await p.context.close();
   });
 });

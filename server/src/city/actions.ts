@@ -76,6 +76,8 @@ export async function actionRoutes(app: FastifyInstance, { db, now, speed }: Act
       switch (outcome.kind) {
         case "unreadable":
           return reply.code(409).send(CITY_REFUSED.unreadable);
+        case "broken":
+          return reply.code(500).send(SERVER_ERROR);
         case "reused":
           return reply.code(409).send({ ...ACTION_REFUSED.reused, ...cityBody(outcome.city) });
         case "refused":

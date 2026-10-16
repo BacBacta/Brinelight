@@ -19,7 +19,13 @@ export function createCity(
   scene: SceneHandle,
   canvas: HTMLCanvasElement,
   root: HTMLElement,
-  game: { state(): PlayerState; upgrade(id: BuildingId): void; toCity(): void; speed: number },
+  game: {
+    state(): PlayerState;
+    upgrade(id: BuildingId): void;
+    toCity(): void;
+    /** How much faster than real time the city runs: the server's speed when signed in. */
+    speed(): number;
+  },
 ): City {
   const buildings = createCityBuildings(kit, (o) => scene.add(o));
   const labels = createLabels(root, scene);
@@ -49,7 +55,7 @@ export function createCity(
     const hit = scene.pick(e.clientX, e.clientY, buildings.hits)[0];
     const id = hit?.object.userData.building as BuildingId | undefined;
     if (id) {
-      sheet.open(id, game.state(), game.speed);
+      sheet.open(id, game.state(), game.speed());
       buildings.select(id);
     } else {
       sheet.close();
@@ -65,8 +71,8 @@ export function createCity(
     update(state) {
       buildings.refresh(state);
       labels.update(state);
-      queue.update(state, game.speed);
-      sheet.update(state, game.speed);
+      queue.update(state, game.speed());
+      sheet.update(state, game.speed());
     },
   };
 }

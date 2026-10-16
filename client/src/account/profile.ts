@@ -1,4 +1,4 @@
-/** The Profile sheet (tap the Power card) and the question asked when the account and this device both have a city. */
+/** The Profile sheet (tap the Power card). */
 import type { Wallet } from "@wallet-standard/base";
 import { NO_SIGN_IN, canSignIn, isPhone, phantomLink } from "./wallets.js";
 
@@ -10,12 +10,6 @@ export const PROFILE_TEXT = {
   saved: "Your city is saved on your account.",
   signOut: "Sign out",
   unavailable: "Accounts are not open yet. Your city is saved on this device.",
-  ask: "Your account already has a city.",
-  keep: "Keep the city saved on your account",
-  replace: "Replace it with this city",
-  lost: "Your account city will be lost.",
-  confirmReplace: "Replace",
-  cancel: "Cancel",
 } as const;
 
 /** "7Hc3wTfa…3tPq" → "7Hc3…3tPq". */
@@ -99,36 +93,4 @@ export function createProfile(
       if (!el.hidden) render();
     },
   };
-}
-
-/** Asks which city to keep. "Replace" asks for a confirmation first; closing the question keeps the account city. */
-export function askWhichCity(root: HTMLElement): Promise<"keep" | "replace"> {
-  const T = PROFILE_TEXT;
-  const el = document.createElement("div");
-  el.className = "modal";
-  el.innerHTML = `<section class="card" role="alertdialog" aria-label="${T.ask}"></section>`;
-  const card = el.firstElementChild as HTMLElement;
-  const first = () =>
-    (card.innerHTML =
-      `<h2>${T.ask}</h2>` +
-      `<button class="b gold xl" data-act="keep">${T.keep}</button>` +
-      `<button class="b" data-act="replace">${T.replace}</button>`);
-  const confirm = () =>
-    (card.innerHTML =
-      `<h2>${T.lost}</h2>` +
-      `<button class="b red xl" data-act="confirm">${T.confirmReplace}</button>` +
-      `<button class="b" data-act="cancel">${T.cancel}</button>`);
-  first();
-  root.appendChild(el);
-  return new Promise((resolve) => {
-    el.addEventListener("click", (e) => {
-      const act = (e.target as HTMLElement).closest<HTMLButtonElement>("button")?.dataset.act;
-      if (act === "replace") return confirm();
-      if (act === "cancel") return first();
-      if (act === "keep" || act === "confirm") {
-        el.remove();
-        resolve(act === "keep" ? "keep" : "replace");
-      }
-    });
-  });
 }

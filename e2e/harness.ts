@@ -20,6 +20,12 @@ const OUT = fileURLToPath(new URL("./.dist", import.meta.url));
 
 export type Harness = { browser: Browser; close(): Promise<void> };
 
+/** How long the relay holds each action (POST /city/actions) before passing it on: a slow server. 0: not held. */
+let actionDelayMs = 0;
+export const holdActions = (ms: number): void => {
+  actionDelayMs = ms;
+};
+
 export async function startHarness(): Promise<Harness> {
   const database: Database = await openDatabase(undefined);
   const config = loadConfig({ ALLOWED_ORIGINS: GAME });
@@ -58,7 +64,10 @@ export async function startHarness(): Promise<Harness> {
   };
 }
 
-/** Passes every request to the server unchanged, but holds each CORS preflight (OPTIONS) for SLOW_PREFLIGHT_MS. */
+/**
+ * Passes every request to the server unchanged, but holds each CORS preflight (OPTIONS) for SLOW_PREFLIGHT_MS,
+ * and each action for the time given to holdActions.
+ */
 function slowPreflightRelay(): Server {
   return createServer((req, res) => {
     const forward = () => {
@@ -71,6 +80,7 @@ function slowPreflightRelay(): Server {
       req.pipe(up);
     };
     if (req.method === "OPTIONS") setTimeout(forward, SLOW_PREFLIGHT_MS);
+    else if (req.method === "POST" && req.url === "/city/actions" && actionDelayMs > 0) setTimeout(forward, actionDelayMs);
     else forward();
   });
 }

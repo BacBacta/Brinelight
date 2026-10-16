@@ -36,7 +36,7 @@ export function createQueue(root: HTMLElement, onCity: () => void) {
         badge.innerHTML = `${ICONS.hammer}<b>${b.count}</b>`;
       }
       el.hidden = state.queue.length === 0 && state.fleets.length === 0;
-      // Time left on the real clock: in development, DEV_SPEED makes it shorter.
+      // Time left on the real clock: a faster game time (DEV_SPEED, or the server's speed when signed in) makes it shorter.
       const row = (name: string, p: number, left: number) =>
         `<div><span class="n">${name}</span><span class="pb"><i style="width:${(p * 100).toFixed(1)}%"></i></span><span class="t">${formatTimeLeft(left / speed)}</span></div>`;
       el.innerHTML =

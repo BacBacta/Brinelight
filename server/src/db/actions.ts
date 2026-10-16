@@ -22,7 +22,9 @@ export type ActionOutcome =
   /** The same id was already used for another action: nothing applied. */
   | { kind: "reused"; city: CityNow }
   /** The stored city cannot be read: nothing applied, the row is left as it is. */
-  | { kind: "unreadable" };
+  | { kind: "unreadable" }
+  /** The rules gave a city that parseState refuses (a bug): nothing written, nothing sent. */
+  | { kind: "broken" };
 
 export const RULE_REFUSED = "rule_refused";
 
@@ -31,9 +33,14 @@ export const RULE_REFUSED = "rule_refused";
  * the city is created if missing and its row locked (SELECT … FOR UPDATE), so two actions on the same city
  * run one after the other; an id already seen gives back its first outcome and applies nothing;
  * the city is advanced to `now` (server clock, times `speed`), then the action is applied with the shared rules.
+ * The city is checked with parseState after catching up and after the action: refused, nothing is written.
  * Only the outcome and a hash of the action are kept, never the city.
  */
 export async function applyPlayerAction(db: Db, playerId: string, action: GameAction, now: Date, speed: number, log?: DbLog): Promise<ActionOutcome> {
+  const broken = (message: string) => {
+    log?.error({ playerId, action: action.type }, message);
+    return { kind: "broken" } as const;
+  };
   return db.transaction(async (tx) => {
     await ensureCity(tx, playerId, now);
     const [row] = await tx.select().from(cities).where(eq(cities.playerId, playerId)).for("update");
@@ -43,6 +50,8 @@ export async function applyPlayerAction(db: Db, playerId: string, action: GameAc
       return { kind: "unreadable" } as const;
     }
     const current = catchUp(stored, gameSeconds(row.savedAt, now, speed));
+    // Every answer carries the city: a city the rules made invalid is never sent, nor written.
+    if (!parseState(current)) return broken("City refused by parseState after catching up");
     const unchanged: CityNow = { state: current, version: row.version, asOf: now };
     const hash = actionHash(action);
 
@@ -67,6 +76,7 @@ export async function applyPlayerAction(db: Db, playerId: string, action: GameAc
       await tx.insert(appliedActions).values({ playerId, actionId: action.id, actionHash: hash, appliedAt: now, ok: true });
       return { kind: "applied", replayed: false, city: unchanged } as const;
     }
+    if (!parseState(result.state)) return broken("City refused by parseState after an action");
     const version = row.version + 1;
     await tx.update(cities).set({ state: result.state, version, savedAt: now }).where(eq(cities.playerId, playerId));
     await tx.insert(appliedActions).values({ playerId, actionId: action.id, actionHash: hash, appliedAt: now, ok: true });
