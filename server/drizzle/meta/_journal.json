@@ -15,6 +15,13 @@
       "when": 1792099482603,
       "tag": "0001_nonce_issued_at",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792144797361,
+      "tag": "0002_applied_actions",
+      "breakpoints": true
     }
   ]
 }

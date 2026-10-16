@@ -39,6 +39,13 @@ Problem found while preparing the week: `catchUp` caps the whole time away at `O
 - Development speed (CLAUDE.md rule 4): `DEV_SPEED` read by the server only, refused when `NODE_ENV=production`, applied to the time it measures. `GET /city` and every action answer include `speed`, so the client shows the same pace as the server. This removes the week 3 limit "fewer resources after a reload in development".
 - Tests: every step above, two actions sent at the same moment (both applied once, in order), the same action sent twice (applied once, same answer), a refused action changes nothing, a new account gets a new city.
 
+**Done (16 October), with these changes approved by the owner:**
+- `applied_actions` keeps the outcome (applied, or refused with code and reason) and a SHA-256 of the action, not the answer with its city. A replay answers the same outcome with the current city and `"replayed": true`; the same id with other content is refused (409 `action_id_reused`).
+- A rule refusal is HTTP 422. Every answer that reads the database carries the city (`state`, `version`, `asOf`, `speed`); 413 `action_too_large` (body over 2 KB) and 429 `too_many_actions` never touch the database and carry none.
+- `PUT /city`, `readSentCity` and their tests stay until task 4, so that every commit stays green, end-to-end tests included. "A new account gets a new city at its first `GET /city`" moves to task 4: `ensureCity` is ready, and the first action already creates the city.
+- `DEV_SPEED` applies to the game time of the city only, never to sessions, nonces, rate limits or purges.
+- Two actions at the same moment are tested on a real PostgreSQL in the CI (job `postgres`), with a check that removing `FOR UPDATE` makes the test fail.
+
 ## Task 4 · The client sends actions
 
 - Signed in: each action is applied locally at once with `applyAction` (the screen reacts immediately), then sent. The server's answer **replaces** the local city.
@@ -47,7 +54,8 @@ Problem found while preparing the week: `catchUp` caps the whole time away at `O
 - Between two answers, the client advances the display with `tick` at the server's `speed`.
 - After sign-in: the account's city is shown. If a city was played on this device without an account, one message: "Your account has its own city. The city on this device stays here when you sign out."
 - Not signed in: nothing changes, the game is played locally as today.
-- Remove the week 3 sync code (`PUT /city`, the "one version ahead" guess, the keep/replace question).
+- Remove the week 3 sync code (`PUT /city`, `readSentCity` and their tests, the "one version ahead" guess, the keep/replace question).
+- `GET /city` creates the city of a new account with `ensureCity` (moved from task 3).
 - e2e: upgrade signed in → reload → the upgrade is there; upgrade refused by the server (resources edited in localStorage) → back to the server city with the toast; offline actions sent when back online.
 
 ## Task 5 · The cheat test

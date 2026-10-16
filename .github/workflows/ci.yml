@@ -18,6 +18,34 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  postgres:
+    # Actions at the same moment on a real PostgreSQL: PGlite runs one transaction at a time and cannot show a locking bug.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.6-bookworm
+        env:
+          POSTGRES_DB: brinelight_test
+          # A throwaway database for this job only, reachable from the runner alone: no password needed.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d brinelight_test"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run server/test/concurrency.test.ts
+        env:
+          TEST_DATABASE_URL: postgres://postgres@localhost:5432/brinelight_test
+
   e2e:
     runs-on: ubuntu-latest
     # Not blocking yet (week 3): it becomes required once it has proven stable.

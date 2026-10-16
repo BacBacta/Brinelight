@@ -8,6 +8,7 @@ import rateLimit from "@fastify/rate-limit";
 import Fastify, { type FastifyServerOptions } from "fastify";
 import { BUILDING_IDS, upgradeCost, upgradeTime, type BuildingId } from "@brinelight/shared";
 import { authRoutes } from "./auth/routes.js";
+import { actionRoutes } from "./city/actions.js";
 import { cityRoutes } from "./city/routes.js";
 import { loadConfig, type Config } from "./config.js";
 import type { Db } from "./db/index.js";
@@ -64,9 +65,13 @@ export async function buildApp(options: AppOptions = {}) {
 
   if (options.db) {
     const now = options.now ?? (() => new Date());
+    const speed = config.devSpeed;
+    // Written at start: a city whose time runs faster must never go unnoticed.
+    app.log.info({ devSpeed: speed }, speed === 1 ? "Game time runs at real speed" : `Game time runs ${speed} times faster than real time (DEV_SPEED)`);
     app.decorateRequest("playerId", "");
     await authRoutes(app, { db: options.db, config, now });
-    await cityRoutes(app, { db: options.db, now });
+    await cityRoutes(app, { db: options.db, now, speed });
+    await actionRoutes(app, { db: options.db, now, speed });
   }
 
   return app;

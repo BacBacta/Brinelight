@@ -1,4 +1,4 @@
-import { index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 /** A player: one per Solana wallet. */
 export const players = pgTable("players", {
@@ -48,3 +48,24 @@ export const cities = pgTable("cities", {
   version: integer("version").notNull(),
   savedAt: timestamp("saved_at", { withTimezone: true }).notNull(),
 });
+
+/**
+ * The actions a player's city received, by the id the client gave them, so none is ever applied twice.
+ * Never the city: only the outcome (applied, or refused with its code and reason) and a SHA-256 of the action,
+ * so the same id sent with other content can be told apart. Kept 7 days.
+ */
+export const appliedActions = pgTable(
+  "applied_actions",
+  {
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    actionId: uuid("action_id").notNull(),
+    actionHash: text("action_hash").notNull(),
+    appliedAt: timestamp("applied_at", { withTimezone: true }).notNull(),
+    ok: boolean("ok").notNull(),
+    code: text("code"),
+    error: text("error"),
+  },
+  (t) => [primaryKey({ columns: [t.playerId, t.actionId] }), index("applied_actions_at_idx").on(t.appliedAt)],
+);

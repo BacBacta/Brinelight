@@ -63,7 +63,7 @@ describe("GET /city", () => {
 
     setClock(2 * HOUR);
     const res = await getCity(server, token);
-    expect(res.json()).toEqual({ state: json(catchUp(city, 7200)), version: 1, savedAt: T0.toISOString(), asOf: clock.toISOString() });
+    expect(res.json()).toEqual({ state: json(catchUp(city, 7200)), version: 1, savedAt: T0.toISOString(), asOf: clock.toISOString(), speed: 1 });
     expect(res.json().state.stock).not.toEqual(json(city.stock));
   });
 

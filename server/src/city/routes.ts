@@ -1,11 +1,10 @@
 /**
- * GET /city  the player's city, advanced to now with the server clock.
- * PUT /city  saves the city the client sends (temporary, removed in week 4).
+ * GET /city  the player's city, advanced to now with the server clock (and the development speed).
+ * PUT /city  saves the city the client sends (temporary, removed in week 4, task 4).
  */
-import { catchUp } from "@brinelight/shared";
 import type { FastifyInstance } from "fastify";
 import { requirePlayer } from "../auth/session.js";
-import { createCity, loadCity, saveCity, type Db } from "../db/index.js";
+import { cityAt, createCity, loadCity, saveCity, type Db } from "../db/index.js";
 import { SERVER_ERROR, refusal } from "../refusals.js";
 import { readSentCity } from "./check.js";
 
@@ -21,11 +20,16 @@ export const CITY_REFUSED = {
   tooMany: refusal("too_many_saves", "Too many saves. Please wait a minute"),
 } as const;
 
-export type CityOptions = { db: Db; now: () => Date };
+export type CityOptions = {
+  db: Db;
+  now: () => Date;
+  /** DEV_SPEED: how much faster a city's game time runs than real time (1 in production). */
+  speed: number;
+};
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
-export async function cityRoutes(app: FastifyInstance, { db, now }: CityOptions): Promise<void> {
+export async function cityRoutes(app: FastifyInstance, { db, now, speed }: CityOptions): Promise<void> {
   const signedIn = requirePlayer(db, now);
 
   // Nothing is created or stored here: two reads in a row give the same city.
@@ -34,12 +38,13 @@ export async function cityRoutes(app: FastifyInstance, { db, now }: CityOptions)
     if (loaded.status === "missing") return { city: null };
     if (loaded.status === "unreadable") return reply.code(409).send(CITY_REFUSED.unreadable);
     const asOf = now();
-    const { state, version, savedAt } = loaded.city;
+    const { version, savedAt } = loaded.city;
     return {
-      state: catchUp(state, (asOf.getTime() - savedAt.getTime()) / 1000),
+      state: cityAt(loaded.city, asOf, speed),
       version,
       savedAt: savedAt.toISOString(),
       asOf: asOf.toISOString(),
+      speed,
     };
   });
 

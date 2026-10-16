@@ -1,4 +1,4 @@
-import { parseState, type PlayerState } from "@brinelight/shared";
+import { catchUp, newPlayerState, parseState, type PlayerState } from "@brinelight/shared";
 import { and, eq } from "drizzle-orm";
 import type { Db } from "./index.js";
 import { cities } from "./schema.js";
@@ -54,3 +54,21 @@ export async function saveCity(db: Db, playerId: string, raw: unknown, fromVersi
     .returning({ version: cities.version });
   return rows.length ? { ok: true, version: rows[0]!.version } : { ok: false, reason: CHANGED_ELSEWHERE };
 }
+
+/**
+ * Creates the player's city if it is missing: a new city made by the server from the shared starting values,
+ * at version 1. Does nothing when the city exists. The only place a city is created for a player who has none
+ * (an action now; GET /city from week 4, task 4).
+ */
+export async function ensureCity(db: Db, playerId: string, now: Date): Promise<void> {
+  await db.insert(cities).values({ playerId, state: newPlayerState(), version: 1, savedAt: now }).onConflictDoNothing();
+}
+
+/**
+ * The game time a city advances by between `savedAt` and `now`: real seconds times the development speed.
+ * Only the city's game time is sped up, never sessions, nonces, rate limits or the purge.
+ */
+export const gameSeconds = (savedAt: Date, now: Date, speed: number): number => Math.max(0, (now.getTime() - savedAt.getTime()) / 1000) * speed;
+
+/** A stored city advanced to `now`, as the server shows it. Nothing is stored. */
+export const cityAt = (city: StoredCity, now: Date, speed: number): PlayerState => catchUp(city.state, gameSeconds(city.savedAt, now, speed));

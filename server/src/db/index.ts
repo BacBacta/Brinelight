@@ -41,4 +41,5 @@ export async function openDatabase(url: string | undefined = process.env.DATABAS
 export * from "./players.js";
 export * from "./sessions.js";
 export * from "./cities.js";
+export * from "./actions.js";
 export { schema };
