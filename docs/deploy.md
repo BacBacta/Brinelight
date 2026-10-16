@@ -45,6 +45,10 @@ The rest of the guide is for later: updating, restoring, solving problems.
 
 On Windows, `deploy/local-test/START-TEST.bat` does all the steps below for you (double-click it; `STOP-TEST.bat` stops everything). It was used for the first Phantom test on 2026-10-16.
 
+To try research and rafts on your phone without waiting hours, double-click `START-TEST-FAST.bat` instead: the same test, with the account's city 60 times faster (the server's `DEV_SPEED=60`, so a 1 h 12 min raft takes about 1 min 12 s). The window shows the speed at start (`Game speed: 60 times faster than real time`), and again next to the game address. It is the parameter `-Speed` of `start-test.ps1` (1 by default, real time). Only a signed-in city is sped up: a city played without an account keeps real time. The server refuses any speed other than 1 in production, so this is for this local test only.
+
+By hand (the terminals below), the same is `DEV_SPEED=60` before `npm run dev:server` (PowerShell: `$env:DEV_SPEED="60"`).
+
 The server is not rented yet: it waits until it is really needed (week 7 at the latest, see `docs/decisions.md`). Until then, you can test signing in with Phantom on your phone from your own computer, for free, through two temporary Cloudflare tunnels. A tunnel gives a local program a public `https://….trycloudflare.com` address, with no account and nothing to configure.
 
 Everything stays on your computer: the database is in memory (PGlite) and is lost when you stop the server. That is fine for a test.

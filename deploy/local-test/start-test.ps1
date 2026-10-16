@@ -2,6 +2,9 @@
 # Starts two temporary Cloudflare tunnels, the server (in-memory database) and the game.
 # Everything stops when you press Enter at the end, or with STOP-TEST.bat.
 # Nothing is installed except cloudflared (with winget, the first time).
+# -Speed 60 (START-TEST-FAST.bat): the account's city runs 60 times faster (the server's DEV_SPEED), to try
+# research and rafts without waiting hours. 1 by default: real time. A city played without an account is not sped up.
+param([ValidateRange(1, 3600)][int]$Speed = 1)
 $ErrorActionPreference = "Stop"
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repo = Resolve-Path (Join-Path $here "..\..")
@@ -23,6 +26,9 @@ function Wait-Url($file) {
 }
 
 try {
+  if ($Speed -eq 1) { Write-Host "Game speed: real time (DEV_SPEED=1)" -ForegroundColor Green }
+  else { Write-Host "Game speed: $Speed times faster than real time (DEV_SPEED=$Speed). For testing only." -ForegroundColor Magenta }
+
   Step "Checking the tools"
   foreach ($t in "node","npm") { if (-not (Get-Command $t -ErrorAction SilentlyContinue)) { throw "$t not found. Install Node.js 22 (nodejs.org), then run again." } }
   $nv = (node -v).TrimStart("v").Split(".")[0]
@@ -58,6 +64,7 @@ try {
   Step "Starting the server and the game"
   $env:ALLOWED_ORIGINS = $game
   $env:TRUSTED_PROXY = "127.0.0.1"
+  $env:DEV_SPEED = "$Speed"
   $procs += Start-Process npm.cmd -ArgumentList "run","dev:server" -WorkingDirectory $repo -RedirectStandardOutput "$logs\server.log" -RedirectStandardError "$logs\server.err.log" -WindowStyle Hidden -PassThru
   $procs += Start-Process npm.cmd -ArgumentList "run","preview","-w","client","--","--host","127.0.0.1","--port","4173","--strictPort" -WorkingDirectory $repo -RedirectStandardOutput "$logs\game.log" -RedirectStandardError "$logs\game.err.log" -WindowStyle Hidden -PassThru
   ($procs | ForEach-Object { $_.Id }) -join "," | Set-Content "$logs\pids.txt"
@@ -76,6 +83,7 @@ try {
   Write-Host "=================================================================" -ForegroundColor Yellow
   Write-Host " READY. Game address (copied to the clipboard):" -ForegroundColor Yellow
   Write-Host "   $game" -ForegroundColor Yellow
+  if ($Speed -ne 1) { Write-Host " Signed in, the city runs $Speed times faster than real time." -ForegroundColor Magenta }
   Write-Host ""
   Write-Host " On your phone: Phantom > browser tab > type this address."
   Write-Host " Tap the Power card > Sign in with your wallet > approve in Phantom."
