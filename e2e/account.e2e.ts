@@ -5,7 +5,7 @@
 import type { BrowserContext, Page } from "playwright-core";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import * as THREE from "three";
-import { HOUR, RAFT_SLOTS, advance, newPlayerState, sail, type PlayerState } from "@brinelight/shared";
+import { HOUR, PROMOTE_TIME, RAFT_SLOTS, advance, heal, newPlayerState, promote, research, sail, upgrade, type ActionResult, type PlayerState } from "@brinelight/shared";
 import { frameCity } from "../client/src/scene/camera.js";
 import { CITY_KEY_PREFIX } from "../client/src/account/actions.js";
 import { PROFILE_TEXT } from "../client/src/account/profile.js";
@@ -335,6 +335,90 @@ describe("combat reports", () => {
     expect(p.apiCalls).toEqual([]);
     await p.context.close();
   });
+
+  it("a report shows the veterans sent, with their icon, and counts the lost ones in the losses", async () => {
+    const vets = { ...newPlayerState(), troops: { boarders: 25, harpooners: 25, crossbowmen: 25 }, veterans: { boarders: 10, harpooners: 0, crossbowmen: 10 } };
+    const r = sail(vets, "camp-1");
+    if (!r.ok) throw new Error(r.reason);
+    const city = advance(r.state, 8 * HOUR);
+    const report = city.reports[0]!;
+    expect(report.infirmary).toBe(false);
+    const p = await newPlayer(false);
+    await p.context.addInitScript(
+      ({ key, file }) => {
+        if (sessionStorage.getItem("e2e-injected")) return;
+        localStorage.setItem(key, file);
+        sessionStorage.setItem("e2e-injected", "1");
+      },
+      { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: Date.now(), state: city }) },
+    );
+    const page = await openGame(p.context);
+    const sheet = page.locator('.sheet[aria-label="Combat report"]:not([hidden])');
+    await sheet.waitFor();
+    const boarders = sheet.locator("table.rep tr", { hasText: "Boarders" });
+    expect(await boarders.locator(".vet").textContent()).toBe("+10 vet.");
+    expect(await boarders.locator('.vet img[src*="veteran-48.webp"]').count()).toBe(1);
+    expect(await boarders.locator("td.l").textContent()).toBe(`−${report.losses.boarders + report.veteranLosses!.boarders}`);
+    expect(await sheet.locator("table.rep tr", { hasText: "Harpooners" }).locator(".vet").count()).toBe(0);
+    await expect.poll(() => sheet.textContent()).toContain("no Infirmary: all losses died");
+    expect(await sheet.textContent()).toContain("One veteran is worth 1.8 soldiers.");
+    await page.screenshot({ path: "e2e/.shots/shot-report-veterans.png" });
+    expect(p.apiCalls).toEqual([]);
+    await p.context.close();
+  });
+});
+
+describe("the queue", () => {
+  it("never cuts a name: each one on its own line, the bar and the time below, at 412 and 360 px", async () => {
+    const ok = (r: ActionResult) => {
+      if (!r.ok) throw new Error(r.reason);
+      return r.state;
+    };
+    const base = newPlayerState();
+    let city: PlayerState = {
+      ...base,
+      buildings: { ...base.buildings, lighthouse: 6, barracks: 3, observatory: 3, infirmary: 1 },
+      techs: { veterans: 1 },
+      troops: { boarders: 25, harpooners: 25, crossbowmen: 25 },
+      wounded: { boarders: 12, harpooners: 5, crossbowmen: 3 },
+      stock: { oil: 50_000, fish: 50_000, wood: 50_000, rope: 3 },
+    };
+    city = ok(upgrade(city, "observatory"));
+    city = ok(upgrade(city, "infirmary"));
+    city = ok(research(city, "warehouses"));
+    city = ok(promote(city, "crossbowmen"));
+    city = ok(heal(city));
+    city = ok(sail(city, "camp-1"));
+    const names = ["Observatory Lv 4", "Infirmary Lv 2", "Research · Sealed Warehouses", "10 veteran crossbowmen", "Healing · 20 wounded", "Fleet · Mist Pirates"];
+    const p = await newPlayer(false);
+    await p.context.addInitScript(
+      ({ key, file }) => {
+        if (sessionStorage.getItem("e2e-injected")) return;
+        localStorage.setItem(key, file);
+        sessionStorage.setItem("e2e-injected", "1");
+      },
+      { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: Date.now(), state: city }) },
+    );
+    const page = await openGame(p.context);
+    for (const width of [412, 360]) {
+      await page.setViewportSize({ width, height: 915 });
+      await page.waitForTimeout(300);
+      const rows = await page.evaluate(() =>
+        [...document.querySelectorAll<HTMLElement>(".queue > div")].map((row) => {
+          const n = row.querySelector<HTMLElement>(".n")!;
+          const box = row.getBoundingClientRect();
+          const name = n.getBoundingClientRect();
+          const bar = row.querySelector<HTMLElement>(".pb")!.getBoundingClientRect();
+          return { text: n.textContent, cut: n.scrollWidth > n.clientWidth, inside: name.left >= box.left && name.right <= box.right, below: bar.top >= name.bottom - 1 };
+        }),
+      );
+      expect(rows.map((r) => r.text), `${width} px`).toEqual(names);
+      for (const r of rows) expect({ width, ...r }).toEqual({ width, text: r.text, cut: false, inside: true, below: true });
+      await page.screenshot({ path: `e2e/.shots/shot-queue-${width}.png` });
+    }
+    expect(p.apiCalls).toEqual([]);
+    await p.context.close();
+  });
 });
 
 describe("signed in", () => {
@@ -652,6 +736,55 @@ describe("signed in", () => {
     await expect.poll(() => p.page.locator('[data-troop-row="harpooners"] .ph').textContent(), NET).toBe(String(now.troops.harpooners + 20));
     await expect.poll(() => p.page.locator(".queue .n", { hasText: "harpooners" }).count(), NET).toBe(0);
     await p.page.screenshot({ path: "e2e/.shots/shot-trained.png" });
+    expect(p.problems).toEqual([]);
+    await p.context.close();
+  });
+
+  it("veterans at the Barracks: promoted from its sheet, found again after a reload, and in the city by the server's clock", async () => {
+    const p = await signedInPlayer();
+    const base = newPlayerState();
+    await h.putCity(p.playerId, {
+      ...base,
+      buildings: { ...base.buildings, barracks: 3 },
+      techs: { veterans: 1 },
+      stock: { oil: 5000, fish: 5000, wood: 5000, rope: 3 },
+    });
+    await show(p.page);
+    await expect.poll(async () => ((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.buildings.barracks, NET).toBe(3);
+    await p.page.locator(".labels.city .bl", { hasText: "Barracks" }).first().waitFor();
+    await openSheet(p.page, "Barracks");
+    const row = p.page.locator('[data-vet-row="boarders"]');
+    await expect.poll(() => row.locator("small").textContent(), NET).toBe("25 soldiers · 0 veterans");
+    await p.page.locator(".sheet .vets").scrollIntoViewIfNeeded();
+    await p.page.screenshot({ path: "e2e/.shots/shot-veterans.png" });
+    await row.locator('[data-act="promote"]').click();
+    await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).training, NET).toMatchObject({ kind: "promote", troop: "boarders", count: 10 });
+    await expect.poll(() => p.page.locator(".queue .n", { hasText: "10 veteran boarders" }).count(), NET).toBe(1);
+    expect(((await serverCity(p.token))!.state as unknown as PlayerState).troops.boarders).toBe(15);
+
+    // Reloaded: the promotion is the server's, and still there.
+    await p.page.reload();
+    await p.page.waitForSelector(".labels.city .bl b");
+    await expect.poll(() => p.page.locator(".queue .n", { hasText: "10 veteran boarders" }).count(), NET).toBe(1);
+    await openSheet(p.page, "Barracks");
+    await expect.poll(() => p.page.locator(".sheet", { hasText: "In progress: 10 veteran boarders" }).count(), NET).toBe(1);
+    await p.page.screenshot({ path: "e2e/.shots/shot-promoting.png" });
+
+    // 3 seconds from its end: the server adds the veterans to the city on its own clock, the sheet follows.
+    const now = (await serverCity(p.token))!.state as unknown as PlayerState;
+    expect(now.training!.duration).toBe(PROMOTE_TIME);
+    await h.putCity(p.playerId, { ...now, training: { ...now.training!, left: 3 } });
+    await show(p.page);
+    await p.page.waitForTimeout(4000);
+    const done = (await serverCity(p.token))!.state as unknown as PlayerState;
+    expect(done.veterans).toEqual({ boarders: 10, harpooners: 0, crossbowmen: 0 });
+    expect(done.troops).toEqual(now.troops);
+    expect(done.training).toBeNull();
+    await show(p.page);
+    await expect.poll(() => row.locator("small").textContent(), NET).toBe("15 soldiers · 10 veterans");
+    await expect.poll(() => p.page.locator(".queue .n", { hasText: "veteran" }).count(), NET).toBe(0);
+    await p.page.locator(".sheet .vets").scrollIntoViewIfNeeded();
+    await p.page.screenshot({ path: "e2e/.shots/shot-promoted.png" });
     expect(p.problems).toEqual([]);
     await p.context.close();
   });

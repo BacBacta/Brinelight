@@ -26,6 +26,7 @@ import {
 const start = (): SeaState => ({
   buildings: { ...STARTING_BUILDINGS },
   troops: { ...STARTING_TROOPS },
+  veterans: emptyTroops(),
   stock: { ...STARTING_STOCK },
   pearls: 200,
   wounded: emptyTroops(),

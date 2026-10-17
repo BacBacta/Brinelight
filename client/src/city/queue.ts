@@ -1,11 +1,10 @@
-import { BUILDINGS, BUILDERS, TECHS, seaSite, totalTroops, type Fleet } from "@brinelight/shared";
+import { BUILDINGS, BUILDERS, TECHS, seaSite, totalTroops, trainingName, type Fleet } from "@brinelight/shared";
 import { ICONS } from "../ui/icons.js";
 import type { PlayerState } from "../state/index.js";
 import { formatTimeLeft } from "./format.js";
 import { fleetPosition } from "../sea/fleets.js";
 import { progress } from "./suggest.js";
 import { healingName } from "./infirmary.js";
-import { batchName } from "./training.js";
 
 const fleetLabel = (f: Fleet): string => `Fleet · ${f.phase === "back" ? "home" : (seaSite(f.site)?.name ?? "")}`;
 
@@ -44,7 +43,7 @@ export function createQueue(root: HTMLElement, onCity: () => void) {
       el.innerHTML =
         state.queue.map((j) => row(`${BUILDINGS[j.id].name} Lv ${state.buildings[j.id] + 1}`, progress(j), j.left)).join("") +
         (state.research ? row(`Research · ${TECHS[state.research.id].name}`, progress(state.research), state.research.left) : "") +
-        (state.training ? row(batchName(state.training.count, state.training.troop), progress(state.training), state.training.left) : "") +
+        (state.training ? row(trainingName(state.training), progress(state.training), state.training.left) : "") +
         (state.healing ? row(healingName(totalTroops(state.healing.wounded)), progress(state.healing), state.healing.left) : "") +
         (state.yard ? row("Shipyard · raft", progress(state.yard), state.yard.left) : "") +
         state.fleets.map((f) => row(fleetLabel(f), fleetPosition(f), f.left)).join("");

@@ -159,6 +159,8 @@ export type Fleet = {
   /** One-way trip, real seconds, fixed at departure. */
   travel: number;
   troops: Troops;
+  /** The veterans it took: a veteran counts as VETERAN_WEIGHT soldiers in combat. */
+  veterans: Troops;
   techs: Techs;
   lead: FleetLead;
   watchtowers: number;
@@ -172,6 +174,7 @@ export type Fleet = {
 export type SeaState = {
   buildings: Buildings;
   troops: Troops;
+  veterans: Troops;
   stock: Stock;
   pearls: number;
   /** Wounded resting in the Infirmary. */
@@ -194,22 +197,28 @@ export type CombatReport = {
   wounded: Troops;
   enemy: Troops;
   loot: { oil: number; wood: number; pearls: number; rope: number } | null;
+  /** The veterans sent and lost. Absent from reports made before veterans existed. */
+  veteranSent?: Troops;
+  veteranLosses?: Troops;
+  /** Did your city have an Infirmary at the time of the combat? Absent from reports made before it was kept. */
+  infirmary?: boolean;
 };
 
 /** Can you send a fleet there now? A refusal comes with its reason. */
-export function canSendFleet(siteId: string, s: Pick<SeaState, "buildings" | "troops" | "fleets">): Check {
+export function canSendFleet(siteId: string, s: Pick<SeaState, "buildings" | "troops" | "veterans" | "fleets">): Check {
   const site = seaSite(siteId);
   if (!site || (site.kind !== "camp" && site.kind !== "wreck")) return refuse("You cannot send a fleet there yet");
   if (s.fleets.length >= fleetsMax(s.buildings.harbor)) {
     return refuse(s.buildings.harbor < 1 ? "Build the Harbor to send more fleets" : "All your fleets are at sea");
   }
-  if (site.kind === "camp" && totalTroops(s.troops) < MIN_ATTACK_TROOPS) return refuse("You do not have enough troops");
+  // Veterans are troops too: they sail with the soldiers.
+  if (site.kind === "camp" && totalTroops(s.troops) + totalTroops(s.veterans) < MIN_ATTACK_TROOPS) return refuse("You do not have enough troops");
   return OK;
 }
 
 export type SendFleet = { ok: true; state: SeaState } | { ok: false; reason: string };
 
-/** Sends a fleet: to a camp with all your troops, which leave the city; to a wreck to salvage it. */
+/** Sends a fleet: to a camp with all your troops and veterans, who leave the city; to a wreck to salvage it. */
 export function sendFleet(siteId: string, s: SeaState): SendFleet {
   const check = canSendFleet(siteId, s);
   if (!check.ok) return check;
@@ -223,6 +232,7 @@ export function sendFleet(siteId: string, s: SeaState): SendFleet {
     left: travel,
     travel,
     troops: kind === "attack" ? { ...s.troops } : emptyTroops(),
+    veterans: kind === "attack" ? { ...s.veterans } : emptyTroops(),
     techs: { ...s.techs },
     lead: s.lead ? { ...s.lead } : null,
     watchtowers: raftEffect(s.rafts, "watchtower"),
@@ -230,7 +240,8 @@ export function sendFleet(siteId: string, s: SeaState): SendFleet {
     cargo: {},
     pearls: 0,
   };
-  return { ok: true, state: { ...s, troops: kind === "attack" ? emptyTroops() : s.troops, fleets: [...s.fleets, fleet] } };
+  const attack = kind === "attack";
+  return { ok: true, state: { ...s, troops: attack ? emptyTroops() : s.troops, veterans: attack ? emptyTroops() : s.veterans, fleets: [...s.fleets, fleet] } };
 }
 
 const add = (a: Troops, b: Troops): Troops => ({ boarders: a.boarders + b.boarders, harpooners: a.harpooners + b.harpooners, crossbowmen: a.crossbowmen + b.crossbowmen });
@@ -241,6 +252,7 @@ function fight(f: Fleet, s: SeaState): { fleet: Fleet; state: SeaState; report: 
   const enemy = pirateCamp(level);
   const r = resolveCombat({
     troops: f.troops,
+    veterans: f.veterans,
     enemy,
     captain: f.lead ? { cls: CAPTAINS[f.lead.id].cls, rarity: f.lead.rarity, level: f.lead.level } : null,
     techs: { blades: techLevel(f.techs, "blades"), hulls: techLevel(f.techs, "hulls"), stretchers: techLevel(f.techs, "stretchers") },
@@ -253,11 +265,26 @@ function fight(f: Fleet, s: SeaState): { fleet: Fleet; state: SeaState; report: 
   const fleet: Fleet = {
     ...f,
     troops: r.survivors,
+    veterans: r.veteranSurvivors,
     cargo: loot ? { oil: loot.oil, wood: loot.wood, rope: loot.rope } : {},
     pearls: loot ? loot.pearls : 0,
   };
   const world = r.win ? { ...s.world, camps: { ...s.world.camps, [f.site]: level + 1 } } : s.world;
-  const report: CombatReport = { site: f.site, level, win: r.win, attack: r.attack, defense: r.defense, sent: { ...f.troops }, losses: r.losses, wounded: r.wounded, enemy, loot };
+  const report: CombatReport = {
+    site: f.site,
+    level,
+    win: r.win,
+    attack: r.attack,
+    defense: r.defense,
+    sent: { ...f.troops },
+    losses: r.losses,
+    wounded: r.wounded,
+    enemy,
+    loot,
+    veteranSent: { ...f.veterans },
+    veteranLosses: r.veteranLosses,
+    infirmary: s.buildings.infirmary > 0,
+  };
   return { fleet, state: { ...s, wounded: add(s.wounded, r.wounded), world }, report };
 }
 
@@ -271,11 +298,11 @@ function salvage(f: Fleet, s: SeaState): { fleet: Fleet; state: SeaState } {
   return { fleet: { ...f, cargo: { oil: got, rope: WRECK_ROPE } }, state: { ...s, world: { ...s.world, wrecks } } };
 }
 
-/** A fleet back home: its troops and everything it carries come back, with no storage cap. */
+/** A fleet back home: its troops, its veterans and everything it carries come back, with no storage cap. */
 function dock(f: Fleet, s: SeaState): SeaState {
   const stock = { ...s.stock };
   for (const [k, v] of Object.entries(f.cargo) as [keyof Stock, number][]) stock[k] += v;
-  return { ...s, troops: add(s.troops, f.troops), stock, pearls: s.pearls + f.pearls };
+  return { ...s, troops: add(s.troops, f.troops), veterans: add(s.veterans, f.veterans), stock, pearls: s.pearls + f.pearls };
 }
 
 /**

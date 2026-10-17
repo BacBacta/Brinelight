@@ -73,18 +73,23 @@ describe("the combat report, when no loss was saved", () => {
     loot: { oil: 100, wood: 100, pearls: 2, rope: 0 },
   };
 
-  it("with no Infirmary, as in the prototype: no Infirmary: all losses died", () => {
+  it("with no Infirmary at the time of the battle, as in the prototype: no Infirmary: all losses died", () => {
     expect(REPORT_TEXT.none).toBe("no Infirmary: all losses died");
-    expect(reportHtml(report, false)).toContain(`<span>Wounded in the Infirmary</span><span>${REPORT_TEXT.none}</span>`);
+    expect(reportHtml({ ...report, infirmary: false })).toContain(`<span>Wounded in the Infirmary</span><span>${REPORT_TEXT.none}</span>`);
   });
 
   it("with an Infirmary whose beds are all taken: no free bed in the Infirmary: all losses died", () => {
     expect(REPORT_TEXT.full).toBe("no free bed in the Infirmary: all losses died");
-    expect(reportHtml(report, true)).toContain(`<span>Wounded in the Infirmary</span><span>${REPORT_TEXT.full}</span>`);
+    expect(reportHtml({ ...report, infirmary: true })).toContain(`<span>Wounded in the Infirmary</span><span>${REPORT_TEXT.full}</span>`);
+  });
+
+  it("a report from before reports kept the Infirmary says only: all losses died", () => {
+    expect(REPORT_TEXT.unknown).toBe("all losses died");
+    expect(reportHtml(report)).toContain(`<span>Wounded in the Infirmary</span><span>${REPORT_TEXT.unknown}</span>`);
   });
 
   it("with wounded saved: how many of the losses are to heal", () => {
-    expect(reportHtml({ ...report, wounded: { boarders: 2, harpooners: 2, crossbowmen: 3 } }, true)).toContain("<span>7 of 12 losses, to heal</span>");
+    expect(reportHtml({ ...report, infirmary: true, wounded: { boarders: 2, harpooners: 2, crossbowmen: 3 } })).toContain("<span>7 of 12 losses, to heal</span>");
   });
 });
 

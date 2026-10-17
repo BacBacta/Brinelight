@@ -4,7 +4,7 @@ import type { HealingJob } from "../rules/healing.js";
 import { RAFT_BUILDINGS, RAFT_BUILDING_MAX_LEVEL, RAFT_MAX_HP, RAFT_SLOTS, type Rafts, type YardJob } from "../rules/rafts.js";
 import { TECHS, techLevel, type ResearchJob, type TechId, type Techs } from "../rules/research.js";
 import { ATTACK_STAY, COLLECT_STAY, SEA_SITES, fleetsMax, hospitalCapacity, seaSite, type Fleet, type SeaWorld } from "../rules/sea.js";
-import { TRAIN_PER_LEVEL, type TrainingJob } from "../rules/training.js";
+import { PROMOTE_BARRACKS, PROMOTE_COUNT, TRAIN_PER_LEVEL, type TrainingJob } from "../rules/training.js";
 import type { Troops } from "../rules/types.js";
 import { MAX_REPORTS } from "./state.js";
 import type { PlayerState, Report } from "./types.js";
@@ -84,6 +84,7 @@ function isFleet(f: unknown): f is Fleet {
     isNum(f.travel) &&
     f.travel > 0 &&
     isTroops(f.troops) &&
+    isTroops(f.veterans) &&
     isTechs(f.techs) &&
     leadOk &&
     isNum(f.watchtowers) &&
@@ -135,17 +136,23 @@ function parseYard(raw: unknown, rafts: Rafts): YardJob | null | undefined {
 }
 
 /**
- * The work at the Barracks: none (null), or a batch of a known troop type (the only kind today), a whole number
- * of soldiers no larger than the Barracks' batch, with its time left brought back between 0 and its duration.
+ * The work at the Barracks: none (null), or for a known troop type either a batch (`train`, a whole number of
+ * soldiers no larger than the Barracks' batch) or a promotion (`promote`, exactly 10 soldiers, with the Veteran
+ * Doctrine and the Barracks at level 3), with its time left brought back between 0 and its duration.
  * Anything else refuses the city.
  */
-function parseTraining(raw: unknown, barracks: number): TrainingJob | null | undefined {
+function parseTraining(raw: unknown, barracks: number, techs: Techs): TrainingJob | null | undefined {
   if (raw === null) return null;
   if (!isObj(raw) || Object.keys(raw).sort().join() !== "count,duration,kind,left,troop") return undefined;
   const { kind, troop, count, left, duration } = raw;
-  if (kind !== "train" || typeof troop !== "string" || !(TROOPS as readonly string[]).includes(troop)) return undefined;
-  if (!isWhole(count, 1, barracks * TRAIN_PER_LEVEL) || !isNum(left) || !isNum(duration) || duration <= 0) return undefined;
-  return { kind, troop: troop as TrainingJob["troop"], count, left: Math.min(Math.max(0, left), duration), duration };
+  if (typeof troop !== "string" || !(TROOPS as readonly string[]).includes(troop)) return undefined;
+  if (kind === "train") {
+    if (!isWhole(count, 1, barracks * TRAIN_PER_LEVEL)) return undefined;
+  } else if (kind === "promote") {
+    if (count !== PROMOTE_COUNT || barracks < PROMOTE_BARRACKS || techLevel(techs, "veterans") < 1) return undefined;
+  } else return undefined;
+  if (!isNum(left) || !isNum(duration) || duration <= 0) return undefined;
+  return { kind, troop: troop as TrainingJob["troop"], count: count as number, left: Math.min(Math.max(0, left), duration), duration };
 }
 
 /**
@@ -202,7 +209,11 @@ const isReport = (r: unknown): r is Report =>
   isTroops(r.losses) &&
   isTroops(r.wounded) &&
   isTroops(r.enemy) &&
-  (r.loot === null || (isAmounts(r.loot, ["oil", "wood", "rope"]) && isWhole((r.loot as Record<string, unknown>).pearls)));
+  (r.loot === null || (isAmounts(r.loot, ["oil", "wood", "rope"]) && isWhole((r.loot as Record<string, unknown>).pearls))) &&
+  // Reports from before the veterans have none of these three.
+  (r.veteranSent === undefined || isTroops(r.veteranSent)) &&
+  (r.veteranLosses === undefined || isTroops(r.veteranLosses)) &&
+  (r.infirmary === undefined || typeof r.infirmary === "boolean");
 
 /**
  * Reads a city sent or stored as JSON. Strict: a missing or invalid field gives null, and nothing is filled in,
@@ -220,6 +231,7 @@ export function parseState(raw: unknown): PlayerState | null {
       !BUILDING_IDS.every((id) => isLevel((s.buildings as Record<string, unknown>)[id], LIGHTHOUSE_MAX)) ||
       !isAmounts(s.stock, RESOURCES) ||
       !isTroops(s.troops) ||
+      !isTroops(s.veterans) ||
       !isTechs(s.techs) ||
       !isRafts(s.rafts) ||
       !isCaptains(s.captains) ||
@@ -248,7 +260,7 @@ export function parseState(raw: unknown): PlayerState | null {
     const yard = parseYard(s.yard, s.rafts as Rafts);
     if (yard === undefined) return null;
     const buildings = s.buildings as PlayerState["buildings"];
-    const training = parseTraining(s.training, buildings.barracks);
+    const training = parseTraining(s.training, buildings.barracks, s.techs as Techs);
     if (training === undefined) return null;
     const healing = parseHealing(s.healing, buildings.infirmary);
     if (healing === undefined) return null;
@@ -256,6 +268,7 @@ export function parseState(raw: unknown): PlayerState | null {
       buildings: { ...buildings },
       stock: { ...(s.stock as PlayerState["stock"]) },
       troops: { ...(s.troops as PlayerState["troops"]) },
+      veterans: { ...(s.veterans as PlayerState["veterans"]) },
       techs: { ...(s.techs as PlayerState["techs"]) },
       rafts: { ...(s.rafts as PlayerState["rafts"]) },
       captains: { ...(s.captains as PlayerState["captains"]) },

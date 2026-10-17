@@ -9,10 +9,10 @@ import { trainingHtml } from "./training.js";
 
 /**
  * The sheet of a building: level, upgrade cost and duration, and why you cannot upgrade when the button is off.
- * Once built, the Observatory's sheet also lists the research, the Barracks' sheet the training, and the Infirmary's
+ * Once built, the Observatory's sheet also lists the research, the Barracks' sheet the training and the veterans, and the Infirmary's
  * sheet its wounded and their healing; the Infirmary's sheet shows its beds at every level.
  */
-export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId): void; research(tech: TechId): void; train(troop: TroopType): void; heal(): void; close(): void }) {
+export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId): void; research(tech: TechId): void; train(troop: TroopType): void; promote(troop: TroopType): void; heal(): void; close(): void }) {
   const el = document.createElement("section");
   el.className = "sheet card";
   el.hidden = true;
@@ -28,6 +28,7 @@ export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId
     if (t.dataset.act === "upgrade") actions.upgrade(current);
     if (t.dataset.act === "research" && t.dataset.tech) actions.research(t.dataset.tech as TechId);
     if (t.dataset.act === "train" && t.dataset.troop) actions.train(t.dataset.troop as TroopType);
+    if (t.dataset.act === "promote" && t.dataset.troop) actions.promote(t.dataset.troop as TroopType);
     if (t.dataset.act === "heal") actions.heal();
   });
 

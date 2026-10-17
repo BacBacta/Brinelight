@@ -1,6 +1,6 @@
 import { applyAction, newPlayerState, trainTime, type GameAction, type PlayerState } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
-import { TRAINING_TEXT, TROOP_COLORS, batchName, trainingHtml } from "../src/city/training.js";
+import { TRAINING_TEXT, TROOP_COLORS, trainingHtml } from "../src/city/training.js";
 import { ICONS } from "../src/ui/icons.js";
 import { SAVE_KEY, openSave, saveGame, type KeyValueStore } from "../src/state/save.js";
 
@@ -39,7 +39,6 @@ describe("the Barracks sheet", () => {
     const html = trainingHtml(r.state, 1);
     expect(html).toContain("In progress: 20 boarders");
     expect(html).toContain('data-act="train" data-troop="harpooners" aria-disabled="true"');
-    expect(batchName(20, "boarders")).toBe("20 boarders");
   });
 
   it("not enough fish or wood: the reason under the list", () => {

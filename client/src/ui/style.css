@@ -39,9 +39,10 @@ body.scene button{color:inherit;font-family:inherit;cursor:pointer}
 
 /* Builders' queue */
 .queue{position:fixed;left:8px;top:calc(100px + env(safe-area-inset-top,0px));z-index:4;display:grid;gap:5px;width:min(220px,48vw);pointer-events:none}
-.queue>div{pointer-events:auto;display:flex;align-items:center;gap:6px;background:rgba(6,16,36,.78);border:2px solid rgba(255,255,255,.12);border-radius:12px;padding:4px 6px;font-size:12px;font-weight:800}
-.queue .n{flex:none;max-width:44%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.queue .pb{flex:1;height:6px;border-radius:9px;background:rgba(255,255,255,.12);overflow:hidden}.queue .pb i{display:block;height:100%;background:linear-gradient(90deg,#3BC6FF,#7CFFD8)}
+/* The name on its own line, never cut; the bar and the time below it */
+.queue>div{pointer-events:auto;display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:6px;row-gap:2px;background:rgba(6,16,36,.78);border:2px solid rgba(255,255,255,.12);border-radius:12px;padding:4px 6px;font-size:12px;font-weight:800}
+.queue .n{grid-column:1/-1;overflow-wrap:anywhere;line-height:1.2}
+.queue .pb{height:6px;border-radius:9px;background:rgba(255,255,255,.12);overflow:hidden}.queue .pb i{display:block;height:100%;background:linear-gradient(90deg,#3BC6FF,#7CFFD8)}
 .queue .t{font-variant-numeric:tabular-nums;color:var(--soft);min-width:38px;text-align:right}
 
 /* At sea, the queue gives way to a small hammer badge that brings you back to the city */
@@ -101,7 +102,7 @@ body.at-sea .build-badge:not([hidden]){display:inline-flex}
 .sl.camp[data-d=easy]{border-color:#6BE07A}.sl.camp[data-d=close]{border-color:#FFD866}.sl.camp[data-d=hard]{border-color:#FF5A3A;background:rgba(110,20,10,.8)}
 .kv{display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:13.5px}.kv span:nth-child(odd){color:var(--soft)}.kv span:nth-child(even){font-weight:900;text-align:right}
 .tx{display:grid;gap:4px;background:rgba(0,0,0,.3);border-radius:12px;padding:10px;font-size:12.5px}.tx div{display:flex;justify-content:space-between;gap:8px}
-table.rep{width:100%;border-collapse:collapse;font-size:12.5px}table.rep th,table.rep td{padding:4px 6px;text-align:right;border-bottom:1px solid rgba(255,255,255,.08);font-variant-numeric:tabular-nums}table.rep th{font-size:11px;color:var(--muted)}table.rep th:first-child,table.rep td:first-child{text-align:left;color:var(--soft)}table.rep .l{color:#FF9A86;font-size:11px}table.rep .adv{color:#9FE6A9;font-size:11px}
+table.rep{width:100%;border-collapse:collapse;font-size:12.5px}table.rep th,table.rep td{padding:4px 6px;text-align:right;border-bottom:1px solid rgba(255,255,255,.08);font-variant-numeric:tabular-nums}table.rep th{font-size:11px;color:var(--muted)}table.rep th:first-child,table.rep td:first-child{text-align:left;color:var(--soft)}table.rep .l{color:#FF9A86;font-size:11px}table.rep .adv{color:#9FE6A9;font-size:11px}table.rep .vet{display:inline-flex;align-items:center;gap:2px;vertical-align:middle}table.rep .vet .icon{width:14px;height:14px}
 .vs{display:flex;height:10px;border-radius:9px;overflow:hidden;background:rgba(255,255,255,.1)}.vs i{display:block;height:100%}
 .verd{text-align:center;font-weight:900;font-size:13px}.verd.easy{color:#9FE6A9}.verd.close{color:#FFD866}.verd.hard{color:#FF9A86}
 body.at-sea .labels.city,body:not(.at-sea) .labels.sea{display:none}

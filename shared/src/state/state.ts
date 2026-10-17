@@ -6,7 +6,7 @@ import { advanceYard, startRaft } from "../rules/rafts.js";
 import { advanceResearch, startResearch, type TechId } from "../rules/research.js";
 import { advanceFleets, leadOf, sendFleet, startingSeaWorld, type CombatReport, type SeaState } from "../rules/sea.js";
 import { STARTING_CAPTAIN, STARTING_LEAD, STARTING_MORALE, STARTING_PEARLS, STARTING_STOCK, STARTING_SURVIVORS, STARTING_TROOPS } from "../rules/start.js";
-import { advanceTraining, startTraining } from "../rules/training.js";
+import { advanceTraining, startPromotion, startTraining } from "../rules/training.js";
 import { emptyTroops, type BuildingId, type TroopType } from "../rules/types.js";
 import type { PlayerState } from "./types.js";
 
@@ -20,6 +20,7 @@ export function newPlayerState(): PlayerState {
     buildings: { ...STARTING_BUILDINGS },
     stock: { ...STARTING_STOCK },
     troops: { ...STARTING_TROOPS },
+    veterans: emptyTroops(),
     techs: {},
     rafts: {},
     captains: { [id]: captain },
@@ -50,6 +51,7 @@ function produce(state: PlayerState, seconds: number): PlayerState {
 const seaState = (s: PlayerState): SeaState => ({
   buildings: s.buildings,
   troops: s.troops,
+  veterans: s.veterans,
   stock: s.stock,
   pearls: s.pearls,
   wounded: s.wounded,
@@ -67,6 +69,7 @@ function withSea(s: PlayerState, sea: SeaState, reports: CombatReport[] = []): P
   return {
     ...s,
     troops: sea.troops,
+    veterans: sea.veterans,
     stock: sea.stock,
     pearls: sea.pearls,
     wounded: sea.wounded,
@@ -92,9 +95,9 @@ export function advance(state: PlayerState, seconds: number): PlayerState {
     const r = advanceResearch(s.techs, s.research, next);
     const y = advanceYard(s.rafts, s.yard, next);
     // The new and the healed soldiers join the troops in the city before the fleets move: a fleet at sea never gets them.
-    const t = advanceTraining(s.troops, s.training, next);
+    const t = advanceTraining(s, s.training, next);
     const hl = advanceHealing(t.troops, s.healing, next);
-    s = { ...s, buildings: q.buildings, queue: q.queue, techs: r.techs, research: r.research, rafts: y.rafts, yard: y.yard, troops: hl.troops, training: t.training, healing: hl.healing };
+    s = { ...s, buildings: q.buildings, queue: q.queue, techs: r.techs, research: r.research, rafts: y.rafts, yard: y.yard, troops: hl.troops, veterans: t.veterans, training: t.training, healing: hl.healing };
     const f = advanceFleets(seaState(s), next);
     s = withSea(s, f.state, f.reports);
     rest -= next;
@@ -144,6 +147,12 @@ export function dockRaft(state: PlayerState, slot: string): ActionResult {
 export function train(state: PlayerState, troop: TroopType): ActionResult {
   const r = startTraining(troop, { barracks: state.buildings.barracks, stock: state.stock, training: state.training });
   return r.ok ? { ok: true, state: { ...state, stock: r.stock, training: r.training } } : r;
+}
+
+/** Promotes 10 soldiers of one type to veterans at the Barracks with the shared rule; a refusal comes with its reason. */
+export function promote(state: PlayerState, troop: TroopType): ActionResult {
+  const r = startPromotion(troop, { barracks: state.buildings.barracks, techs: state.techs, troops: state.troops, stock: state.stock, training: state.training });
+  return r.ok ? { ok: true, state: { ...state, stock: r.stock, troops: r.troops, training: r.training } } : r;
 }
 
 /** Starts healing every wounded in the Infirmary with the shared rule; a refusal comes with its reason. */

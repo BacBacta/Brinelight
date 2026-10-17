@@ -14,6 +14,7 @@ import {
   readReport,
   research,
   heal,
+  promote,
   sail,
   train,
   upgrade,
@@ -37,6 +38,7 @@ function wholeFields(s: PlayerState): [string, number][] {
   const troops = (where: string, t: Record<string, number>) => Object.entries(t).forEach(([k, v]) => out.push([`${where}.${k}`, v]));
   for (const id of BUILDING_IDS) out.push([`buildings.${id}`, s.buildings[id]]);
   troops("troops", s.troops);
+  troops("veterans", s.veterans);
   troops("wounded", s.wounded);
   out.push(["survivors", s.survivors], ["pearls", s.pearls], ["reportSeq", s.reportSeq]);
   for (const [id, v] of Object.entries(s.techs)) out.push([`techs.${id}`, v ?? 0]);
@@ -47,12 +49,15 @@ function wholeFields(s: PlayerState): [string, number][] {
   for (const [id, v] of Object.entries(s.world.camps)) out.push([`camps.${id}`, v]);
   s.fleets.forEach((f, i) => {
     troops(`fleets.${i}.troops`, f.troops);
+    troops(`fleets.${i}.veterans`, f.veterans);
     out.push([`fleets.${i}.pearls`, f.pearls]);
     if (f.lead) out.push([`fleets.${i}.lead.level`, f.lead.level]);
   });
   for (const r of s.reports) {
     out.push([`${r.id}.level`, r.level]);
     for (const part of ["sent", "losses", "wounded", "enemy"] as const) troops(`${r.id}.${part}`, r[part]);
+    if (r.veteranSent) troops(`${r.id}.veteranSent`, r.veteranSent);
+    if (r.veteranLosses) troops(`${r.id}.veteranLosses`, r.veteranLosses);
     if (r.loot) out.push([`${r.id}.loot.pearls`, r.loot.pearls]);
   }
   return out;
@@ -60,13 +65,18 @@ function wholeFields(s: PlayerState): [string, number][] {
 
 describe("parseState: whole numbers, nothing below 0", () => {
   it("the rules never give a decimal where a whole number is required: a long game, time cut at odd lengths", () => {
-    let s: PlayerState = { ...richCity(), buildings: { ...richCity().buildings, observatory: 2, barracks: 1, infirmary: 1 } };
+    let s: PlayerState = {
+      ...richCity(),
+      techs: { ...richCity().techs, veterans: 1 },
+      buildings: { ...richCity().buildings, observatory: 2, barracks: 3, infirmary: 1 },
+    };
     const camps = SEA_SITES.filter((x) => x.kind === "camp").map((x) => x.id);
     const wrecks = SEA_SITES.filter((x) => x.kind === "wreck").map((x) => x.id);
     const steps = [0.37, 13.1, 600.5, 2.3 * HOUR, 0.001, 7.77 * HOUR, 1.7 * 24 * HOUR, 59.9, 3.3 * HOUR, 4 * 24 * HOUR];
     let checked = 0;
     let trained = 0;
     let healed = 0;
+    let promoted = 0;
     for (let round = 0; round < 40; round++) {
       for (const id of BUILDING_IDS) {
         const r = upgrade(s, id);
@@ -74,6 +84,11 @@ describe("parseState: whole numbers, nothing below 0", () => {
       }
       const studied = research(s, (Object.keys(TECHS) as (keyof typeof TECHS)[])[round % 10]!);
       if (studied.ok) s = studied.state;
+      const raised = round % 2 ? promote(s, (["boarders", "harpooners", "crossbowmen"] as const)[round % 3]!) : null;
+      if (raised?.ok) {
+        s = raised.state;
+        promoted++;
+      }
       const drilled = train(s, (["boarders", "harpooners", "crossbowmen"] as const)[round % 3]!);
       if (drilled.ok) {
         s = drilled.state;
@@ -106,6 +121,9 @@ describe("parseState: whole numbers, nothing below 0", () => {
     expect(checked).toBeGreaterThan(1000);
     // Training too: batches started, and some finished along the way.
     expect(trained).toBeGreaterThan(3);
+    // Promotions too: veterans went to sea, and some came back from the battles.
+    expect(promoted).toBeGreaterThan(1);
+    expect(s.reports.some((r) => Object.values(r.veteranSent ?? {}).some((n) => n > 0))).toBe(true);
     // Healing too: wounded from the battles were healed.
     expect(healed).toBeGreaterThan(1);
     // Research too: some finished along the way.

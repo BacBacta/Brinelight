@@ -9,7 +9,7 @@ import { TECHS, type TechId } from "../rules/research.js";
 import { seaSite } from "../rules/sea.js";
 import type { BuildingId, TroopType } from "../rules/types.js";
 import { REPORT_ID } from "./parse.js";
-import { dockRaft, heal, readReport, research, sail, train, upgrade, type ActionResult } from "./state.js";
+import { dockRaft, heal, promote, readReport, research, sail, train, upgrade, type ActionResult } from "./state.js";
 import type { PlayerState } from "./types.js";
 
 /** Every action carries an id made by the client (a UUID), so the server never applies it twice. */
@@ -20,7 +20,8 @@ export type GameAction =
   | { id: string; type: "research"; tech: TechId }
   | { id: string; type: "dockRaft"; slot: string }
   | { id: string; type: "train"; troop: TroopType }
-  | { id: string; type: "heal" };
+  | { id: string; type: "heal" }
+  | { id: string; type: "promote"; troop: TroopType };
 
 export type GameActionType = GameAction["type"];
 
@@ -36,6 +37,7 @@ const FIELDS: Record<GameActionType, readonly string[]> = {
   dockRaft: ["slot"],
   train: ["troop"],
   heal: [],
+  promote: ["troop"],
 };
 
 const SLOTS = new Set(RAFT_SLOTS.map((s) => s.key));
@@ -65,6 +67,8 @@ export function applyAction(state: PlayerState, action: GameAction): ActionResul
       return train(state, action.troop);
     case "heal":
       return heal(state);
+    case "promote":
+      return promote(state, action.troop);
   }
 }
 
@@ -104,7 +108,8 @@ export function parseAction(raw: unknown): GameAction | null {
         const slot = o.slot;
         return shortText(slot, 8) && SLOTS.has(slot) ? { id, type: t, slot } : null;
       }
-      case "train": {
+      case "train":
+      case "promote": {
         // The troop type only: the number of soldiers is the rule's, never the client's.
         const troop = o.troop;
         return shortText(troop) && Object.prototype.hasOwnProperty.call(BEATS, troop) ? { id, type: t, troop: troop as TroopType } : null;

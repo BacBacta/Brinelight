@@ -148,7 +148,7 @@ describe("parseState: the training in progress", () => {
     ["a city without the field", (({ training: _t, ...rest }) => rest)(city)],
     ["an unknown troop type", { ...city, training: { ...job, troop: "archers" } }],
     ["a troop type inherited from Object", { ...city, training: { ...job, troop: "toString" } }],
-    ["an unknown kind", { ...city, training: { ...job, kind: "promote" } }],
+    ["an unknown kind", { ...city, training: { ...job, kind: "heal" } }],
     ["no soldier", { ...city, training: { ...job, count: 0 } }],
     ["part of a soldier", { ...city, training: { ...job, count: 12.5 } }],
     ["a batch larger than the Barracks trains", { ...city, training: { ...job, count: 41 } }],

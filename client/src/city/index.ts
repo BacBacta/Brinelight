@@ -31,6 +31,7 @@ export function createCity(
     upgrade(id: BuildingId): void;
     research(tech: TechId): void;
     train(troop: TroopType): void;
+    promote(troop: TroopType): void;
     heal(): void;
     dockRaft(slot: string): void;
     toCity(): void;
@@ -49,6 +50,7 @@ export function createCity(
     upgrade: (id) => game.upgrade(id),
     research: (tech) => game.research(tech),
     train: (troop) => game.train(troop),
+    promote: (troop) => game.promote(troop),
     heal: () => game.heal(),
     close: () => {
       sheet.close();

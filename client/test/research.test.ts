@@ -37,10 +37,10 @@ describe("the Observatory sheet", () => {
     expect(html).toContain('data-act="research" data-tech="nets" aria-disabled="true"');
   });
 
-  it("says in one sentence that the Veteran Doctrine takes effect with troop training", () => {
+  it("the Veteran Doctrine has no \"coming soon\" note any more: veterans are promoted at the Barracks", () => {
     const html = researchHtml(withObservatory(3), 1);
-    expect(html).toMatch(/data-tech-row="veterans".*?It takes effect once troops can be trained, coming soon\./);
-    expect(html.split(RESEARCH_TEXT.veterans)).toHaveLength(2);
+    expect(html).toMatch(/data-tech-row="veterans".*?<small>Unlocks veterans at the Barracks<\/small>/);
+    expect(html).not.toContain("coming soon");
   });
 });
 

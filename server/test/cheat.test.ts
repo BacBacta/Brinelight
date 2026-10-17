@@ -5,7 +5,7 @@
  * applyAction for each accepted action), and the server's city is compared with it after every case.
  */
 import { randomBytes, randomUUID } from "node:crypto";
-import { RAFT_BUILD_TIME, RAFT_MAX_HP, RAFT_SLOTS, applyAction, catchUp, emptyTroops, healTime, newPlayerState, raftCap, totalTroops, trainTime, type GameAction, type PlayerState } from "@brinelight/shared";
+import { PROMOTE_TIME, RAFT_BUILD_TIME, RAFT_MAX_HP, RAFT_SLOTS, applyAction, catchUp, emptyTroops, healTime, newPlayerState, raftCap, totalTroops, trainTime, type GameAction, type PlayerState } from "@brinelight/shared";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
@@ -341,6 +341,62 @@ describe("a modified client cannot change the rules", () => {
     expect(p.ref.now().training).toBeNull();
     await expectApplied(server, p, action({ type: "sail", site: "camp-1" }));
   });
+  it("veterans: no Doctrine, Barracks below 3, one work already underway, fewer than 10, not enough resources, an unknown troop, a number sent", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const ready = {
+      ...base,
+      buildings: { ...base.buildings, barracks: 3 },
+      techs: { veterans: 1 },
+      troops: { boarders: 30, harpooners: 9, crossbowmen: 20 },
+      stock: { oil: 9000, fish: 9000, wood: 9000, rope: 3 },
+    };
+    const doctrine = "You need the Veteran Doctrine research at the Observatory and Barracks at level 3.";
+
+    await expectRefused(server, await player({ ...ready, techs: {} }), action({ type: "promote", troop: "boarders" }), doctrine);
+    await expectRefused(server, await player({ ...ready, buildings: { ...ready.buildings, barracks: 2 } }), action({ type: "promote", troop: "boarders" }), doctrine);
+    const poor = await player({ ...ready, stock: { oil: 39, fish: 9000, wood: 9000, rope: 3 } });
+    await expectRefused(server, poor, action({ type: "promote", troop: "boarders" }), "Not enough resources");
+
+    const p = await player(ready);
+    await expectRefused(server, p, action({ type: "promote", troop: "harpooners" }), "You need 10 harpooners to promote.");
+    for (const troop of ["archers", "toString", "__proto__", ""]) await expectInvalid(server, p, { action: { ...action({ type: "promote", troop: "boarders" }), troop } });
+    await expectInvalid(server, p, { action: { ...action({ type: "promote", troop: "boarders" }), count: 30 } });
+    await expectApplied(server, p, action({ type: "promote", troop: "boarders" }));
+    // Exactly 10, never what a client would like.
+    expect(p.ref.now().training).toMatchObject({ kind: "promote", troop: "boarders", count: 10 });
+    expect(p.ref.now().troops.boarders).toBe(20);
+    later(1000);
+    await expectRefused(server, p, action({ type: "promote", troop: "crossbowmen" }), "Training is already underway");
+    await expectRefused(server, p, action({ type: "train", troop: "crossbowmen" }), "Training is already underway");
+  });
+
+  it("from Barracks to battle: the server decides when the veterans arrive, they all sail, and the survivors come home", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const p = await player({ ...base, buildings: { ...base.buildings, barracks: 3, infirmary: 1 }, techs: { veterans: 1 } });
+    await expectApplied(server, p, action({ type: "promote", troop: "crossbowmen" }));
+    later(PROMOTE_TIME * 1000 - 1000);
+    await expectRules(server, p);
+    expect(p.ref.now().veterans).toEqual(emptyTroops());
+    later(1000);
+    await expectRules(server, p);
+    expect(p.ref.now().veterans).toEqual({ ...emptyTroops(), crossbowmen: 10 });
+    await expectApplied(server, p, action({ type: "sail", site: "camp-1" }));
+    expect(p.ref.now().veterans).toEqual(emptyTroops());
+    expect(p.ref.now().fleets[0]!.veterans).toEqual({ ...emptyTroops(), crossbowmen: 10 });
+    later(8 * 3600_000);
+    await expectRules(server, p);
+    const back = p.ref.now();
+    const report = back.reports[0]!;
+    expect(back.fleets).toEqual([]);
+    expect(report.veteranSent).toEqual({ ...emptyTroops(), crossbowmen: 10 });
+    expect(report.infirmary).toBe(true);
+    expect(back.veterans.crossbowmen).toBe(10 - report.veteranLosses!.crossbowmen);
+    // The wounded are soldiers only.
+    expect(back.wounded).toEqual(report.wounded);
+  });
+
   it("healing: no Infirmary, no wounded, one already underway, not enough fish, a field the server does not expect", async () => {
     const server = await buildApp({ db, now: () => clock });
     const base = newPlayerState();

@@ -13,6 +13,8 @@ export type PlayerState = {
   buildings: Buildings;
   stock: Stock;
   troops: Troops;
+  /** Veterans in the city: promoted at the Barracks, each worth VETERAN_WEIGHT soldiers in combat. */
+  veterans: Troops;
   techs: Techs;
   rafts: Rafts;
   captains: Partial<Record<CaptainId, OwnedCaptain>>;

@@ -13,28 +13,39 @@ import { formatAmount, formatTimeLeft } from "../city/format.js";
 import type { PlayerState, Report } from "../state/index.js";
 import { attackInput } from "./odds.js";
 import { siteLabel } from "./labels.js";
+import { ICONS } from "../ui/icons.js";
 import { ODDS_TEXT, TROOP_NAMES, TROOP_TYPES, counterTip } from "./text.js";
 
 const HOLD_NOTE = { tom: " (Old Tom +30%)" } as Record<string, string>;
 
 export const REPORT_TEXT = {
-  /** No Infirmary when the report is read (the prototype's words). */
+  /** No Infirmary in your city at the time of the battle (the prototype's words). */
   none: "no Infirmary: all losses died",
   /** An Infirmary, but no free bed. */
   full: "no free bed in the Infirmary: all losses died",
+  /** A report from before reports kept the Infirmary: it cannot say why. */
+  unknown: "all losses died",
+  /** The prototype's note under every report. */
+  rules: "Combat is deterministic: Boarders beat Harpooners, Harpooners beat Crossbowmen, Crossbowmen beat Boarders (+20%). One veteran is worth 1.8 soldiers.",
 } as const;
 
 /**
- * A combat report. With no wounded saved, it says why: no Infirmary in your city when you read it, or no free bed.
+ * A combat report, with the veterans sent ("+10 vet.") and lost among the losses. With no wounded saved, it says why:
+ * no Infirmary in your city at the time of the battle, or no free bed. Lost veterans never become wounded.
  * Pure: tested without a browser.
  */
-export function reportHtml(r: Report, infirmary: boolean): string {
+export function reportHtml(r: Report): string {
   const name = seaSite(r.site)?.name ?? "";
+  const vetSent = (k: (typeof TROOP_TYPES)[number]) => r.veteranSent?.[k] ?? 0;
+  const vetLost = (k: (typeof TROOP_TYPES)[number]) => r.veteranLosses?.[k] ?? 0;
   const lost = TROOP_TYPES.reduce((a, k) => a + r.losses[k], 0);
   const hurt = TROOP_TYPES.reduce((a, k) => a + r.wounded[k], 0);
+  const why = r.infirmary === undefined ? REPORT_TEXT.unknown : r.infirmary ? REPORT_TEXT.full : REPORT_TEXT.none;
   const rows = TROOP_TYPES.map((k) => {
-    const adv = r.sent[k] > 0 && r.enemy[BEATS[k]] > 0 ? ' <span class="adv">+20%</span>' : "";
-    return `<tr><td>${TROOP_NAMES[k]}${adv}</td><td>${r.sent[k]}</td><td class="l">${r.losses[k] ? `−${r.losses[k]}` : "0"}</td><td>${r.enemy[k]}</td></tr>`;
+    const adv = r.sent[k] + vetSent(k) > 0 && r.enemy[BEATS[k]] > 0 ? ' <span class="adv">+20%</span>' : "";
+    const vets = vetSent(k) ? ` <span class="adv vet">${ICONS.veteran}+${vetSent(k)} vet.</span>` : "";
+    const losses = r.losses[k] + vetLost(k);
+    return `<tr><td>${TROOP_NAMES[k]}${adv}</td><td>${r.sent[k]}${vets}</td><td class="l">${losses ? `−${losses}` : "0"}</td><td>${r.enemy[k]}</td></tr>`;
   }).join("");
   return (
     `<div class="verd ${r.win ? "easy" : "hard"}">${r.win ? "Victory" : "Defeat"} · ${name} level ${r.level}</div>` +
@@ -42,10 +53,10 @@ export function reportHtml(r: Report, infirmary: boolean): string {
     `<div class="row" style="justify-content:space-between;font-size:12px;font-weight:900"><span style="color:#9FD8FF">Your strength ${Math.round(r.attack)}</span><span style="color:#FF9A86">Pirates ${Math.round(r.defense)}</span></div>` +
     `<table class="rep"><tr><th></th><th>Sent</th><th>Losses</th><th>Pirates</th></tr>${rows}</table>` +
     `<div class="tx">` +
-    (lost ? `<div><span>Wounded in the Infirmary</span><span>${hurt ? `${hurt} of ${lost} losses, to heal` : infirmary ? REPORT_TEXT.full : REPORT_TEXT.none}</span></div>` : "") +
+    (lost ? `<div><span>Wounded in the Infirmary</span><span>${hurt ? `${hurt} of ${lost} losses, to heal` : why}</span></div>` : "") +
     (r.loot ? `<div><span>Loot</span><span>+${r.loot.oil} oil, +${r.loot.wood} wood, +${r.loot.pearls} Pearls, +${r.loot.rope} rope</span></div>` : `<div><span>Tip</span><span>${counterTip(r.enemy)}</span></div>`) +
     `</div>` +
-    `<p class="p" style="font-size:11.5px">Combat is deterministic: Boarders beat Harpooners, Harpooners beat Crossbowmen, Crossbowmen beat Boarders (+20%). Your fleet brings the survivors${r.loot ? " and the loot" : ""} home.</p>`
+    `<p class="p" style="font-size:11.5px">${REPORT_TEXT.rules} Your fleet brings the survivors${r.loot ? " and the loot" : ""} home.</p>`
   );
 }
 
@@ -97,7 +108,9 @@ export function createSeaSheet(root: HTMLElement, actions: { sail(site: string):
         `<p class="p">Pirates out of the Mist. Beat them for loot.</p>` +
         busy +
         `<div class="kv"><span>Level</span><span>${level}</span>${TROOP_TYPES.map((k) => `<span>${TROOP_NAMES[k]}</span><span>${enemy[k]}</span>`).join("")}` +
-        `<span>Your troops</span><span>${totalTroops(state.troops)}</span><span>Trip</span><span>${trip} one way</span></div>` +
+        `<span>Your troops</span><span>${totalTroops(state.troops)}</span>` +
+        (totalTroops(state.veterans) ? `<span>Your veterans</span><span>${totalTroops(state.veterans)}</span>` : "") +
+        `<span>Trip</span><span>${trip} one way</span></div>` +
         `<div class="verd ${o}">${ODDS_TEXT[o]}</div>` +
         `<p class="p" style="font-size:12.5px">Tip: their ${TROOP_NAMES[top].toLowerCase()} are beaten by ${TROOP_NAMES[counter].toLowerCase()}. Train them at the Barracks.</p>` +
         `<button class="b red xl" data-act="sail" aria-disabled="${!check.ok}">Attack with all your troops</button>` +
@@ -117,12 +130,11 @@ export function createSeaSheet(root: HTMLElement, actions: { sail(site: string):
 
   const render = (state: PlayerState, speed: number) => {
     if (report) {
-      const infirmary = state.buildings.infirmary > 0;
-      const k = `r|${infirmary}|${JSON.stringify(report)}`;
+      const k = `r|${JSON.stringify(report)}`;
       if (k === key) return;
       key = k;
       el.setAttribute("aria-label", "Combat report");
-      el.innerHTML = frame("Combat report", reportHtml(report, infirmary));
+      el.innerHTML = frame("Combat report", reportHtml(report));
       return;
     }
     if (!site) return;
