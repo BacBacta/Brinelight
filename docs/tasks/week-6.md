@@ -54,6 +54,16 @@ Do the tasks in order, one per session. For each one: read CLAUDE.md, say what y
 - The three lights of the art direction (calm day, Mist, Lighthouse night), the water near the island and far away, and the Mist's mood (fog, leaden water, the Lighthouse's beam as the only warm point).
 - Visual only: no rule, no timer, no damage. The Mist's mechanism comes in week 7.
 - 30 FPS or more on an entry-level Android phone, in the city and at sea: measured before and after, in `docs/perf.md`.
+- **Postponed:** the Lighthouse night. By the owner's decision (17 October), the light is a fixed late afternoon; the night comes back with the Mist's calendar or later.
+
+**Done (17 October).**
+- **Light** (`client/src/scene/look.ts`): a fixed, warm late afternoon in the city and at sea: a cream-to-turquoise sky, a low sun in the west-southwest (about 26° up) with long, soft shadows, a warm sky light, and a haze the far sea melts into.
+- **Water** (`client/src/scene/water.ts`, `shore.ts`): turquoise near the island, navy from 30 m out; it reflects the sky (a PMREM of its gradient, on the water only), with small waves (±0.06) and finer ripples drawn pixel by pixel. Foam along the island's shore and around the rafts afloat, from a grid of distances built on the CPU from the island's triangles, and again only when the rafts change. No texture file, no new dependency, no extra draw call.
+- **The Mist's mood** (visual only): `seaMood()` is read by the banner and the 3D view alike; it is calm until the Mist's calendar (week 7), and `?mist` shows the Mist's look (the banner then says "Mist · oil for …"). In the Mist: a grey-violet sky and fog, a light violet veil on the horizon, leaden water, a dim, cold sun, and the Lighthouses' beams sweeping, the only warm point. In calm weather the beams are hidden and the lantern keeps its tier's glow. The two looks fade into each other in 1.5 s, at once with reduced motion.
+- **Quality steps** (`QUALITY_STEPS`): step 1 also halves the shadow map; step 2 drops the shadows, the water's reflection, ripples and moving foam, and draws the water on a coarser grid.
+- **At sea:** the islets' sand and foam lie just above the highest wave, where the waves never cross them (they flickered).
+- **Measures** in `docs/perf.md`: fewer triangles (the water's grid) and, in calm weather, fewer draw calls (the beams). The 30 FPS goal on an entry-level phone is still to be checked; the measures to take on the S22 are listed there.
+- **The look:** the 48 references did not move (the 3D view is hidden during the captures).
 
 ## Task 5 · Balance simulation
 

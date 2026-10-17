@@ -13,10 +13,11 @@ Goal of week 2 (task 6): **30 FPS or more on the low-end Android test phone**, i
 - The minimum ignores the 5 seconds after the 3D models load, and starts over after a change of view or a return to the tab.
 - `?quality=0`, `?quality=1` or `?quality=2` forces a quality step, to compare steps on the same phone. The automatic tuning is then off.
   - `0`: full quality.
-  - `1`: pixel ratio 1.
-  - `2`: pixel ratio 1 and no shadows.
+  - `1`: pixel ratio 1, and a 1024 px shadow map instead of 2048.
+  - `2`: pixel ratio 1, no shadows, and the water without its sky reflection, small ripples and moving foam, on a coarser grid (week 6, task 4).
 - Without `?quality`, the game starts at step 0 and lowers the step by itself when it stays under 30 FPS for 3 seconds, as the prototype did.
-- Both can be combined: `?fps&quality=1`.
+- `?mist` shows the Mist's look (its mood only, no rule): the banner says "Mist", and the counter adds "Mist" after the view.
+- They can be combined: `?fps&quality=1`, `?fps&mist&quality=2`.
 
 ## Protocol (5 steps)
 
@@ -239,3 +240,35 @@ The game's own JavaScript and CSS (as in the section above): from 118 675 B (42 
 The island's shore steadied (week 6, after task 3): the prototype's 18 foam hexagons of ring 3 are removed, so 16 draw calls fewer on the start city (34 to 18, at 412 × 915), and 20, 21 and 22 instead of 38, 39 and 40 for the three tiers above (container, `npm run e2e`). `island.glb` grows by 5 424 B (228 200 B): 194 faces of the meadow turned face up, on vertices of their own.
 
 Recorded sounds (week 6, after task 3): 11 MP3 in `client/public/sounds/`, 350 kB in all (the interface sounds 3 to 12 kB each, the rewards 11 to 27 kB, the sea loop 224 kB). None is in the first screen: they load after the first tap, in the background. The game's own JavaScript grows by about 1.5 kB gzipped (the loader and the sea).
+
+## Light, water and the Mist's mood (week 6, task 4)
+
+Measured in the container (Chromium, software rendering, 412 × 915, `?fps&quality=0` or `2`), 10 s after the city or the sea shows, on a new city. "Before" is `c912d7f`, "after" the end of the task, the same day on the same machine. The container only shows the order of the costs: the phone rows of this file decide whether the goal of 30 FPS is met.
+
+| View | Step | Before: FPS, draw calls, triangles | After, calm: FPS, draw calls, triangles | After, `?mist` |
+| --- | --- | --- | --- | --- |
+| City | 0 | 4, 18, 64.8 k | 3, 14, 43.9 k | 4, 19, 44.1 k |
+| City | 2 | 6, 18, 64.8 k | 7, 14, 30.1 k | 6, 19, 30.3 k |
+| Sea | 0 | 10 to 12, 135 to 139, 66.2 k | 7, 109, 44.5 k | 7, 137, 45.4 k |
+| Sea | 2 | 10 to 12, 133, 66.0 k | 11, 109, 30.7 k | 12, 133, 31.4 k |
+
+The three tiers of the e2e (step 2, after): 16, 17 and 18 draw calls, 29.3 k, 30.0 k and 33.3 k triangles (20, 21, 22 and 64.0 k, 64.8 k, 68.0 k before).
+
+- **Triangles:** the water's grid goes from 140 to 96 segments a side at steps 0 and 1 (39.2 k → 18.4 k triangles), and 48 at step 2 (4.6 k); its small ripples are drawn per pixel instead.
+- **Draw calls:** in calm weather the Lighthouses' beams are hidden: 4 calls fewer in the city (two cones, each drawn on both sides), 28 at sea (7 Lighthouses). In the Mist they sweep again, and the veil on the horizon adds 1 in the city.
+- **The water's shader** (sky reflection, ripples, foam) costs fragments. At sea, step 0 falls from about 11 to 7 FPS in the container, where the whole screen is water drawn by the processor; at step 2, without the reflection and the ripples, it is back where it was. A phone's graphics chip does this work; only its rows count.
+- **Foam:** no draw call and no extra render pass. Its grid (256 × 256, 64 kB) is built on the CPU when the city shows and again only when the rafts change.
+- **Weight:** the game's own JavaScript goes from 101 856 B (37 799 B gzipped) to 111 429 B (41 510 B gzipped), +3 711 B gzipped: the light, the water's shader, the shore's grid, the Mist's mood. The CSS does not change. This is new work, not a tidying-up: the 0.5 % rule does not apply.
+
+**The 30 FPS goal on an entry-level phone is still to be checked**: there is none to measure on yet.
+
+### To measure on the S22 (owner)
+
+With the protocol at the top of this file, on the pull request's Cloudflare preview, plugged in and at full brightness; wait 10 s after each change before reading:
+
+1. `?fps`: the city 30 s without touching, then Sea 20 s. Note the step `auto` reached.
+2. `?fps&quality=0`, then `?fps&quality=2`: the city, then the sea.
+3. `?fps&mist&quality=0`, then `?fps&mist&quality=2`: the city, then the sea.
+4. In the city at step 0, turn the camera toward the horizon: the Mist's veil (with `&mist`) and the shore's foam should hold still while the camera stays still.
+
+Note each FPS and min, with the draw calls and triangles the counter shows, in the results table above.

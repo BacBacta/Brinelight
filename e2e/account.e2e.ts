@@ -820,11 +820,16 @@ describe("short motions", () => {
   it("a sheet opens with \"up\" and closes down, already hidden and out of the way of taps; a button pressed sinks", async () => {
     const p = await newPlayer(false);
     const page = await openGame(p.context);
-    await page.locator('.nav button[data-v="captains"]').click();
-    expect(await running(page)).toContain("up");
-    await page.waitForTimeout(400);
-    // Closed: at once [hidden] and out of the way of taps, while its picture goes down for 160 ms (read in the same task:
-    // the container draws slowly).
+    // Opened and closed, the motions are read in the same task as the tap: the container draws slowly, and a 220 ms
+    // motion can be over before a later read.
+    const opening = await page.evaluate(() => {
+      document.querySelector<HTMLButtonElement>('.nav button[data-v="captains"]')!.click();
+      return document.getAnimations().map((a) => (a as CSSAnimation).animationName);
+    });
+    expect(opening).toContain("up");
+    // Its "up" starts on the next frame drawn: wait for it to end, however slowly the container draws.
+    await expect.poll(() => running(page), NET).not.toContain("up");
+    // Closed: at once [hidden] and out of the way of taps, while its picture goes down for 160 ms.
     const closing = await page.evaluate(() => {
       const e = document.querySelector<HTMLElement>(".sheet.captains")!;
       e.querySelector<HTMLButtonElement>('[data-act="close"]')!.click();
