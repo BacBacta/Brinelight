@@ -40,6 +40,15 @@ Do the tasks in order, one per session. For each one: read CLAUDE.md, say what y
 - This also answers the open question "A message when a work ends".
 - The look references are made again from the CI (`e2e/look/README.md`), including the variant of `captains-top`, from any run that draws it.
 
+**Done (17 October).**
+- **Celebrations** (`client/src/ui/celebrate.ts`), one at a time, closed by a tap: floating gold text for a work that ends (building, research, raft, raft building, troops, veterans, healing), the full screen for the Lighthouse, a card with the 512 px portrait for a captain who rises a level. What ended comes from `eventsBetween` (`shared/src/state/events.ts`, pure, no rule), which compares two cities.
+- **While you were away:** at launch, the city shown (the server's, or the one advanced on this device) is compared with the last city seen on this device, kept with its owner. Several events make one card, one makes a normal celebration; nothing on the very first launch, nothing when the account's city replaces the city of this device. Tested on the three cases, in the client tests and the e2e.
+- **Sounds** (`client/src/ui/sound.ts`): ten sounds of wood and rope made with the Web Audio API, no file, no dependency, none before the first tap. On by default; the switch is in the Profile, with or without an account, kept on this device.
+- **Motions:** a sheet closes down (160 ms) and opens up (220 ms), a pressed button sinks (80 ms), bars fill (300 ms), the amounts of the top bar roll after an action (400 ms, never during a celebration). With reduced motion, nothing moves.
+- **Building tiers** (`client/src/city/tiers.ts`): 86 %, 93 %, 100 % of the full size; a flag at the second tier; a crate, a barrel and a lantern at the third. Two draw calls at most for all the details. `client/test/tiers.test.ts` checks that nothing leaves its plot or touches a neighbor plot or a raft slot (the Barracks and the Fishery are a little smaller for it, and the Lighthouse stops widening once it fills its plot). Captures of the three tiers in the CI's artifact (`shot-tier-*`).
+- **Measures** in `docs/perf.md`: one draw call more from the second tier, two from the third; the full-screen celebration's beam stops at the lowest quality step. The entry-level phone still has to be measured.
+- **The look:** the Profile (412 and 360 px) changes on purpose (the sounds' switch); six new captures of the celebrations; every other capture is unchanged.
+
 ## Task 4 · Light, water and the Mist's mood
 
 - The three lights of the art direction (calm day, Mist, Lighthouse night), the water near the island and far away, and the Mist's mood (fog, leaden water, the Lighthouse's beam as the only warm point).

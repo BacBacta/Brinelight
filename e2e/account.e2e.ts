@@ -952,8 +952,9 @@ describe("the look", () => {
     await page.evaluate(() => {
       const s = document.createElement("style");
       s.id = "look-hide";
-      // The celebrations are captured standing still (as with reduced motion): their motions run on the real clock.
-      s.textContent = "#cv,.labels{visibility:hidden!important}.celebration *{animation:none!important}";
+      // Captured standing still (as with reduced motion): the celebrations' motions and the bars' 300 ms transitions run
+      // on the real clock, and the Lighthouse's full screen shows the top bar under its veil.
+      s.textContent = "#cv,.labels{visibility:hidden!important}.celebration *{animation:none!important}*{transition:none!important}";
       document.head.appendChild(s);
     });
     const png = await what.screenshot({ animations: "disabled", caret: "hide" });

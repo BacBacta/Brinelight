@@ -1,6 +1,6 @@
 # The look references
 
-The e2e `the look` (`e2e/account.e2e.ts`) compares 42 captures (every sheet, the top bar and the queue, at 412 and 360 px) with the PNG files of this folder, at zero pixels, with no tolerance.
+The e2e `the look` (`e2e/account.e2e.ts`) compares 48 captures (every sheet, the top bar, the queue and the three celebrations, at 412 and 360 px) with the PNG files of this folder, at zero pixels, with no tolerance. The captures are taken standing still: no animation in the celebrations, and no transition anywhere (the bars fill in 300 ms of real time, which a capture would catch halfway).
 
 ## How they are made
 
