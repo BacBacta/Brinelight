@@ -577,12 +577,15 @@ describe("captains", () => {
  * interface components must not change it). The page's clock is fixed (page.clock), the 3D view and its labels are
  * hidden at the moment of each capture, and each capture is cut to its element. LOOK=update writes the references;
  * every capture is also written to e2e/.shots/look/ (an artifact of the CI's e2e job).
+ * The references are made by the CI's e2e job (its captures, downloaded): another machine draws text a little
+ * differently. So a difference fails the test in the CI (or with LOOK=strict), and is only reported elsewhere.
  */
 describe("the look", () => {
   const T0 = new Date("2026-10-18T12:00:00.000Z");
   const REF = "e2e/look";
   const OUT = "e2e/.shots/look";
   const update = process.env.LOOK === "update";
+  const strict = !!process.env.CI || process.env.LOOK === "strict";
   const problems: string[] = [];
   const ok = (r: ActionResult) => {
     if (!r.ok) throw new Error(r.reason);
@@ -776,7 +779,8 @@ describe("the look", () => {
       await look(page, page.locator(".queue"), `queue-open-${w}`);
       await page.context().close();
     }
-    expect(problems).toEqual([]);
+    if (strict) expect(problems).toEqual([]);
+    else if (problems.length) console.warn(`The look differs from the CI's references on this machine (LOOK=strict to fail):\n${problems.join("\n")}`);
   });
 });
 
