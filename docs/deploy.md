@@ -2,7 +2,7 @@
 
 This guide takes you from nothing to a game server online at `https://api.brinelight.xyz`, with the game at `https://play.brinelight.xyz`. It is written for a first time: copy each command, and compare with what you should see.
 
-**The server is not rented yet**: steps 1 to 11 wait until week 7 at the latest. To test with a real wallet meanwhile, see "Test with a real wallet without a server" just below.
+**The server is not rented yet**: steps 1 to 11 wait until week 8 at the latest. To test with a real wallet meanwhile, see "Test with a real wallet without a server" just below.
 
 The domain `brinelight.xyz` was bought at Vercel, and its DNS stays at Vercel. Everywhere below, replace `203.0.113.10` with your server's IPv4 address.
 
@@ -51,7 +51,7 @@ By hand (the terminals below), the same is `DEV_SPEED=1000` before `npm run dev:
 
 On an Android phone, the whole test can run in Termux, with no computer: `deploy/local-test/start-test-termux.sh` does the same as `START-TEST.bat`, then opens the game in Phantom's browser. Once: `pkg install -y git nodejs-lts cloudflared`, then `git clone https://github.com/BacBacta/Brinelight.git ~/Brinelight` (one line at a time: a line pasted while `pkg` is still running is lost). Each test: `cd ~/Brinelight && git pull --ff-only && bash deploy/local-test/start-test-termux.sh 1000` (`1000`: the account's city 1000 times faster; without it, real time). Ctrl+C stops everything (in Termux: Volume down + C). The script keeps the phone awake while you are in Phantom (`termux-wake-lock`); if Android still closes Termux, set its battery use to "Unrestricted". The same script works on Linux and macOS.
 
-The server is not rented yet: it waits until it is really needed (week 7 at the latest, see `docs/decisions.md`). Until then, you can test signing in with Phantom on your phone from your own computer, for free, through two temporary Cloudflare tunnels. A tunnel gives a local program a public `https://….trycloudflare.com` address, with no account and nothing to configure.
+The server is not rented yet: it waits until it is really needed (week 8 at the latest, see `docs/decisions.md`). Until then, you can test signing in with Phantom on your phone from your own computer, for free, through two temporary Cloudflare tunnels. A tunnel gives a local program a public `https://….trycloudflare.com` address, with no account and nothing to configure.
 
 Everything stays on your computer: the database is in memory (PGlite) and is lost when you stop the server. That is fine for a test.
 

@@ -113,7 +113,7 @@ Measures in the container (Chromium, 412 × 915, quality 2, cache off). Each tim
 - The new models save 9 to 11 draw calls, with about as many triangles.
 - They cost 1.3 MB more to download, about 1.2 to 1.6 s at 10 Mbit/s, and some decoding time. The kit (`phare.glb`, 2.9 MB) still loads for the island, the scaffolding, the flags, the rafts and the sea.
 - To check on the phone with `?fps`.
-- A smaller kit, holding only the models still used, is planned for week 6, so that `phare.glb` no longer loads in full.
+- A smaller kit, holding only the models still used, so that `phare.glb` no longer loads in full: not planned yet (it is not among week 6's tasks).
 
 ## The island, the sea's models and the icons (week 5)
 
@@ -132,9 +132,9 @@ Before quantizing, the island is flattened:
 | Wreck | 3 552 kB | 157 kB | 2 452 | yes |
 | Pirate camp | 3 639 kB | 167 kB | 2 930 | yes |
 | Boat | 3 012 kB | 119 kB | 1 965 | yes |
-| Kelp Greenhouse | 3 631 kB | 156 kB | 2 309 | not yet (week 5, task 4) |
-| Smokehouse | 3 071 kB | 145 kB | 2 332 | not yet (week 5, task 4) |
-| Watchtower | 3 491 kB | 151 kB | 2 498 | not yet (week 5, task 4) |
+| Kelp Greenhouse | 3 631 kB | 156 kB | 2 309 | since week 5, task 4 |
+| Smokehouse | 3 071 kB | 145 kB | 2 332 | since week 5, task 4 |
+| Watchtower | 3 491 kB | 151 kB | 2 498 | since week 5, task 4 |
 | **Total** | | **1 214 kB** | | |
 
 The 24 icons (`assets/icons/make-icons.py`, from the sheet) weigh 256 kB in all, at 48 and 96 px.
