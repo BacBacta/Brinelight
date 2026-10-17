@@ -204,3 +204,17 @@ To take up when measuring on the entry-level phone (week 5 measures, above). Ite
 three.js now has its own file (`manualChunks` in `client/vite.config.ts`): **568 kB** minified, **146 kB** gzipped. The game's own code is 50 kB (20 kB gzipped). Because three.js changes rarely, browsers keep it in cache across game updates.
 
 Vite still warns that one file is over 500 kB. That file is three.js alone, which the game needs from the first second, so loading it later would not help. The warning limit is left as it is: it applies to every file, and raising it would also hide a real growth of the game's own code.
+
+## Shared interface components (week 6, task 2)
+
+The game's own JavaScript and CSS (`client/dist/assets/index-*.js` and `index-*.css` after `npm run build`, gzip at level 9; three.js and the fonts do not change):
+
+| | JS | CSS | Total |
+| --- | --- | --- | --- |
+| Before (`527d7d1`) | 93 315 B, 33 334 B gzipped | 28 535 B, 9 001 B gzipped | 121 850 B, 42 335 B gzipped |
+| After | 89 906 B, 33 407 B gzipped | 28 716 B, 9 046 B gzipped | 118 622 B, 42 453 B gzipped |
+| Change | −3 409 B, +73 B gzipped | +181 B, +45 B gzipped | **−3 228 B, +118 B gzipped** |
+
+The goal was no growth at all; gzipped, it is missed by 118 B (0.28 %). The CSS's 45 B are the invisible 44 px tap areas. The JS's 73 B are the components themselves: the same HTML written again in every sheet compressed very well, and a function that writes it costs a little more than the copies it replaces. Tried and left out because they were heavier: the interface's own shades as CSS variables (+150 B gzipped), full class names in the buttons' calls, a component for paragraphs, the top bar and the queue on components.
+
+The 42 look references in `e2e/look/` weigh 1 749 004 B in git.

@@ -24,14 +24,13 @@ import {
   raftCap,
   raftCost,
   raftUpgradeTime,
-  type Cost,
   type Raft,
   type RaftBuildingId,
 } from "@brinelight/shared";
 import type { PlayerState } from "../state/index.js";
 import { RAFT_BUILDING_IDS } from "../scene/index.js";
-import { resourceIcon } from "../ui/icons.js";
-import { RESOURCE_NAMES, costEntries, formatAmount, formatDuration, formatTimeLeft } from "./format.js";
+import { actionButton, box, button, costLine, costText, createSheetView, keyValues, kv, listRow, progressBar, why } from "../ui/components.js";
+import { formatAmount, formatDuration, formatTimeLeft } from "./format.js";
 import { progress } from "./suggest.js";
 
 export const RAFT_TEXT = {
@@ -55,16 +54,10 @@ export function raftEffectText(id: RaftBuildingId, level: number): string {
 const sturdiness = (raft: Raft): string => {
   const bad = raft.hp < RAFT_DAMAGED_BELOW;
   return (
-    `<div class="kv"><span>Sturdiness</span><span class="${bad ? "no" : "ok"}">${Math.round((raft.hp / RAFT_MAX_HP) * 100)}%${bad ? " · half efficiency" : ""}</span></div>` +
-    `<div class="pb"><i style="width:${((raft.hp / RAFT_MAX_HP) * 100).toFixed(0)}%"></i></div>`
+    keyValues(kv("Sturdiness", `${Math.round((raft.hp / RAFT_MAX_HP) * 100)}%${bad ? " · half efficiency" : ""}`, "", bad ? "no" : "ok")) +
+    progressBar(raft.hp / RAFT_MAX_HP, 0)
   );
 };
-
-/** A cost with its icons; a resource you lack is marked. */
-const costHtml = (state: PlayerState, cost: Cost): string =>
-  costEntries(cost)
-    .map(([r, v]) => `<span class="${state.stock[r] < v ? "no" : ""}" title="${RESOURCE_NAMES[r]}">${resourceIcon(r)}${formatAmount(v)}</span>`)
-    .join("");
 
 /** "Shipyard · Kelp Greenhouse": what the shipyard works on, as the queue names it. */
 export function yardName(state: PlayerState): string | null {
@@ -87,7 +80,7 @@ export function raftSheetHtml(state: PlayerState, slot: string, speed: number): 
     const title = job.kind === "install" ? RAFT_BUILDINGS[job.building].name : job.kind === "upgrade" && raft?.building ? RAFT_BUILDINGS[raft.building].name : "Shipyard";
     return {
       title,
-      body: `<p class="p">${RAFT_TEXT.working}</p><div class="pb"><i style="width:${(progress(job) * 100).toFixed(1)}%"></i></div><p class="p">Done in ${formatTimeLeft(job.left / speed)}</p>`,
+      body: `<p class="p">${RAFT_TEXT.working}</p>${progressBar(progress(job))}<p class="p">Done in ${formatTimeLeft(job.left / speed)}</p>`,
     };
   }
   if (raft && raft.building) {
@@ -99,45 +92,49 @@ export function raftSheetHtml(state: PlayerState, slot: string, speed: number): 
       title: b.name,
       body:
         head +
-        `<div class="box"><h4>Upgrade to level ${raft.level + 1}</h4><div class="cost">${costHtml(state, raftBuildingCost(raft.building, raft.level))}</div>` +
-        `<p class="p" style="font-size:12.5px;margin-top:6px">Time: ${formatDuration(raftUpgradeTime(raft.level) / speed)} · Power +${RAFT_LEVEL_POWER}</p></div>` +
+        box(
+          `Upgrade to level ${raft.level + 1}`,
+          costLine(state.stock, raftBuildingCost(raft.building, raft.level)) +
+            `<p class="p" style="font-size:12.5px;margin-top:6px">Time: ${formatDuration(raftUpgradeTime(raft.level) / speed)} · Power +${RAFT_LEVEL_POWER}</p>`,
+        ) +
         // Still tappable when refused: the tap shows the reason in a toast too.
-        `<button class="b gold xl" data-act="upgrade-raft" aria-disabled="${!check.ok}">Upgrade</button>` +
-        (check.ok ? "" : `<p class="why">${check.reason}</p>`),
+        actionButton("Upgrade", check, "gold xl", "upgrade-raft"),
     };
   }
   if (raft) {
     const rows = RAFT_BUILDING_IDS.map((id) => {
       const b = RAFT_BUILDINGS[id];
       const check = canInstall(id, { rafts: state.rafts, slot, stock: state.stock, yard: state.yard });
-      const cost = costEntries(raftBuildingCost(id, 0))
-        .map(([r, v]) => `${formatAmount(v)} ${RESOURCE_NAMES[r]}`)
-        .join(" · ");
-      return (
-        `<div class="it" data-raft-building="${id}"><div class="tt"><b>${b.name}</b><small>${raftEffectText(id, 1)} per level</small>` +
-        `<small>${cost} · ${formatDuration(RAFT_INSTALL_TIME / speed)} · ${raftBuildingCopies(id, state.rafts, state.yard)}/${RAFT_BUILDING_MAX_COPIES}</small></div>` +
+      return listRow(
+        b.name,
+        `<small>${raftEffectText(id, 1)} per level</small>` +
+          `<small>${costText(raftBuildingCost(id, 0))} · ${formatDuration(RAFT_INSTALL_TIME / speed)} · ${raftBuildingCopies(id, state.rafts, state.yard)}/${RAFT_BUILDING_MAX_COPIES}</small>`,
         // Still tappable when refused: the tap shows the reason in a toast, as for an upgrade.
-        `<button class="b sm" data-act="install" data-building="${id}" aria-disabled="${!check.ok}">Install</button></div>`
+        button("Install", "sm", "install", ` data-building="${id}"`, !check.ok),
+        "",
+        ` data-raft-building="${id}"`,
       );
     }).join("");
     return {
       title: "Raft",
-      body: `<p class="p">${RAFT_TEXT.raft}</p>${sturdiness(raft)}<div class="list">${rows}</div>` + (state.yard ? `<p class="why">The shipyard is busy</p>` : ""),
+      body: `<p class="p">${RAFT_TEXT.raft}</p>${sturdiness(raft)}<div class="list">${rows}</div>` + (state.yard ? why("The shipyard is busy") : ""),
     };
   }
   const n = Object.keys(state.rafts).length;
   const check = canAddRaft({ rafts: state.rafts, lighthouse, slot, stock: state.stock, yardBusy: state.yard !== null });
-  const cost = costHtml(state, raftCost(n));
   return {
     title: "Raft slot",
     body:
       `<p class="p">${RAFT_TEXT.free}</p>` +
-      `<div class="kv"><span>Rafts</span><span>${n} / ${raftCap(lighthouse)}</span><span>Ring</span><span>${s.ring === 3 ? "first" : "second"}</span>` +
-      `<span>At next Lighthouse level</span><span>${raftCap(lighthouse + 1)} rafts</span><span>Your rope</span><span>${formatAmount(state.stock.rope)}</span></div>` +
-      `<div class="box"><h4>Moor a raft</h4><div class="cost">${cost}</div><p class="p" style="font-size:12.5px;margin-top:6px">Time: ${formatDuration(RAFT_BUILD_TIME / speed)}. ${RAFT_TEXT.rope}</p></div>` +
+      keyValues(
+        kv("Rafts", `${n} / ${raftCap(lighthouse)}`) +
+          kv("Ring", s.ring === 3 ? "first" : "second") +
+          kv("At next Lighthouse level", `${raftCap(lighthouse + 1)} rafts`) +
+          kv("Your rope", formatAmount(state.stock.rope)),
+      ) +
+      box("Moor a raft", costLine(state.stock, raftCost(n)) + `<p class="p" style="font-size:12.5px;margin-top:6px">Time: ${formatDuration(RAFT_BUILD_TIME / speed)}. ${RAFT_TEXT.rope}</p>`) +
       // Still tappable when refused: the tap shows the reason in a toast too.
-      `<button class="b gold xl" data-act="dock" aria-disabled="${!check.ok}">${RAFT_TEXT.build}</button>` +
-      (check.ok ? "" : `<p class="why">${check.reason}</p>`),
+      actionButton(RAFT_TEXT.build, check, "gold xl", "dock"),
   };
 }
 
@@ -145,33 +142,22 @@ export function createRaftSheet(
   root: HTMLElement,
   actions: { dock(slot: string): void; install(slot: string, building: RaftBuildingId): void; upgrade(slot: string): void; close(): void },
 ) {
-  const el = document.createElement("section");
-  el.className = "sheet card raft-sheet";
-  el.hidden = true;
-  el.setAttribute("role", "dialog");
-  root.appendChild(el);
   let current: string | null = null;
-  let key = "";
-
-  el.addEventListener("click", (e) => {
-    const t = (e.target as HTMLElement).closest("button");
-    if (!t || !current) return;
-    if (t.dataset.act === "close") actions.close();
-    if (t.dataset.act === "dock") actions.dock(current);
-    if (t.dataset.act === "install" && t.dataset.building) actions.install(current, t.dataset.building as RaftBuildingId);
-    if (t.dataset.act === "upgrade-raft") actions.upgrade(current);
+  const sheet = createSheetView(root, "raft-sheet", (act, data) => {
+    if (!current) return;
+    if (act === "close") actions.close();
+    if (act === "dock") actions.dock(current);
+    if (act === "install" && data.building) actions.install(current, data.building as RaftBuildingId);
+    if (act === "upgrade-raft") actions.upgrade(current);
   });
 
   const render = (state: PlayerState, speed: number) => {
     if (!current) return;
     const html = raftSheetHtml(state, current, speed);
     if (!html) return actions.close();
-    const k = html.title + html.body;
-    if (k === key) return;
-    key = k;
-    el.setAttribute("aria-label", html.title);
-    el.dataset.slot = current;
-    el.innerHTML = `<div class="sh-h"><h2>${html.title}</h2><button class="x" data-act="close" aria-label="Close">✕</button></div><div class="sh-b">${html.body}</div>`;
+    if (sheet.drawn(html.title + html.body)) return;
+    sheet.el.dataset.slot = current;
+    sheet.draw(html.title, html.body);
   };
 
   return {
@@ -180,13 +166,12 @@ export function createRaftSheet(
     },
     open(slot: string, state: PlayerState, speed: number) {
       current = slot;
-      key = "";
-      el.hidden = false;
+      sheet.show();
       render(state, speed);
     },
     close() {
       current = null;
-      el.hidden = true;
+      sheet.hide();
     },
     update(state: PlayerState, speed: number) {
       render(state, speed);

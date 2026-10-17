@@ -3,6 +3,7 @@
  * Signed in, every action goes to the server, which decides; the city shown is the server's.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpus } from "node:os";
 import type { BrowserContext, Locator, Page } from "playwright-core";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import * as THREE from "three";
@@ -587,6 +588,10 @@ describe("the look", () => {
   const update = process.env.LOOK === "update";
   const strict = !!process.env.CI || process.env.LOOK === "strict";
   const problems: string[] = [];
+  /** Taps that miss their button: on every machine, they fail the test. */
+  const missed: string[] = [];
+  /** Neighbor buttons whose 44 px squares overlap: they share the space between them. */
+  const pairs = new Set<string>();
   const ok = (r: ActionResult) => {
     if (!r.ok) throw new Error(r.reason);
     return r.state;
@@ -634,10 +639,57 @@ describe("the look", () => {
       writeFileSync(ref, png);
       return;
     }
+    await taps(what, name);
     if (!existsSync(ref)) return void problems.push(`${name}: no reference`);
     const d = comparePixels(decodePng(readFileSync(ref)), decodePng(png));
     if (!d.size) problems.push(`${name}: not the same size`);
     else if (d.differing) problems.push(`${name}: ${d.differing} pixels differ, the first at ${d.first!.x},${d.first!.y}`);
+  }
+
+  /**
+   * Every button in `what` can be tapped on a 44 px square around its center (or its own size when bigger): a tap at
+   * the middle of each side of that square reaches the button, except on the side of a neighbor whose square overlaps
+   * (the pair is listed), outside the screen, or outside the part of a sheet that scrolls.
+   */
+  async function taps(what: Locator, name: string): Promise<void> {
+    const r = await what.evaluate((root) => {
+      const label = (e: HTMLElement) => {
+        const data = Object.entries(e.dataset)
+          .filter(([k]) => k !== "act")
+          .map(([k, v]) => `${k}=${v}`)
+          .join(",");
+        return `${e.dataset.act ?? e.className}${data ? `(${data})` : ""} "${(e.getAttribute("aria-label") ?? e.textContent ?? "").trim().slice(0, 30)}"`;
+      };
+      const all = [root as HTMLElement, ...root.querySelectorAll<HTMLElement>("*")].filter(
+        (e) => e.matches("button, [role=button], .build-badge") && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden",
+      );
+      const squares = all.map((e) => {
+        const b = e.getBoundingClientRect();
+        const w = Math.max(44, b.width);
+        const h = Math.max(44, b.height);
+        const x = b.x + b.width / 2;
+        const y = b.y + b.height / 2;
+        let clip: DOMRect | null = null;
+        for (let a = e.parentElement; a; a = a.parentElement) if (getComputedStyle(a).overflowY !== "visible") clip ??= a.getBoundingClientRect();
+        return { e, x, y, l: x - w / 2, r: x + w / 2, t: y - h / 2, b: y + h / 2, clip };
+      });
+      const misses: string[] = [];
+      const pairs: string[] = [];
+      for (const s of squares) {
+        const others = squares.filter((o) => o !== s && o.l < s.r && s.l < o.r && o.t < s.b && s.t < o.b);
+        for (const o of others) pairs.push([label(s.e), label(o.e)].sort().join(" + "));
+        for (const [px, py] of [[s.x, s.t + 1], [s.x, s.b - 1], [s.l + 1, s.y], [s.r - 1, s.y]] as const) {
+          if (px < 0 || py < 0 || px >= innerWidth || py >= innerHeight) continue;
+          if (s.clip && (px < s.clip.left || px >= s.clip.right || py < s.clip.top || py >= s.clip.bottom)) continue;
+          if (others.some((o) => px >= o.l && px < o.r && py >= o.t && py < o.b)) continue;
+          const hit = document.elementFromPoint(px, py);
+          if (!hit || !s.e.contains(hit)) misses.push(`${label(s.e)} at ${Math.round(px)},${Math.round(py)} gives ${hit ? (hit as HTMLElement).className || hit.tagName : "nothing"}`);
+        }
+      }
+      return { misses, pairs };
+    });
+    for (const m of r.misses) missed.push(`${name}: a tap misses ${m}`);
+    for (const p of r.pairs) pairs.add(p);
   }
 
   const sheet = (page: Page) => page.locator(".sheet:not([hidden])").first();
@@ -779,6 +831,12 @@ describe("the look", () => {
       await look(page, page.locator(".queue"), `queue-open-${w}`);
       await page.context().close();
     }
+    writeFileSync(`${OUT}/pairs.txt`, [...pairs].sort().join("\n") + "\n");
+    // Two CI machines can draw a rounded corner a little differently (week 6): which processor drew these captures.
+    const flags = existsSync("/proc/cpuinfo") ? readFileSync("/proc/cpuinfo", "utf8") : "";
+    console.log(`Drawn on: ${cpus()[0]?.model ?? "?"}, AVX-512 ${/\bavx512f\b/.test(flags) ? "yes" : "no"}`);
+    console.log(`Neighbor buttons sharing their 44 px squares:\n${[...pairs].sort().join("\n")}`);
+    expect(missed).toEqual([]);
     if (strict) expect(problems).toEqual([]);
     else if (problems.length) console.warn(`The look differs from the CI's references on this machine (LOOK=strict to fail):\n${problems.join("\n")}`);
   });
