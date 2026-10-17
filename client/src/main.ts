@@ -152,6 +152,8 @@ if (new URLSearchParams(location.search).has("rules")) {
       return;
     }
     sound.play(WORKS.has(input.type) ? "start" : "tap");
+    // What it cost rolls in the top bar; never while a celebration plays: one motion at a time.
+    if (!celebrations.playing) ui.roll();
     state = r.state;
     refresh();
     save();

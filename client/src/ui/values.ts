@@ -52,3 +52,12 @@ export function mistText(state: PlayerState): string {
   const time = h >= 100 ? "99+ h" : h > 0 ? `${h} h ${String(m).padStart(2, "0")}` : `${m} min`;
   return `Calm sea · oil for ${time} in the Mist`;
 }
+
+/** How long a number of the top bar takes to roll to its new value, in ms. */
+export const ROLL_MS = 400;
+
+/** The value shown `elapsed` ms into a roll from `from` to `to`: fast at first, then easing into place. */
+export function rolled(from: number, to: number, elapsed: number): number {
+  const t = Math.min(1, Math.max(0, elapsed / ROLL_MS));
+  return from + (to - from) * (1 - (1 - t) ** 3);
+}

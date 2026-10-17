@@ -783,6 +783,65 @@ describe("sounds", () => {
   });
 });
 
+describe("short motions", () => {
+  /** The animations and transitions running in the page, by name (CSS animation) or property (transition). */
+  const running = (page: Page) =>
+    page.evaluate(() => document.getAnimations().map((a) => (a as CSSAnimation).animationName ?? (a as CSSTransition).transitionProperty));
+
+  it("a sheet opens with \"up\" and closes down, already hidden and out of the way of taps; a button pressed sinks", async () => {
+    const p = await newPlayer(false);
+    const page = await openGame(p.context);
+    await page.locator('.nav button[data-v="captains"]').click();
+    expect(await running(page)).toContain("up");
+    await page.waitForTimeout(400);
+    // Closed: at once [hidden] and out of the way of taps, while its picture goes down for 160 ms (read in the same task:
+    // the container draws slowly).
+    const closing = await page.evaluate(() => {
+      const e = document.querySelector<HTMLElement>(".sheet.captains")!;
+      e.querySelector<HTMLButtonElement>('[data-act="close"]')!.click();
+      return { hidden: e.hidden, taps: getComputedStyle(e).pointerEvents, moving: document.getAnimations().map((a) => (a as CSSTransition).transitionProperty) };
+    });
+    expect(closing).toEqual({ hidden: true, taps: "none", moving: expect.arrayContaining(["translate", "opacity", "display"]) });
+    await page.waitForTimeout(300);
+    expect(await page.locator(".sheet.captains").evaluate((e) => getComputedStyle(e).display)).toBe("none");
+    // A pressed button sinks by 2 px and shrinks a little.
+    await page.locator('.nav button[data-v="captains"]').click();
+    const lead = page.locator('.sheet.captains .b').first();
+    const box = (await lead.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(150);
+    expect(await lead.evaluate((e) => getComputedStyle(e).transform)).toBe("matrix(0.97, 0, 0, 0.97, 0, 2)");
+    await page.mouse.up();
+    await p.context.close();
+  });
+
+  it("with reduced motion on the device: nothing moves, the celebrations stand still", async () => {
+    const p = await newPlayer(false);
+    const t0 = Date.now();
+    const city = { ...newPlayerState(), queue: [{ id: "refinery" as const, left: 600, duration: 900 }] };
+    await p.context.addInitScript(({ key, file }) => localStorage.setItem(key, file), { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: t0, state: city }) });
+    const page = await p.context.newPage();
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.clock.install({ time: t0 });
+    await page.clock.pauseAt(t0 + 500);
+    await page.goto(`${GAME}/?quality=2`);
+    await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
+    await page.waitForSelector(".labels.city .bl b");
+    await page.locator('.nav button[data-v="captains"]').click();
+    expect(await running(page)).toEqual([]);
+    await page.locator('.sheet.captains [data-act="close"]').click();
+    expect(await running(page)).toEqual([]);
+    await page.clock.fastForward(600_000);
+    await page.clock.runFor(200);
+    const float = page.locator(".celebration.float .cel-float");
+    await float.waitFor();
+    expect(await running(page)).toEqual([]);
+    expect(await float.evaluate((e) => [getComputedStyle(e).opacity, getComputedStyle(e).transform])).toEqual(["1", "none"]);
+    await p.context.close();
+  });
+});
+
 /**
  * The look of every sheet, compared pixel by pixel with the references in e2e/look/ (week 6, task 2: the shared
  * interface components must not change it). The page's clock is fixed (page.clock), the 3D view and its labels are

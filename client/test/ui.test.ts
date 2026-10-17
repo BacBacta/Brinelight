@@ -83,3 +83,16 @@ describe("menus and toasts", () => {
     expect(keepToasts(["a", "b"], "c")).toEqual(["b", "c"]);
   });
 });
+
+describe("a number that rolls", () => {
+  it("from its old value to its new one in ROLL_MS, fast at first, then easing into place", async () => {
+    const { ROLL_MS, rolled } = await import("../src/ui/values.js");
+    expect(ROLL_MS).toBe(400);
+    expect(rolled(1000, 400, 0)).toBe(1000);
+    expect(rolled(1000, 400, ROLL_MS)).toBe(400);
+    expect(rolled(1000, 400, 10 * ROLL_MS)).toBe(400);
+    // Halfway in time, more than halfway in value.
+    expect(rolled(1000, 400, ROLL_MS / 2)).toBeLessThan(700);
+    expect(rolled(0, 100, -5)).toBe(0);
+  });
+});

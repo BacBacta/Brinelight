@@ -11,6 +11,8 @@ import "./style.css";
 
 export type Ui = {
   update(state: PlayerState): void;
+  /** The next change of the top bar's amounts rolls (after an action). */
+  roll(): void;
   toast(text: string, kind?: ToastKind, icon?: string): void;
   /** Switches to a view as if its menu button was tapped. */
   showView(view: NavView): void;
@@ -26,6 +28,7 @@ export function createUi(root: HTMLElement, onView: (view: NavView) => void, onP
   return {
     showView: (view) => nav.select(view),
     update: (state) => hud.update(state),
+    roll: () => hud.roll(),
     toast: (text, kind, icon) => toasts.show(text, kind, icon),
     signedIn: (on) => hud.signedIn(on),
   };
