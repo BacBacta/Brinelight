@@ -2,16 +2,18 @@
  * Sign in from the game, end to end: the real server (PGlite), the built client in Chromium, and a test wallet.
  * Signed in, every action goes to the server, which decides; the city shown is the server's.
  */
-import type { BrowserContext, Page } from "playwright-core";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import type { BrowserContext, Locator, Page } from "playwright-core";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import * as THREE from "three";
-import { HOUR, PROMOTE_TIME, RAFT_INSTALL_TIME, RAFT_SLOTS, advance, heal, newPlayerState, promote, raftUpgradeTime, research, sail, upgrade, type ActionResult, type PlayerState, type RaftBuildingId } from "@brinelight/shared";
+import { HOUR, PROMOTE_TIME, RAFT_INSTALL_TIME, RAFT_SLOTS, advance, heal, installOnRaft, newPlayerState, promote, raftUpgradeTime, research, sail, upgrade, type ActionResult, type PlayerState, type RaftBuildingId } from "@brinelight/shared";
 import { frameCity } from "../client/src/scene/camera.js";
 import { SHORE_RADIUS } from "../client/src/scene/models.js";
 import { CITY_KEY_PREFIX } from "../client/src/account/actions.js";
 import { PROFILE_TEXT } from "../client/src/account/profile.js";
 import { TEXT } from "../client/src/account/index.js";
 import { installFakeWallet, type TestWallet } from "./fakeWallet.js";
+import { comparePixels, decodePng } from "./png.js";
 import { API, GAME, holdActions, startHarness, type Harness } from "./harness.js";
 
 const SAVE_KEY = "brinelight-client-v1";
@@ -567,6 +569,214 @@ describe("captains", () => {
       expect(p.apiCalls).toEqual([]);
       await p.context.close();
     }
+  });
+});
+
+/**
+ * The look of every sheet, compared pixel by pixel with the references in e2e/look/ (week 6, task 2: the shared
+ * interface components must not change it). The page's clock is fixed (page.clock), the 3D view and its labels are
+ * hidden at the moment of each capture, and each capture is cut to its element. LOOK=update writes the references;
+ * every capture is also written to e2e/.shots/look/ (an artifact of the CI's e2e job).
+ */
+describe("the look", () => {
+  const T0 = new Date("2026-10-18T12:00:00.000Z");
+  const REF = "e2e/look";
+  const OUT = "e2e/.shots/look";
+  const update = process.env.LOOK === "update";
+  const problems: string[] = [];
+  const ok = (r: ActionResult) => {
+    if (!r.ok) throw new Error(r.reason);
+    return r.state;
+  };
+
+  /** Opens the game with its clock fixed at T0, a city saved at T0, then pauses the clock 5 minutes later. */
+  async function frozenGame(size: { width: number; height: number }, city: PlayerState): Promise<Page> {
+    const p = await newPlayer(false, size);
+    await p.context.addInitScript(
+      ({ key, file }) => {
+        if (sessionStorage.getItem("e2e-injected")) return;
+        localStorage.setItem(key, file);
+        sessionStorage.setItem("e2e-injected", "1");
+      },
+      { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: T0.getTime(), state: city }) },
+    );
+    const page = await p.context.newPage();
+    // Paused before the game starts: however long the loading takes, the game sees the same times, frame by frame.
+    await page.clock.install({ time: T0 });
+    await page.clock.pauseAt(new Date(T0.getTime() + 1000));
+    await page.goto(`${GAME}/?quality=2`);
+    await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
+    await page.evaluate(() => document.fonts.ready);
+    await page.clock.fastForward(5 * 60_000);
+    await page.clock.runFor(200);
+    await page.waitForSelector(".labels.city .bl b");
+    return page;
+  }
+
+  /** Captures `what`, the 3D view hidden, and compares it with its reference (or writes it, with LOOK=update). */
+  async function look(page: Page, what: Locator, name: string): Promise<void> {
+    await page.evaluate(() => {
+      const s = document.createElement("style");
+      s.id = "look-hide";
+      s.textContent = "#cv,.labels{visibility:hidden!important}";
+      document.head.appendChild(s);
+    });
+    const png = await what.screenshot({ animations: "disabled", caret: "hide" });
+    await page.evaluate(() => document.getElementById("look-hide")?.remove());
+    mkdirSync(OUT, { recursive: true });
+    writeFileSync(`${OUT}/${name}.png`, png);
+    const ref = `${REF}/${name}.png`;
+    if (update) {
+      mkdirSync(REF, { recursive: true });
+      writeFileSync(ref, png);
+      return;
+    }
+    if (!existsSync(ref)) return void problems.push(`${name}: no reference`);
+    const d = comparePixels(decodePng(readFileSync(ref)), decodePng(png));
+    if (!d.size) problems.push(`${name}: not the same size`);
+    else if (d.differing) problems.push(`${name}: ${d.differing} pixels differ, the first at ${d.first!.x},${d.first!.y}`);
+  }
+
+  const sheet = (page: Page) => page.locator(".sheet:not([hidden])").first();
+  const close = (page: Page) => page.evaluate(() => document.querySelector<HTMLButtonElement>('.sheet:not([hidden]) [data-act="close"]')?.click());
+  const toBottom = (page: Page) => page.evaluate(() => document.querySelectorAll(".sheet:not([hidden]) .sh-b").forEach((b) => (b.scrollTop = b.scrollHeight)));
+
+  it("every sheet, the top bar and the queue, at 412 and 360 px", async () => {
+    for (const size of SIZES) {
+      const w = size.width;
+      const clear = slotsOnScreen(6, size.width, size.height);
+      const base = newPlayerState();
+
+      // A built city: every building, a research, a work at the shipyard, rafts, wounded and captains.
+      let town: PlayerState = {
+        ...base,
+        buildings: { lighthouse: 6, refinery: 3, fishery: 6, lumberyard: 2, shelters: 2, barracks: 3, harbor: 1, observatory: 3, infirmary: 1 },
+        techs: { veterans: 1, blades: 1 },
+        troops: { boarders: 60, harpooners: 60, crossbowmen: 60 },
+        wounded: { boarders: 12, harpooners: 5, crossbowmen: 3 },
+        stock: { oil: 9000, fish: 9000, wood: 9000, rope: 10 },
+        captains: { tom: { level: 3, xp: 40, stars: 2 }, sel: { level: 1, xp: 0, stars: 1 } },
+        shards: { sel: 4, mira: 7 },
+        rafts: {
+          [clear[0]!.slot]: { hp: 100, building: null, level: 0 },
+          [clear[1]!.slot]: { hp: 100, building: "greenhouse", level: 2 },
+          [clear[2]!.slot]: { hp: 100, building: null, level: 0 },
+        },
+      };
+      town = ok(upgrade(town, "lumberyard"));
+      town = ok(research(town, "nets"));
+      town = ok(installOnRaft(town, clear[2]!.slot, "watchtower"));
+      let page = await frozenGame(size, town);
+      await look(page, page.locator(".hud"), `hud-${w}`);
+      for (const [name, file] of [
+        ["Refinery", "refinery"],
+        ["Fishery", "fishery"],
+        ["Lumberyard", "lumberyard-working"],
+        ["Barracks", "barracks"],
+        ["Infirmary", "infirmary"],
+      ] as const) {
+        await openSheet(page, name);
+        await look(page, sheet(page), `${file}-${w}`);
+        await close(page);
+      }
+      await openSheet(page, "Observatory");
+      await look(page, sheet(page), `observatory-top-${w}`);
+      await toBottom(page);
+      await look(page, sheet(page), `observatory-bottom-${w}`);
+      await close(page);
+      for (const [i, file] of [
+        [0, "raft-free"],
+        [1, "raft-building"],
+        [2, "raft-working"],
+      ] as const) {
+        await page.mouse.click(clear[i]!.x, clear[i]!.y);
+        await page.locator(".raft-sheet:not([hidden])").waitFor();
+        await look(page, page.locator(".raft-sheet"), `${file}-${w}`);
+        await close(page);
+      }
+      await page.locator('.nav button[data-v="captains"]').click();
+      await look(page, sheet(page), `captains-top-${w}`);
+      await toBottom(page);
+      await look(page, sheet(page), `captains-bottom-${w}`);
+      await close(page);
+      await page.locator(".hud .lvl").click();
+      await look(page, page.locator(".sheet.profile"), `profile-${w}`);
+      await page.context().close();
+
+      // A poor city after a victory: the report opens by itself; a refused upgrade; a free slot; the sea's sheets.
+      const sent = sail({ ...base, buildings: { ...base.buildings, lighthouse: 4 }, troops: { boarders: 200, harpooners: 200, crossbowmen: 200 }, shards: { sel: 9 } }, "camp-1");
+      if (!sent.ok) throw new Error(sent.reason);
+      const poor: PlayerState = { ...advance(sent.state, 8 * HOUR), stock: { oil: 50, fish: 50, wood: 50, rope: 0 } };
+      page = await frozenGame(size, poor);
+      await page.locator('.sheet[aria-label="Combat report"]:not([hidden])').waitFor();
+      await look(page, sheet(page), `report-${w}`);
+      await close(page);
+      await page.clock.runFor(200);
+      await openSheet(page, "Refinery");
+      await look(page, sheet(page), `refinery-refused-${w}`);
+      await close(page);
+      const free = slotsOnScreen(4, size.width, size.height)[0]!;
+      await page.mouse.click(free.x, free.y);
+      await page.locator(".raft-sheet:not([hidden])").waitFor();
+      await look(page, page.locator(".raft-sheet"), `raft-slot-${w}`);
+      await close(page);
+      await page.context().close();
+      // At sea, on a page whose clock runs: finding a site needs drawn frames, and a site's sheet holds no time.
+      const seaPlayer = await newPlayer(false, size);
+      await injectCity(seaPlayer.context, { ...poor, reports: poor.reports.map((r) => ({ ...r, read: true })) });
+      page = await openGame(seaPlayer.context);
+      await page.evaluate(() => document.fonts.ready);
+      await page.locator('.nav button[data-v="sea"]').click();
+      await page.waitForTimeout(1500);
+      for (const kind of ["camp", "wreck"] as const) {
+        if (kind === "wreck") {
+          // Farther out: the wrecks are beyond the first view.
+          await page.mouse.move(size.width / 2, size.height / 2);
+          await page.mouse.wheel(0, 1500);
+          await page.waitForTimeout(1000);
+        }
+        const labels = page.locator(`.labels.sea .sl.${kind}:visible`);
+        const site = page.locator(".sheet:not([hidden])", { has: page.locator('[data-act="sail"]') });
+        let found = false;
+        for (let i = 0; i < (await labels.count()) && !found; i++) {
+          const box = (await labels.nth(i).boundingBox())!;
+          for (const dy of [30, 45, 60, 15, 8]) {
+            await page.mouse.click(box.x + box.width / 2, box.y + box.height + dy);
+            if (await site.isVisible()) {
+              found = true;
+              break;
+            }
+          }
+        }
+        if (!found) await page.screenshot({ path: `${OUT}/debug-${kind}-${w}.png` });
+        expect(found, kind).toBe(true);
+        await look(page, site, `${kind}-${w}`);
+        await close(page);
+      }
+      await page.context().close();
+
+      // Six works: the queue folded, then unfolded.
+      let busy: PlayerState = {
+        ...base,
+        buildings: { ...base.buildings, lighthouse: 6, barracks: 3, observatory: 3, infirmary: 1 },
+        techs: { veterans: 1 },
+        troops: { boarders: 25, harpooners: 25, crossbowmen: 25 },
+        wounded: { boarders: 12, harpooners: 5, crossbowmen: 3 },
+        stock: { oil: 50_000, fish: 50_000, wood: 50_000, rope: 3 },
+      };
+      busy = ok(upgrade(busy, "observatory"));
+      busy = ok(upgrade(busy, "infirmary"));
+      busy = ok(research(busy, "warehouses"));
+      busy = ok(promote(busy, "crossbowmen"));
+      busy = ok(heal(busy));
+      busy = ok(sail(busy, "camp-1"));
+      page = await frozenGame(size, busy);
+      await look(page, page.locator(".queue"), `queue-folded-${w}`);
+      await page.locator(".queue .more").click();
+      await look(page, page.locator(".queue"), `queue-open-${w}`);
+      await page.context().close();
+    }
+    expect(problems).toEqual([]);
   });
 });
 
