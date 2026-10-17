@@ -5,10 +5,10 @@ import { ISLAND_ANISOTROPY, filterTexture, fitIsland, loadModels, loadRaftBuildi
 import { createCamera, createControls, frameCity } from "./camera.js";
 import { createIsland, type Kit } from "./island.js";
 import { createLighthouse, lighthouseScale } from "./lighthouse.js";
-import { addCityLights } from "./lights.js";
 import { applyQualityStep, createQualityMonitor, type QualityStep } from "./quality.js";
 import { createRenderer } from "./renderer.js";
-import { addCitySky } from "./sky.js";
+import { createSky } from "./sky.js";
+import { CITY_CALM, addLook } from "./look.js";
 import { createSeaView } from "./sea.js";
 import { createWater } from "./water.js";
 
@@ -66,8 +66,7 @@ const KIT_URL = `${import.meta.env.BASE_URL}prototype/assets/phare.glb`;
 export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}): SceneHandle {
   const renderer = createRenderer(canvas);
   const scene = new THREE.Scene();
-  addCitySky(scene);
-  const { sun } = addCityLights(scene);
+  const { sun } = addLook(scene, createSky(CITY_CALM.sky), CITY_CALM, true);
   const water = createWater(160, "#2A9AD8");
   scene.add(water.mesh);
   const lighthouse = createLighthouse();
