@@ -580,6 +580,7 @@ describe("captains", () => {
  * every capture is also written to e2e/.shots/look/ (an artifact of the CI's e2e job).
  * The references are made by the CI's e2e job (its captures, downloaded): another machine draws text a little
  * differently. So a difference fails the test in the CI (or with LOOK=strict), and is only reported elsewhere.
+ * How to make them: e2e/look/README.md.
  */
 describe("the look", () => {
   const T0 = new Date("2026-10-18T12:00:00.000Z");
@@ -588,6 +589,13 @@ describe("the look", () => {
   const update = process.env.LOOK === "update";
   const strict = !!process.env.CI || process.env.LOOK === "strict";
   const problems: string[] = [];
+  /**
+   * The only captures with a second reference (docs/decisions.md, 17 October): the CI's AMD EPYC 9V74 machines draw the
+   * left corners of the captain rows a little differently, with the same layout. Any third drawing fails, as for the others.
+   */
+  const VARIANTS: Readonly<Record<string, readonly string[]>> = { "captains-top-412": ["amd-epyc-9v74"], "captains-top-360": ["amd-epyc-9v74"] };
+  /** Which reference each capture with a second one matched. */
+  const matched: string[] = [];
   /** Taps that miss their button: on every machine, they fail the test. */
   const missed: string[] = [];
   /** Neighbor buttons whose 44 px squares overlap: they share the space between them. */
@@ -641,7 +649,14 @@ describe("the look", () => {
     }
     await taps(what, name);
     if (!existsSync(ref)) return void problems.push(`${name}: no reference`);
-    const d = comparePixels(decodePng(readFileSync(ref)), decodePng(png));
+    const shot = decodePng(png);
+    for (const v of VARIANTS[name] ?? []) {
+      const variant = `${REF}/${name}.${v}.png`;
+      if (!existsSync(variant)) problems.push(`${name}: no reference ${variant}`);
+      else if (comparePixels(decodePng(readFileSync(variant)), shot).differing === 0) return void matched.push(`${name}: ${name}.${v}.png`);
+    }
+    const d = comparePixels(decodePng(readFileSync(ref)), shot);
+    if (VARIANTS[name] && d.size && !d.differing) matched.push(`${name}: ${name}.png`);
     if (!d.size) problems.push(`${name}: not the same size`);
     else if (d.differing) problems.push(`${name}: ${d.differing} pixels differ, the first at ${d.first!.x},${d.first!.y}`);
   }
@@ -840,6 +855,7 @@ describe("the look", () => {
     // Two CI machines can draw a rounded corner a little differently (week 6): which processor drew these captures.
     const flags = existsSync("/proc/cpuinfo") ? readFileSync("/proc/cpuinfo", "utf8") : "";
     console.log(`Drawn on: ${cpus()[0]?.model ?? "?"}, AVX-512 ${/\bavx512f\b/.test(flags) ? "yes" : "no"}`);
+    console.log(`References matched: ${matched.join(", ") || "none"}`);
     console.log(`Neighbor buttons sharing their 44 px squares:\n${[...pairs].sort().join("\n")}`);
     expect(missed).toEqual([]);
     if (strict) expect(problems).toEqual([]);

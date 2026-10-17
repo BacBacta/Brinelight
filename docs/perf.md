@@ -212,9 +212,9 @@ The game's own JavaScript and CSS (`client/dist/assets/index-*.js` and `index-*.
 | | JS | CSS | Total |
 | --- | --- | --- | --- |
 | Before (`527d7d1`) | 93 315 B, 33 334 B gzipped | 28 535 B, 9 001 B gzipped | 121 850 B, 42 335 B gzipped |
-| After | 89 906 B, 33 407 B gzipped | 28 716 B, 9 046 B gzipped | 118 622 B, 42 453 B gzipped |
-| Change | −3 409 B, +73 B gzipped | +181 B, +45 B gzipped | **−3 228 B, +118 B gzipped** |
+| After | 89 906 B, 33 407 B gzipped | 28 769 B, 9 060 B gzipped | 118 675 B, 42 467 B gzipped |
+| Change | −3 409 B, +73 B gzipped | +234 B, +59 B gzipped | **−3 175 B, +132 B gzipped** |
 
-The goal was no growth at all; gzipped, it is missed by 118 B (0.28 %). The CSS's 45 B are the invisible 44 px tap areas. The JS's 73 B are the components themselves: the same HTML written again in every sheet compressed very well, and a function that writes it costs a little more than the copies it replaces. Tried and left out because they were heavier: the interface's own shades as CSS variables (+150 B gzipped), full class names in the buttons' calls, a component for paragraphs, the top bar and the queue on components.
+The goal was no growth at all; gzipped, it is missed by 132 B (0.31 %), which the owner accepted on 17 October. **The rule for a tidying-up of the code (no new feature) is now: the raw size does not grow, and the gzipped size does not grow by more than 0.5 %.** The CSS's 59 B are the invisible 44 px tap areas (the sheets' close button has its own, placed from the sheet, so that its ✕ is drawn as before). The JS's 73 B are the components themselves: the same HTML written again in every sheet compressed very well, and a function that writes it costs a little more than the copies it replaces. Tried and left out because they were heavier: the interface's own shades as CSS variables (+150 B gzipped), full class names in the buttons' calls, a component for paragraphs, the top bar and the queue on components.
 
-The 42 look references in `e2e/look/` weigh 1 749 004 B in git.
+The 44 look references in `e2e/look/` (42 captures, and the second reference of `captains-top` at both sizes) weigh 1 956 368 B in git.
