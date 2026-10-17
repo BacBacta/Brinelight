@@ -5,7 +5,7 @@
  * applyAction for each accepted action), and the server's city is compared with it after every case.
  */
 import { randomBytes, randomUUID } from "node:crypto";
-import { RAFT_BUILD_TIME, RAFT_MAX_HP, RAFT_SLOTS, applyAction, catchUp, newPlayerState, raftCap, type GameAction, type PlayerState } from "@brinelight/shared";
+import { PROMOTE_TIME, RAFT_BUILD_TIME, RAFT_INSTALL_TIME, RAFT_MAX_HP, RAFT_SLOTS, applyAction, catchUp, emptyTroops, healTime, newPlayerState, raftCap, raftUpgradeTime, totalTroops, trainTime, type GameAction, type PlayerState } from "@brinelight/shared";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
@@ -306,5 +306,237 @@ describe("a modified client cannot change the rules", () => {
     later(1000);
     await expectRules(server, p);
     expect(p.ref.now().rafts[inner[1]!]).toEqual(sound);
+  });
+  it("buildings on rafts: a raft taken, no raft, an unknown type, a third copy, above level 3, the shipyard busy, the resources, a level sent", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const inner = RAFT_SLOTS.filter((s) => s.ring === 3).map((s) => s.key);
+    const [a, b, c, d] = inner as [string, string, string, string];
+    const free = { hp: RAFT_MAX_HP, building: null, level: 0 };
+    const rich = { oil: 9000, fish: 9000, wood: 9000, rope: 50 };
+    const city = {
+      ...base,
+      buildings: { ...base.buildings, lighthouse: 6 },
+      stock: rich,
+      rafts: { [a]: { hp: RAFT_MAX_HP, building: "greenhouse" as const, level: 3 }, [b]: { hp: RAFT_MAX_HP, building: "greenhouse" as const, level: 1 }, [c]: free },
+    };
+
+    const p = await player(city);
+    await expectRefused(server, p, action({ type: "installOnRaft", slot: a, building: "smokehouse" }), "This raft already has a building");
+    await expectRefused(server, p, action({ type: "installOnRaft", slot: d, building: "smokehouse" }), "There is no raft here");
+    await expectRefused(server, p, action({ type: "upgradeRaft", slot: d }), "There is no raft here");
+    await expectRefused(server, p, action({ type: "upgradeRaft", slot: c }), "Put a building on this raft first");
+    await expectRefused(server, p, action({ type: "installOnRaft", slot: c, building: "greenhouse" }), "Each type is limited to 2 rafts");
+    await expectRefused(server, p, action({ type: "upgradeRaft", slot: a }), "Max level");
+    for (const building of ["casino", "toString", "__proto__", ""]) await expectInvalid(server, p, { action: { ...action({ type: "installOnRaft", slot: c, building: "watchtower" }), building } });
+    for (const slot of ["0,0", "1,-3", "toString"]) await expectInvalid(server, p, { action: { ...action({ type: "upgradeRaft", slot: b }), slot } });
+    // The level and the cost are the rule's.
+    await expectInvalid(server, p, { action: { ...action({ type: "upgradeRaft", slot: b }), level: 3 } });
+    await expectInvalid(server, p, { action: { ...action({ type: "installOnRaft", slot: c, building: "watchtower" }), level: 3 } });
+    const poor = await player({ ...city, stock: { oil: 119, fish: 9000, wood: 9000, rope: 50 } });
+    await expectRefused(server, poor, action({ type: "installOnRaft", slot: c, building: "watchtower" }), "Not enough resources");
+
+    await expectApplied(server, p, action({ type: "installOnRaft", slot: c, building: "watchtower" }));
+    expect(p.ref.now().yard).toMatchObject({ slot: c, kind: "install", building: "watchtower" });
+    later(1000);
+    await expectRefused(server, p, action({ type: "upgradeRaft", slot: b }), "The shipyard is busy");
+    await expectRefused(server, p, action({ type: "dockRaft", slot: d }), "The shipyard is busy");
+  });
+
+  it("from shipyard to fleet: the server puts the Watchtower on its raft by its clock, then a fleet sails with it", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const slot = RAFT_SLOTS.find((s) => s.ring === 3)!.key;
+    const p = await player({ ...base, buildings: { ...base.buildings, lighthouse: 4 }, stock: { oil: 9000, fish: 9000, wood: 9000, rope: 50 }, rafts: { [slot]: { hp: RAFT_MAX_HP, building: null, level: 0 } } });
+    await expectApplied(server, p, action({ type: "installOnRaft", slot, building: "watchtower" }));
+    later(RAFT_INSTALL_TIME * 1000 - 1000);
+    await expectRules(server, p);
+    expect(p.ref.now().rafts[slot]).toMatchObject({ building: null, level: 0 });
+    later(1000);
+    await expectRules(server, p);
+    expect(p.ref.now().rafts[slot]).toMatchObject({ building: "watchtower", level: 1 });
+    await expectApplied(server, p, action({ type: "upgradeRaft", slot }));
+    later(raftUpgradeTime(1) * 1000);
+    await expectRules(server, p);
+    expect(p.ref.now().rafts[slot]).toMatchObject({ building: "watchtower", level: 2 });
+    await expectApplied(server, p, action({ type: "sail", site: "camp-1" }));
+    expect(p.ref.now().fleets[0]!.watchtowers).toBe(2);
+  });
+
+  it("captains: a lead not owned, the Logbook without Pearls or at max level, shards short, a captain owned or at 5 stars, numbers sent", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const p = await player({ ...base, pearls: 49, shards: { sel: 9, tom: 9 } });
+    await expectRefused(server, p, action({ type: "setLead", captain: "mira" }), "Recruit this captain first");
+    await expectRefused(server, p, action({ type: "logbook" }), "Not enough Pearls");
+    await expectRefused(server, p, action({ type: "unlockCaptain", captain: "sel" }), "You need 10 shards");
+    await expectRefused(server, p, action({ type: "unlockCaptain", captain: "tom" }), "You already have this captain");
+    await expectRefused(server, p, action({ type: "addStar", captain: "sel" }), "Recruit this captain first");
+    await expectRefused(server, p, action({ type: "addStar", captain: "tom" }), "You need 10 shards");
+    for (const type of ["setLead", "unlockCaptain", "addStar"] as const) {
+      for (const captain of ["blackbeard", "toString", "__proto__", ""]) await expectInvalid(server, p, { action: { ...action({ type, captain: "tom" }), captain } });
+      await expectInvalid(server, p, { action: { ...action({ type, captain: "tom" }), shards: 10 } });
+    }
+    for (const extra of [{ xp: 400 }, { pearls: 0 }, { captain: "tom" }]) await expectInvalid(server, p, { action: { ...action({ type: "logbook" }), ...extra } });
+
+    const max = await player({ ...base, captains: { tom: { level: 20, xp: 0, stars: 5 } }, shards: { tom: 30 } });
+    await expectRefused(server, max, action({ type: "logbook" }), "Your lead captain is at max level");
+    await expectRefused(server, max, action({ type: "addStar", captain: "tom" }), "Max stars");
+  });
+
+  it("from camp to captain: the captain who sailed gains the experience, the camp's captain the shards, by the server's clock", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const p = await player({ ...base, troops: { boarders: 200, harpooners: 200, crossbowmen: 200 }, captains: { tom: { level: 1, xp: 70, stars: 1 }, isa: { level: 2, xp: 0, stars: 1 } }, shards: { sel: 9 } });
+    await expectApplied(server, p, action({ type: "sail", site: "camp-1" }));
+    // Another captain leads now: the experience still goes to Old Tom, who sailed.
+    await expectApplied(server, p, action({ type: "setLead", captain: "isa" }));
+    later(8 * 3600_000);
+    await expectRules(server, p);
+    const back = p.ref.now();
+    expect(back.reports[0]).toMatchObject({ win: true, captainXp: { id: "tom", xp: 30, levels: 1 }, shards: { id: "sel", count: 1 } });
+    expect(back.captains.tom).toEqual({ level: 2, xp: 20, stars: 1 });
+    expect(back.captains.isa).toEqual({ level: 2, xp: 0, stars: 1 });
+    expect(back.shards).toEqual({ sel: 10 });
+    await expectApplied(server, p, action({ type: "unlockCaptain", captain: "sel" }));
+    await expectApplied(server, p, action({ type: "setLead", captain: "sel" }));
+    await expectApplied(server, p, action({ type: "logbook" }));
+    expect(p.ref.now().captains.sel).toEqual({ level: 1, xp: 40, stars: 1 });
+    expect(p.ref.now().pearls).toBe(back.pearls - 50);
+  });
+
+  it("training: no Barracks, one already underway, not enough resources, an unknown troop type, a number of soldiers sent", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const barracks = { ...base, buildings: { ...base.buildings, barracks: 2 }, stock: { oil: 9000, fish: 9000, wood: 9000, rope: 3 } };
+
+    await expectRefused(server, await player(), action({ type: "train", troop: "boarders" }), "Build the Barracks first");
+    const poor = await player({ ...barracks, stock: { oil: 9000, fish: 119, wood: 9000, rope: 3 } });
+    await expectRefused(server, poor, action({ type: "train", troop: "boarders" }), "Not enough resources");
+
+    const p = await player(barracks);
+    for (const troop of ["archers", "toString", "__proto__", ""]) await expectInvalid(server, p, { action: { ...action({ type: "train", troop: "boarders" }), troop } });
+    await expectInvalid(server, p, { action: { ...action({ type: "train", troop: "boarders" }), count: 5000 } });
+    await expectApplied(server, p, action({ type: "train", troop: "harpooners" }));
+    later(1000);
+    await expectRefused(server, p, action({ type: "train", troop: "crossbowmen" }), "Training is already underway");
+    // The batch the server set: Barracks level × 20, never what a client would like.
+    expect(p.ref.now().training).toMatchObject({ troop: "harpooners", count: 40 });
+  });
+
+  it("done when: a player who lost all their troops at sea trains new ones, and the server decides when they arrive", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const p = await player({ ...base, buildings: { ...base.buildings, barracks: 1 }, troops: emptyTroops() });
+    await expectRefused(server, p, action({ type: "sail", site: "camp-1" }), "You do not have enough troops");
+    await expectApplied(server, p, action({ type: "train", troop: "crossbowmen" }));
+    later(trainTime(20) * 1000 - 1000);
+    await expectRules(server, p);
+    expect(p.ref.now().troops).toEqual(emptyTroops());
+    later(1000);
+    await expectRules(server, p);
+    expect(p.ref.now().troops).toEqual({ ...emptyTroops(), crossbowmen: 20 });
+    expect(p.ref.now().training).toBeNull();
+    await expectApplied(server, p, action({ type: "sail", site: "camp-1" }));
+  });
+  it("veterans: no Doctrine, Barracks below 3, one work already underway, fewer than 10, not enough resources, an unknown troop, a number sent", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const ready = {
+      ...base,
+      buildings: { ...base.buildings, barracks: 3 },
+      techs: { veterans: 1 },
+      troops: { boarders: 30, harpooners: 9, crossbowmen: 20 },
+      stock: { oil: 9000, fish: 9000, wood: 9000, rope: 3 },
+    };
+    const doctrine = "You need the Veteran Doctrine research at the Observatory and Barracks at level 3.";
+
+    await expectRefused(server, await player({ ...ready, techs: {} }), action({ type: "promote", troop: "boarders" }), doctrine);
+    await expectRefused(server, await player({ ...ready, buildings: { ...ready.buildings, barracks: 2 } }), action({ type: "promote", troop: "boarders" }), doctrine);
+    const poor = await player({ ...ready, stock: { oil: 39, fish: 9000, wood: 9000, rope: 3 } });
+    await expectRefused(server, poor, action({ type: "promote", troop: "boarders" }), "Not enough resources");
+
+    const p = await player(ready);
+    await expectRefused(server, p, action({ type: "promote", troop: "harpooners" }), "You need 10 harpooners to promote.");
+    for (const troop of ["archers", "toString", "__proto__", ""]) await expectInvalid(server, p, { action: { ...action({ type: "promote", troop: "boarders" }), troop } });
+    await expectInvalid(server, p, { action: { ...action({ type: "promote", troop: "boarders" }), count: 30 } });
+    await expectApplied(server, p, action({ type: "promote", troop: "boarders" }));
+    // Exactly 10, never what a client would like.
+    expect(p.ref.now().training).toMatchObject({ kind: "promote", troop: "boarders", count: 10 });
+    expect(p.ref.now().troops.boarders).toBe(20);
+    later(1000);
+    await expectRefused(server, p, action({ type: "promote", troop: "crossbowmen" }), "Training is already underway");
+    await expectRefused(server, p, action({ type: "train", troop: "crossbowmen" }), "Training is already underway");
+  });
+
+  it("from Barracks to battle: the server decides when the veterans arrive, they all sail, and the survivors come home", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const p = await player({ ...base, buildings: { ...base.buildings, barracks: 3, infirmary: 1 }, techs: { veterans: 1 } });
+    await expectApplied(server, p, action({ type: "promote", troop: "crossbowmen" }));
+    later(PROMOTE_TIME * 1000 - 1000);
+    await expectRules(server, p);
+    expect(p.ref.now().veterans).toEqual(emptyTroops());
+    later(1000);
+    await expectRules(server, p);
+    expect(p.ref.now().veterans).toEqual({ ...emptyTroops(), crossbowmen: 10 });
+    await expectApplied(server, p, action({ type: "sail", site: "camp-1" }));
+    expect(p.ref.now().veterans).toEqual(emptyTroops());
+    expect(p.ref.now().fleets[0]!.veterans).toEqual({ ...emptyTroops(), crossbowmen: 10 });
+    later(8 * 3600_000);
+    await expectRules(server, p);
+    const back = p.ref.now();
+    const report = back.reports[0]!;
+    expect(back.fleets).toEqual([]);
+    expect(report.veteranSent).toEqual({ ...emptyTroops(), crossbowmen: 10 });
+    expect(report.infirmary).toBe(true);
+    expect(back.veterans.crossbowmen).toBe(10 - report.veteranLosses!.crossbowmen);
+    // The wounded are soldiers only.
+    expect(back.wounded).toEqual(report.wounded);
+  });
+
+  it("healing: no Infirmary, no wounded, one already underway, not enough fish, a field the server does not expect", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const wounded = { boarders: 12, harpooners: 5, crossbowmen: 3 };
+    const infirmary = { ...base, buildings: { ...base.buildings, infirmary: 1 }, wounded, stock: { oil: 9000, fish: 9000, wood: 9000, rope: 3 } };
+
+    await expectRefused(server, await player({ ...infirmary, buildings: base.buildings }), action({ type: "heal" }), "Build the Infirmary first");
+    await expectRefused(server, await player({ ...infirmary, wounded: emptyTroops() }), action({ type: "heal" }), "No wounded to heal");
+    const poor = await player({ ...infirmary, stock: { oil: 9000, fish: 39, wood: 9000, rope: 3 } });
+    await expectRefused(server, poor, action({ type: "heal" }), "Not enough resources");
+
+    const p = await player(infirmary);
+    for (const extra of [{ count: 500 }, { wounded: { boarders: 60, harpooners: 0, crossbowmen: 0 } }, { troop: "boarders" }]) await expectInvalid(server, p, { action: { ...action({ type: "heal" }), ...extra } });
+    await expectApplied(server, p, action({ type: "heal" }));
+    // The wounded the server had, never a number a client chose.
+    expect(p.ref.now().healing?.wounded).toEqual(wounded);
+    later(1000);
+    await expectRefused(server, p, action({ type: "heal" }), "No wounded to heal");
+    const busy = await player({ ...p.ref.now(), wounded: { boarders: 1, harpooners: 0, crossbowmen: 0 } });
+    await expectRefused(server, busy, action({ type: "heal" }), "Healing is already underway");
+  });
+
+  it("from battle to ranks: the wounded of a fleet are healed, and the server decides when they are back", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const p = await player({ ...base, buildings: { ...base.buildings, infirmary: 1 } });
+    await expectApplied(server, p, action({ type: "sail", site: "camp-1" }));
+    // The fleet fights and comes home on the server's clock.
+    later(8 * 3600_000);
+    await expectRules(server, p);
+    const back = p.ref.now();
+    const saved = totalTroops(back.wounded);
+    expect(back.fleets).toEqual([]);
+    expect(saved).toBeGreaterThan(0);
+    await expectApplied(server, p, action({ type: "heal" }));
+    // Whole milliseconds: the healing time can hold a fraction of a second.
+    later(Math.ceil(healTime(saved) * 1000) - 1000);
+    await expectRules(server, p);
+    expect(totalTroops(p.ref.now().troops)).toBe(totalTroops(back.troops));
+    later(1000);
+    await expectRules(server, p);
+    expect(totalTroops(p.ref.now().troops)).toBe(totalTroops(back.troops) + saved);
+    expect(p.ref.now().healing).toBeNull();
   });
 });

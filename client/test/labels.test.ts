@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GAP, layoutLabels, type LabelBox } from "../src/city/overlap.js";
+import { GAP, layoutLabels, type LabelBox, type LabelPlace } from "../src/city/overlap.js";
 
 /** A label 80 × 20, whose badge is 24 × 20. */
 const box = (id: string, x: number, y: number, depth: number, extra: Partial<LabelBox> = {}): LabelBox => ({
@@ -17,14 +17,14 @@ const box = (id: string, x: number, y: number, depth: number, extra: Partial<Lab
 describe("city labels layout", () => {
   it("labels apart stay where they are", () => {
     const r = layoutLabels([box("a", 100, 100, 0.5), box("b", 300, 100, 0.6)]);
-    expect(r).toEqual({ a: { dy: 0, compact: false }, b: { dy: 0, compact: false } });
+    expect(r).toEqual({ a: { dy: 0, compact: false, hidden: false }, b: { dy: 0, compact: false, hidden: false } });
   });
 
   it("the farther of two overlapping labels moves up just above the nearer one", () => {
     const r = layoutLabels([box("far", 110, 105, 0.9), box("near", 100, 110, 0.5)]);
-    expect(r.near).toEqual({ dy: 0, compact: false });
+    expect(r.near).toEqual({ dy: 0, compact: false, hidden: false });
     // The near label's top is at 110 - 20 = 90: the far one ends GAP above it, 17 px up.
-    expect(r.far).toEqual({ dy: 90 - GAP - 105, compact: false });
+    expect(r.far).toEqual({ dy: 90 - GAP - 105, compact: false, hidden: false });
   });
 
   it("the order is by distance, not by the order given", () => {
@@ -42,18 +42,29 @@ describe("city labels layout", () => {
 
   it("a badge beside the crowd stays on its anchor", () => {
     const r = layoutLabels([box("n1", 100, 100, 0.1), box("n2", 100, 78, 0.2), box("far", 160, 100, 0.9)]);
-    expect(r.far).toEqual({ dy: 0, compact: true });
+    expect(r.far).toEqual({ dy: 0, compact: true, hidden: false });
   });
 
-  it("a badge that still cannot fit stays on its anchor rather than floating away", () => {
+  it("a badge that still cannot fit is hidden, rather than covering a label or floating away", () => {
     const wall = [box("n1", 100, 100, 0.1), box("n2", 100, 78, 0.2), box("n3", 100, 56, 0.3)];
     const r = layoutLabels([...wall, box("far", 100, 100, 0.9)]);
-    expect(r.far).toEqual({ dy: 0, compact: true });
+    expect(r.far).toEqual({ dy: 0, compact: true, hidden: true });
+    for (const id of ["n1", "n2", "n3"]) expect(r[id]!.hidden).toBe(false);
+  });
+
+  it("seen on the phone: a badge beside the Lighthouse's label, with no room above, is hidden instead of covering its end", () => {
+    // "Lighthouse 4" (98 × 22), and the badge "1" of a farther building anchored on its right end, under a third label.
+    const lighthouse = box("lighthouse", 200, 365, 0.2, { w: 98, h: 22, compactW: 26, compactH: 22 });
+    const above = box("infirmary", 225, 322, 0.3, { w: 80, h: 22, compactW: 26, compactH: 22 });
+    const badge = box("barracks", 240, 366, 0.6, { w: 82, h: 22, compactW: 26, compactH: 22 });
+    const r = layoutLabels([lighthouse, above, badge]);
+    expect(r.lighthouse).toEqual({ dy: 0, compact: false, hidden: false });
+    expect(r.barracks!.hidden).toBe(true);
   });
 
   it("the building you tapped keeps its full label, laid out first", () => {
     const r = layoutLabels([box("near", 100, 100, 0.1), box("tapped", 100, 100, 0.9)], "tapped");
-    expect(r.tapped).toEqual({ dy: 0, compact: false });
+    expect(r.tapped).toEqual({ dy: 0, compact: false, hidden: false });
     // The nearer label gives way: it would have to move 22 px up, more than its 20 px height.
     expect(r.near!.compact).toBe(true);
   });
@@ -71,6 +82,32 @@ describe("city labels layout", () => {
         const p = r[b.id]!;
         expect(p.dy).toBeLessThanOrEqual(0);
         expect(-p.dy).toBeLessThanOrEqual(p.compact ? b.compactH : b.h);
+      }
+    }
+  });
+
+  it("a label never covers another one, and the building you tapped always keeps its label", () => {
+    const rect = (b: LabelBox, p: LabelPlace) => {
+      const [w, h] = p.compact ? [b.compactW, b.compactH] : [b.w, b.h];
+      return { left: b.x - w / 2, right: b.x + w / 2, top: b.y + p.dy - h, bottom: b.y + p.dy };
+    };
+    // Crowded islands seen from many angles: 9 labels in a small area, in fixed patterns.
+    for (let seed = 1; seed <= 200; seed++) {
+      const boxes: LabelBox[] = [];
+      for (let i = 0; i < 9; i++) {
+        const k = seed * 31 + i * 17;
+        boxes.push(box(`l${i}`, 120 + ((k * 37) % 170), 300 + ((k * 53) % 120), (k * 7) % 40, { w: 50 + (k % 5) * 12, h: 20 + (k % 2) * 24, compactW: 26, compactH: 20 + (k % 2) * 24 }));
+      }
+      for (const pinned of [null, "l4"]) {
+        const r = layoutLabels(boxes, pinned);
+        if (pinned) expect(r[pinned]).toMatchObject({ compact: false, hidden: false });
+        const shown = boxes.filter((b) => !r[b.id]!.hidden).map((b) => ({ id: b.id, ...rect(b, r[b.id]!) }));
+        for (const a of shown)
+          for (const c of shown) {
+            if (a.id >= c.id) continue;
+            const apart = a.right + GAP <= c.left || c.right + GAP <= a.left || a.bottom + GAP <= c.top || c.bottom + GAP <= a.top;
+            expect(apart, `seed ${seed}, pinned ${pinned}: ${a.id} and ${c.id}`).toBe(true);
+          }
       }
     }
   });

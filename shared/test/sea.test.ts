@@ -26,12 +26,15 @@ import {
 const start = (): SeaState => ({
   buildings: { ...STARTING_BUILDINGS },
   troops: { ...STARTING_TROOPS },
+  veterans: emptyTroops(),
   stock: { ...STARTING_STOCK },
   pearls: 200,
   wounded: emptyTroops(),
   techs: {},
   rafts: {},
   lead: leadOf("tom", { tom: { level: 1 } }),
+  captains: { tom: { level: 1, xp: 0, stars: 1 } },
+  shards: {},
   fleets: [],
   world: startingSeaWorld(),
 });

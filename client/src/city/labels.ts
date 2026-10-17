@@ -1,12 +1,13 @@
 import { BUILDINGS, BUILDING_IDS, type BuildingId } from "@brinelight/shared";
-import { lighthouseScale, type SceneHandle } from "../scene/index.js";
+import type { SceneHandle } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 import { plotPosition } from "./buildings.js";
 import { layoutLabels, type LabelBox } from "./overlap.js";
 import { progress, suggestedUpgrades } from "./suggest.js";
 
 /** Level labels above the buildings, as in the prototype. */
-export function createLabels(root: HTMLElement, scene: SceneHandle) {
+/** `heightOf` gives the height of a building's label above the ground, from its model (and the Lighthouse's level). */
+export function createLabels(root: HTMLElement, scene: SceneHandle, heightOf: (id: BuildingId, lighthouseLevel: number) => number) {
   const layer = document.createElement("div");
   layer.className = "labels city";
   layer.setAttribute("aria-hidden", "true");
@@ -19,6 +20,11 @@ export function createLabels(root: HTMLElement, scene: SceneHandle) {
     layer.appendChild(el);
     els[id] = { el, key: "", bar: null, w: 0, h: 0, compactW: 0, compactH: 0 };
   }
+  // The game's font can arrive after a first measure (font-display: swap): sizes are measured again once it is there,
+  // or a label measured with the fallback font would be wider on screen than the layout thinks.
+  document.fonts?.addEventListener("loadingdone", () => {
+    for (const id of BUILDING_IDS) els[id].w = 0;
+  });
   /** Sizes are measured once per text change, and only when the label is shown. */
   const measure = (L: Label) => {
     L.el.classList.remove("compact");
@@ -63,7 +69,7 @@ export function createLabels(root: HTMLElement, scene: SceneHandle) {
       const boxes: (LabelBox & { id: BuildingId })[] = [];
       for (const id of BUILDING_IDS) {
         const { x, z } = plotPosition(id);
-        const p = scene.project(x, id === "lighthouse" ? 3.3 * lighthouseScale(lighthouseLevel) : 1.9, z);
+        const p = scene.project(x, heightOf(id, lighthouseLevel), z);
         const L = els[id];
         L.el.style.display = p.visible ? "" : "none";
         if (!p.visible) continue;
@@ -75,6 +81,7 @@ export function createLabels(root: HTMLElement, scene: SceneHandle) {
         const L = els[b.id];
         const pl = places[b.id]!;
         L.el.classList.toggle("compact", pl.compact);
+        if (pl.hidden) L.el.style.display = "none";
         L.el.style.transform = `translate(${b.x.toFixed(1)}px,${(b.y + pl.dy).toFixed(1)}px)`;
       }
     },

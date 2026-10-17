@@ -4,6 +4,9 @@ import type { Techs } from "./research.js";
 import type { Rafts } from "./rafts.js";
 
 const RARITY_POWER: Record<Rarity, number> = { officer: 150, commander: 320, admiral: 650 };
+/** Power of a moored raft, and of each level of the building on it. */
+export const RAFT_POWER = 60;
+export const RAFT_LEVEL_POWER = 90;
 
 export type PowerState = {
   buildings: Buildings;
@@ -22,6 +25,6 @@ export function power(s: PowerState): number {
   p += totalTroops(s.veterans) * 8;
   for (const c of s.captains) p += RARITY_POWER[c.rarity] * c.stars * (1 + 0.05 * (c.level - 1));
   for (const l of Object.values(s.techs)) p += (l ?? 0) * 140;
-  for (const r of Object.values(s.rafts)) p += 60 + (r.building ? r.level * 90 : 0);
+  for (const r of Object.values(s.rafts)) p += RAFT_POWER + (r.building ? r.level * RAFT_LEVEL_POWER : 0);
   return Math.round(p);
 }

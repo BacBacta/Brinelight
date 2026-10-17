@@ -1,7 +1,6 @@
 import * as THREE from "three";
 import { SEA_SITES, type SeaSite } from "@brinelight/shared";
-import { createLighthouse, hexGeometry, kitModel, type Kit } from "../scene/index.js";
-import { createBoat } from "./boat.js";
+import { createLighthouse, hexGeometry, kitModel, normalizeBuilding, type Kit, type Models } from "../scene/index.js";
 
 export type SeaMap = {
   /** Invisible shapes used to know which site was tapped. */
@@ -9,8 +8,19 @@ export type SeaMap = {
   animate(now: number): void;
 };
 
-/** Every site of the sea map, with the prototype's models. */
-export function createSeaMap(kit: Kit, add: (o: THREE.Object3D) => void): SeaMap {
+/** The room the wreck and the pirate camp take on the map, and how deep they sit: they float, the hull half sunk. */
+export const WRECK_FIT = { width: 2.2, height: 1.9 };
+export const CAMP_FIT = { width: 2.6, height: 2 };
+const WRECK_DEPTH = -0.55;
+const CAMP_DEPTH = -0.62;
+
+/**
+ * Every site of the sea map. Wrecks and pirate camps have the art direction's models (a camp floats: no islet);
+ * the other sites keep the prototype's kit for now.
+ */
+export function createSeaMap(kit: Kit, models: Pick<Models, "wreck" | "camp">, add: (o: THREE.Object3D) => void): SeaMap {
+  const wreckModel = normalizeBuilding(models.wreck, WRECK_FIT, { scale: 1, turn: 0 }).object;
+  const campModel = normalizeBuilding(models.camp, CAMP_FIT, { scale: 1, turn: 0 }).object;
   const sandM = new THREE.MeshStandardMaterial({ color: "#E9D9A6", roughness: 1 });
   const foamM = new THREE.MeshBasicMaterial({ color: "#fff", transparent: true, opacity: 0.5, depthWrite: false });
   const hitM = new THREE.MeshBasicMaterial({ visible: false });
@@ -65,10 +75,9 @@ export function createSeaMap(kit: Kit, add: (o: THREE.Object3D) => void): SeaMap
         const sand = new THREE.Mesh(hexGeometry(0.9), sandM);
         sand.position.y = -0.36;
         g.add(sand);
-        const w = place(kitModel(kit, "building_destroyed"), 1.15, 0, -0.2);
-        w.rotation.set(0.15, (i * 1.7) % 6, 0.1);
+        const w = place(wreckModel.clone(true), 1, 0, WRECK_DEPTH);
+        w.rotation.set(0.12, (i * 1.7) % 6, 0.08);
         g.add(w);
-        g.add(place(kitModel(kit, "barrel"), 1, 0.6, -0.25, 0.3));
         break;
       }
       case "fish": {
@@ -91,13 +100,9 @@ export function createSeaMap(kit: Kit, add: (o: THREE.Object3D) => void): SeaMap
         g.add(place(kitModel(kit, "resource_lumber"), 1, 0.6, 0, 0.4));
         break;
       case "camp": {
-        islet(g);
-        g.add(place(kitModel(kit, "tent"), 1, -0.3));
-        g.add(place(kitModel(kit, "building_tower_A_red"), 0.5, 0.55, 0, 0.3));
-        const b = createBoat("#2A2A2A");
-        b.position.set(1.3, -0.32, 1);
-        b.rotation.y = 1;
-        g.add(b);
+        const c = place(campModel.clone(true), 1, 0, CAMP_DEPTH);
+        c.rotation.y = (i * 1.3) % 6;
+        g.add(c);
         break;
       }
     }

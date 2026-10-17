@@ -6,6 +6,7 @@
  * The week 1 rules table stays available with ?rules.
  * Week 3: sign in with your wallet (Profile, on the Power card) to keep your city on your account.
  * Week 4: signed in, every action is sent to the server, which decides; the city shown is the server's.
+ * Week 5: troops are trained at the Barracks, and the wounded healed at the Infirmary.
  * The reference prototype stays playable at /prototype/.
  */
 import { HOME, applyAction, type GameAction } from "@brinelight/shared";
@@ -21,6 +22,7 @@ import { forcedQuality, startScene, type View } from "./scene/index.js";
 import { createSea, type Sea } from "./sea/index.js";
 import { createFpsCounter } from "./ui/fps.js";
 import { fpsWanted } from "./ui/fpsMeter.js";
+import { createCaptainsSheet } from "./ui/captains.js";
 import { createUi } from "./ui/index.js";
 import { DEV_SPEED, SAVE_EVERY_MS, browserStore, elapse, openSave, saveGame, type PlayerState } from "./state/index.js";
 import "./style.css";
@@ -29,7 +31,7 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 
 /** What the screen shows: changes here open a report, refresh a sheet, and save the city of this device. */
 const signature = (s: PlayerState): string =>
-  `${s.queue.map((j) => j.id).join()}|${s.research?.id ?? ""}|${JSON.stringify(s.techs)}|${s.yard?.slot ?? ""}|${Object.keys(s.rafts).length}|${s.reports.map((r) => `${r.id}${r.read ? "+" : "-"}`).join()}|${s.fleets.map((f) => f.phase).join()}`;
+  `${s.queue.map((j) => j.id).join()}|${s.research?.id ?? ""}|${JSON.stringify(s.techs)}|${s.yard ? `${s.yard.kind}${s.yard.slot}` : ""}|${JSON.stringify(s.rafts)}|${s.training ? `${s.training.kind}${s.training.troop}` : ""}|${s.healing ? "h" : ""}|${JSON.stringify(s.troops)}|${JSON.stringify(s.veterans)}|${s.lead}|${JSON.stringify(s.captains)}|${JSON.stringify(s.shards)}|${s.reports.map((r) => `${r.id}${r.read ? "+" : "-"}`).join()}|${s.fleets.map((f) => f.phase).join()}`;
 
 if (new URLSearchParams(location.search).has("rules")) {
   showRules(app);
@@ -76,6 +78,7 @@ if (new URLSearchParams(location.search).has("rules")) {
   const refresh = () => {
     city?.update(state);
     sea?.update(state);
+    captains.update(state);
     ui.update(state);
   };
 
@@ -84,12 +87,25 @@ if (new URLSearchParams(location.search).has("rules")) {
     document.body.classList.toggle("at-sea", v === "sea");
     city?.closeSheet();
     sea?.closeSheet();
+    captains.close();
   };
-  const ui = createUi(app, showView, () => {
-    city?.closeSheet();
-    sea?.closeSheet();
-    profile.open();
-  });
+  const ui = createUi(
+    app,
+    showView,
+    () => {
+      city?.closeSheet();
+      sea?.closeSheet();
+      captains.close();
+      profile.open();
+    },
+    // The Captains button opens its sheet over the view you are in.
+    () => {
+      city?.closeSheet();
+      sea?.closeSheet();
+      profile.close();
+      captains.open(state);
+    },
+  );
   ui.update(state);
   if (opened?.rejected) ui.toast("Your saved city could not be read. A copy was kept.", "bad", "!");
 
@@ -108,6 +124,15 @@ if (new URLSearchParams(location.search).has("rules")) {
     refresh();
     save();
   };
+
+  const captains = createCaptainsSheet(app, {
+    setLead: (captain) => act({ type: "setLead", captain }),
+    logbook: () => act({ type: "logbook" }),
+    unlock: (captain) => act({ type: "unlockCaptain", captain }),
+    addStar: (captain) => act({ type: "addStar", captain }),
+  });
+  // A tap in the 3D view is for the city or the sea: the Captains sheet makes way.
+  canvas.addEventListener("pointerup", () => captains.close());
 
   /** Signed in or out: the other city takes the screen. The city of this device goes on from its own save. */
   function switchCity(): void {
@@ -131,11 +156,12 @@ if (new URLSearchParams(location.search).has("rules")) {
   const scene = startScene(canvas, {
     home: HOME,
     quality: forcedQuality(location.search),
-    onLoaded: (kit) => {
+    onRaftBuildings: (models) => city?.useRaftBuildings(models),
+    onLoaded: (kit, buildings, models) => {
       status.remove();
       fps?.modelsLoaded();
-      city = createCity(kit, scene, canvas, app, { state: () => state, upgrade: (building) => act({ type: "upgrade", building }), research: (tech) => act({ type: "research", tech }), dockRaft: (slot) => act({ type: "dockRaft", slot }), toCity: () => ui.showView("city"), speed });
-      sea = createSea(kit, scene, canvas, app, {
+      city = createCity(kit, buildings, models, scene, canvas, app, { state: () => state, upgrade: (building) => act({ type: "upgrade", building }), research: (tech) => act({ type: "research", tech }), train: (troop) => act({ type: "train", troop }), promote: (troop) => act({ type: "promote", troop }), heal: () => act({ type: "heal" }), dockRaft: (slot) => act({ type: "dockRaft", slot }), installOnRaft: (slot, building) => act({ type: "installOnRaft", slot, building }), upgradeRaft: (slot) => act({ type: "upgradeRaft", slot }), toCity: () => ui.showView("city"), speed });
+      sea = createSea(kit, models, scene, canvas, app, {
         state: () => state,
         sail: (site) => {
           act({ type: "sail", site });

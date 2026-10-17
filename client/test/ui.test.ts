@@ -72,9 +72,9 @@ describe("top bar values from the shared rules", () => {
 });
 
 describe("menus and toasts", () => {
-  it("the bottom menu keeps all 5 buttons; the city and the sea are ready", () => {
+  it("the bottom menu keeps all 5 buttons; the city, the sea and the captains are ready", () => {
     expect(NAV_ITEMS.map((n) => n.label)).toEqual(["City", "Sea", "Captains", "Alliance", "Shop"]);
-    expect(NAV_ITEMS.filter((n) => n.ready).map((n) => n.id)).toEqual(["city", "sea"]);
+    expect(NAV_ITEMS.filter((n) => n.ready).map((n) => n.id)).toEqual(["city", "sea", "captains"]);
   });
 
   it("at most 2 toasts at a time, the oldest goes first", () => {

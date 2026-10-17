@@ -1,4 +1,4 @@
-import type { CaptainId } from "./captains.js";
+import type { CaptainId, CaptainState } from "./captains.js";
 import type { Stock, Troops } from "./types.js";
 
 /** Starting values of a new city, taken from the prototype. */
@@ -10,7 +10,7 @@ export const STARTING_MORALE = 84;
 export const STARTING_PEARLS = 200;
 
 /** A captain the player owns. */
-export type OwnedCaptain = { level: number; xp: number; stars: number };
+export type OwnedCaptain = CaptainState;
 
 /** Every new city starts with Old Tom, level 1, 1 star. */
 export const STARTING_CAPTAIN: { id: CaptainId } & OwnedCaptain = { id: "tom", level: 1, xp: 0, stars: 1 };

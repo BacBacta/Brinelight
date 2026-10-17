@@ -1,4 +1,4 @@
-import { CAPTAINS, skillFactor, type CaptainId } from "./captains.js";
+import { CAPTAINS, addXp, combatXp, skillFactor, type CaptainId, type Captains, type Shards } from "./captains.js";
 import { pirateCamp, pirateLoot, resolveCombat } from "./combat.js";
 import { raftEffect, type Rafts } from "./rafts.js";
 import { techLevel, type Techs } from "./research.js";
@@ -23,6 +23,8 @@ export type SeaSite = {
   amount?: number;
   resource?: "oil" | "fish" | "wood";
   color?: AllianceColor;
+  /** The captain whose shards a pirate camp gives when you beat it: always the same one, never drawn at random. */
+  captain?: CaptainId;
 };
 
 /** Your city on the sea map. */
@@ -32,7 +34,7 @@ const wreck = (n: number, x: number, z: number, amount: number): SeaSite => ({ i
 const fish = (n: number, x: number, z: number, amount: number): SeaSite => ({ id: `fish-${n}`, kind: "fish", name: "Fish Shoal", x, z, amount, resource: "fish" });
 const isle = (n: number, x: number, z: number, amount: number): SeaSite => ({ id: `isle-${n}`, kind: "isle", name: "Wooded Isle", x, z, amount, resource: "wood" });
 const city = (name: string, color: AllianceColor, x: number, z: number, level: number): SeaSite => ({ id: `city-${name.toLowerCase()}`, kind: "city", name, x, z, level, color });
-const camp = (level: number, x: number, z: number): SeaSite => ({ id: `camp-${level}`, kind: "camp", name: "Mist Pirates", x, z, level });
+const camp = (level: number, x: number, z: number, captain: CaptainId): SeaSite => ({ id: `camp-${level}`, kind: "camp", name: "Mist Pirates", x, z, level, captain });
 
 /**
  * The fixed sea map. Positions are the prototype's (its seeded placement, seed 7); amounts and city levels,
@@ -73,12 +75,14 @@ export const SEA_SITES: readonly SeaSite[] = [
   isle(3, 8.36, -31.08, 420),
   isle(4, 9.6, 19.51, 360),
   isle(5, -23.1, 31.63, 360),
-  camp(1, 23.14, 15.1),
-  camp(2, 18.92, 22.65),
-  camp(3, -21.07, -31.79),
-  camp(4, 30.9, -28.15),
-  camp(5, -8.43, -8.96),
-  camp(6, -26.88, -15.86),
+  // Each camp gives the shards of one captain (owner's decision, 17 October): the rarer the captain, the stronger
+  // the camp at the start. Officers first, Old Tom's for stars, then the commanders and the admirals.
+  camp(1, 23.14, 15.1, "sel"),
+  camp(2, 18.92, 22.65, "tom"),
+  camp(3, -21.07, -31.79, "bran"),
+  camp(4, 30.9, -28.15, "isa"),
+  camp(5, -8.43, -8.96, "mira"),
+  camp(6, -26.88, -15.86, "nera"),
 ];
 
 export const seaSite = (id: string): SeaSite | undefined => SEA_SITES.find((s) => s.id === id);
@@ -159,6 +163,8 @@ export type Fleet = {
   /** One-way trip, real seconds, fixed at departure. */
   travel: number;
   troops: Troops;
+  /** The veterans it took: a veteran counts as VETERAN_WEIGHT soldiers in combat. */
+  veterans: Troops;
   techs: Techs;
   lead: FleetLead;
   watchtowers: number;
@@ -172,6 +178,7 @@ export type Fleet = {
 export type SeaState = {
   buildings: Buildings;
   troops: Troops;
+  veterans: Troops;
   stock: Stock;
   pearls: number;
   /** Wounded resting in the Infirmary. */
@@ -179,6 +186,9 @@ export type SeaState = {
   techs: Techs;
   rafts: Rafts;
   lead: FleetLead;
+  /** Your captains and their shards: a combat gives experience to the captain who sailed and shards to the camp's. */
+  captains: Captains;
+  shards: Shards;
   fleets: Fleet[];
   world: SeaWorld;
 };
@@ -194,22 +204,32 @@ export type CombatReport = {
   wounded: Troops;
   enemy: Troops;
   loot: { oil: number; wood: number; pearls: number; rope: number } | null;
+  /** The veterans sent and lost. Absent from reports made before veterans existed. */
+  veteranSent?: Troops;
+  veteranLosses?: Troops;
+  /** Did your city have an Infirmary at the time of the combat? Absent from reports made before it was kept. */
+  infirmary?: boolean;
+  /** The experience the captain who sailed gained, and its level-ups. Absent with no captain, and from older reports. */
+  captainXp?: { id: CaptainId; xp: number; levels: number };
+  /** The shards a victory gave, to the camp's captain. Absent after a defeat, and from older reports. */
+  shards?: { id: CaptainId; count: number };
 };
 
 /** Can you send a fleet there now? A refusal comes with its reason. */
-export function canSendFleet(siteId: string, s: Pick<SeaState, "buildings" | "troops" | "fleets">): Check {
+export function canSendFleet(siteId: string, s: Pick<SeaState, "buildings" | "troops" | "veterans" | "fleets">): Check {
   const site = seaSite(siteId);
   if (!site || (site.kind !== "camp" && site.kind !== "wreck")) return refuse("You cannot send a fleet there yet");
   if (s.fleets.length >= fleetsMax(s.buildings.harbor)) {
     return refuse(s.buildings.harbor < 1 ? "Build the Harbor to send more fleets" : "All your fleets are at sea");
   }
-  if (site.kind === "camp" && totalTroops(s.troops) < MIN_ATTACK_TROOPS) return refuse("You do not have enough troops");
+  // Veterans are troops too: they sail with the soldiers.
+  if (site.kind === "camp" && totalTroops(s.troops) + totalTroops(s.veterans) < MIN_ATTACK_TROOPS) return refuse("You do not have enough troops");
   return OK;
 }
 
 export type SendFleet = { ok: true; state: SeaState } | { ok: false; reason: string };
 
-/** Sends a fleet: to a camp with all your troops, which leave the city; to a wreck to salvage it. */
+/** Sends a fleet: to a camp with all your troops and veterans, who leave the city; to a wreck to salvage it. */
 export function sendFleet(siteId: string, s: SeaState): SendFleet {
   const check = canSendFleet(siteId, s);
   if (!check.ok) return check;
@@ -223,6 +243,7 @@ export function sendFleet(siteId: string, s: SeaState): SendFleet {
     left: travel,
     travel,
     troops: kind === "attack" ? { ...s.troops } : emptyTroops(),
+    veterans: kind === "attack" ? { ...s.veterans } : emptyTroops(),
     techs: { ...s.techs },
     lead: s.lead ? { ...s.lead } : null,
     watchtowers: raftEffect(s.rafts, "watchtower"),
@@ -230,35 +251,63 @@ export function sendFleet(siteId: string, s: SeaState): SendFleet {
     cargo: {},
     pearls: 0,
   };
-  return { ok: true, state: { ...s, troops: kind === "attack" ? emptyTroops() : s.troops, fleets: [...s.fleets, fleet] } };
+  const attack = kind === "attack";
+  return { ok: true, state: { ...s, troops: attack ? emptyTroops() : s.troops, veterans: attack ? emptyTroops() : s.veterans, fleets: [...s.fleets, fleet] } };
 }
 
 const add = (a: Troops, b: Troops): Troops => ({ boarders: a.boarders + b.boarders, harpooners: a.harpooners + b.harpooners, crossbowmen: a.crossbowmen + b.crossbowmen });
 
-/** A fleet reaches a pirate camp: deterministic combat with resolveCombat, loot from pirateLoot. */
+/**
+ * A fleet reaches a pirate camp: deterministic combat with resolveCombat, loot from pirateLoot. The captain who sailed
+ * gains its experience (combatXp), even if another one leads your fleets now; a victory gives the camp's level in
+ * shards to the camp's captain, owned or not.
+ */
 function fight(f: Fleet, s: SeaState): { fleet: Fleet; state: SeaState; report: CombatReport } {
   const level = s.world.camps[f.site] ?? seaSite(f.site)?.level ?? 1;
   const enemy = pirateCamp(level);
   const r = resolveCombat({
     troops: f.troops,
+    veterans: f.veterans,
     enemy,
     captain: f.lead ? { cls: CAPTAINS[f.lead.id].cls, rarity: f.lead.rarity, level: f.lead.level } : null,
     techs: { blades: techLevel(f.techs, "blades"), hulls: techLevel(f.techs, "hulls"), stretchers: techLevel(f.techs, "stretchers") },
     watchtowers: f.watchtowers,
     hospital: s.buildings.infirmary > 0 ? { capacity: hospitalCapacity(s.buildings.infirmary), occupied: totalTroops(s.wounded) } : null,
   });
-  // Fragments of the loot are not given yet: the prototype gave them to a captain drawn at random.
   const l = r.win ? pirateLoot(level) : null;
   const loot = l ? { oil: l.oil, wood: l.wood, pearls: l.pearls, rope: l.rope } : null;
   const fleet: Fleet = {
     ...f,
     troops: r.survivors,
+    veterans: r.veteranSurvivors,
     cargo: loot ? { oil: loot.oil, wood: loot.wood, rope: loot.rope } : {},
     pearls: loot ? loot.pearls : 0,
   };
   const world = r.win ? { ...s.world, camps: { ...s.world.camps, [f.site]: level + 1 } } : s.world;
-  const report: CombatReport = { site: f.site, level, win: r.win, attack: r.attack, defense: r.defense, sent: { ...f.troops }, losses: r.losses, wounded: r.wounded, enemy, loot };
-  return { fleet, state: { ...s, wounded: add(s.wounded, r.wounded), world }, report };
+  // The captain who sailed, as you own it now (a Logbook may have raised it meanwhile).
+  const sailed = f.lead ? s.captains[f.lead.id] : undefined;
+  const gained = f.lead && sailed ? { id: f.lead.id, ...addXp(sailed, combatXp(r.win, level)) } : null;
+  const captains = gained ? { ...s.captains, [gained.id]: { ...sailed!, level: gained.level, xp: gained.xp } } : s.captains;
+  const shardsFor = seaSite(f.site)?.captain;
+  const shards = l && shardsFor ? { ...s.shards, [shardsFor]: (s.shards[shardsFor] ?? 0) + l.fragments } : s.shards;
+  const report: CombatReport = {
+    site: f.site,
+    level,
+    win: r.win,
+    attack: r.attack,
+    defense: r.defense,
+    sent: { ...f.troops },
+    losses: r.losses,
+    wounded: r.wounded,
+    enemy,
+    loot,
+    veteranSent: { ...f.veterans },
+    veteranLosses: r.veteranLosses,
+    infirmary: s.buildings.infirmary > 0,
+    ...(gained ? { captainXp: { id: gained.id, xp: combatXp(r.win, level), levels: gained.levelsGained } } : {}),
+    ...(l && shardsFor ? { shards: { id: shardsFor, count: l.fragments } } : {}),
+  };
+  return { fleet, state: { ...s, wounded: add(s.wounded, r.wounded), world, captains, shards }, report };
 }
 
 /** A fleet leaves a wreck with what its hold can carry; an emptied wreck refills at once. */
@@ -271,11 +320,11 @@ function salvage(f: Fleet, s: SeaState): { fleet: Fleet; state: SeaState } {
   return { fleet: { ...f, cargo: { oil: got, rope: WRECK_ROPE } }, state: { ...s, world: { ...s.world, wrecks } } };
 }
 
-/** A fleet back home: its troops and everything it carries come back, with no storage cap. */
+/** A fleet back home: its troops, its veterans and everything it carries come back, with no storage cap. */
 function dock(f: Fleet, s: SeaState): SeaState {
   const stock = { ...s.stock };
   for (const [k, v] of Object.entries(f.cargo) as [keyof Stock, number][]) stock[k] += v;
-  return { ...s, troops: add(s.troops, f.troops), stock, pearls: s.pearls + f.pearls };
+  return { ...s, troops: add(s.troops, f.troops), veterans: add(s.veterans, f.veterans), stock, pearls: s.pearls + f.pearls };
 }
 
 /**

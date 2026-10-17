@@ -13,7 +13,17 @@ import {
   parseState,
   readReport,
   research,
+  addStar,
+  dockRaft,
+  heal,
+  logbook,
+  setLead,
+  unlockCaptain,
+  installOnRaft,
+  promote,
+  upgradeRaft,
   sail,
+  train,
   upgrade,
   type PlayerState,
 } from "../src/index.js";
@@ -35,32 +45,52 @@ function wholeFields(s: PlayerState): [string, number][] {
   const troops = (where: string, t: Record<string, number>) => Object.entries(t).forEach(([k, v]) => out.push([`${where}.${k}`, v]));
   for (const id of BUILDING_IDS) out.push([`buildings.${id}`, s.buildings[id]]);
   troops("troops", s.troops);
+  troops("veterans", s.veterans);
   troops("wounded", s.wounded);
   out.push(["survivors", s.survivors], ["pearls", s.pearls], ["reportSeq", s.reportSeq]);
   for (const [id, v] of Object.entries(s.techs)) out.push([`techs.${id}`, v ?? 0]);
   for (const [id, c] of Object.entries(s.captains)) out.push([`captains.${id}.level`, c!.level], [`captains.${id}.stars`, c!.stars]);
+  for (const [id, n] of Object.entries(s.shards)) out.push([`shards.${id}`, n ?? 0]);
   for (const [k, r] of Object.entries(s.rafts)) out.push([`rafts.${k}.level`, r.level]);
+  if (s.training) out.push(["training.count", s.training.count]);
+  if (s.healing) troops("healing.wounded", s.healing.wounded);
   for (const [id, v] of Object.entries(s.world.camps)) out.push([`camps.${id}`, v]);
   s.fleets.forEach((f, i) => {
     troops(`fleets.${i}.troops`, f.troops);
+    troops(`fleets.${i}.veterans`, f.veterans);
     out.push([`fleets.${i}.pearls`, f.pearls]);
     if (f.lead) out.push([`fleets.${i}.lead.level`, f.lead.level]);
   });
   for (const r of s.reports) {
     out.push([`${r.id}.level`, r.level]);
     for (const part of ["sent", "losses", "wounded", "enemy"] as const) troops(`${r.id}.${part}`, r[part]);
+    if (r.veteranSent) troops(`${r.id}.veteranSent`, r.veteranSent);
+    if (r.veteranLosses) troops(`${r.id}.veteranLosses`, r.veteranLosses);
     if (r.loot) out.push([`${r.id}.loot.pearls`, r.loot.pearls]);
+    if (r.captainXp) out.push([`${r.id}.captainXp`, r.captainXp.xp]);
+    if (r.shards) out.push([`${r.id}.shards`, r.shards.count]);
   }
   return out;
 }
 
 describe("parseState: whole numbers, nothing below 0", () => {
   it("the rules never give a decimal where a whole number is required: a long game, time cut at odd lengths", () => {
-    let s: PlayerState = { ...richCity(), buildings: { ...richCity().buildings, observatory: 2 } };
+    let s: PlayerState = {
+      ...richCity(),
+      techs: { ...richCity().techs, veterans: 1 },
+      // A few shards already, so the victories along the way unlock captains and add stars.
+      shards: { sel: 9, tom: 8, nera: 10 },
+      buildings: { ...richCity().buildings, observatory: 2, barracks: 3, infirmary: 1 },
+    };
     const camps = SEA_SITES.filter((x) => x.kind === "camp").map((x) => x.id);
     const wrecks = SEA_SITES.filter((x) => x.kind === "wreck").map((x) => x.id);
     const steps = [0.37, 13.1, 600.5, 2.3 * HOUR, 0.001, 7.77 * HOUR, 1.7 * 24 * HOUR, 59.9, 3.3 * HOUR, 4 * 24 * HOUR];
     let checked = 0;
+    let trained = 0;
+    let healed = 0;
+    let promoted = 0;
+    let shipyard = 0;
+    let captainWork = 0;
     for (let round = 0; round < 40; round++) {
       for (const id of BUILDING_IDS) {
         const r = upgrade(s, id);
@@ -68,6 +98,47 @@ describe("parseState: whole numbers, nothing below 0", () => {
       }
       const studied = research(s, (Object.keys(TECHS) as (keyof typeof TECHS)[])[round % 10]!);
       if (studied.ok) s = studied.state;
+      // The shipyard: a new raft, a building on a free raft, or a building one level up, whichever the rules allow.
+      const slots = RAFT_SLOTS.filter((x) => x.ring === 3).map((x) => x.key);
+      const types = ["greenhouse", "smokehouse", "watchtower"] as const;
+      const yardWork = [
+        ...slots.map((k) => () => dockRaft(s, k)),
+        ...slots.map((k) => () => installOnRaft(s, k, types[round % 3]!)),
+        ...slots.map((k) => () => upgradeRaft(s, k)),
+      ].map((f) => f()).find((r) => r.ok);
+      if (yardWork?.ok) {
+        s = yardWork.state;
+        shipyard++;
+      }
+      // The captains: shards spent as soon as there are enough, a Logbook now and then, another captain in the lead.
+      for (const id of ["sel", "tom", "bran", "isa", "mira", "nera"] as const) {
+        const used = s.captains[id] ? addStar(s, id) : unlockCaptain(s, id);
+        if (used.ok) {
+          s = used.state;
+          captainWork++;
+        }
+      }
+      if (round % 4 === 1) {
+        const read = logbook(s);
+        if (read.ok) s = read.state;
+      }
+      const owned = Object.keys(s.captains) as (keyof typeof s.captains)[];
+      s = (setLead(s, owned[round % owned.length]!) as { ok: true; state: PlayerState }).state;
+      const raised = round % 2 ? promote(s, (["boarders", "harpooners", "crossbowmen"] as const)[round % 3]!) : null;
+      if (raised?.ok) {
+        s = raised.state;
+        promoted++;
+      }
+      const drilled = train(s, (["boarders", "harpooners", "crossbowmen"] as const)[round % 3]!);
+      if (drilled.ok) {
+        s = drilled.state;
+        trained++;
+      }
+      const cared = heal(s);
+      if (cared.ok) {
+        s = cared.state;
+        healed++;
+      }
       const to = round % 3 === 2 ? wrecks[round % wrecks.length]! : camps[round % camps.length]!;
       const sent = sail(round % 5 === 0 ? { ...s, troops: { boarders: 40, harpooners: 31, crossbowmen: 27 } } : s, to);
       if (sent.ok) s = sent.state;
@@ -88,18 +159,31 @@ describe("parseState: whole numbers, nothing below 0", () => {
     expect(s.reports.some((r) => r.loot)).toBe(true);
     expect(Object.values(s.stock).some((v) => !Number.isInteger(v))).toBe(true);
     expect(checked).toBeGreaterThan(1000);
+    // Training too: batches started, and some finished along the way.
+    expect(trained).toBeGreaterThan(3);
+    // The captains too: shards won and spent, experience gained.
+    expect(captainWork).toBeGreaterThan(2);
+    expect(Object.keys(s.captains).length).toBeGreaterThan(Object.keys(richCity().captains).length);
+    // The shipyard too: rafts, buildings put on them and upgraded.
+    expect(shipyard).toBeGreaterThan(5);
+    expect(Object.values(s.rafts).filter((x) => x.building).length).toBeGreaterThan(2);
+    // Promotions too: veterans went to sea, and some came back from the battles.
+    expect(promoted).toBeGreaterThan(1);
+    expect(s.reports.some((r) => Object.values(r.veteranSent ?? {}).some((n) => n > 0))).toBe(true);
+    // Healing too: wounded from the battles were healed.
+    expect(healed).toBeGreaterThan(1);
     // Research too: some finished along the way.
     expect(Object.values(s.techs).reduce((a, b) => a + (b ?? 0), 0)).toBeGreaterThan(richCity().techs.blades! + richCity().techs.sails!);
   });
 
   it("reads research, captains and rafts within the bounds of the rules; a missing id is level 0 or not owned yet", () => {
     expect(parseState(json(richCity()))).toEqual(richCity());
-    expect(parseState(json({ ...richCity(), techs: {}, captains: {}, rafts: {} }))).not.toBeNull();
+    expect(parseState(json({ ...richCity(), techs: {}, captains: {}, rafts: {}, lead: null }))).not.toBeNull();
     const maxed = {
       ...richCity(),
       techs: Object.fromEntries(Object.entries(TECHS).map(([id, t]) => [id, t.max])),
       captains: { tom: { level: CAPTAIN_MAX_LEVEL, xp: 0, stars: 5 } },
-      rafts: { [SLOT]: { hp: 100, building: null, level: RAFT_BUILDING_MAX_LEVEL } },
+      rafts: { [SLOT]: { hp: 100, building: "smokehouse", level: RAFT_BUILDING_MAX_LEVEL } },
       buildings: Object.fromEntries(BUILDING_IDS.map((id) => [id, LIGHTHOUSE_MAX])),
     };
     expect(parseState(json(maxed))).not.toBeNull();

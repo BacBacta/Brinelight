@@ -1,17 +1,21 @@
 import { ICONS } from "./icons.js";
 
-/** The bottom menu. The city and the sea exist; the other screens come later. */
+/**
+ * The bottom menu. The city and the sea are views; Captains opens its sheet over the view you are in;
+ * the other screens come later.
+ */
 export const NAV_ITEMS = [
   { id: "city", label: "City", ready: true },
   { id: "sea", label: "Sea", ready: true },
-  { id: "captains", label: "Captains", ready: false },
+  { id: "captains", label: "Captains", ready: true, sheet: true },
   { id: "alliance", label: "Alliance", ready: false },
   { id: "shop", label: "Shop", ready: false },
 ] as const;
 
 export type NavView = "city" | "sea";
+export type NavSheet = "captains";
 
-export function createNav(root: HTMLElement, onSoon: () => void, onView: (view: NavView) => void) {
+export function createNav(root: HTMLElement, onSoon: () => void, onView: (view: NavView) => void, onSheet: (sheet: NavSheet) => void = () => {}) {
   const nav = document.createElement("nav");
   nav.className = "nav";
   nav.innerHTML = NAV_ITEMS.map((n) => `<button data-v="${n.id}" aria-pressed="${n.id === "city"}">${ICONS[n.id]}${n.label}</button>`).join("");
@@ -21,6 +25,7 @@ export function createNav(root: HTMLElement, onSoon: () => void, onView: (view: 
     const item = NAV_ITEMS.find((n) => n.id === b.dataset.v);
     if (!item) return;
     if (!item.ready) return onSoon();
+    if ("sheet" in item) return onSheet(item.id);
     select(item.id as NavView);
   });
   root.appendChild(nav);

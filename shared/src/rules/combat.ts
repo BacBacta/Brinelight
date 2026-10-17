@@ -1,10 +1,13 @@
 import { emptyTroops, type Rarity, type TroopType, type Troops } from "./types.js";
 import { attackBonus, type CaptainClass } from "./captains.js";
+import { woundedSaved } from "./healing.js";
 
 /** Each troop type beats the next: boarders > harpooners > crossbowmen > boarders. */
 export const BEATS: Record<TroopType, TroopType> = { boarders: "harpooners", harpooners: "crossbowmen", crossbowmen: "boarders" };
 export const COUNTER_BONUS = 1.2;
 export const VETERAN_WEIGHT = 1.8;
+/** The attack a fleet gains per Watchtower level on your rafts (prototype: +5%). */
+export const WATCHTOWER_ATTACK = 0.05;
 const TYPES: TroopType[] = ["boarders", "harpooners", "crossbowmen"];
 
 /** Makeup of a level `level` pirate camp. */
@@ -64,7 +67,7 @@ export function strengths(input: CombatInput): { attack: number; defense: number
     attack += v;
   }
   attack *= 1 + 0.06 * (input.techs?.blades ?? 0);
-  attack *= 1 + 0.05 * (input.watchtowers ?? 0);
+  attack *= 1 + WATCHTOWER_ATTACK * (input.watchtowers ?? 0);
   let defense = 0;
   for (const k of TYPES) {
     // Pirates also benefit from the triangle when you field their prey.
@@ -82,7 +85,7 @@ export function resolveCombat(input: CombatInput): CombatResult {
   const vets = input.veterans ?? emptyTroops();
   const losses = emptyTroops(), veteranLosses = emptyTroops(), wounded = emptyTroops();
   const survivors = emptyTroops(), veteranSurvivors = emptyTroops();
-  const saveRate = 0.5 + 0.1 * (input.techs?.stretchers ?? 0);
+  const saveRate = woundedSaved(input.techs?.stretchers ?? 0);
   let room = input.hospital ? Math.max(0, input.hospital.capacity - input.hospital.occupied) : 0;
   for (const k of TYPES) {
     losses[k] = Math.round(input.troops[k] * lossRate);

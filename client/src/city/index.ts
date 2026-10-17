@@ -1,5 +1,5 @@
-import type { BuildingId, TechId } from "@brinelight/shared";
-import type { Kit, SceneHandle } from "../scene/index.js";
+import type { BuildingId, RaftBuildingId, TechId, TroopType } from "@brinelight/shared";
+import { lighthouseScale, type BuildingModels, type Kit, type Models, type RaftBuildingModels, type SceneHandle } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 import { createCityBuildings } from "./buildings.js";
 import { createLabels } from "./labels.js";
@@ -13,11 +13,18 @@ export type City = {
   update(state: PlayerState): void;
   /** Closes the open sheet, when you leave the city. */
   closeSheet(): void;
+  /** The buildings on rafts, once loaded after the city shows. */
+  useRaftBuildings(models: RaftBuildingModels): void;
 };
+
+/** Height of a building's label above its model's top. */
+const LABEL_GAP = 0.25;
 
 /** The 9 buildings on their plots, the raft slots around the island, their labels, their sheets and the queue. */
 export function createCity(
   kit: Kit,
+  models: BuildingModels,
+  others: Models,
   scene: SceneHandle,
   canvas: HTMLCanvasElement,
   root: HTMLElement,
@@ -25,29 +32,44 @@ export function createCity(
     state(): PlayerState;
     upgrade(id: BuildingId): void;
     research(tech: TechId): void;
+    train(troop: TroopType): void;
+    promote(troop: TroopType): void;
+    heal(): void;
     dockRaft(slot: string): void;
+    installOnRaft(slot: string, building: RaftBuildingId): void;
+    upgradeRaft(slot: string): void;
     toCity(): void;
     /** How much faster than real time the city runs: the server's speed when signed in. */
     speed(): number;
   },
 ): City {
-  const buildings = createCityBuildings(kit, (o) => scene.add(o));
-  const rafts = createCityRafts(kit, (o) => scene.add(o));
-  const labels = createLabels(root, scene);
+  const buildings = createCityBuildings(kit, models, (o) => scene.add(o));
+  const rafts = createCityRafts(kit, others.raft, (o) => scene.add(o));
+  // Labels float just above each model; the Lighthouse's grows with its level.
+  const labels = createLabels(root, scene, (id, lighthouse) =>
+    id === "lighthouse" ? (models.lighthouse.height + LABEL_GAP) * lighthouseScale(lighthouse) : models[id].height + LABEL_GAP,
+  );
   const queue = createQueue(root, () => game.toCity());
   const sheet = createSheet(root, {
     upgrade: (id) => game.upgrade(id),
     research: (tech) => game.research(tech),
+    train: (troop) => game.train(troop),
+    promote: (troop) => game.promote(troop),
+    heal: () => game.heal(),
     close: () => {
       sheet.close();
       buildings.select(null);
     },
   });
-  const raftSheet = createRaftSheet(root, { dock: (slot) => game.dockRaft(slot), close: () => raftSheet.close() });
+  const raftSheet = createRaftSheet(root, {
+    dock: (slot) => game.dockRaft(slot),
+    install: (slot, building) => game.installOnRaft(slot, building),
+    upgrade: (slot) => game.upgradeRaft(slot),
+    close: () => raftSheet.close(),
+  });
 
   scene.onFrame((now, view) => {
     if (view !== "city") return;
-    buildings.animate(now);
     rafts.animate(now);
     labels.place(sheet.current);
   });
@@ -76,6 +98,9 @@ export function createCity(
   });
 
   return {
+    useRaftBuildings(m) {
+      rafts.useBuildings(m);
+    },
     closeSheet() {
       sheet.close();
       raftSheet.close();

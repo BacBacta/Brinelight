@@ -22,11 +22,15 @@ Do the tasks in order, one per session. For each one: read CLAUDE.md, say what y
 - e2e: train signed in, reload, the training is there; a city whose training ends in a few seconds (the harness's `putCity`, as for research) shows the new soldiers on the server and on screen.
 - Done when: a player who lost all their troops at sea trains new ones, and the server decides.
 
+**Done (16 October).** One training at a time (`training` in the city, with a `kind` ready for the veterans), ended as an event of `advance`; the prototype's values (Barracks level × 20 soldiers, 3 fish and 2 wood each, n × 0.25 + 3 prototype seconds) and refusals; action `train` (the troop type only); the Barracks sheet from the prototype, the queue row "20 harpooners"; `migrateSave` adds `training: null`; works without an account; cheat cases (no Barracks, already underway, not enough resources, unknown troop type, a number of soldiers sent) and the done-when case on the server; e2e: training started from the sheet, found again after a reload, then the soldiers in the city by the server's clock. No message at the end of a work yet: it will come for research, shipyard and training together (open question).
+
 ## Task 2 · Heal the wounded at the Infirmary
 
 - As in the prototype: Infirmary level 1 or more, at least one wounded, one healing at a time; all the wounded at once, 2 fish per wounded, (n × 0.12 + 2) prototype seconds. When it ends, they go back to the troops in the city.
 - During a healing, new wounded take the free beds, as in the prototype: the beds count only the wounded not being healed.
 - Infirmary sheet as in the prototype: wounded by type, beds in use, battle losses saved, "Heal N wounded · X fish".
+
+**Done (16 October).** One healing at a time (`healing` in the city), ended as an event of `advance`; the prototype's values (2 fish per wounded, n × 0.12 + 2 prototype seconds); all the wounded at once, out of the beds as soon as the healing starts; refusals "Build the Infirmary first", "No wounded to heal", "Healing is already underway", "Not enough resources"; action `heal` with no field; the Infirmary sheet from the prototype (beds at this level and the next, wounded by type, beds in use, losses saved, "Heal N wounded · X fish"), the queue row "Healing · N wounded"; `migrateSave` adds `healing: null`; works without an account; cheat cases and the whole path on the server (a fleet's wounded, healed, back in the city by the server's clock); e2e: healing started from the sheet, found again after a reload, then the soldiers back. The combat report now says "no Infirmary: all losses died" without an Infirmary, as in the prototype.
 
 ## Task 3 · Veterans
 
@@ -34,12 +38,16 @@ Do the tasks in order, one per session. For each one: read CLAUDE.md, say what y
 - Veterans in the city and in fleets: an attack fleet takes them with the soldiers. `resolveCombat` already counts a veteran as 1.8 soldiers (`VETERAN_WEIGHT`) and gives `veteranLosses` and `veteranSurvivors`; the report shows them. `power` already counts them.
 - The Observatory sheet loses its "coming soon" note: the Veteran Doctrine now has its effect.
 
+**Done (17 October).** Promotion in the Barracks' one slot (`kind: "promote"` in `training`): 10 soldiers leave the troops at once and come back as veterans, an event of `advance`; the prototype's values (the Veteran Doctrine and Barracks level 3, 60 fish and 40 oil, 6 prototype seconds) and refusals, in this order: the Doctrine and the Barracks (the prototype's sentence), "Training is already underway", "You need 10 boarders to promote.", "Not enough resources"; action `promote` (the troop type only). `veterans` in the city and in each fleet: every veteran of the city sails with an attack fleet, the survivors come home, the lost ones never become wounded. Each report keeps the veterans sent and lost, and whether the city had an Infirmary at the time of the battle; an older report says only "all losses died". The Barracks sheet has the prototype's Veterans box, with the veteran icon; the queue row "10 veteran boarders"; the report "+10 vet." with the icon; the Power and the odds count the veterans; the Observatory's "coming soon" note is gone. The queue never cuts a name any more: each one on its own line, the bar and the time below. `migrateSave` adds the veterans, none; works without an account; cheat cases and the whole path on the server; e2e: promoted from the sheet, found again after a reload, then the veterans in the city by the server's clock, the report, and the queue at 412 and 360 px. No message at the end of a promotion (celebrations come in week 6).
+
 ## Task 4 · Buildings on rafts
 
 - The shipyard's two other kinds, planned in week 4: `install` (a building on a free raft) and `upgrade`.
 - As in the prototype: installing costs `raftBuildingCost(id, 0)` and takes 8 prototype seconds, at most `RAFT_BUILDING_MAX_COPIES` (2) rafts per type; upgrading costs `raftBuildingCost(id, level)` and takes 8 × 1.5^level prototype seconds, up to `RAFT_BUILDING_MAX_LEVEL` (3). One work at a time at the shipyard, new rafts included.
 - The effects are already in the rules (Kelp Greenhouse: fish; Smokehouse: fish eaten; Watchtower: fleet attack). They follow the end of the work at the exact moment.
 - Raft sheet as in the prototype. Repair waits for the Mist (week 6): until then, no raft can be damaged.
+
+**Done (17 October).** The shipyard's three kinds of work, one at a time: a raft, `install` and `upgrade`, with the prototype's values (8 prototype seconds to install, 8 × 1.5^level to upgrade, level 3 at most, 2 rafts per type, the one being installed included) and refusals; actions `installOnRaft` and `upgradeRaft`; the effects at the exact end of the work. The three models stand on their rafts, one InstancedMesh per type (at most 3 draw calls more), loaded once the city shows; no 3D label on them (owner's decision). The raft's sheet as in the prototype: a free raft lists the three buildings with their effect, cost, time and copies; a raft with a building shows its effect, its next level and "Power +90", or "Max level.". The queue names the work ("Shipyard · Kelp Greenhouse", "Shipyard · Kelp Greenhouse Lv 2") and shows 3 rows at most, then "+N more". Cheat cases and the whole path on the server; e2e: a building put from the sheet, found again after a reload, standing by the server's clock, then upgraded; six rafts with buildings and both sheets at 412 and 360 px; the queue with six works, clear of the island. Draw calls in `docs/perf.md`. No repair and no Mist damage (week 6).
 
 ## Task 5 · Captains
 
@@ -51,6 +59,8 @@ Do the tasks in order, one per session. For each one: read CLAUDE.md, say what y
   - **A (recommended):** each pirate camp gives the shards of one fixed captain, named on its sheet (`pirateLoot` already gives the camp's level in shards). 10 shards unlock a captain or add a star, as in the prototype (`FRAGMENTS_PER_STAR`). No luck: the player chooses whom to work for. The plan proposes which captain each camp gives.
   - **B:** no shards before the recruitment (week 15).
 - Not the daily recruitment: it is the only random draw, and it must be verifiable (roadmap week 15, with Switchboard).
+
+**Done (17 October).** Option A for the shards (owner's decision): each pirate camp gives the shards of one fixed captain, named on its sheet (camp-1 Sel, camp-2 Old Tom, camp-3 Bran, camp-4 Isa, camp-5 Mira, camp-6 Nera); no luck. Experience after each combat to the captain who sailed (owner's decision); the Logbook, refused at level 20 (owner's decision); unlocking with 10 shards and stars up to 5; actions `setLead`, `logbook`, `unlockCaptain`, `addStar`; new city field `shards`, with `migrateSave`. The Captains sheet from the bottom menu, as in the prototype, with the painted portraits; the camp's sheet names its captain ("Sel the Navigator has max stars." at 5 stars); the report shows the captain's experience and the shards. Cheat cases and the whole path on the server; e2e: a victory's report, the Captains sheet and a camp's sheet at 412 and 360 px; signed in, Sel unlocked, found again after a reload, leading, and a Logbook. No daily recruitment (week 15).
 
 ## Not this week
 

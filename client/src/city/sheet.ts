@@ -1,15 +1,18 @@
-import { BUILDINGS, canUpgrade, maxLevel, upgradeCost, upgradeTime, type BuildingId, type TechId } from "@brinelight/shared";
+import { BUILDINGS, canUpgrade, maxLevel, upgradeCost, upgradeTime, type BuildingId, type TechId, type TroopType } from "@brinelight/shared";
 import type { PlayerState } from "../state/index.js";
 import { resourceIcon } from "../ui/icons.js";
 import { RESOURCE_NAMES, costEntries, formatAmount, formatDuration, formatTimeLeft } from "./format.js";
+import { bedsHtml, infirmaryHtml } from "./infirmary.js";
 import { researchHtml } from "./research.js";
 import { progress } from "./suggest.js";
+import { trainingHtml } from "./training.js";
 
 /**
  * The sheet of a building: level, upgrade cost and duration, and why you cannot upgrade when the button is off.
- * The Observatory's sheet also lists the research, once it is built.
+ * Once built, the Observatory's sheet also lists the research, the Barracks' sheet the training and the veterans, and the Infirmary's
+ * sheet its wounded and their healing; the Infirmary's sheet shows its beds at every level.
  */
-export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId): void; research(tech: TechId): void; close(): void }) {
+export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId): void; research(tech: TechId): void; train(troop: TroopType): void; promote(troop: TroopType): void; heal(): void; close(): void }) {
   const el = document.createElement("section");
   el.className = "sheet card";
   el.hidden = true;
@@ -24,6 +27,9 @@ export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId
     if (t.dataset.act === "close") actions.close();
     if (t.dataset.act === "upgrade") actions.upgrade(current);
     if (t.dataset.act === "research" && t.dataset.tech) actions.research(t.dataset.tech as TechId);
+    if (t.dataset.act === "train" && t.dataset.troop) actions.train(t.dataset.troop as TroopType);
+    if (t.dataset.act === "promote" && t.dataset.troop) actions.promote(t.dataset.troop as TroopType);
+    if (t.dataset.act === "heal") actions.heal();
   });
 
   const render = (id: BuildingId, state: PlayerState, speed: number) => {
@@ -32,8 +38,9 @@ export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId
     const check = canUpgrade(id, { buildings: state.buildings, stock: state.stock, queue: state.queue.map((j) => j.id) });
     const next = level < maxLevel(id, state.buildings);
     const left = job ? formatTimeLeft(job.left / speed) : "";
-    const extra = id === "observatory" && level > 0 ? researchHtml(state, speed) : "";
-    const k = [id, level, left, extra, job ? progress(job).toFixed(2) : "", check.ok ? "ok" : check.reason, costEntries(upgradeCost(id, level)).map(([r, v]) => state.stock[r] >= v).join()].join("|");
+    const extra = level === 0 ? "" : id === "observatory" ? researchHtml(state, speed) : id === "barracks" ? trainingHtml(state, speed) : id === "infirmary" ? infirmaryHtml(state, speed) : "";
+    const info = id === "infirmary" ? bedsHtml(state.buildings) : "";
+    const k = [id, level, left, info, extra, job ? progress(job).toFixed(2) : "", check.ok ? "ok" : check.reason, costEntries(upgradeCost(id, level)).map(([r, v]) => state.stock[r] >= v).join()].join("|");
     if (k === key) return;
     key = k;
 
@@ -58,6 +65,7 @@ export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId
       `<div class="sh-h"><h2>${BUILDINGS[id].name}</h2><button class="x" data-act="close" aria-label="Close">✕</button></div>` +
       `<div class="sh-b"><p class="p">${BUILDINGS[id].description}</p>` +
       `<div class="row"><span class="chip gold">Level ${level}${level === 0 ? " (not built)" : ""}</span>${job ? `<span class="chip ok">Building · ${left}</span>` : ""}</div>` +
+      info +
       body +
       extra +
       `</div>`;

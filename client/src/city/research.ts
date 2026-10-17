@@ -8,7 +8,6 @@ import { RESOURCE_NAMES, costEntries, formatAmount, formatDuration, formatTimeLe
 
 export const RESEARCH_TEXT = {
   intro: "One research at a time. The Observatory's level caps each research level.",
-  veterans: "It takes effect once troops can be trained, coming soon.",
 } as const;
 
 const BRANCHES = ["Economy", "Sea", "War"] as const;
@@ -36,7 +35,6 @@ function techRow(state: PlayerState, id: TechId, speed: number): string {
     .map(([r, v]) => `${formatAmount(v)} ${RESOURCE_NAMES[r]}`)
     .join(" · ");
   const detail = max ? "" : state.buildings.observatory < need ? `<small>Requires Observatory Lv ${need}</small>` : `<small>${cost} · ${formatDuration(techTime(id, level) / speed)}</small>`;
-  const note = id === "veterans" ? `<small>${RESEARCH_TEXT.veterans}</small>` : "";
   const side = max
     ? '<span class="chip ok">Max</span>'
     : state.research?.id === id
@@ -45,6 +43,6 @@ function techRow(state: PlayerState, id: TechId, speed: number): string {
         `<button class="b sm" data-act="research" data-tech="${id}" aria-disabled="${!check.ok}">Research</button>`;
   return (
     `<div class="it tech" data-tech-row="${id}"><div class="tt"><b>${t.name} <span class="dots">${"●".repeat(level)}${"○".repeat(t.max - level)}</span></b>` +
-    `<small>${t.effect}</small>${detail}${note}</div>${side}</div>`
+    `<small>${t.effect}</small>${detail}</div>${side}</div>`
   );
 }

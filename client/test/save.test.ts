@@ -225,6 +225,15 @@ describe("migrateSave: old local saves", () => {
     expect(migrateSave(JSON.parse(JSON.stringify(city)))).toEqual(city);
   });
 
+  it("gives a save from before the veterans none, in the city and in each fleet at sea", () => {
+    const r = sail(newPlayerState(), "camp-1");
+    if (!r.ok) throw new Error(r.reason);
+    const city = advance(r.state, 600);
+    const { veterans: _v, ...rest } = JSON.parse(JSON.stringify(city));
+    const old = { ...rest, fleets: rest.fleets.map(({ veterans: _fv, ...f }: { veterans: unknown }) => f) };
+    expect(migrateSave(old)).toEqual(city);
+  });
+
   it("does not repair a field that exists but is invalid: parseState refuses it", () => {
     expect(migrateSave({ ...newPlayerState(), pearls: "lots" })).toBeNull();
     expect(migrateSave({ ...newPlayerState(), world: { camps: {}, wrecks: {} } })).toBeNull();

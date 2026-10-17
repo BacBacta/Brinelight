@@ -17,8 +17,8 @@ export const PLOTS: Record<BuildingId, readonly [q: number, r: number]> = {
 export const SKIN = "blue";
 
 /**
- * Name of the building model in phare.glb for this level (prototype bModel).
- * The Lighthouse is built in code and has no model.
+ * Name of the building model in phare.glb for this level (prototype bModel). Since week 5 the city shows its own
+ * models (scene/buildings.ts); the kit's models stay in phare.glb, and this table with them, for the visual tiers to come.
  */
 export function buildingModel(id: Exclude<BuildingId, "lighthouse">, level: number): string {
   const base = {
@@ -34,5 +34,5 @@ export function buildingModel(id: Exclude<BuildingId, "lighthouse">, level: numb
   return `building_${base}_${SKIN}`;
 }
 
-/** From level 5, a small tower stands next to the building (not on the Observatory, which is already a tower). */
+/** In the kit's look: from level 5, a small tower stood next to the building (not on the Observatory, which is already a tower). */
 export const hasTower = (id: BuildingId, level: number): boolean => level >= 5 && id !== "observatory";

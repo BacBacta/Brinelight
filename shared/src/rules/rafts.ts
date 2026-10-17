@@ -89,16 +89,24 @@ export function applyMistDamage(rafts: Rafts, held: boolean): Rafts {
 
 export const repairCost = (r: Raft): Cost => ({ wood: (RAFT_MAX_HP - r.hp) * 3 });
 
-/**
- * The work at the shipyard: one at a time. Today only a new raft (`kind: "raft"`); the same shape will take
- * the other works of the prototype later (a building put on a raft, a building upgraded) with their own kind.
- */
-export type YardJob = { slot: string; kind: "raft"; left: number; duration: number };
+/** Real duration (seconds) of putting a building on a raft (prototype: 8 seconds). */
+export const RAFT_INSTALL_TIME = protoSeconds(8);
+/** Real duration (seconds) of taking a raft building from `level` to the next one (prototype: 8 × 1.5^level seconds). */
+export const raftUpgradeTime = (level: number): number => protoSeconds(8 * 1.5 ** level);
 
-export type StartRaft = { ok: true; stock: Stock; yard: YardJob } | { ok: false; reason: string };
+/**
+ * The work at the shipyard: one at a time, as in the prototype. A new raft on a slot (`raft`), a building put on a
+ * free raft (`install`, at level 1 when done), or a raft building taken one level up (`upgrade`).
+ */
+export type YardJob =
+  | { slot: string; kind: "raft"; left: number; duration: number }
+  | { slot: string; kind: "install"; building: RaftBuildingId; left: number; duration: number }
+  | { slot: string; kind: "upgrade"; left: number; duration: number };
+
+export type StartYard = { ok: true; stock: Stock; yard: YardJob } | { ok: false; reason: string };
 
 /** Starts a new raft on a slot: checked with canAddRaft, paid at once, moored after RAFT_BUILD_TIME. */
-export function startRaft(slot: string, ctx: { rafts: Rafts; lighthouse: number; stock: Stock; yard: YardJob | null }): StartRaft {
+export function startRaft(slot: string, ctx: { rafts: Rafts; lighthouse: number; stock: Stock; yard: YardJob | null }): StartYard {
   const check = canAddRaft({ rafts: ctx.rafts, lighthouse: ctx.lighthouse, slot, stock: ctx.stock, yardBusy: ctx.yard !== null });
   if (!check.ok) return check;
   return {
@@ -108,9 +116,65 @@ export function startRaft(slot: string, ctx: { rafts: Rafts; lighthouse: number;
   };
 }
 
-/** Advances the work at the shipyard by `seconds` real seconds; once done, the new raft is moored on its slot. */
+/** Rafts that carry this building type, plus the one the shipyard is putting it on: a type has at most RAFT_BUILDING_MAX_COPIES. */
+export function raftBuildingCopies(id: RaftBuildingId, rafts: Rafts, yard: YardJob | null): number {
+  const on = Object.values(rafts).filter((r) => r.building === id).length;
+  return on + (yard?.kind === "install" && yard.building === id ? 1 : 0);
+}
+
+/** Can you put this building on the raft of this slot now? The refusals keep the prototype's words where it had some. */
+export function canInstall(id: RaftBuildingId, ctx: { rafts: Rafts; slot: string; stock: Stock; yard: YardJob | null }): Check {
+  const raft = ctx.rafts[ctx.slot];
+  if (!raft) return refuse("There is no raft here");
+  if (raft.building) return refuse("This raft already has a building");
+  if (raftBuildingCopies(id, ctx.rafts, ctx.yard) >= RAFT_BUILDING_MAX_COPIES) return refuse(`Each type is limited to ${RAFT_BUILDING_MAX_COPIES} rafts`);
+  if (ctx.yard) return refuse("The shipyard is busy");
+  if (!canPay(ctx.stock, raftBuildingCost(id, 0))) return refuse("Not enough resources");
+  return OK;
+}
+
+/** Puts a building on a free raft: checked with canInstall, paid at once, at level 1 after RAFT_INSTALL_TIME. */
+export function startInstall(id: RaftBuildingId, ctx: { rafts: Rafts; slot: string; stock: Stock; yard: YardJob | null }): StartYard {
+  const check = canInstall(id, ctx);
+  if (!check.ok) return check;
+  return {
+    ok: true,
+    stock: payCost(ctx.stock, raftBuildingCost(id, 0)),
+    yard: { slot: ctx.slot, kind: "install", building: id, left: RAFT_INSTALL_TIME, duration: RAFT_INSTALL_TIME },
+  };
+}
+
+/** Can you take the building on this raft one level up now? */
+export function canUpgradeRaft(ctx: { rafts: Rafts; slot: string; stock: Stock; yard: YardJob | null }): Check {
+  const raft = ctx.rafts[ctx.slot];
+  if (!raft) return refuse("There is no raft here");
+  if (!raft.building) return refuse("Put a building on this raft first");
+  if (raft.level >= RAFT_BUILDING_MAX_LEVEL) return refuse("Max level");
+  if (ctx.yard) return refuse("The shipyard is busy");
+  if (!canPay(ctx.stock, raftBuildingCost(raft.building, raft.level))) return refuse("Not enough resources");
+  return OK;
+}
+
+/** Takes the building on a raft one level up: checked with canUpgradeRaft, paid at once, done after raftUpgradeTime. */
+export function startRaftUpgrade(ctx: { rafts: Rafts; slot: string; stock: Stock; yard: YardJob | null }): StartYard {
+  const check = canUpgradeRaft(ctx);
+  if (!check.ok) return check;
+  const raft = ctx.rafts[ctx.slot]!;
+  const duration = raftUpgradeTime(raft.level);
+  return { ok: true, stock: payCost(ctx.stock, raftBuildingCost(raft.building!, raft.level)), yard: { slot: ctx.slot, kind: "upgrade", left: duration, duration } };
+}
+
+/**
+ * Advances the work at the shipyard by `seconds` real seconds. Once done: the new raft is moored on its slot, the
+ * building stands on its raft at level 1, or the raft's building is one level up. Its effect starts at that moment.
+ */
 export function advanceYard(rafts: Rafts, job: YardJob | null, seconds: number): { rafts: Rafts; yard: YardJob | null } {
   if (!job) return { rafts, yard: null };
   if (job.left > Math.max(0, seconds)) return { rafts, yard: { ...job, left: job.left - Math.max(0, seconds) } };
-  return { rafts: { ...rafts, [job.slot]: { hp: RAFT_MAX_HP, building: null, level: 0 } }, yard: null };
+  const raft = rafts[job.slot];
+  if (job.kind === "raft") return { rafts: { ...rafts, [job.slot]: { hp: RAFT_MAX_HP, building: null, level: 0 } }, yard: null };
+  // The raft is always there: nothing removes one while the shipyard works on it.
+  if (!raft) return { rafts, yard: null };
+  if (job.kind === "install") return { rafts: { ...rafts, [job.slot]: { ...raft, building: job.building, level: 1 } }, yard: null };
+  return { rafts: { ...rafts, [job.slot]: { ...raft, level: Math.min(RAFT_BUILDING_MAX_LEVEL, raft.level + 1) } }, yard: null };
 }

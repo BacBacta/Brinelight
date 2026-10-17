@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 /** The models of phare.glb, one scene per name ("hex_grass", "building_…"). */
 export type Kit = Record<string, THREE.Object3D>;
@@ -27,13 +28,19 @@ export function kitModel(kit: Kit, name: string): THREE.Object3D {
   return o;
 }
 
-/** The empty island: grass tiles on rings 0 to 2, a ring of sand and foam on ring 3. */
-export function createIsland(kit: Kit): THREE.Group {
+/** The outline of each building plot on the island: cream, half transparent, readable on sand as on rock. */
+export const PLOT_OUTLINE = { color: "#FFF4DA", opacity: 0.55, inner: 0.98, outer: 1.08 } as const;
+
+/**
+ * The empty island: the island model (fitted by fitIsland: shore on ring 3, meadow at y = 0), the outlines of the
+ * 19 plots of rings 0 to 2 (one mesh), and the foam on ring 3, as in the prototype.
+ */
+export function createIsland(model: THREE.Object3D): THREE.Group {
   const island = new THREE.Group();
-  const sandM = new THREE.MeshStandardMaterial({ color: "#E9D9A6", roughness: 1 });
+  island.add(model);
   const foamM = new THREE.MeshBasicMaterial({ color: "#fff", transparent: true, opacity: 0.5, depthWrite: false });
   const foamG = hexGeometry(1.4);
-  const sandG = hexGeometry(1.2);
+  const outlines: THREE.BufferGeometry[] = [];
   for (let q = -3; q <= 3; q++)
     for (let r = -3; r <= 3; r++) {
       const ring = Math.max(Math.abs(q), Math.abs(r), Math.abs(-q - r));
@@ -41,18 +48,22 @@ export function createIsland(kit: Kit): THREE.Group {
       const x = hexX(q, r);
       const z = hexZ(r);
       if (ring <= 2) {
-        const tile = kitModel(kit, "hex_grass");
-        tile.position.set(x, 0, z);
-        island.add(tile);
+        const g = new THREE.RingGeometry(PLOT_OUTLINE.inner, PLOT_OUTLINE.outer, 6, 1);
+        g.rotateX(-Math.PI / 2);
+        g.rotateY(Math.PI / 6);
+        g.translate(x, 0.015, z);
+        outlines.push(g);
       } else {
         const foam = new THREE.Mesh(foamG, foamM);
         foam.position.set(x, -0.36, z);
         island.add(foam);
-        const sand = new THREE.Mesh(sandG, sandM);
-        sand.position.set(x, -0.38, z);
-        sand.receiveShadow = true;
-        island.add(sand);
       }
     }
+  const outline = new THREE.Mesh(
+    mergeGeometries(outlines),
+    new THREE.MeshBasicMaterial({ color: PLOT_OUTLINE.color, transparent: true, opacity: PLOT_OUTLINE.opacity, depthWrite: false }),
+  );
+  outline.name = "plot-outlines";
+  island.add(outline);
   return island;
 }
