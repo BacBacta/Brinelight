@@ -1,4 +1,4 @@
-import type { CaptainId } from "../rules/captains.js";
+import type { CaptainId, Shards } from "../rules/captains.js";
 import type { Rafts, YardJob } from "../rules/rafts.js";
 import type { ResearchJob, Techs } from "../rules/research.js";
 import type { HealingJob } from "../rules/healing.js";
@@ -18,6 +18,8 @@ export type PlayerState = {
   techs: Techs;
   rafts: Rafts;
   captains: Partial<Record<CaptainId, OwnedCaptain>>;
+  /** Shards by captain, owned or not: FRAGMENTS_PER_STAR unlock a captain or add a star. Won at the pirate camps. */
+  shards: Shards;
   survivors: number;
   morale: number;
   /** Pearls: kept apart from the stock, never capped by storage. */

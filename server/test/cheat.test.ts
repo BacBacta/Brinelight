@@ -363,6 +363,48 @@ describe("a modified client cannot change the rules", () => {
     expect(p.ref.now().fleets[0]!.watchtowers).toBe(2);
   });
 
+  it("captains: a lead not owned, the Logbook without Pearls or at max level, shards short, a captain owned or at 5 stars, numbers sent", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const p = await player({ ...base, pearls: 49, shards: { sel: 9, tom: 9 } });
+    await expectRefused(server, p, action({ type: "setLead", captain: "mira" }), "Recruit this captain first");
+    await expectRefused(server, p, action({ type: "logbook" }), "Not enough Pearls");
+    await expectRefused(server, p, action({ type: "unlockCaptain", captain: "sel" }), "You need 10 shards");
+    await expectRefused(server, p, action({ type: "unlockCaptain", captain: "tom" }), "You already have this captain");
+    await expectRefused(server, p, action({ type: "addStar", captain: "sel" }), "Recruit this captain first");
+    await expectRefused(server, p, action({ type: "addStar", captain: "tom" }), "You need 10 shards");
+    for (const type of ["setLead", "unlockCaptain", "addStar"] as const) {
+      for (const captain of ["blackbeard", "toString", "__proto__", ""]) await expectInvalid(server, p, { action: { ...action({ type, captain: "tom" }), captain } });
+      await expectInvalid(server, p, { action: { ...action({ type, captain: "tom" }), shards: 10 } });
+    }
+    for (const extra of [{ xp: 400 }, { pearls: 0 }, { captain: "tom" }]) await expectInvalid(server, p, { action: { ...action({ type: "logbook" }), ...extra } });
+
+    const max = await player({ ...base, captains: { tom: { level: 20, xp: 0, stars: 5 } }, shards: { tom: 30 } });
+    await expectRefused(server, max, action({ type: "logbook" }), "Your lead captain is at max level");
+    await expectRefused(server, max, action({ type: "addStar", captain: "tom" }), "Max stars");
+  });
+
+  it("from camp to captain: the captain who sailed gains the experience, the camp's captain the shards, by the server's clock", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const p = await player({ ...base, troops: { boarders: 200, harpooners: 200, crossbowmen: 200 }, captains: { tom: { level: 1, xp: 70, stars: 1 }, isa: { level: 2, xp: 0, stars: 1 } }, shards: { sel: 9 } });
+    await expectApplied(server, p, action({ type: "sail", site: "camp-1" }));
+    // Another captain leads now: the experience still goes to Old Tom, who sailed.
+    await expectApplied(server, p, action({ type: "setLead", captain: "isa" }));
+    later(8 * 3600_000);
+    await expectRules(server, p);
+    const back = p.ref.now();
+    expect(back.reports[0]).toMatchObject({ win: true, captainXp: { id: "tom", xp: 30, levels: 1 }, shards: { id: "sel", count: 1 } });
+    expect(back.captains.tom).toEqual({ level: 2, xp: 20, stars: 1 });
+    expect(back.captains.isa).toEqual({ level: 2, xp: 0, stars: 1 });
+    expect(back.shards).toEqual({ sel: 10 });
+    await expectApplied(server, p, action({ type: "unlockCaptain", captain: "sel" }));
+    await expectApplied(server, p, action({ type: "setLead", captain: "sel" }));
+    await expectApplied(server, p, action({ type: "logbook" }));
+    expect(p.ref.now().captains.sel).toEqual({ level: 1, xp: 40, stars: 1 });
+    expect(p.ref.now().pearls).toBe(back.pearls - 50);
+  });
+
   it("training: no Barracks, one already underway, not enough resources, an unknown troop type, a number of soldiers sent", async () => {
     const server = await buildApp({ db, now: () => clock });
     const base = newPlayerState();

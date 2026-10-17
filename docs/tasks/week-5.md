@@ -60,6 +60,8 @@ Do the tasks in order, one per session. For each one: read CLAUDE.md, say what y
   - **B:** no shards before the recruitment (week 15).
 - Not the daily recruitment: it is the only random draw, and it must be verifiable (roadmap week 15, with Switchboard).
 
+**Done (17 October).** Option A for the shards (owner's decision): each pirate camp gives the shards of one fixed captain, named on its sheet (camp-1 Sel, camp-2 Old Tom, camp-3 Bran, camp-4 Isa, camp-5 Mira, camp-6 Nera); no luck. Experience after each combat to the captain who sailed (owner's decision); the Logbook, refused at level 20 (owner's decision); unlocking with 10 shards and stars up to 5; actions `setLead`, `logbook`, `unlockCaptain`, `addStar`; new city field `shards`, with `migrateSave`. The Captains sheet from the bottom menu, as in the prototype, with the painted portraits; the camp's sheet names its captain ("Sel the Navigator has max stars." at 5 stars); the report shows the captain's experience and the shards. Cheat cases and the whole path on the server; e2e: a victory's report, the Captains sheet and a camp's sheet at 412 and 360 px; signed in, Sel unlocked, found again after a reload, leading, and a Logbook. No daily recruitment (week 15).
+
 ## Not this week
 
 The daily recruitment (week 15); raft repair and Mist damage, the Mist and the Leviathan, objectives and Daily Tasks (week 6); the load test and renting the server (week 7); multiplayer (weeks 8 to 12).

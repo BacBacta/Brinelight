@@ -33,6 +33,8 @@ const start = (): SeaState => ({
   techs: {},
   rafts: {},
   lead: leadOf("tom", { tom: { level: 1 } }),
+  captains: { tom: { level: 1, xp: 0, stars: 1 } },
+  shards: {},
   fleets: [],
   world: startingSeaWorld(),
 });

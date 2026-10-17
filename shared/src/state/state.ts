@@ -1,5 +1,6 @@
 /** The player's city and what changes it: pure, with no clock, no randomness and no DOM. */
 import { STARTING_BUILDINGS, advanceQueue, startUpgrade } from "../rules/buildings.js";
+import { canSetLead, starWithShards, unlockWithShards, useLogbook, type CaptainId } from "../rules/captains.js";
 import { advanceStock, netRates, storeCap } from "../rules/economy.js";
 import { advanceHealing, startHealing } from "../rules/healing.js";
 import { advanceYard, startInstall, startRaft, startRaftUpgrade, type RaftBuildingId } from "../rules/rafts.js";
@@ -24,6 +25,7 @@ export function newPlayerState(): PlayerState {
     techs: {},
     rafts: {},
     captains: { [id]: captain },
+    shards: {},
     survivors: STARTING_SURVIVORS,
     morale: STARTING_MORALE,
     pearls: STARTING_PEARLS,
@@ -58,6 +60,8 @@ const seaState = (s: PlayerState): SeaState => ({
   techs: s.techs,
   rafts: s.rafts,
   lead: leadOf(s.lead, s.captains),
+  captains: s.captains,
+  shards: s.shards,
   fleets: s.fleets,
   world: s.world,
 });
@@ -73,6 +77,8 @@ function withSea(s: PlayerState, sea: SeaState, reports: CombatReport[] = []): P
     stock: sea.stock,
     pearls: sea.pearls,
     wounded: sea.wounded,
+    captains: sea.captains,
+    shards: sea.shards,
     fleets: sea.fleets,
     world: sea.world,
     reports: added.length ? [...s.reports, ...added].slice(-MAX_REPORTS) : s.reports,
@@ -141,6 +147,31 @@ export function research(state: PlayerState, id: TechId): ActionResult {
 export function dockRaft(state: PlayerState, slot: string): ActionResult {
   const r = startRaft(slot, { rafts: state.rafts, lighthouse: state.buildings.lighthouse, stock: state.stock, yard: state.yard });
   return r.ok ? { ok: true, state: { ...state, stock: r.stock, yard: r.yard } } : r;
+}
+
+/** Puts an owned captain at the head of your fleets; fleets at sea keep the one they left with. */
+export function setLead(state: PlayerState, id: CaptainId): ActionResult {
+  const check = canSetLead(id, state.captains);
+  if (!check.ok) return check;
+  return { ok: true, state: state.lead === id ? state : { ...state, lead: id } };
+}
+
+/** A Logbook for your lead captain with the shared rule; a refusal comes with its reason. */
+export function logbook(state: PlayerState): ActionResult {
+  const r = useLogbook({ lead: state.lead, captains: state.captains, pearls: state.pearls });
+  return r.ok ? { ok: true, state: { ...state, captains: r.captains, pearls: r.pearls } } : r;
+}
+
+/** Unlocks a captain with shards, with the shared rule; a refusal comes with its reason. */
+export function unlockCaptain(state: PlayerState, id: CaptainId): ActionResult {
+  const r = unlockWithShards(id, { captains: state.captains, shards: state.shards });
+  return r.ok ? { ok: true, state: { ...state, captains: r.captains, shards: r.shards } } : r;
+}
+
+/** Adds a star to a captain with shards, with the shared rule; a refusal comes with its reason. */
+export function addStar(state: PlayerState, id: CaptainId): ActionResult {
+  const r = starWithShards(id, { captains: state.captains, shards: state.shards });
+  return r.ok ? { ok: true, state: { ...state, captains: r.captains, shards: r.shards } } : r;
 }
 
 /** Puts a building on the free raft of a slot with the shared rule; a refusal comes with its reason. */

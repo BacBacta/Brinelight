@@ -514,6 +514,62 @@ describe("buildings on rafts", () => {
   });
 });
 
+describe("captains", () => {
+  it("a victory's report with the captain's experience and the shards; the Captains sheet; a camp's sheet, at 412 and 360 px", async () => {
+    const base = newPlayerState();
+    const sent = sail({ ...base, troops: { boarders: 200, harpooners: 200, crossbowmen: 200 }, captains: { tom: { level: 2, xp: 140, stars: 2 }, isa: { level: 1, xp: 0, stars: 1 } }, shards: { sel: 9, mira: 4 } }, "camp-1");
+    if (!sent.ok) throw new Error(sent.reason);
+    const city = advance(sent.state, 8 * HOUR);
+    expect(city.reports[0]).toMatchObject({ win: true, captainXp: { id: "tom", xp: 30, levels: 1 }, shards: { id: "sel", count: 1 } });
+    for (const size of SIZES) {
+      const p = await newPlayer(false, size);
+      await injectCity(p.context, city);
+      const page = await openGame(p.context);
+
+      // The report of the victory opens by itself.
+      const report = page.locator('.sheet[aria-label="Combat report"]:not([hidden])');
+      await report.waitFor();
+      expect(await report.textContent()).toContain("CaptainOld Tom · +30 XP · +1 level");
+      expect(await report.textContent()).toContain("Shards+1 for Sel the Navigator");
+      await page.screenshot({ path: `e2e/.shots/shot-report-captain-${size.width}.png` });
+      await report.locator('[data-act="close"]').click();
+
+      // The Captains sheet, from the bottom menu: Sel has 10 shards now, Nera is not recruited.
+      await page.locator('.nav button[data-v="captains"]').click();
+      const sheet = page.locator(".sheet.captains:not([hidden])");
+      await sheet.waitFor();
+      expect(await sheet.locator('[data-captain-row="nera"] small').last().textContent()).toBe("Not recruited · shards 0/10");
+      expect(await sheet.locator('[data-captain-row="sel"] [data-act="unlock"]').getAttribute("aria-disabled")).toBe("false");
+      expect(await sheet.locator('[data-captain-row="tom"] small').last().textContent()).toBe("Lv 3 · 10/240 XP · shards 0/10");
+      expect(await sheet.locator('[data-captain-row="tom"] img').evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0)).toBe(true);
+      await page.screenshot({ path: `e2e/.shots/shot-captains-${size.width}.png` });
+      await sheet.locator('[data-act="close"]').click();
+
+      // At sea, a camp's sheet names its captain.
+      await page.locator('.nav button[data-v="sea"]').click();
+      await page.waitForTimeout(1500);
+      const camps = page.locator(".labels.sea .sl.camp:visible");
+      const site = page.locator(".sheet:not([hidden])", { has: page.locator("[data-shards-for]") });
+      let found = false;
+      for (let i = 0; i < (await camps.count()) && !found; i++) {
+        const box = (await camps.nth(i).boundingBox())!;
+        for (const dy of [30, 45, 60]) {
+          await page.mouse.click(box.x + box.width / 2, box.y + box.height + dy);
+          if (await site.isVisible()) {
+            found = true;
+            break;
+          }
+        }
+      }
+      expect(found).toBe(true);
+      expect(await site.locator("[data-shards-for]").textContent()).toMatch(/^Shards for .+ · \d+\/10$/);
+      await page.screenshot({ path: `e2e/.shots/shot-camp-${size.width}.png` });
+      expect(p.apiCalls).toEqual([]);
+      await p.context.close();
+    }
+  });
+});
+
 describe("signed in", () => {
   it("the account has its own city: one message; an upgrade goes to the server, and is found again after a reload", async () => {
     const p = await newPlayer(true);
@@ -953,6 +1009,33 @@ describe("signed in", () => {
     await p.page.mouse.click(x, y);
     await expect.poll(() => p.page.locator(".raft-sheet:not([hidden])").textContent(), NET).toContain("Sturdiness");
     await p.page.screenshot({ path: "e2e/.shots/shot-raft.png" });
+    await p.context.close();
+  });
+
+  it("captains: Sel unlocked with 10 shards, found again after a reload, then leading; a Logbook for Sel", async () => {
+    const p = await signedInPlayer();
+    const base = newPlayerState();
+    await h.putCity(p.playerId, { ...base, shards: { sel: 10 } });
+    await show(p.page);
+    await expect.poll(async () => ((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.shards, NET).toEqual({ sel: 10 });
+    await p.page.locator('.nav button[data-v="captains"]').click();
+    const sheet = p.page.locator(".sheet.captains:not([hidden])");
+    await sheet.waitFor();
+    await sheet.locator('[data-act="unlock"][data-captain="sel"]').click();
+    await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).captains.sel, NET).toEqual({ level: 1, xp: 0, stars: 1 });
+
+    await p.page.reload();
+    await p.page.waitForSelector(".labels.city .bl b");
+    await p.page.locator('.nav button[data-v="captains"]').click();
+    await sheet.waitFor();
+    await expect.poll(() => sheet.locator('[data-captain-row="sel"] small').last().textContent(), NET).toBe("Lv 1 · 0/80 XP · shards 0/10");
+    await sheet.locator('[data-act="lead"][data-captain="sel"]').click();
+    await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).lead, NET).toBe("sel");
+    await expect.poll(() => sheet.locator('[data-captain-row="sel"] .chip').textContent(), NET).toBe("Leading");
+    await sheet.locator('[data-act="logbook"]').click();
+    await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).captains.sel, NET).toEqual({ level: 1, xp: 40, stars: 1 });
+    expect(((await serverCity(p.token))!.state as unknown as PlayerState).pearls).toBe(base.pearls - 50);
+    expect(p.problems).toEqual([]);
     await p.context.close();
   });
 

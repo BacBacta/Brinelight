@@ -1,5 +1,5 @@
 import { BUILDERS, BUILDING_IDS, LIGHTHOUSE_MAX, type UpgradeJob } from "../rules/buildings.js";
-import { CAPTAINS, CAPTAIN_MAX_LEVEL, type CaptainId } from "../rules/captains.js";
+import { CAPTAINS, CAPTAIN_MAX_LEVEL, CAPTAIN_MAX_STARS, xpNeeded, type CaptainId } from "../rules/captains.js";
 import type { HealingJob } from "../rules/healing.js";
 import { RAFT_BUILDINGS, RAFT_BUILDING_MAX_COPIES, RAFT_BUILDING_MAX_LEVEL, RAFT_MAX_HP, RAFT_SLOTS, raftBuildingCopies, type RaftBuildingId, type Rafts, type YardJob } from "../rules/rafts.js";
 import { TECHS, techLevel, type ResearchJob, type TechId, type Techs } from "../rules/research.js";
@@ -25,15 +25,24 @@ const isTroops = (t: unknown): t is Troops => isObj(t) && TROOPS.every((k) => is
 const isLevel = (v: unknown, max: number) => isWhole(v, 0, max);
 
 /**
- * Research, captains and rafts: a missing id means level 0 or not owned yet, as the rules read them, so a city
- * saved before a new research or captain existed stays readable. An unknown id, or a level out of bounds, is refused.
+ * Research, captains, shards and rafts: a missing id means level 0, not owned yet or no shard, as the rules read them,
+ * so a city saved before a new research or captain existed stays readable. An unknown id, or a value out of bounds,
+ * is refused. A captain below the highest level holds less experience than its next level needs.
  */
 const isTechs = (t: unknown) => isObj(t) && Object.entries(t).every(([id, v]) => has(TECHS, id) && isLevel(v, TECHS[id as keyof typeof TECHS].max));
 const isCaptains = (c: unknown) =>
   isObj(c) &&
   Object.entries(c).every(
-    ([id, v]) => has(CAPTAINS, id) && isObj(v) && isWhole(v.level, 1, CAPTAIN_MAX_LEVEL) && isWhole(v.stars, 1) && isNum(v.xp) && v.xp >= 0,
+    ([id, v]) =>
+      has(CAPTAINS, id) &&
+      isObj(v) &&
+      isWhole(v.level, 1, CAPTAIN_MAX_LEVEL) &&
+      isWhole(v.stars, 1, CAPTAIN_MAX_STARS) &&
+      isNum(v.xp) &&
+      v.xp >= 0 &&
+      (v.level === CAPTAIN_MAX_LEVEL || v.xp < xpNeeded(v.level)),
   );
+const isShards = (c: unknown) => isObj(c) && Object.entries(c).every(([id, v]) => has(CAPTAINS, id) && isWhole(v));
 const SLOTS = new Set(RAFT_SLOTS.map((s) => s.key));
 /** A raft on a known slot: with no building at level 0, or with a known building at level 1 to RAFT_BUILDING_MAX_LEVEL. */
 const isRafts = (r: unknown) =>
@@ -223,7 +232,11 @@ const isReport = (r: unknown): r is Report =>
   // Reports from before the veterans have none of these three.
   (r.veteranSent === undefined || isTroops(r.veteranSent)) &&
   (r.veteranLosses === undefined || isTroops(r.veteranLosses)) &&
-  (r.infirmary === undefined || typeof r.infirmary === "boolean");
+  (r.infirmary === undefined || typeof r.infirmary === "boolean") &&
+  // Reports from before the captains' experience and shards have neither.
+  (r.captainXp === undefined ||
+    (isObj(r.captainXp) && typeof r.captainXp.id === "string" && has(CAPTAINS, r.captainXp.id) && isWhole(r.captainXp.xp) && isWhole(r.captainXp.levels))) &&
+  (r.shards === undefined || (isObj(r.shards) && typeof r.shards.id === "string" && has(CAPTAINS, r.shards.id) && isWhole(r.shards.count, 1)));
 
 /**
  * Reads a city sent or stored as JSON. Strict: a missing or invalid field gives null, and nothing is filled in,
@@ -245,12 +258,14 @@ export function parseState(raw: unknown): PlayerState | null {
       !isTechs(s.techs) ||
       !isRafts(s.rafts) ||
       !isCaptains(s.captains) ||
+      !isShards(s.shards) ||
       !isWhole(s.survivors) ||
       !isNum(s.morale) ||
       s.morale < 0 ||
       !isWhole(s.pearls) ||
       !Array.isArray(s.queue) ||
-      !(s.lead === null || (typeof s.lead === "string" && has(CAPTAINS, s.lead))) ||
+      // The lead captain is one you own.
+      !(s.lead === null || (typeof s.lead === "string" && has(CAPTAINS, s.lead) && has(s.captains as object, s.lead))) ||
       !Array.isArray(s.fleets) ||
       !isTroops(s.wounded) ||
       !Array.isArray(s.reports) ||
@@ -284,6 +299,7 @@ export function parseState(raw: unknown): PlayerState | null {
       techs: { ...(s.techs as PlayerState["techs"]) },
       rafts: { ...(s.rafts as PlayerState["rafts"]) },
       captains: { ...(s.captains as PlayerState["captains"]) },
+      shards: { ...(s.shards as PlayerState["shards"]) },
       survivors: s.survivors,
       morale: s.morale,
       pearls: s.pearls,

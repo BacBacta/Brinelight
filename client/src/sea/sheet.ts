@@ -1,5 +1,8 @@
 import {
   BEATS,
+  CAPTAINS,
+  CAPTAIN_MAX_STARS,
+  FRAGMENTS_PER_STAR,
   canSendFleet,
   holdCapacity,
   leadOf,
@@ -8,12 +11,14 @@ import {
   seaSite,
   totalTroops,
   travelTime,
+  type CaptainId,
 } from "@brinelight/shared";
 import { formatAmount, formatTimeLeft } from "../city/format.js";
 import type { PlayerState, Report } from "../state/index.js";
 import { attackInput } from "./odds.js";
 import { siteLabel } from "./labels.js";
 import { ICONS } from "../ui/icons.js";
+import { portraitImg } from "../ui/captains.js";
 import { ODDS_TEXT, TROOP_NAMES, TROOP_TYPES, counterTip } from "./text.js";
 
 const HOLD_NOTE = { tom: " (Old Tom +30%)" } as Record<string, string>;
@@ -54,10 +59,21 @@ export function reportHtml(r: Report): string {
     `<table class="rep"><tr><th></th><th>Sent</th><th>Losses</th><th>Pirates</th></tr>${rows}</table>` +
     `<div class="tx">` +
     (lost ? `<div><span>Wounded in the Infirmary</span><span>${hurt ? `${hurt} of ${lost} losses, to heal` : why}</span></div>` : "") +
+    (r.captainXp
+      ? `<div><span>Captain</span><span>${CAPTAINS[r.captainXp.id].name} · +${r.captainXp.xp} XP${r.captainXp.levels ? ` · +${r.captainXp.levels} level${r.captainXp.levels > 1 ? "s" : ""}` : ""}</span></div>`
+      : "") +
+    (r.shards ? `<div><span>Shards</span><span>+${r.shards.count} for ${CAPTAINS[r.shards.id].name}</span></div>` : "") +
     (r.loot ? `<div><span>Loot</span><span>+${r.loot.oil} oil, +${r.loot.wood} wood, +${r.loot.pearls} Pearls, +${r.loot.rope} rope</span></div>` : `<div><span>Tip</span><span>${counterTip(r.enemy)}</span></div>`) +
     `</div>` +
     `<p class="p" style="font-size:11.5px">${REPORT_TEXT.rules} Your fleet brings the survivors${r.loot ? " and the loot" : ""} home.</p>`
   );
+}
+
+/** What a camp's sheet says of its captain: "Shards for Sel the Navigator · 3/10", or "Sel the Navigator has max stars." */
+export function shardsForText(state: Pick<PlayerState, "captains" | "shards">, id: CaptainId): string {
+  const owned = state.captains[id];
+  if (owned && owned.stars >= CAPTAIN_MAX_STARS) return `${CAPTAINS[id].name} has max stars.`;
+  return `Shards for ${CAPTAINS[id].name} · ${state.shards[id] ?? 0}/${FRAGMENTS_PER_STAR}`;
 }
 
 /** The sheet of a camp or a wreck, and the combat reports. */
@@ -104,6 +120,8 @@ export function createSeaSheet(root: HTMLElement, actions: { sail(site: string):
       const o = odds(attackInput(state, enemy));
       const top = [...TROOP_TYPES].sort((a, b) => enemy[b] - enemy[a])[0]!;
       const counter = TROOP_TYPES.find((k) => BEATS[k] === top)!;
+      // The captain whose shards this camp gives: always the same one.
+      const cid = s.captain!;
       return (
         `<p class="p">Pirates out of the Mist. Beat them for loot.</p>` +
         busy +
@@ -111,6 +129,7 @@ export function createSeaSheet(root: HTMLElement, actions: { sail(site: string):
         `<span>Your troops</span><span>${totalTroops(state.troops)}</span>` +
         (totalTroops(state.veterans) ? `<span>Your veterans</span><span>${totalTroops(state.veterans)}</span>` : "") +
         `<span>Trip</span><span>${trip} one way</span></div>` +
+        `<div class="shards-for" data-shards-for="${cid}"><div class="ph portrait">${portraitImg(cid)}</div><span>${shardsForText(state, cid)}</span></div>` +
         `<div class="verd ${o}">${ODDS_TEXT[o]}</div>` +
         `<p class="p" style="font-size:12.5px">Tip: their ${TROOP_NAMES[top].toLowerCase()} are beaten by ${TROOP_NAMES[counter].toLowerCase()}. Train them at the Barracks.</p>` +
         `<button class="b red xl" data-act="sail" aria-disabled="${!check.ok}">Attack with all your troops</button>` +
