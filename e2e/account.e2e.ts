@@ -751,6 +751,11 @@ describe("the look", () => {
       }
       await page.locator('.nav button[data-v="captains"]').click();
       await look(page, sheet(page), `captains-top-${w}`);
+      // Where the captain rows fall, to the fraction of a pixel: their rounded corners were drawn in two ways by the CI.
+      console.log(
+        `Captain rows at ${w} px (devicePixelRatio ${await page.evaluate(() => devicePixelRatio)}): ` +
+          (await sheet(page).locator(".it.captain").evaluateAll((rows) => rows.map((r) => { const b = r.getBoundingClientRect(); return `${b.top}..${b.bottom} (left ${b.left})`; }))).join(", "),
+      );
       await toBottom(page);
       await look(page, sheet(page), `captains-bottom-${w}`);
       await close(page);
