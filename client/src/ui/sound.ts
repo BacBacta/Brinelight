@@ -1,7 +1,9 @@
 /**
- * The game's sounds (week 6, task 3), made by the game with the Web Audio API: no file, no dependency. One family, wood
- * and rope, never metal: knocks, a rope's creak, a marimba. Quiet, each under a second. Nothing is made before your
- * first tap (browsers only allow sound after one). On by default; turned off in the Profile, they stay off on this device.
+ * The game's sounds (week 6, task 3). Recorded sounds made with ElevenLabs (client/public/sounds/, sources in
+ * assets/sounds/), played with the Web Audio API, and a calm sea that loops under the game. One family, wood and rope,
+ * never metal. Until a recorded sound has loaded, the game plays its own: knocks, a rope's creak, a marimba, made with
+ * oscillators. Nothing is made or loaded before your first tap (browsers only allow sound after one). On by default;
+ * turned off in the Profile, they stay off on this device.
  */
 import type { KeyValueStore } from "../state/save.js";
 
@@ -48,6 +50,39 @@ export const SOUNDS: Record<SoundId, readonly Note[]> = {
     { kind: "rope", at: 0, freq: 200, dur: 0.3, gain: 0.07 },
     { kind: "marimba", at: 0.2, freq: E5, dur: 0.5, gain: 0.16 },
   ],
+};
+
+/** The recorded sound of each sound, in client/public/sounds/, and how loud it plays (0 to 1). */
+export const SAMPLES: Record<SoundId, { file: string; gain: number }> = {
+  tap: { file: "tap", gain: 0.35 },
+  open: { file: "sheet-open", gain: 0.4 },
+  close: { file: "sheet-close", gain: 0.35 },
+  refused: { file: "refuse", gain: 0.45 },
+  start: { file: "work-start", gain: 0.5 },
+  done: { file: "work-done", gain: 0.7 },
+  troops: { file: "troops-ready", gain: 0.7 },
+  lighthouse: { file: "lighthouse-up", gain: 0.85 },
+  captain: { file: "captain-up", gain: 0.8 },
+  away: { file: "resources", gain: 0.55 },
+};
+
+/** The calm sea under the game: a 28 s loop whose end runs into its start, very quiet. */
+export const AMBIENCE = { file: "sea-ambience", gain: 0.16 } as const;
+
+export const soundUrl = (file: string): string => `${import.meta.env.BASE_URL}sounds/${file}.mp3`;
+
+/** Loads and decodes one recorded sound; null when it cannot (offline, an old browser): the made sound plays instead. */
+export type SampleLoader = (ctx: AudioContext, file: string) => Promise<AudioBuffer | null>;
+
+const loadSample: SampleLoader = async (ctx, file) => {
+  try {
+    if (typeof fetch !== "function" || typeof ctx.decodeAudioData !== "function") return null;
+    const res = await fetch(soundUrl(file));
+    if (!res.ok) return null;
+    return await ctx.decodeAudioData(await res.arrayBuffer());
+  } catch {
+    return null;
+  }
 };
 
 /** The choice kept on this device: "off" when turned off; anything else, sounds on. */
@@ -117,16 +152,70 @@ function playNote(ctx: AudioContext, out: AudioNode, n: Note): void {
 
 /**
  * The sounds of the page. The AudioContext is only made at the first tap on the page (and only if sounds are on), so
- * that nothing sounds, or asks to, before you touch the game.
+ * that nothing sounds, loads or asks to before you touch the game. The recorded sounds load then, once; the sea starts
+ * as soon as it has loaded, and stops when sounds are turned off.
  */
-export function createSound(store: KeyValueStore | null, target: Pick<Window, "addEventListener" | "removeEventListener"> = window) {
+export function createSound(
+  store: KeyValueStore | null,
+  target: Pick<Window, "addEventListener" | "removeEventListener"> = window,
+  load: SampleLoader = loadSample,
+) {
   let on = soundOn(store);
   let touched = false;
   let ctx: AudioContext | null = null;
   let out: GainNode | null = null;
+  let loading = false;
+  const buffers = new Map<string, AudioBuffer>();
+  let sea: { source: AudioBufferSourceNode; gain: GainNode } | null = null;
+
+  const startSea = () => {
+    const buffer = buffers.get(AMBIENCE.file);
+    if (!ctx || !out || !on || sea || !buffer) return;
+    const source = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    source.buffer = buffer;
+    source.loop = true;
+    // The sea rises in 2 s, never with a jump.
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(AMBIENCE.gain, ctx.currentTime + 2);
+    source.connect(gain).connect(out);
+    source.start();
+    sea = { source, gain };
+  };
+  const stopSea = () => {
+    if (!sea || !ctx) return;
+    const { source, gain } = sea;
+    sea = null;
+    gain.gain.setValueAtTime(gain.gain.value, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
+    source.stop(ctx.currentTime + 0.45);
+  };
+  const loadAll = (c: AudioContext) => {
+    if (loading) return;
+    loading = true;
+    const files = [...new Set(Object.values(SAMPLES).map((s) => s.file)), AMBIENCE.file];
+    for (const file of files)
+      void load(c, file).then((b) => {
+        if (!b) return;
+        buffers.set(file, b);
+        if (file === AMBIENCE.file) startSea();
+      });
+  };
+  const context = (): AudioContext => {
+    if (!ctx) {
+      ctx = new AudioContext();
+      out = ctx.createGain();
+      out.gain.value = 0.8;
+      out.connect(ctx.destination);
+      loadAll(ctx);
+    }
+    if (ctx.state === "suspended") void ctx.resume();
+    return ctx;
+  };
   const touch = () => {
     touched = true;
     target.removeEventListener("pointerdown", touch, true);
+    if (on) context();
   };
   target.addEventListener("pointerdown", touch, true);
   return {
@@ -136,17 +225,27 @@ export function createSound(store: KeyValueStore | null, target: Pick<Window, "a
     set on(value: boolean) {
       on = value;
       keepSoundOn(store, value);
+      if (!value) stopSea();
+      else if (touched) {
+        context();
+        startSea();
+      }
     },
     play(id: SoundId): void {
       if (!on || !touched) return;
-      if (!ctx) {
-        ctx = new AudioContext();
-        out = ctx.createGain();
-        out.gain.value = 0.8;
-        out.connect(ctx.destination);
+      const c = context();
+      const sample = SAMPLES[id];
+      const buffer = buffers.get(sample.file);
+      if (!buffer) {
+        for (const n of SOUNDS[id]) playNote(c, out!, n);
+        return;
       }
-      if (ctx.state === "suspended") void ctx.resume();
-      for (const n of SOUNDS[id]) playNote(ctx, out!, n);
+      const source = c.createBufferSource();
+      const gain = c.createGain();
+      source.buffer = buffer;
+      gain.gain.value = sample.gain;
+      source.connect(gain).connect(out!);
+      source.start();
     },
   };
 }

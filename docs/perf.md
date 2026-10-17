@@ -237,3 +237,5 @@ Measured in the container (Chromium, software rendering, 412 × 915, `?quality=2
 The game's own JavaScript and CSS (as in the section above): from 118 675 B (42 467 B gzipped) after task 2 to 131 113 B (46 793 B gzipped), +10 % gzipped: the celebrations, the ten sounds made in code, the motions and the tiers. This is new work, not a tidying-up: the 0.5 % rule does not apply.
 
 The island's shore steadied (week 6, after task 3): the prototype's 18 foam hexagons of ring 3 are removed, so 16 draw calls fewer on the start city (34 to 18, at 412 × 915), and 20, 21 and 22 instead of 38, 39 and 40 for the three tiers above (container, `npm run e2e`). `island.glb` grows by 5 424 B (228 200 B): 194 faces of the meadow turned face up, on vertices of their own.
+
+Recorded sounds (week 6, after task 3): 11 MP3 in `client/public/sounds/`, 350 kB in all (the interface sounds 3 to 12 kB each, the rewards 11 to 27 kB, the sea loop 224 kB). None is in the first screen: they load after the first tap, in the background. The game's own JavaScript grows by about 1.5 kB gzipped (the loader and the sea).
