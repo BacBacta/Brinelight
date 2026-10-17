@@ -948,15 +948,15 @@ describe("the look", () => {
   }
 
   /** Captures `what`, the 3D view hidden, and compares it with its reference (or writes it, with LOOK=update). */
-  async function look(page: Page, what: Locator, name: string): Promise<void> {
-    await page.evaluate(() => {
+  async function look(page: Page, what: Locator, name: string, hide = ""): Promise<void> {
+    await page.evaluate((hide) => {
       const s = document.createElement("style");
       s.id = "look-hide";
       // Captured standing still (as with reduced motion): the celebrations' motions and the bars' 300 ms transitions run
-      // on the real clock, and the Lighthouse's full screen shows the top bar under its veil.
-      s.textContent = "#cv,.labels{visibility:hidden!important}.celebration *{animation:none!important}*{transition:none!important}";
+      // on the real clock. `hide`: what else is hidden for this capture.
+      s.textContent = `#cv,.labels{visibility:hidden!important}.celebration *{animation:none!important}*{transition:none!important}${hide}`;
       document.head.appendChild(s);
-    });
+    }, hide);
     const png = await what.screenshot({ animations: "disabled", caret: "hide" });
     await page.evaluate(() => document.getElementById("look-hide")?.remove());
     mkdirSync(OUT, { recursive: true });
@@ -1190,7 +1190,9 @@ describe("the look", () => {
       await page.clock.runFor(1300);
       await page.clock.fastForward(600_000);
       await page.clock.runFor(200);
-      await look(page, page.locator(".celebration.lighthouse"), `celebrate-lighthouse-${w}`);
+      // The top bar and the line under it are hidden under the veil: the CI draws their rounded bars there in two ways
+      // (week 6), and they have their own captures.
+      await look(page, page.locator(".celebration.lighthouse"), `celebrate-lighthouse-${w}`, ".hud,.sub{visibility:hidden!important}");
       await page.locator(".celebration.lighthouse").click();
       await page.locator('.nav button[data-v="captains"]').click();
       await page.locator('.sheet.captains [data-act="logbook"]').click();
