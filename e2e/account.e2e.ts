@@ -3,6 +3,7 @@
  * Signed in, every action goes to the server, which decides; the city shown is the server's.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { cpus } from "node:os";
 import type { BrowserContext, Locator, Page } from "playwright-core";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -754,8 +755,33 @@ describe("the look", () => {
       // Where the captain rows fall, to the fraction of a pixel: their rounded corners were drawn in two ways by the CI.
       console.log(
         `Captain rows at ${w} px (devicePixelRatio ${await page.evaluate(() => devicePixelRatio)}): ` +
-          (await sheet(page).locator(".it.captain").evaluateAll((rows) => rows.map((r) => { const b = r.getBoundingClientRect(); return `${b.top}..${b.bottom} (left ${b.left})`; }))).join(", "),
+          (await sheet(page).locator(".it.captain").evaluateAll((rows) => { const r = (e: Element | null) => { const b = e!.getBoundingClientRect(); return `${b.top}/${b.height}`; }; const sh = rows[0]!.closest(".sheet")!; return [`sheet ${r(sh)}`, `body ${r(sh.querySelector(".sh-b"))}`, `list ${r(rows[0]!.parentElement)}`, ...[...rows[0]!.parentElement!.parentElement!.children].map((c) => `${c.className} ${r(c)}`)]; })).join(" | ") + " || " + (await sheet(page).locator(".it.captain").evaluateAll((rows) => rows.map((r) => { const b = r.getBoundingClientRect(); return `${b.top}..${b.bottom} (left ${b.left})`; }))).join(", "),
       );
+      // Temporary (week 6): the captain rows' left corners drawn under a few variants, to find the one every CI machine draws alike.
+      const strip = await sheet(page).locator(".it.captain").first().evaluate((r) => { const l = r.parentElement!.getBoundingClientRect(); return { x: 0, y: Math.floor(l.top), width: 60, height: Math.min(innerHeight, Math.ceil(l.bottom)) - Math.floor(l.top) }; });
+      const corners: string[] = [];
+      for (const [v, css] of [
+        ["now", ""],
+        ["whole-height", ".it.captain .tt b{line-height:22px}"],
+        ["whole-top", ".it.captain .tt b{line-height:22px}"],
+        ["border-1.5", ".it.captain{border-width:1.5px}"],
+        ["no-background", ".it.captain{background:none}"],
+        ["no-opacity", ".it.captain.locked .ph,.it.captain.locked .tt{opacity:1}"],
+      ] as const) {
+        await page.evaluate(([css, whole]) => {
+          const s = document.createElement("style");
+          s.id = "corner-variant";
+          s.textContent = `#cv,.labels{visibility:hidden!important}${css}`;
+          document.head.appendChild(s);
+          const list = document.querySelector<HTMLElement>(".sheet:not([hidden]) .it.captain")!.parentElement!;
+          list.style.marginTop = "";
+          if (whole) list.style.marginTop = `${Math.ceil(list.getBoundingClientRect().top) - list.getBoundingClientRect().top}px`;
+        }, [css, v === "whole-top"] as const);
+        const png = await page.screenshot({ clip: strip, animations: "disabled" });
+        corners.push(`${v} ${createHash("sha1").update(png).digest("hex").slice(0, 10)}`);
+        await page.evaluate(() => { document.getElementById("corner-variant")?.remove(); document.querySelector<HTMLElement>(".sheet:not([hidden]) .it.captain")!.parentElement!.style.marginTop = ""; });
+      }
+      console.log(`Captain corners at ${w} px: ${corners.join(", ")}`);
       await toBottom(page);
       await look(page, sheet(page), `captains-bottom-${w}`);
       await close(page);
