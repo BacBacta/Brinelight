@@ -590,10 +590,11 @@ describe("the look", () => {
   const strict = !!process.env.CI || process.env.LOOK === "strict";
   const problems: string[] = [];
   /**
-   * The only captures with a second reference (docs/decisions.md, 17 October): the CI's AMD EPYC 9V74 machines draw the
-   * left corners of the captain rows a little differently, with the same layout. Any third drawing fails, as for the others.
+   * The only captures with a second reference (docs/decisions.md, 17 October): some AMD machines of the CI (EPYC 9V74,
+   * 9V45) draw the left corners of the captain rows a little differently, with the same layout. Any third drawing fails, as
+   * for the others.
    */
-  const VARIANTS: Readonly<Record<string, readonly string[]>> = { "captains-top-412": ["amd-epyc-9v74"], "captains-top-360": ["amd-epyc-9v74"] };
+  const VARIANTS: Readonly<Record<string, readonly string[]>> = { "captains-top-412": ["variant"], "captains-top-360": ["variant"] };
   /** Which reference each capture with a second one matched. */
   const matched: string[] = [];
   /** Taps that miss their button: on every machine, they fail the test. */
