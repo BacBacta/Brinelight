@@ -1,0 +1,178 @@
+{
+  "buildings": {
+    "lighthouse": 4,
+    "refinery": 1,
+    "fishery": 1,
+    "lumberyard": 1,
+    "shelters": 1,
+    "barracks": 0,
+    "harbor": 1,
+    "observatory": 1,
+    "infirmary": 1
+  },
+  "stock": {
+    "oil": 4021.1666666666656,
+    "fish": 4134.7333333333345,
+    "wood": 3326.3333333333335,
+    "rope": 9
+  },
+  "troops": {
+    "boarders": 0,
+    "harpooners": 0,
+    "crossbowmen": 0
+  },
+  "techs": {},
+  "rafts": {
+    "-3,0": {
+      "hp": 100,
+      "building": null,
+      "level": 0
+    }
+  },
+  "captains": {
+    "tom": {
+      "level": 1,
+      "xp": 0,
+      "stars": 1
+    }
+  },
+  "survivors": 8,
+  "morale": 84,
+  "pearls": 216,
+  "queue": [
+    {
+      "id": "refinery",
+      "left": 2640,
+      "duration": 3240
+    }
+  ],
+  "research": {
+    "id": "refining",
+    "left": 3000,
+    "duration": 3600
+  },
+  "yard": {
+    "slot": "-3,1",
+    "kind": "raft",
+    "left": 3720,
+    "duration": 4320
+  },
+  "lead": "tom",
+  "fleets": [
+    {
+      "site": "camp-2",
+      "kind": "attack",
+      "phase": "out",
+      "left": 2366,
+      "travel": 2966,
+      "troops": {
+        "boarders": 40,
+        "harpooners": 40,
+        "crossbowmen": 40
+      },
+      "techs": {},
+      "lead": {
+        "id": "tom",
+        "rarity": "officer",
+        "level": 1
+      },
+      "watchtowers": 0,
+      "hold": 715,
+      "cargo": {},
+      "pearls": 0
+    }
+  ],
+  "world": {
+    "camps": {
+      "camp-1": 2,
+      "camp-2": 2,
+      "camp-3": 3,
+      "camp-4": 4,
+      "camp-5": 5,
+      "camp-6": 6
+    },
+    "wrecks": {
+      "wreck-1": 240,
+      "wreck-2": 480,
+      "wreck-3": 300,
+      "wreck-4": 420,
+      "wreck-5": 540,
+      "wreck-6": 480,
+      "wreck-7": 240,
+      "wreck-8": 420
+    }
+  },
+  "wounded": {
+    "boarders": 13,
+    "harpooners": 13,
+    "crossbowmen": 13
+  },
+  "reports": [
+    {
+      "site": "camp-1",
+      "level": 1,
+      "win": true,
+      "attack": 216,
+      "defense": 88.8,
+      "sent": {
+        "boarders": 60,
+        "harpooners": 60,
+        "crossbowmen": 60
+      },
+      "losses": {
+        "boarders": 12,
+        "harpooners": 12,
+        "crossbowmen": 12
+      },
+      "wounded": {
+        "boarders": 6,
+        "harpooners": 6,
+        "crossbowmen": 6
+      },
+      "enemy": {
+        "boarders": 15,
+        "harpooners": 44,
+        "crossbowmen": 15
+      },
+      "loot": {
+        "oil": 110,
+        "wood": 110,
+        "pearls": 16,
+        "rope": 1
+      },
+      "id": "r1",
+      "read": true
+    },
+    {
+      "site": "camp-6",
+      "level": 6,
+      "win": false,
+      "attack": 72,
+      "defense": 298.79999999999995,
+      "sent": {
+        "boarders": 20,
+        "harpooners": 20,
+        "crossbowmen": 20
+      },
+      "losses": {
+        "boarders": 14,
+        "harpooners": 14,
+        "crossbowmen": 14
+      },
+      "wounded": {
+        "boarders": 7,
+        "harpooners": 7,
+        "crossbowmen": 7
+      },
+      "enemy": {
+        "boarders": 149,
+        "harpooners": 50,
+        "crossbowmen": 50
+      },
+      "loot": null,
+      "id": "r2",
+      "read": false
+    }
+  ],
+  "reportSeq": 2
+}

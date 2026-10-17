@@ -2,4 +2,5 @@
 export type { PlayerState, Report } from "./types.js";
 export { MAX_REPORTS, addStar, advance, catchUp, dockRaft, heal, installOnRaft, logbook, newPlayerState, promote, readReport, research, sail, setLead, train, unlockCaptain, upgrade, upgradeRaft, type ActionResult, type UpgradeResult } from "./state.js";
 export { MAX_REPORT_SEQ, REPORT_ID, cleanFleets, cleanQueue, parseState } from "./parse.js";
+export { CITY_SHAPE, MIN_CITY_SHAPE, migrateCity, upgradeShape } from "./migrate.js";
 export { ACTION_ID, applyAction, parseAction, type GameAction, type GameActionType } from "./actions.js";

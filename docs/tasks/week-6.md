@@ -21,6 +21,8 @@ Do the tasks in order, one per session. For each one: read CLAUDE.md, say what y
 - The open question on stored cities in `docs/decisions.md` is closed.
 - Done when: a city saved by the week 4 server opens on today's server, with its fleet and its reports, and the next action saves it in the current shape.
 
+**Done (17 October).** A column `cities.shape` (migration `0003`: the rows already stored are shape 4) and `migrateCity` in `shared/src/state/migrate.ts`: shape 4 → 5 adds only what is missing (`training`, `healing`, `veterans` in the city and in each fleet, `shards`), shapes below 4 or above 5 are refused. The server reads every stored city with it; `GET /city` writes nothing, the first action that changes the city writes it in shape 5, logged with the player id and the two shapes only. The client's `migrateSave` uses the same step. Tests: the city of week 4 made by the week 4 code (`shared/test/fixtures/city-week4.json`, with a fleet at sea and two reports), in `shared/test/migrate.test.ts` and `server/test/migration.test.ts`, on PGlite and on PostgreSQL in the CI's `postgres` job, including a database left by the week 4 server (migrations 0000 to 0002) opened by today's.
+
 ## Task 2 · Shared interface components
 
 - Buttons, sheets, progress bars and chips become shared components used by every sheet (buildings, rafts, Captains, sea, reports, Profile), instead of HTML written again in each one.

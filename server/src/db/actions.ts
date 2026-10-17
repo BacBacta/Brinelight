@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { applyAction, catchUp, parseState, type GameAction, type PlayerState } from "@brinelight/shared";
+import { CITY_SHAPE, applyAction, catchUp, migrateCity, parseState, type GameAction, type PlayerState } from "@brinelight/shared";
 import { and, eq, lt } from "drizzle-orm";
 import { ensureCity, gameSeconds, type DbLog } from "./cities.js";
 import type { Db } from "./index.js";
@@ -32,7 +32,8 @@ export const RULE_REFUSED = "rule_refused";
  * Applies one action to a player's city, in one transaction:
  * the city is created if missing and its row locked (SELECT … FOR UPDATE), so two actions on the same city
  * run one after the other; an id already seen gives back its first outcome and applies nothing;
- * the city is advanced to `now` (server clock, times `speed`), then the action is applied with the shared rules.
+ * the city, brought up to the current shape (migrateCity), is advanced to `now` (server clock, times `speed`), then the
+ * action is applied with the shared rules; a city stored in an older shape is written in the current one.
  * The city is checked with parseState after catching up and after the action: refused, nothing is written.
  * Only the outcome and a hash of the action are kept, never the city.
  */
@@ -44,9 +45,9 @@ export async function applyPlayerAction(db: Db, playerId: string, action: GameAc
   return db.transaction(async (tx) => {
     await ensureCity(tx, playerId, now);
     const [row] = await tx.select().from(cities).where(eq(cities.playerId, playerId)).for("update");
-    const stored = row ? parseState(row.state) : null;
+    const stored = row ? migrateCity(row.state, row.shape) : null;
     if (!row || !stored) {
-      log?.error({ playerId, version: row?.version }, "Stored city refused by parseState");
+      log?.error({ playerId, version: row?.version, shape: row?.shape }, "Stored city refused by migrateCity");
       return { kind: "unreadable" } as const;
     }
     const current = catchUp(stored, gameSeconds(row.savedAt, now, speed));
@@ -78,7 +79,9 @@ export async function applyPlayerAction(db: Db, playerId: string, action: GameAc
     }
     if (!parseState(result.state)) return broken("City refused by parseState after an action");
     const version = row.version + 1;
-    await tx.update(cities).set({ state: result.state, version, savedAt: now }).where(eq(cities.playerId, playerId));
+    await tx.update(cities).set({ state: result.state, version, shape: CITY_SHAPE, savedAt: now }).where(eq(cities.playerId, playerId));
+    // The player id and the two shapes only: never the city, never a wallet address.
+    if (row.shape !== CITY_SHAPE) log?.info?.({ playerId, from: row.shape, to: CITY_SHAPE }, "Stored city written in the current shape");
     await tx.insert(appliedActions).values({ playerId, actionId: action.id, actionHash: hash, appliedAt: now, ok: true });
     return { kind: "applied", replayed: false, city: { state: result.state, version, asOf: now } } as const;
   });

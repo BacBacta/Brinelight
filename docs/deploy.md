@@ -410,7 +410,7 @@ All as `brinelight`, in `~/brinelight/deploy`.
   ~/brinelight/deploy/update.sh
   ```
 
-  It makes a backup, fetches `main`, rebuilds, restarts, and checks `/health`. Database migrations apply by themselves when the server starts.
+  It makes a backup, fetches `main`, rebuilds, restarts, and checks `/health`. Database migrations apply by themselves when the server starts. A city stored in an older shape is brought up to date when it is read, and written in the current shape at its next change (`docs/decisions.md`).
 
 - **Space left on the disk**: `df -h /`
 

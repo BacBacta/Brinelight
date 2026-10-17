@@ -1,4 +1,4 @@
-import { advance, newPlayerState } from "@brinelight/shared";
+import { CITY_SHAPE, advance, newPlayerState } from "@brinelight/shared";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -66,11 +66,11 @@ describe("players", () => {
 });
 
 describe("cities", () => {
-  it("reads a stored city, unchanged, with its version and save time", async () => {
+  it("reads a stored city, unchanged, with its version, save time and shape", async () => {
     const p = await findOrCreatePlayer(db, WALLET, T0);
     const city = advance(newPlayerState(), 3600);
-    await db.insert(schema.cities).values({ playerId: p.id, state: city, version: 3, savedAt: T0 });
-    expect(await loadCity(db, p.id)).toEqual({ status: "ok", city: { state: city, version: 3, savedAt: T0 } });
+    await db.insert(schema.cities).values({ playerId: p.id, state: city, version: 3, shape: CITY_SHAPE, savedAt: T0 });
+    expect(await loadCity(db, p.id)).toEqual({ status: "ok", city: { state: city, version: 3, savedAt: T0, shape: CITY_SHAPE } });
   });
 
   it("a player with no city has none", async () => {
@@ -81,14 +81,14 @@ describe("cities", () => {
   it("ensureCity makes a new city at version 1 for a player who has none, and never touches an existing one", async () => {
     const p = await findOrCreatePlayer(db, WALLET, T0);
     await ensureCity(db, p.id, T0);
-    expect(await loadCity(db, p.id)).toEqual({ status: "ok", city: { state: newPlayerState(), version: 1, savedAt: T0 } });
+    expect(await loadCity(db, p.id)).toEqual({ status: "ok", city: { state: newPlayerState(), version: 1, savedAt: T0, shape: CITY_SHAPE } });
     const played = advance(newPlayerState(), 600);
     await db.update(schema.cities).set({ state: played, version: 5, savedAt: later(MIN) });
     await ensureCity(db, p.id, later(DAY));
-    expect(await loadCity(db, p.id)).toEqual({ status: "ok", city: { state: played, version: 5, savedAt: later(MIN) } });
+    expect(await loadCity(db, p.id)).toEqual({ status: "ok", city: { state: played, version: 5, savedAt: later(MIN), shape: CITY_SHAPE } });
   });
 
-  it("a stored city that parseState refuses is reported, logged with the player id only, and left intact", async () => {
+  it("a stored city that migrateCity refuses is reported, logged with the player id and its shape only, and left intact", async () => {
     const p = await findOrCreatePlayer(db, WALLET, T0);
     await ensureCity(db, p.id, T0);
     // The stored document gets damaged (by hand, or by an old server).
@@ -97,7 +97,7 @@ describe("cities", () => {
     const logs: { fields: Record<string, unknown>; message: string }[] = [];
     const r = await loadCity(db, p.id, { error: (fields, message) => logs.push({ fields, message }) });
     expect(r).toEqual({ status: "unreadable", reason: UNREADABLE });
-    expect(logs).toEqual([{ fields: { playerId: p.id, version: 1 }, message: "Stored city refused by parseState" }]);
+    expect(logs).toEqual([{ fields: { playerId: p.id, version: 1, shape: CITY_SHAPE }, message: "Stored city refused by migrateCity" }]);
     expect(JSON.stringify(logs)).not.toContain("camps");
     const [row] = await db.select().from(schema.cities);
     expect(row!.state).toEqual(broken);
