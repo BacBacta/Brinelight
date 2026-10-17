@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { loadBuildings, tierOf, type BuildingModels } from "./buildings.js";
-import { fitIsland, loadModels, loadRaftBuildings, type Models, type RaftBuildingModels } from "./models.js";
+import { ISLAND_ANISOTROPY, filterTexture, fitIsland, loadModels, loadRaftBuildings, type Models, type RaftBuildingModels } from "./models.js";
 import { createCamera, createControls, frameCity } from "./camera.js";
 import { createIsland, type Kit } from "./island.js";
 import { createLighthouse, lighthouseScale } from "./lighthouse.js";
@@ -100,6 +100,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       if (disposed) return;
       const kit: Kit = {};
       gltf.scenes.forEach((sc) => (kit[sc.name] = sc));
+      filterTexture(models.island, Math.min(ISLAND_ANISOTROPY, renderer.capabilities.getMaxAnisotropy()));
       scene.add(createIsland(fitIsland(models.island)));
       lighthouse.useModel(buildings.lighthouse);
       sizeLighthouse();

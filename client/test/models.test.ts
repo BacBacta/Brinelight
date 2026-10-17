@@ -4,10 +4,11 @@ import * as THREE from "three";
 import { BUILDING_IDS, RAFT_SLOTS } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
 import { PLOT_OUTLINE, createIsland, hexX, hexZ } from "../src/scene/island.js";
-import { ISLAND_TURN, MODEL_IDS, SHORE_RADIUS, fitIsland, modelUrl } from "../src/scene/models.js";
+import { ISLAND_TURN, MODEL_IDS, SHORE_RADIUS, filterTexture, fitIsland, modelUrl } from "../src/scene/models.js";
 import { buildingUrl } from "../src/scene/buildings.js";
 import { plotPosition } from "../src/city/buildings.js";
 import { RAFT_WIDTH, slotPosition } from "../src/city/rafts.js";
+import { readGlb } from "./glb.js";
 
 const PUBLIC = fileURLToPath(new URL("../public", import.meta.url));
 /** Every model the game serves or keeps for later: the buildings, then the other models. */
@@ -86,6 +87,52 @@ describe("the island under the city", () => {
     // On ring 3: its tiles are 5.2 to 6 from the center.
     expect(SHORE_RADIUS).toBeGreaterThanOrEqual(5.2);
     expect(SHORE_RADIUS).toBeLessThanOrEqual(6);
+  });
+
+  it("the island and the outlines of its plots, nothing else: no foam of the prototype on ring 3, inside the waves", () => {
+    const model = fitIsland(islandModel());
+    const island = createIsland(model);
+    expect(island.children).toEqual([model, island.getObjectByName("plot-outlines")]);
+  });
+
+  it("its meadow: every face at its level faces up, and those flattening turned over lie face up just under it (the S22's shore)", () => {
+    // Flattening once laid the undersides of the meadow's bumps on it, upside down: z-fighting, dark through the
+    // double-sided material. make-models.py turns them face up, just under the meadow.
+    const root = Object.values(readGlb(`${PUBLIC}${modelUrl("island")}`).scenes)[0]!;
+    root.updateMatrixWorld(true);
+    let level = 0;
+    let under = 0;
+    const [a, b, c] = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+    root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const pos = mesh.geometry.getAttribute("position");
+      const index = mesh.geometry.index!;
+      for (let i = 0; i < index.count; i += 3) {
+        [a, b, c].forEach((v, k) => v.fromBufferAttribute(pos, index.getX(i + k)).applyMatrix4(mesh.matrixWorld));
+        const ys = [a.y, b.y, c.y];
+        const up = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a)).y > 0;
+        if (ys.every((y) => Math.abs(y) < 1e-4)) {
+          level++;
+          expect(up, `face ${i / 3}, on the meadow`).toBe(true);
+        } else if (ys.every((y) => y < -1e-3 && y > -3e-3)) {
+          under++;
+          expect(up, `face ${i / 3}, turned under the meadow`).toBe(true);
+        }
+      }
+    });
+    expect(level).toBeGreaterThan(500);
+    expect(under).toBeGreaterThan(100);
+  });
+
+  it("its texture: mipmaps, trilinear and anisotropic filtering", () => {
+    const map = new THREE.Texture();
+    map.minFilter = THREE.LinearFilter;
+    const model = new THREE.Mesh(new THREE.PlaneGeometry(), new THREE.MeshStandardMaterial({ map }));
+    filterTexture(model, 8);
+    expect(map.generateMipmaps).toBe(true);
+    expect(map.minFilter).toBe(THREE.LinearMipmapLinearFilter);
+    expect(map.anisotropy).toBe(8);
   });
 
   it("the outlines of the 19 plots in one mesh, cream and half transparent, just above the ground", () => {
