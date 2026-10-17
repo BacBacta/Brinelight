@@ -729,6 +729,35 @@ describe("celebrations", () => {
   });
 });
 
+describe("the Mist's mood", () => {
+  it("?mist: the banner says Mist, and the 3D view shows its look (the veil, the beams); without it, calm, as before", async () => {
+    const look = async (query: string) => {
+      const p = await newPlayer(false);
+      const page = await p.context.newPage();
+      await page.goto(`${GAME}/?quality=2&fps${query}`);
+      await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
+      await page.waitForSelector(".labels.city .bl b");
+      await expect.poll(() => page.locator(".fps").innerText(), NET).toMatch(/calls/);
+      await page.waitForTimeout(1500);
+      const banner = await page.locator('.sub [data-k="mist"]').innerText();
+      const fps = await page.locator(".fps").innerText();
+      await page.screenshot({ path: `e2e/.shots/shot-mood${query ? "-mist" : "-calm"}.png` });
+      await p.context.close();
+      return { banner, fps, calls: Number(/(\d+) calls/.exec(fps)![1]) };
+    };
+    const calm = await look("");
+    const mist = await look("&mist");
+    expect(calm.banner).toMatch(/^Calm sea · /);
+    expect(calm.fps).not.toMatch(/Mist/);
+    expect(mist.banner).toMatch(/^Mist · /);
+    expect(mist.fps).toMatch(/City · Mist/);
+    // The veil on the horizon (+1), and the Lighthouse's two beams, hidden in calm and sweeping in the Mist (+4: each
+    // cone is drawn on both sides).
+    console.log(`The Mist's mood: calm ${calm.calls} calls, Mist ${mist.calls} calls`);
+    expect(mist.calls).toBe(calm.calls + 5);
+  });
+});
+
 describe("sounds", () => {
   it("nothing before the first tap; turned off in the Profile, without an account, they stay off after a reload", async () => {
     const p = await newPlayer(false);

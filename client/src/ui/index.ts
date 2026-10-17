@@ -5,6 +5,7 @@ import "@fontsource/nunito/800.css";
 import "@fontsource/nunito/900.css";
 import type { PlayerState } from "../state/index.js";
 import { createHud } from "./hud.js";
+import type { SeaMood } from "../scene/look.js";
 import { createNav, type NavSheet, type NavView } from "./nav.js";
 import { createToasts, type ToastKind } from "./toast.js";
 import "./style.css";
@@ -21,8 +22,14 @@ export type Ui = {
 };
 
 /** The game interface over the 3D view: top bar, Mist banner, bottom menu and toasts. */
-export function createUi(root: HTMLElement, onView: (view: NavView) => void, onProfile?: () => void, onSheet?: (sheet: NavSheet) => void): Ui {
-  const hud = createHud(root, onProfile);
+export function createUi(
+  root: HTMLElement,
+  onView: (view: NavView) => void,
+  onProfile?: () => void,
+  onSheet?: (sheet: NavSheet) => void,
+  mood: SeaMood = "calm",
+): Ui {
+  const hud = createHud(root, onProfile, mood);
   const toasts = createToasts(root);
   const nav = createNav(root, () => toasts.show("Coming soon", "", "~"), onView, onSheet);
   return {

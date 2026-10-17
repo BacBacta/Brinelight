@@ -8,7 +8,8 @@ import { createLighthouse, lighthouseScale } from "./lighthouse.js";
 import { applyQualityStep, createQualityMonitor, type QualityStep } from "./quality.js";
 import { createRenderer } from "./renderer.js";
 import { createSky } from "./sky.js";
-import { CITY_CALM, CITY_WATER, addLook } from "./look.js";
+import { CITY_CALM, CITY_MIST, CITY_WATER, SEA_CALM, SEA_MIST, addLook, applyLook, mixLook, type SeaMood } from "./look.js";
+import { createVeil } from "./veil.js";
 import { createSeaView } from "./sea.js";
 import { createWater } from "./water.js";
 import { createShore, type Disc } from "./shore.js";
@@ -23,10 +24,11 @@ export { WAVE_HEIGHT } from "./water.js";
 export type View = "city" | "sea";
 export type { QualityStep } from "./quality.js";
 export type { Disc } from "./shore.js";
+export type { SeaMood } from "./look.js";
 export { forcedQuality } from "./quality.js";
 
 /** What the ?fps counter shows about rendering. */
-export type RenderStats = { step: QualityStep; forced: boolean; calls: number; triangles: number };
+export type RenderStats = { step: QualityStep; forced: boolean; mood: SeaMood; calls: number; triangles: number };
 
 /** A point on screen; `depth` grows with the distance from the camera (normalized device depth). */
 export type ScreenPoint = { x: number; y: number; depth: number; visible: boolean };
@@ -45,6 +47,13 @@ export type SceneHandle = {
   project(x: number, y: number, z: number): ScreenPoint;
   /** Called on every drawn frame, before rendering, with the scene clock in seconds and the shown view. */
   onFrame(cb: (now: number, view: View) => void): void;
+  /**
+   * The sea's mood, calm or the Mist (its look only): the light, the fog, the water, the veil and the Lighthouses' beams
+   * fade to it in 1.5 s, or at once (`now`, or with reduced motion on the device).
+   */
+  setMood(mood: SeaMood, now?: boolean): void;
+  /** How much the Lighthouses' beams show, 0 to 1 (the sea map's Lighthouses follow it). */
+  readonly beams: number;
   /** The rafts moored around the island (and the shipyard at work): the foam goes around them. */
   setMoored(discs: readonly Disc[]): void;
   /** Quality step and the last frame's draw calls and triangles (renderer.info). */
@@ -71,7 +80,10 @@ const KIT_URL = `${import.meta.env.BASE_URL}prototype/assets/phare.glb`;
 export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}): SceneHandle {
   const renderer = createRenderer(canvas);
   const scene = new THREE.Scene();
-  const { sun } = addLook(scene, createSky(CITY_CALM.sky), CITY_CALM, true);
+  const look = addLook(scene, createSky(CITY_CALM.sky), CITY_CALM, true);
+  const { sun } = look;
+  const veil = createVeil();
+  scene.add(veil.mesh);
   const water = createWater(CITY_WATER);
   scene.add(water.mesh);
   water.useRenderer(renderer);
@@ -98,6 +110,25 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     sea.layout(innerWidth / innerHeight, home);
   };
   const shown = () => (view === "city" ? { scene, camera, controls } : sea);
+
+  // The sea's mood: 0 calm, 1 the Mist; `moodAt` fades to `moodTo`.
+  let mood: SeaMood = "calm";
+  let moodAt = 0;
+  let moodTo = 0;
+  let beams = 0;
+  const showMood = (t: number) => {
+    const city = mixLook(CITY_CALM, CITY_MIST, t);
+    applyLook(look, city);
+    const atSea = mixLook(SEA_CALM, SEA_MIST, t);
+    applyLook(sea.look, atSea);
+    water.setLead(city.lead, city.sky[2]);
+    sea.water.setLead(atSea.lead, atSea.sky[2]);
+    veil.set(city.veil);
+    lighthouse.setBeams(city.beams);
+    beams = city.beams;
+  };
+  /** The mood's fade, in seconds. */
+  const MOOD_FADE = 1.5;
   addEventListener("resize", layout);
 
   let disposed = false;
@@ -156,6 +187,10 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       applyQualityStep(renderer, sun, next, [water, sea.water]);
       layout();
     }
+    if (moodAt !== moodTo) {
+      moodAt = moodTo > moodAt ? Math.min(moodTo, moodAt + dt / MOOD_FADE) : Math.max(moodTo, moodAt - dt / MOOD_FADE);
+      showMood(moodAt);
+    }
     const v = shown();
     if (view === "city") {
       water.setTime(now);
@@ -182,12 +217,23 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     get view() {
       return view;
     },
+    setMood(next, now = false) {
+      mood = next;
+      moodTo = next === "mist" ? 1 : 0;
+      if (now || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        moodAt = moodTo;
+        showMood(moodAt);
+      }
+    },
+    get beams() {
+      return beams;
+    },
     setMoored(discs) {
       moored = discs;
       if (shore) water.setShore(shore.distances(discs));
     },
     stats() {
-      return { step, forced: forced !== null, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles };
+      return { step, forced: forced !== null, mood, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles };
     },
     add(object, v = "city") {
       (v === "city" ? scene : sea.scene).add(object);

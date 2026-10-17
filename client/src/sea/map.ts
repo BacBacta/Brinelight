@@ -5,7 +5,8 @@ import { WAVE_HEIGHT, createLighthouse, hexGeometry, kitModel, normalizeBuilding
 export type SeaMap = {
   /** Invisible shapes used to know which site was tapped. */
   hits: THREE.Object3D[];
-  animate(now: number): void;
+  /** `beams`: how much the Lighthouses' beams show (hidden in calm weather, sweeping in the Mist). */
+  animate(now: number, beams: number): void;
 };
 
 /** The room the wreck and the pirate camp take on the map, and how deep they sit: they float, the hull half sunk. */
@@ -126,8 +127,11 @@ export function createSeaMap(kit: Kit, models: Pick<Models, "wreck" | "camp">, a
 
   return {
     hits,
-    animate(now) {
-      for (const { lh, x } of lighthouses) lh.animate(now * 0.8 + x);
+    animate(now, beams) {
+      for (const { lh, x } of lighthouses) {
+        lh.setBeams(beams);
+        lh.animate(now * 0.8 + x);
+      }
       for (const { ring, x } of rings) ring.scale.setScalar(1 + Math.sin(now * 2 + x) * 0.08);
     },
   };

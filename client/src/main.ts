@@ -27,6 +27,7 @@ import { fpsWanted } from "./ui/fpsMeter.js";
 import { createCaptainsSheet } from "./ui/captains.js";
 import { createCelebrations } from "./ui/celebrate.js";
 import { createUi } from "./ui/index.js";
+import { seaMood } from "./ui/values.js";
 import { createSound, type SoundId } from "./ui/sound.js";
 import { DEVICE, DEV_SPEED, SAVE_EVERY_MS, accountOwner, awayEvents, browserStore, elapse, eventsBetween, openSave, readSeen, saveGame, writeSeen, type PlayerState } from "./state/index.js";
 import "./style.css";
@@ -110,6 +111,8 @@ if (new URLSearchParams(location.search).has("rules")) {
     sea?.closeSheet();
     captains.close();
   };
+  // The sea's mood, for the banner and the 3D view: calm until the Mist's calendar (week 7); ?mist shows its look.
+  const mood = seaMood(location.search);
   const ui = createUi(
     app,
     showView,
@@ -126,6 +129,7 @@ if (new URLSearchParams(location.search).has("rules")) {
       profile.close();
       captains.open(state);
     },
+    mood,
   );
   ui.update(state);
   if (opened?.rejected) ui.toast("Your saved city could not be read. A copy was kept.", "bad", "!");
@@ -225,6 +229,8 @@ if (new URLSearchParams(location.search).has("rules")) {
     },
     onError: () => (status.textContent = "Could not load the 3D models. Reload the page."),
   });
+
+  scene.setMood(mood, true);
 
   // Measuring on a phone: ?fps shows the counter, ?quality=0|1|2 forces a quality step (docs/perf.md).
   if (fpsWanted(location.search)) fps = createFpsCounter(app, scene);

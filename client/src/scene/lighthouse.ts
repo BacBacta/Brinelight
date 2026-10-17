@@ -18,6 +18,11 @@ export type Lighthouse = {
   readonly widthCap: number;
   /** Its lantern shines brighter with each visual tier. */
   setTier(tier: Tier): void;
+  /**
+   * Its two beams, 0 to 1: hidden in calm weather, sweeping in the Mist (docs/art-direction.md); its lantern keeps its
+   * tier's glow either way.
+   */
+  setBeams(amount: number): void;
 };
 
 /**
@@ -55,7 +60,8 @@ export function createLighthouse(opts: { gold?: boolean; light?: boolean } = {})
   const lamp = add(new THREE.CylinderGeometry(0.24, 0.24, 0.36, 12), lampM, top + 0.25);
   add(new THREE.ConeGeometry(0.33, 0.32, 12), redM, top + 0.59);
 
-  const beamM = new THREE.MeshBasicMaterial({ color: "#FFE7A0", transparent: true, opacity: 0.14, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+  // The beams pierce the Mist's fog: the only warm point in it (docs/art-direction.md).
+  const beamM = new THREE.MeshBasicMaterial({ color: "#FFE7A0", transparent: true, opacity: 0.14, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
   const beam = new THREE.Mesh(new THREE.ConeGeometry(0.42, 3.2, 16, 1, true), beamM);
   beam.rotation.z = Math.PI / 2;
   beam.position.x = 1.6;
@@ -74,6 +80,8 @@ export function createLighthouse(opts: { gold?: boolean; light?: boolean } = {})
     g.add(light);
   }
 
+  let beams = 0;
+  pivot.visible = false;
   let widthCap = Infinity;
   return {
     group: g,
@@ -86,7 +94,11 @@ export function createLighthouse(opts: { gold?: boolean; light?: boolean } = {})
     },
     animate(now) {
       pivot.rotation.y = now;
-      beamM.opacity = 0.12 * (1 + Math.sin(now * 6) * 0.05);
+      beamM.opacity = 0.12 * (1 + Math.sin(now * 6) * 0.05) * beams;
+    },
+    setBeams(amount) {
+      beams = amount;
+      pivot.visible = amount > 0.001;
     },
     useModel(model) {
       for (const m of tower) m.visible = m === lamp;

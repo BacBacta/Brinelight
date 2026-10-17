@@ -2,12 +2,13 @@ import { netRates } from "@brinelight/shared";
 import type { PlayerState } from "../state/index.js";
 import { ICONS, resourceIcon } from "./icons.js";
 import { FULL_AT, ROLL_MS, cityPower, fillRatio, longAmount, mistText, rateText, rolled, shortAmount, survivorsText } from "./values.js";
+import type { SeaMood } from "../scene/look.js";
 
 const RESOURCES = ["oil", "fish", "wood"] as const;
 const NAMES = { oil: "Oil", fish: "Fish", wood: "Driftwood" } as const;
 
 /** The top bar (Lighthouse level, Power, resources, Pearls) and the line under it (survivors, morale, Mist). */
-export function createHud(root: HTMLElement, onProfile?: () => void) {
+export function createHud(root: HTMLElement, onProfile?: () => void, mood: SeaMood = "calm") {
   const hud = document.createElement("header");
   hud.className = "hud";
   hud.innerHTML =
@@ -89,7 +90,7 @@ export function createHud(root: HTMLElement, onProfile?: () => void) {
       set(q(sub, '[data-k="surv"]'), survivorsText(state));
       q(sub, '[data-k="morale-bar"]').style.width = `${Math.min(100, Math.max(0, state.morale))}%`;
       set(q(sub, '[data-k="morale"]'), `${Math.round(state.morale)}%`);
-      set(q(sub, '[data-k="mist"]'), mistText(state));
+      set(q(sub, '[data-k="mist"]'), mistText(state, mood));
     },
   };
 }

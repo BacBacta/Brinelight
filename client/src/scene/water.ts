@@ -26,6 +26,8 @@ export type Water = {
   setShore(distances: Uint8Array | null): void;
   /** Builds the sky's reflection once a renderer is there (PMREM). */
   useRenderer(renderer: THREE.WebGLRenderer): void;
+  /** How leaden the water is (the Mist's mood), 0 to 1, and the horizon it shows without its reflection. */
+  setLead(amount: number, horizon: string): void;
 };
 
 /** The big, slow waves: the height of the water at (x, y) of the plane at time t, and its slopes (vertex shader). */
@@ -55,8 +57,11 @@ export function createWater(opts: WaterOptions): Water {
     uFoam: { value: 0 },
     uFoamMoves: { value: 1 },
     uFoamColor: { value: new THREE.Color("#FFF6E6").multiplyScalar(1.05) },
+    uLead: { value: 0 },
+    uLeadColor: { value: new THREE.Color("#6A7382") },
   };
-  const material = new THREE.MeshStandardMaterial({ color: opts.far, roughness: 0.12, metalness: 0.05, envMapIntensity: 0.55 });
+  const ENV = 0.55;
+  const material = new THREE.MeshStandardMaterial({ color: opts.far, roughness: 0.12, metalness: 0.05, envMapIntensity: ENV });
   material.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uniforms);
     sh.vertexShader =
@@ -68,8 +73,8 @@ export function createWater(opts: WaterOptions): Water {
         .replace("#include <project_vertex>", "#include <project_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.)).xyz;");
     sh.fragmentShader =
       [
-        "uniform float uT, uRipples, uFoam, uFoamMoves;",
-        "uniform vec3 uNear, uFar, uSkyTint, uFoamColor, uShoreBox;",
+        "uniform float uT, uRipples, uFoam, uFoamMoves, uLead;",
+        "uniform vec3 uNear, uFar, uSkyTint, uFoamColor, uShoreBox, uLeadColor;",
         "uniform vec2 uRadii;",
         "uniform sampler2D uShore;",
         "varying vec3 vWPos;",
@@ -80,7 +85,7 @@ export function createWater(opts: WaterOptions): Water {
         // Turquoise near the center, navy far away.
         .replace(
           "vec4 diffuseColor = vec4( diffuse, opacity );",
-          "vec4 diffuseColor = vec4( mix(uNear, uFar, smoothstep(uRadii.x, uRadii.y, length(vWPos.xz))), opacity );",
+          "vec4 diffuseColor = vec4( mix(mix(uNear, uFar, smoothstep(uRadii.x, uRadii.y, length(vWPos.xz))), uLeadColor, uLead * .75), opacity );",
         )
         // Small ripples: a few crossing sines tilt the normal, pixel by pixel.
         .replace(
@@ -109,7 +114,7 @@ if (uFoam > 0.) {
     float swell = .5 + .5 * sin(d * 9. - t * 2.2);
     float grain = sin(vWPos.x * 7.3 + sin(vWPos.z * 5.1)) * sin(vWPos.z * 6.7 + sin(vWPos.x * 4.3 + t * .4));
     float f = (1. - smoothstep(.03, .28 + .1 * swell, d)) * smoothstep(-.5, .5, grain + swell * .8 - d * 2.);
-    outgoingLight = mix(outgoingLight, uFoamColor, clamp(f, 0., 1.) * .7);
+    outgoingLight = mix(outgoingLight, uFoamColor * (1. - uLead * .35), clamp(f, 0., 1.) * .7);
   }
 }
 #include <opaque_fragment>`,
@@ -158,6 +163,12 @@ if (uFoam > 0.) {
       } else shoreTexture.image.data.set(distances);
       shoreTexture.needsUpdate = true;
       uniforms.uFoam.value = 1;
+    },
+    setLead(amount, horizon) {
+      uniforms.uLead.value = amount;
+      uniforms.uSkyTint.value.set(horizon);
+      // Leaden water reflects less of its sky.
+      material.envMapIntensity = ENV * (1 - 0.6 * amount);
     },
     useRenderer(renderer) {
       if (reflection) return;

@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { PORTRAIT_ASPECT } from "./camera.js";
 import { createSky } from "./sky.js";
-import { SEA_CALM, SEA_WATER, addLook } from "./look.js";
+import { SEA_CALM, SEA_WATER, addLook, type LookParts } from "./look.js";
 import { createWater, type Water } from "./water.js";
 
 /** How far the sea camera can pan from the center of the map (prototype). */
@@ -13,6 +13,8 @@ export type SeaView = {
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
   water: Water;
+  /** Its sky, fog and lights (the Mist's mood changes them). */
+  look: LookParts;
   /** First framing over your city; later resizes keep where you looked. */
   layout(aspect: number, home: { x: number; z: number }): void;
 };
@@ -20,7 +22,7 @@ export type SeaView = {
 /** The sea scene of the prototype: wide water, its own sky and lights, a camera that pans and zooms but never turns. */
 export function createSeaView(dom: HTMLElement): SeaView {
   const scene = new THREE.Scene();
-  addLook(scene, createSky(SEA_CALM.sky), SEA_CALM, false);
+  const look = addLook(scene, createSky(SEA_CALM.sky), SEA_CALM, false);
   const water = createWater(SEA_WATER);
   scene.add(water.mesh);
 
@@ -50,6 +52,7 @@ export function createSeaView(dom: HTMLElement): SeaView {
     camera,
     controls,
     water,
+    look,
     layout(aspect, home) {
       camera.aspect = aspect;
       camera.updateProjectionMatrix();

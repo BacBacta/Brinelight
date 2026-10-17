@@ -1,6 +1,8 @@
 /**
  * The light of the city and of the sea (docs/art-direction.md, Light; week 6, task 4): a fixed, warm late afternoon. A
- * cream-to-turquoise sky, a warm, low sun with long, soft shadows, and a haze the far sea melts into.
+ * cream-to-turquoise sky, a warm, low sun with long, soft shadows, and a haze the far sea melts into. In the Mist, its
+ * mood only (no rule: the Mist's mechanism comes in week 7): a grey-violet sky and fog, a light violet veil on the
+ * horizon, leaden water, a dim sun, and the Lighthouse's beams sweeping, the only warm point.
  */
 import * as THREE from "three";
 import type { Sky } from "./sky.js";
@@ -13,7 +15,14 @@ export type Look = {
   sun: { color: string; intensity: number };
   /** The light from the sky and from the ground (HemisphereLight). */
   hemi: { sky: string; ground: string; intensity: number };
+  /** The violet veil on the horizon, the Lighthouse's beams, and how leaden the water is: 0 to 1. */
+  veil: number;
+  beams: number;
+  lead: number;
 };
+
+/** The sea's mood: calm, or the Mist. Only its look: no rule depends on it. */
+export type SeaMood = "calm" | "mist";
 
 /**
  * Where the sun stands, seen from the city's center: low in the west-southwest (about 26° up), to the left of the camera
@@ -27,6 +36,20 @@ export const CITY_CALM: Look = {
   fog: { color: "#DCE6DA", near: 32, far: 80 },
   sun: { color: "#FFC98A", intensity: 3.6 },
   hemi: { sky: "#FFE6C7", ground: "#4F6B3A", intensity: 0.85 },
+  veil: 0,
+  beams: 0,
+  lead: 0,
+};
+
+/** The city in the Mist: a uniform grey-violet sky, fog eating the far sea, a dim, cold sun (art direction). */
+export const CITY_MIST: Look = {
+  sky: ["#8E86B0", "#B3ADCB", "#C9C2DC"],
+  fog: { color: "#B9B3D6", near: 18, far: 54 },
+  sun: { color: "#D9D2E6", intensity: 1.3 },
+  hemi: { sky: "#C9C2DC", ground: "#4A4F5A", intensity: 1.1 },
+  veil: 1,
+  beams: 1,
+  lead: 1,
 };
 
 /** The sea map: the same light, seen from higher (its camera stands 40 to 80 above the water). */
@@ -35,7 +58,37 @@ export const SEA_CALM: Look = {
   fog: { color: "#DCE6DA", near: 55, far: 120 },
   sun: { color: "#FFC98A", intensity: 3.2 },
   hemi: { sky: "#FFE6C7", ground: "#3A6B8A", intensity: 1 },
+  veil: 0,
+  beams: 0,
+  lead: 0,
 };
+
+/** The sea map in the Mist (its camera looks down: no horizon to veil). */
+export const SEA_MIST: Look = {
+  sky: ["#8E86B0", "#B3ADCB", "#C9C2DC"],
+  fog: { color: "#B9B3D6", near: 42, far: 96 },
+  sun: { color: "#D9D2E6", intensity: 1.2 },
+  hemi: { sky: "#C9C2DC", ground: "#3E4A5C", intensity: 1.15 },
+  veil: 0,
+  beams: 1,
+  lead: 1,
+};
+
+/** The look `t` of the way from `a` to `b` (0: a, 1: b): colors and numbers alike. */
+export function mixLook(a: Look, b: Look, t: number): Look {
+  const c = new THREE.Color();
+  const color = (x: string, y: string) => "#" + c.set(x).lerp(new THREE.Color(y), t).getHexString().toUpperCase();
+  const num = (x: number, y: number) => x + (y - x) * t;
+  return {
+    sky: [color(a.sky[0], b.sky[0]), color(a.sky[1], b.sky[1]), color(a.sky[2], b.sky[2])],
+    fog: { color: color(a.fog.color, b.fog.color), near: num(a.fog.near, b.fog.near), far: num(a.fog.far, b.fog.far) },
+    sun: { color: color(a.sun.color, b.sun.color), intensity: num(a.sun.intensity, b.sun.intensity) },
+    hemi: { sky: color(a.hemi.sky, b.hemi.sky), ground: color(a.hemi.ground, b.hemi.ground), intensity: num(a.hemi.intensity, b.hemi.intensity) },
+    veil: num(a.veil, b.veil),
+    beams: num(a.beams, b.beams),
+    lead: num(a.lead, b.lead),
+  };
+}
 
 /** The city's water: turquoise around the island and its rafts, navy from 30 m out, reflecting the calm sky. */
 export const CITY_WATER: WaterOptions = { size: 160, near: "#17A7CF", far: "#16508C", radii: [9, 30], sky: CITY_CALM.sky };

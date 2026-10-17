@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { newPlayerState, sail } from "@brinelight/shared";
 import { NAV_ITEMS } from "../src/ui/nav.js";
 import { MAX_TOASTS, keepToasts } from "../src/ui/toast.js";
-import { FULL_AT, cityPower, fillRatio, longAmount, mistText, rateText, shortAmount, survivorsText } from "../src/ui/values.js";
+import { FULL_AT, cityPower, fillRatio, longAmount, mistText, rateText, seaMood, shortAmount, survivorsText } from "../src/ui/values.js";
 
 describe("amounts", () => {
   it("short amounts for the pills, as in the prototype", () => {
@@ -68,6 +68,18 @@ describe("top bar values from the shared rules", () => {
     expect(oilAutonomy(noRefinery, 110)).toBeCloseTo(10 * 3600);
     expect(mistText({ ...noRefinery, stock: { ...s.stock, oil: 110 } })).toBe("Calm sea · oil for 10 h 00 in the Mist");
     expect(mistText({ ...noRefinery, stock: { ...s.stock, oil: 5 } })).toBe("Calm sea · oil for 27 min in the Mist");
+  });
+
+  it("the sea's mood: calm, unless ?mist shows the Mist's look; the banner says so", () => {
+    expect(seaMood("")).toBe("calm");
+    expect(seaMood("?quality=2&fps")).toBe("calm");
+    expect(seaMood("?mist")).toBe("mist");
+    expect(seaMood("?fps&mist")).toBe("mist");
+    const s = newPlayerState();
+    const noRefinery = { ...s, buildings: { ...s.buildings, refinery: 0 }, stock: { ...s.stock, oil: 110 } };
+    expect(mistText(noRefinery, "mist")).toBe("Mist · oil for 10 h 00");
+    expect(mistText({ ...s, buildings: { ...s.buildings, refinery: 5 } }, "mist")).toBe("Mist · your oil holds");
+    expect(mistText(noRefinery, "calm")).toBe(mistText(noRefinery));
   });
 });
 
