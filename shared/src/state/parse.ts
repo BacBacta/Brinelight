@@ -1,7 +1,7 @@
 import { BUILDERS, BUILDING_IDS, LIGHTHOUSE_MAX, type UpgradeJob } from "../rules/buildings.js";
 import { CAPTAINS, CAPTAIN_MAX_LEVEL, type CaptainId } from "../rules/captains.js";
 import type { HealingJob } from "../rules/healing.js";
-import { RAFT_BUILDINGS, RAFT_BUILDING_MAX_LEVEL, RAFT_MAX_HP, RAFT_SLOTS, type Rafts, type YardJob } from "../rules/rafts.js";
+import { RAFT_BUILDINGS, RAFT_BUILDING_MAX_COPIES, RAFT_BUILDING_MAX_LEVEL, RAFT_MAX_HP, RAFT_SLOTS, raftBuildingCopies, type RaftBuildingId, type Rafts, type YardJob } from "../rules/rafts.js";
 import { TECHS, techLevel, type ResearchJob, type TechId, type Techs } from "../rules/research.js";
 import { ATTACK_STAY, COLLECT_STAY, SEA_SITES, fleetsMax, hospitalCapacity, seaSite, type Fleet, type SeaWorld } from "../rules/sea.js";
 import { PROMOTE_BARRACKS, PROMOTE_COUNT, TRAIN_PER_LEVEL, type TrainingJob } from "../rules/training.js";
@@ -35,6 +35,7 @@ const isCaptains = (c: unknown) =>
     ([id, v]) => has(CAPTAINS, id) && isObj(v) && isWhole(v.level, 1, CAPTAIN_MAX_LEVEL) && isWhole(v.stars, 1) && isNum(v.xp) && v.xp >= 0,
   );
 const SLOTS = new Set(RAFT_SLOTS.map((s) => s.key));
+/** A raft on a known slot: with no building at level 0, or with a known building at level 1 to RAFT_BUILDING_MAX_LEVEL. */
 const isRafts = (r: unknown) =>
   isObj(r) &&
   Object.entries(r).every(
@@ -44,8 +45,7 @@ const isRafts = (r: unknown) =>
       isNum(v.hp) &&
       v.hp >= 0 &&
       v.hp <= RAFT_MAX_HP &&
-      (v.building === null || (typeof v.building === "string" && has(RAFT_BUILDINGS, v.building))) &&
-      isLevel(v.level, RAFT_BUILDING_MAX_LEVEL),
+      (v.building === null ? v.level === 0 : typeof v.building === "string" && has(RAFT_BUILDINGS, v.building) && isWhole(v.level, 1, RAFT_BUILDING_MAX_LEVEL)),
   );
 
 const isJob = (j: unknown): j is UpgradeJob =>
@@ -123,16 +123,26 @@ function parseResearch(raw: unknown, techs: Techs): ResearchJob | null | undefin
 }
 
 /**
- * The work at the shipyard: none (null), or a new raft (the only kind today) on a known slot with no raft yet,
- * with its time left brought back between 0 and its duration. Anything else refuses the city.
+ * The work at the shipyard: none (null), a new raft on a known slot with no raft yet, a building put on a free raft,
+ * or a raft building below its highest level taken one level up; with its time left brought back between 0 and its
+ * duration. Anything else refuses the city.
  */
 function parseYard(raw: unknown, rafts: Rafts): YardJob | null | undefined {
   if (raw === null) return null;
-  if (!isObj(raw) || Object.keys(raw).sort().join() !== "duration,kind,left,slot") return undefined;
+  if (!isObj(raw)) return undefined;
   const { slot, kind, left, duration } = raw;
-  if (kind !== "raft" || typeof slot !== "string" || !SLOTS.has(slot) || has(rafts, slot)) return undefined;
-  if (!isNum(left) || !isNum(duration) || duration <= 0) return undefined;
-  return { slot, kind, left: Math.min(Math.max(0, left), duration), duration };
+  if (typeof slot !== "string" || !SLOTS.has(slot) || !isNum(left) || !isNum(duration) || duration <= 0) return undefined;
+  const time = { left: Math.min(Math.max(0, left), duration), duration };
+  const keys = Object.keys(raw).sort().join();
+  const raft = has(rafts, slot) ? rafts[slot]! : null;
+  if (kind === "raft") return keys === "duration,kind,left,slot" && !raft ? { slot, kind, ...time } : undefined;
+  if (kind === "install") {
+    const b = raw.building;
+    if (keys !== "building,duration,kind,left,slot" || typeof b !== "string" || !has(RAFT_BUILDINGS, b) || !raft || raft.building) return undefined;
+    return { slot, kind, building: b as RaftBuildingId, ...time };
+  }
+  if (kind === "upgrade") return keys === "duration,kind,left,slot" && raft?.building && raft.level < RAFT_BUILDING_MAX_LEVEL ? { slot, kind, ...time } : undefined;
+  return undefined;
 }
 
 /**
@@ -259,6 +269,8 @@ export function parseState(raw: unknown): PlayerState | null {
     if (research === undefined) return null;
     const yard = parseYard(s.yard, s.rafts as Rafts);
     if (yard === undefined) return null;
+    // At most RAFT_BUILDING_MAX_COPIES rafts per building type, the one being put on a raft included.
+    if ((Object.keys(RAFT_BUILDINGS) as RaftBuildingId[]).some((id) => raftBuildingCopies(id, s.rafts as Rafts, yard) > RAFT_BUILDING_MAX_COPIES)) return null;
     const buildings = s.buildings as PlayerState["buildings"];
     const training = parseTraining(s.training, buildings.barracks, s.techs as Techs);
     if (training === undefined) return null;

@@ -38,9 +38,11 @@ body.scene button{color:inherit;font-family:inherit;cursor:pointer}
 .brume span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* Builders' queue */
-.queue{position:fixed;left:8px;top:calc(100px + env(safe-area-inset-top,0px));z-index:4;display:grid;gap:5px;width:min(220px,48vw);pointer-events:none}
+.queue{position:fixed;left:8px;top:calc(100px + env(safe-area-inset-top,0px));z-index:4;display:grid;gap:5px;width:min(220px,48vw);pointer-events:none}.queue .list{display:grid;gap:5px}.queue .list:empty{display:none}
+/* "+N more" under the first rows, "Show less" once unfolded */
+.queue .more{pointer-events:auto;justify-self:start;background:rgba(6,16,36,.78);border:2px solid rgba(255,255,255,.12);border-radius:99px;padding:3px 10px;font:900 12px var(--f-b);color:var(--soft)}.queue .more[hidden]{display:none}
 /* The name on its own line, never cut; the bar and the time below it */
-.queue>div{pointer-events:auto;display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:6px;row-gap:2px;background:rgba(6,16,36,.78);border:2px solid rgba(255,255,255,.12);border-radius:12px;padding:4px 6px;font-size:12px;font-weight:800}
+.queue .list>div{pointer-events:auto;display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:6px;row-gap:2px;background:rgba(6,16,36,.78);border:2px solid rgba(255,255,255,.12);border-radius:12px;padding:4px 6px;font-size:12px;font-weight:800}
 .queue .n{grid-column:1/-1;overflow-wrap:anywhere;line-height:1.2}
 .queue .pb{height:6px;border-radius:9px;background:rgba(255,255,255,.12);overflow:hidden}.queue .pb i{display:block;height:100%;background:linear-gradient(90deg,#3BC6FF,#7CFFD8)}
 .queue .t{font-variant-numeric:tabular-nums;color:var(--soft);min-width:38px;text-align:right}

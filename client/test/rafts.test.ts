@@ -101,7 +101,7 @@ describe("the sheet of a raft slot", () => {
     expect(raftSheetHtml(r.state, INNER[0]!, 1)!.body).toContain(RAFT_TEXT.working);
     const moored = raftSheetHtml({ ...lit(), rafts: { [INNER[0]!]: raft(40) } }, INNER[0]!, 1)!;
     expect(moored.body).toContain("40% · half efficiency");
-    expect(moored.body).toContain("Buildings on rafts are coming soon.");
+    expect(moored.body).toContain(RAFT_TEXT.raft);
   });
 });
 

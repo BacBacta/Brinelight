@@ -1,5 +1,5 @@
-import type { BuildingId, TechId, TroopType } from "@brinelight/shared";
-import { lighthouseScale, type BuildingModels, type Kit, type Models, type SceneHandle } from "../scene/index.js";
+import type { BuildingId, RaftBuildingId, TechId, TroopType } from "@brinelight/shared";
+import { lighthouseScale, type BuildingModels, type Kit, type Models, type RaftBuildingModels, type SceneHandle } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 import { createCityBuildings } from "./buildings.js";
 import { createLabels } from "./labels.js";
@@ -13,6 +13,8 @@ export type City = {
   update(state: PlayerState): void;
   /** Closes the open sheet, when you leave the city. */
   closeSheet(): void;
+  /** The buildings on rafts, once loaded after the city shows. */
+  useRaftBuildings(models: RaftBuildingModels): void;
 };
 
 /** Height of a building's label above its model's top. */
@@ -34,6 +36,8 @@ export function createCity(
     promote(troop: TroopType): void;
     heal(): void;
     dockRaft(slot: string): void;
+    installOnRaft(slot: string, building: RaftBuildingId): void;
+    upgradeRaft(slot: string): void;
     toCity(): void;
     /** How much faster than real time the city runs: the server's speed when signed in. */
     speed(): number;
@@ -57,7 +61,12 @@ export function createCity(
       buildings.select(null);
     },
   });
-  const raftSheet = createRaftSheet(root, { dock: (slot) => game.dockRaft(slot), close: () => raftSheet.close() });
+  const raftSheet = createRaftSheet(root, {
+    dock: (slot) => game.dockRaft(slot),
+    install: (slot, building) => game.installOnRaft(slot, building),
+    upgrade: (slot) => game.upgradeRaft(slot),
+    close: () => raftSheet.close(),
+  });
 
   scene.onFrame((now, view) => {
     if (view !== "city") return;
@@ -89,6 +98,9 @@ export function createCity(
   });
 
   return {
+    useRaftBuildings(m) {
+      rafts.useBuildings(m);
+    },
     closeSheet() {
       sheet.close();
       raftSheet.close();

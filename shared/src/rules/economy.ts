@@ -12,6 +12,10 @@ const PROTO = {
   survivorEats: 0.06,
   greenhouse: 0.45,
 };
+/** What a Kelp Greenhouse adds per level, in fish per real hour (prototype: 0.45 per prototype second). */
+export const GREENHOUSE_FISH_PER_HOUR = protoRatePerHour(PROTO.greenhouse);
+/** The share of fish eaten a Smokehouse saves per level (prototype: 10%), down to half at most. */
+export const SMOKEHOUSE_SAVES = 0.1;
 export const STOKE_MULTIPLIER = 2.2;
 export const MIST_PENALTY = 0.7;
 export const HIGH_MORALE = 90;
@@ -37,7 +41,7 @@ export type Weather = { mist: boolean; stoked: boolean };
 export function netRates(s: EconomyState, w: Weather = { mist: false, stoked: false }): Record<Exclude<Resource, "rope">, number> {
   const mul = (s.morale >= HIGH_MORALE ? HIGH_MORALE_BONUS : 1) * (w.mist && !w.stoked ? MIST_PENALTY : 1);
   const t = (id: "refining" | "nets" | "saws") => 1 + 0.1 * techLevel(s.techs, id);
-  const smoke = Math.max(0.5, 1 - 0.1 * raftEffect(s.rafts, "smokehouse"));
+  const smoke = Math.max(0.5, 1 - SMOKEHOUSE_SAVES * raftEffect(s.rafts, "smokehouse"));
   const oil = PROTO.refinery * s.buildings.refinery * mul * t("refining") - PROTO.lighthouseBurn * s.buildings.lighthouse * (w.stoked ? STOKE_MULTIPLIER : 1);
   const fish = PROTO.fishery * s.buildings.fishery * mul * t("nets") + PROTO.greenhouse * raftEffect(s.rafts, "greenhouse") - s.survivors * PROTO.survivorEats * smoke;
   const wood = PROTO.lumberyard * s.buildings.lumberyard * mul * t("saws");

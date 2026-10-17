@@ -2,7 +2,7 @@
 import { STARTING_BUILDINGS, advanceQueue, startUpgrade } from "../rules/buildings.js";
 import { advanceStock, netRates, storeCap } from "../rules/economy.js";
 import { advanceHealing, startHealing } from "../rules/healing.js";
-import { advanceYard, startRaft } from "../rules/rafts.js";
+import { advanceYard, startInstall, startRaft, startRaftUpgrade, type RaftBuildingId } from "../rules/rafts.js";
 import { advanceResearch, startResearch, type TechId } from "../rules/research.js";
 import { advanceFleets, leadOf, sendFleet, startingSeaWorld, type CombatReport, type SeaState } from "../rules/sea.js";
 import { STARTING_CAPTAIN, STARTING_LEAD, STARTING_MORALE, STARTING_PEARLS, STARTING_STOCK, STARTING_SURVIVORS, STARTING_TROOPS } from "../rules/start.js";
@@ -140,6 +140,18 @@ export function research(state: PlayerState, id: TechId): ActionResult {
 /** Starts a new raft on a slot around the island with the shared rule; a refusal comes with its reason. */
 export function dockRaft(state: PlayerState, slot: string): ActionResult {
   const r = startRaft(slot, { rafts: state.rafts, lighthouse: state.buildings.lighthouse, stock: state.stock, yard: state.yard });
+  return r.ok ? { ok: true, state: { ...state, stock: r.stock, yard: r.yard } } : r;
+}
+
+/** Puts a building on the free raft of a slot with the shared rule; a refusal comes with its reason. */
+export function installOnRaft(state: PlayerState, slot: string, building: RaftBuildingId): ActionResult {
+  const r = startInstall(building, { rafts: state.rafts, slot, stock: state.stock, yard: state.yard });
+  return r.ok ? { ok: true, state: { ...state, stock: r.stock, yard: r.yard } } : r;
+}
+
+/** Takes the building on the raft of a slot one level up with the shared rule; a refusal comes with its reason. */
+export function upgradeRaft(state: PlayerState, slot: string): ActionResult {
+  const r = startRaftUpgrade({ rafts: state.rafts, slot, stock: state.stock, yard: state.yard });
   return r.ok ? { ok: true, state: { ...state, stock: r.stock, yard: r.yard } } : r;
 }
 

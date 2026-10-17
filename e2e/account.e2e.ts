@@ -5,8 +5,9 @@
 import type { BrowserContext, Page } from "playwright-core";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import * as THREE from "three";
-import { HOUR, PROMOTE_TIME, RAFT_SLOTS, advance, heal, newPlayerState, promote, research, sail, upgrade, type ActionResult, type PlayerState } from "@brinelight/shared";
+import { HOUR, PROMOTE_TIME, RAFT_INSTALL_TIME, RAFT_SLOTS, advance, heal, newPlayerState, promote, raftUpgradeTime, research, sail, upgrade, type ActionResult, type PlayerState, type RaftBuildingId } from "@brinelight/shared";
 import { frameCity } from "../client/src/scene/camera.js";
+import { SHORE_RADIUS } from "../client/src/scene/models.js";
 import { CITY_KEY_PREFIX } from "../client/src/account/actions.js";
 import { PROFILE_TEXT } from "../client/src/account/profile.js";
 import { TEXT } from "../client/src/account/index.js";
@@ -34,8 +35,11 @@ afterEach(async () => {
 });
 
 /** A browser profile of its own (its own localStorage); with a test wallet when asked. */
-async function newPlayer(withWallet: boolean): Promise<{ context: BrowserContext; wallet: TestWallet | null; apiCalls: string[]; actionIds: string[]; problems: string[] }> {
-  const context = await h.browser.newContext({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 1 });
+async function newPlayer(
+  withWallet: boolean,
+  viewport = { width: 412, height: 915 },
+): Promise<{ context: BrowserContext; wallet: TestWallet | null; apiCalls: string[]; actionIds: string[]; problems: string[] }> {
+  const context = await h.browser.newContext({ viewport, deviceScaleFactor: 1 });
   contexts.push(context);
   const wallet = withWallet ? await installFakeWallet(context) : null;
   const apiCalls: string[] = [];
@@ -223,8 +227,9 @@ describe("city labels", () => {
     const models: string[] = [];
     p.context.on("response", (r) => r.url().includes("/models/") && r.ok() && models.push(new URL(r.url()).pathname));
     const page = await openGame(p.context);
-    // The buildings on rafts wait for the shipyard's task: not loaded.
-    expect(models.sort()).toEqual(["boat", "camp", "island", "raft", "wreck"].map((id) => `/models/${id}.glb`));
+    // The five models of the first screen, then the three buildings on rafts, loaded once the city shows.
+    expect(models.slice(0, 5).sort()).toEqual(["boat", "camp", "island", "raft", "wreck"].map((id) => `/models/${id}.glb`));
+    await expect.poll(() => models.slice(5).sort(), NET).toEqual(["greenhouse", "smokehouse", "watchtower"].map((id) => `/models/${id}.glb`));
     await page.waitForTimeout(1000);
     await page.screenshot({ path: "e2e/.shots/shot-island.png" });
     await page.screenshot({ path: "e2e/.shots/shot-hud.png", clip: { x: 0, y: 0, width: 412, height: 140 } });
@@ -368,8 +373,23 @@ describe("combat reports", () => {
   });
 });
 
+/** Puts a city in this device's save before the game starts, once (a reload would not put it back). */
+const injectCity = (context: BrowserContext, city: PlayerState) =>
+  context.addInitScript(
+    ({ key, file }) => {
+      if (sessionStorage.getItem("e2e-injected")) return;
+      localStorage.setItem(key, file);
+      sessionStorage.setItem("e2e-injected", "1");
+    },
+    { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: Date.now(), state: city }) },
+  );
+const SIZES = [
+  { width: 412, height: 915 },
+  { width: 360, height: 800 },
+];
+
 describe("the queue", () => {
-  it("never cuts a name: each one on its own line, the bar and the time below, at 412 and 360 px", async () => {
+  it("six works: three rows and \"+3 more\", clear of the island; unfolded, no name cut; folded back, at 412 and 360 px", async () => {
     const ok = (r: ActionResult) => {
       if (!r.ok) throw new Error(r.reason);
       return r.state;
@@ -390,21 +410,9 @@ describe("the queue", () => {
     city = ok(heal(city));
     city = ok(sail(city, "camp-1"));
     const names = ["Observatory Lv 4", "Infirmary Lv 2", "Research · Sealed Warehouses", "10 veteran crossbowmen", "Healing · 20 wounded", "Fleet · Mist Pirates"];
-    const p = await newPlayer(false);
-    await p.context.addInitScript(
-      ({ key, file }) => {
-        if (sessionStorage.getItem("e2e-injected")) return;
-        localStorage.setItem(key, file);
-        sessionStorage.setItem("e2e-injected", "1");
-      },
-      { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: Date.now(), state: city }) },
-    );
-    const page = await openGame(p.context);
-    for (const width of [412, 360]) {
-      await page.setViewportSize({ width, height: 915 });
-      await page.waitForTimeout(300);
-      const rows = await page.evaluate(() =>
-        [...document.querySelectorAll<HTMLElement>(".queue > div")].map((row) => {
+    const rowsOf = (page: Page) =>
+      page.evaluate(() =>
+        [...document.querySelectorAll<HTMLElement>(".queue .list > div")].map((row) => {
           const n = row.querySelector<HTMLElement>(".n")!;
           const box = row.getBoundingClientRect();
           const name = n.getBoundingClientRect();
@@ -412,12 +420,97 @@ describe("the queue", () => {
           return { text: n.textContent, cut: n.scrollWidth > n.clientWidth, inside: name.left >= box.left && name.right <= box.right, below: bar.top >= name.bottom - 1 };
         }),
       );
-      expect(rows.map((r) => r.text), `${width} px`).toEqual(names);
-      for (const r of rows) expect({ width, ...r }).toEqual({ width, text: r.text, cut: false, inside: true, below: true });
-      await page.screenshot({ path: `e2e/.shots/shot-queue-${width}.png` });
+    for (const size of SIZES) {
+      const p = await newPlayer(false, size);
+      await injectCity(p.context, city);
+      const page = await openGame(p.context);
+      const more = page.locator(".queue .more");
+      await expect.poll(() => more.textContent()).toBe("+3 more");
+      const folded = await rowsOf(page);
+      expect(folded.map((r) => r.text), `${size.width} px`).toEqual(names.slice(0, 3));
+      // Folded, the queue ends above the island's shore wherever they share the screen's width.
+      const queue = (await page.locator(".queue").boundingBox())!;
+      const shore = shoreOnScreen(6, size.width, size.height).filter((pt) => pt.x >= queue.x && pt.x <= queue.x + queue.width);
+      expect(shore.length).toBeGreaterThan(0);
+      expect(queue.y + queue.height, `${size.width} px`).toBeLessThan(Math.min(...shore.map((pt) => pt.y)));
+      await page.screenshot({ path: `e2e/.shots/shot-queue-folded-${size.width}.png` });
+
+      await more.click();
+      await expect.poll(() => more.textContent()).toBe("Show less");
+      const open = await rowsOf(page);
+      expect(open.map((r) => r.text), `${size.width} px`).toEqual(names);
+      for (const r of open) expect({ width: size.width, ...r }).toEqual({ width: size.width, text: r.text, cut: false, inside: true, below: true });
+      await page.screenshot({ path: `e2e/.shots/shot-queue-open-${size.width}.png` });
+      // Still unfolded a few seconds later, as the rows are drawn again.
+      await page.waitForTimeout(1500);
+      expect(await page.locator(".queue .list > div").count()).toBe(6);
+
+      await more.click();
+      await expect.poll(() => page.locator(".queue .list > div").count()).toBe(3);
+      expect(await more.textContent()).toBe("+3 more");
+      expect(p.apiCalls).toEqual([]);
+      await p.context.close();
     }
-    expect(p.apiCalls).toEqual([]);
-    await p.context.close();
+  });
+});
+
+describe("buildings on rafts", () => {
+  it("six rafts with buildings, two of each type; the sheet of a free raft and of a raft with a building, at 412 and 360 px", async () => {
+    const order: [RaftBuildingId, number][] = [
+      ["greenhouse", 2],
+      ["greenhouse", 1],
+      ["smokehouse", 1],
+      ["smokehouse", 3],
+      ["watchtower", 1],
+      ["watchtower", 2],
+    ];
+    for (const size of SIZES) {
+      // The two lowest slots on screen: a free raft, then the Kelp Greenhouse level 2; the others around them.
+      const clear = slotsOnScreen(6, size.width, size.height);
+      const rest = RAFT_SLOTS.filter((x) => x.ring === 3 && x.key !== clear[0]!.slot && x.key !== clear[1]!.slot).map((x) => x.key);
+      const equipped = [clear[1]!.slot, ...rest.slice(0, 5)];
+      const base = newPlayerState();
+      const city: PlayerState = {
+        ...base,
+        buildings: { lighthouse: 6, refinery: 2, fishery: 2, lumberyard: 2, shelters: 1, barracks: 1, harbor: 1, observatory: 1, infirmary: 1 },
+        stock: { oil: 5000, fish: 5000, wood: 5000, rope: 3 },
+        rafts: {
+          [clear[0]!.slot]: { hp: 100, building: null, level: 0 },
+          ...Object.fromEntries(equipped.map((k, i) => [k, { hp: 100, building: order[i]![0], level: order[i]![1] }])),
+        },
+      };
+      const p = await newPlayer(false, size);
+      await injectCity(p.context, city);
+      const models: string[] = [];
+      p.context.on("response", (r) => r.url().includes("/models/") && r.ok() && models.push(new URL(r.url()).pathname));
+      const page = await openGame(p.context);
+      await expect.poll(() => models.filter((m) => /greenhouse|smokehouse|watchtower/.test(m)).length, NET).toBe(3);
+      await page.waitForTimeout(1000);
+      await page.screenshot({ path: `e2e/.shots/shot-rafts-${size.width}.png` });
+
+      const sheet = page.locator(".raft-sheet:not([hidden])");
+      await page.mouse.click(clear[0]!.x, clear[0]!.y);
+      await sheet.waitFor();
+      expect(await sheet.locator("h2").textContent()).toBe("Raft");
+      expect(await sheet.locator("[data-raft-building]").count()).toBe(3);
+      // Two greenhouses already: refused, still tappable; the reason comes in a toast.
+      expect(await sheet.locator('[data-building="greenhouse"]').getAttribute("aria-disabled")).toBe("true");
+      expect(await sheet.locator('[data-raft-building="watchtower"] small').last().textContent()).toContain("2/2");
+      await page.screenshot({ path: `e2e/.shots/shot-raft-free-${size.width}.png` });
+      // aria-disabled: Playwright waits for an enabled button; a finger does not.
+      await sheet.locator('[data-building="greenhouse"]').click({ force: true });
+      await page.locator(".toast", { hasText: "Each type is limited to 2 rafts" }).waitFor();
+      await sheet.locator('[data-act="close"]').click();
+
+      await page.mouse.click(clear[1]!.x, clear[1]!.y);
+      await sheet.waitFor();
+      expect(await sheet.locator("h2").textContent()).toBe("Kelp Greenhouse");
+      expect(await sheet.textContent()).toContain("Kelp Greenhouse level 2: +9 fish/h.");
+      expect(await sheet.textContent()).toContain("Upgrade to level 3");
+      await page.screenshot({ path: `e2e/.shots/shot-raft-building-${size.width}.png` });
+      expect(p.apiCalls).toEqual([]);
+      await p.context.close();
+    }
   });
 });
 
@@ -862,6 +955,47 @@ describe("signed in", () => {
     await p.page.screenshot({ path: "e2e/.shots/shot-raft.png" });
     await p.context.close();
   });
+
+  it("a building on a raft: put from the raft's sheet, found again after a reload, standing by the server's clock, then upgraded", async () => {
+    const p = await signedInPlayer();
+    const base = newPlayerState();
+    const { slot, x, y } = slotOnScreen(4);
+    await h.putCity(p.playerId, { ...base, buildings: { ...base.buildings, lighthouse: 4 }, stock: { oil: 5000, fish: 5000, wood: 5000, rope: 20 }, rafts: { [slot]: { hp: 100, building: null, level: 0 } } });
+    await show(p.page);
+    await expect.poll(async () => Object.keys(((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.rafts ?? {}), NET).toEqual([slot]);
+    await p.page.waitForTimeout(500);
+    await p.page.mouse.click(x, y);
+    const sheet = p.page.locator(".raft-sheet:not([hidden])");
+    await sheet.waitFor();
+    await sheet.locator('[data-act="install"][data-building="greenhouse"]').click();
+    await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).yard, NET).toMatchObject({ slot, kind: "install", building: "greenhouse" });
+    await expect.poll(() => p.page.locator(".queue .n", { hasText: "Shipyard · Kelp Greenhouse" }).count(), NET).toBe(1);
+
+    // Reloaded: the work is the server's, and still there.
+    await p.page.reload();
+    await p.page.waitForSelector(".labels.city .bl b");
+    await expect.poll(() => p.page.locator(".queue .n", { hasText: "Shipyard · Kelp Greenhouse" }).count(), NET).toBe(1);
+
+    // 3 seconds from its end: the server puts the building on the raft on its own clock.
+    const now = (await serverCity(p.token))!.state as unknown as PlayerState;
+    expect(now.yard!.duration).toBe(RAFT_INSTALL_TIME);
+    await h.putCity(p.playerId, { ...now, yard: { ...now.yard!, left: 3 } });
+    await show(p.page);
+    await p.page.waitForTimeout(4000);
+    const done = (await serverCity(p.token))!.state as unknown as PlayerState;
+    expect(done.rafts[slot]).toEqual({ hp: 100, building: "greenhouse", level: 1 });
+    expect(done.yard).toBeNull();
+    await show(p.page);
+    await expect.poll(async () => ((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.rafts[slot]?.building, NET).toBe("greenhouse");
+    await p.page.waitForTimeout(500);
+    await p.page.mouse.click(x, y);
+    await expect.poll(() => p.page.locator(".raft-sheet:not([hidden]) h2").textContent(), NET).toBe("Kelp Greenhouse");
+    await p.page.locator('.raft-sheet:not([hidden]) [data-act="upgrade-raft"]').click();
+    await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).yard, NET).toMatchObject({ slot, kind: "upgrade", duration: raftUpgradeTime(1) });
+    await expect.poll(() => p.page.locator(".queue .n", { hasText: "Shipyard · Kelp Greenhouse Lv 2" }).count(), NET).toBe(1);
+    expect(p.problems).toEqual([]);
+    await p.context.close();
+  });
 });
 
 /**
@@ -869,16 +1003,34 @@ describe("signed in", () => {
  * Lighthouse level: the one lowest on screen that stays clear of the top bar and the bottom menu.
  */
 function slotOnScreen(lighthouse: number): { slot: string; x: number; y: number } {
-  const [w, hgt] = [412, 915];
+  const clear = slotsOnScreen(lighthouse, 412, 915);
+  if (!clear[0]) throw new Error("No raft slot clear on screen");
+  return clear[0];
+}
+
+/** The game's starting camera (frameCity) for this Lighthouse level, on a w × h screen, and a point's place on that screen. */
+function cityCamera(lighthouse: number, w: number, hgt: number) {
   const camera = new THREE.PerspectiveCamera(40, w / hgt, 0.1, 200);
   const target = new THREE.Vector3();
   frameCity(camera, { target, update: () => camera.lookAt(target) } as unknown as Parameters<typeof frameCity>[1], w / hgt, lighthouse);
   camera.updateMatrixWorld();
-  const shown = RAFT_SLOTS.filter((s) => s.ring === 3).map((s) => {
-    const v = new THREE.Vector3(2 * (s.q + s.r / 2), 0, 1.732 * s.r).project(camera);
-    return { slot: s.key, x: ((v.x + 1) / 2) * w, y: ((1 - v.y) / 2) * hgt };
-  });
-  const clear = shown.filter((p) => p.x > 40 && p.x < w - 40 && p.y > 200 && p.y < hgt - 140).sort((a, b) => b.y - a.y);
-  if (!clear[0]) throw new Error("No raft slot clear on screen");
-  return clear[0];
+  return (x: number, y: number, z: number) => {
+    const v = new THREE.Vector3(x, y, z).project(camera);
+    return { x: ((v.x + 1) / 2) * w, y: ((1 - v.y) / 2) * hgt };
+  };
+}
+
+/** The slots of the first ring clear of the top bar and the bottom menu on a w × h screen, lowest on screen first. */
+function slotsOnScreen(lighthouse: number, w: number, hgt: number): { slot: string; x: number; y: number }[] {
+  const at = cityCamera(lighthouse, w, hgt);
+  return RAFT_SLOTS.filter((s) => s.ring === 3)
+    .map((s) => ({ slot: s.key, ...at(2 * (s.q + s.r / 2), 0, 1.732 * s.r) }))
+    .filter((p) => p.x > 40 && p.x < w - 40 && p.y > 200 && p.y < hgt - 140)
+    .sort((a, b) => b.y - a.y);
+}
+
+/** The island's shore (its meadow's edge, SHORE_RADIUS from the center) on a w × h screen, every 5 degrees. */
+function shoreOnScreen(lighthouse: number, w: number, hgt: number): { x: number; y: number }[] {
+  const at = cityCamera(lighthouse, w, hgt);
+  return Array.from({ length: 72 }, (_, i) => at(SHORE_RADIUS * Math.cos((i * Math.PI) / 36), 0, SHORE_RADIUS * Math.sin((i * Math.PI) / 36)));
 }

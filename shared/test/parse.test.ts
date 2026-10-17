@@ -13,8 +13,11 @@ import {
   parseState,
   readReport,
   research,
+  dockRaft,
   heal,
+  installOnRaft,
   promote,
+  upgradeRaft,
   sail,
   train,
   upgrade,
@@ -77,6 +80,7 @@ describe("parseState: whole numbers, nothing below 0", () => {
     let trained = 0;
     let healed = 0;
     let promoted = 0;
+    let shipyard = 0;
     for (let round = 0; round < 40; round++) {
       for (const id of BUILDING_IDS) {
         const r = upgrade(s, id);
@@ -84,6 +88,18 @@ describe("parseState: whole numbers, nothing below 0", () => {
       }
       const studied = research(s, (Object.keys(TECHS) as (keyof typeof TECHS)[])[round % 10]!);
       if (studied.ok) s = studied.state;
+      // The shipyard: a new raft, a building on a free raft, or a building one level up, whichever the rules allow.
+      const slots = RAFT_SLOTS.filter((x) => x.ring === 3).map((x) => x.key);
+      const types = ["greenhouse", "smokehouse", "watchtower"] as const;
+      const yardWork = [
+        ...slots.map((k) => () => dockRaft(s, k)),
+        ...slots.map((k) => () => installOnRaft(s, k, types[round % 3]!)),
+        ...slots.map((k) => () => upgradeRaft(s, k)),
+      ].map((f) => f()).find((r) => r.ok);
+      if (yardWork?.ok) {
+        s = yardWork.state;
+        shipyard++;
+      }
       const raised = round % 2 ? promote(s, (["boarders", "harpooners", "crossbowmen"] as const)[round % 3]!) : null;
       if (raised?.ok) {
         s = raised.state;
@@ -121,6 +137,9 @@ describe("parseState: whole numbers, nothing below 0", () => {
     expect(checked).toBeGreaterThan(1000);
     // Training too: batches started, and some finished along the way.
     expect(trained).toBeGreaterThan(3);
+    // The shipyard too: rafts, buildings put on them and upgraded.
+    expect(shipyard).toBeGreaterThan(5);
+    expect(Object.values(s.rafts).filter((x) => x.building).length).toBeGreaterThan(2);
     // Promotions too: veterans went to sea, and some came back from the battles.
     expect(promoted).toBeGreaterThan(1);
     expect(s.reports.some((r) => Object.values(r.veteranSent ?? {}).some((n) => n > 0))).toBe(true);
@@ -137,7 +156,7 @@ describe("parseState: whole numbers, nothing below 0", () => {
       ...richCity(),
       techs: Object.fromEntries(Object.entries(TECHS).map(([id, t]) => [id, t.max])),
       captains: { tom: { level: CAPTAIN_MAX_LEVEL, xp: 0, stars: 5 } },
-      rafts: { [SLOT]: { hp: 100, building: null, level: RAFT_BUILDING_MAX_LEVEL } },
+      rafts: { [SLOT]: { hp: 100, building: "smokehouse", level: RAFT_BUILDING_MAX_LEVEL } },
       buildings: Object.fromEntries(BUILDING_IDS.map((id) => [id, LIGHTHOUSE_MAX])),
     };
     expect(parseState(json(maxed))).not.toBeNull();

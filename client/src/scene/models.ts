@@ -1,11 +1,12 @@
 /**
  * The other models generated from the art direction (client/public/models, made by assets/make-models.py):
  * the island, the raft, and at sea the wreck, the pirate camp and your boat. The buildings on rafts (greenhouse,
- * smokehouse, watchtower) are in the same folder but not loaded yet: the shipyard's task (week 5, task 4) shows them.
+ * smokehouse, watchtower) are in the same folder, loaded once the city shows (loadRaftBuildings).
  */
 import * as THREE from "three";
 import type { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { RAFT_BUILDINGS, type RaftBuildingId } from "@brinelight/shared";
 
 export const MODEL_IDS = ["island", "raft", "wreck", "camp", "boat"] as const;
 export type ModelId = (typeof MODEL_IDS)[number];
@@ -18,6 +19,20 @@ export async function loadModels(loader: GLTFLoader): Promise<Models> {
   const loaded = await Promise.all(MODEL_IDS.map((id) => loader.loadAsync(modelUrl(id))));
   const out = {} as Models;
   MODEL_IDS.forEach((id, i) => (out[id] = loaded[i]!.scene));
+  return out;
+}
+
+export type RaftBuildingModels = Record<RaftBuildingId, THREE.Object3D>;
+export const RAFT_BUILDING_IDS = Object.keys(RAFT_BUILDINGS) as RaftBuildingId[];
+
+/**
+ * The three buildings on rafts, in parallel with the scene's loader. They are not needed for the first screen
+ * (+464 kB): the scene loads them after the city shows, and the rafts show their buildings once they are there.
+ */
+export async function loadRaftBuildings(loader: GLTFLoader): Promise<RaftBuildingModels> {
+  const loaded = await Promise.all(RAFT_BUILDING_IDS.map((id) => loader.loadAsync(modelUrl(id))));
+  const out = {} as RaftBuildingModels;
+  RAFT_BUILDING_IDS.forEach((id, i) => (out[id] = loaded[i]!.scene));
   return out;
 }
 

@@ -4,12 +4,12 @@
  */
 import { BUILDING_IDS } from "../rules/buildings.js";
 import { BEATS } from "../rules/combat.js";
-import { RAFT_SLOTS } from "../rules/rafts.js";
+import { RAFT_BUILDINGS, RAFT_SLOTS, type RaftBuildingId } from "../rules/rafts.js";
 import { TECHS, type TechId } from "../rules/research.js";
 import { seaSite } from "../rules/sea.js";
 import type { BuildingId, TroopType } from "../rules/types.js";
 import { REPORT_ID } from "./parse.js";
-import { dockRaft, heal, promote, readReport, research, sail, train, upgrade, type ActionResult } from "./state.js";
+import { dockRaft, heal, installOnRaft, promote, readReport, research, sail, train, upgrade, upgradeRaft, type ActionResult } from "./state.js";
 import type { PlayerState } from "./types.js";
 
 /** Every action carries an id made by the client (a UUID), so the server never applies it twice. */
@@ -21,7 +21,9 @@ export type GameAction =
   | { id: string; type: "dockRaft"; slot: string }
   | { id: string; type: "train"; troop: TroopType }
   | { id: string; type: "heal" }
-  | { id: string; type: "promote"; troop: TroopType };
+  | { id: string; type: "promote"; troop: TroopType }
+  | { id: string; type: "installOnRaft"; slot: string; building: RaftBuildingId }
+  | { id: string; type: "upgradeRaft"; slot: string };
 
 export type GameActionType = GameAction["type"];
 
@@ -38,6 +40,8 @@ const FIELDS: Record<GameActionType, readonly string[]> = {
   train: ["troop"],
   heal: [],
   promote: ["troop"],
+  installOnRaft: ["slot", "building"],
+  upgradeRaft: ["slot"],
 };
 
 const SLOTS = new Set(RAFT_SLOTS.map((s) => s.key));
@@ -69,12 +73,16 @@ export function applyAction(state: PlayerState, action: GameAction): ActionResul
       return heal(state);
     case "promote":
       return promote(state, action.troop);
+    case "installOnRaft":
+      return installOnRaft(state, action.slot, action.building);
+    case "upgradeRaft":
+      return upgradeRaft(state, action.slot);
   }
 }
 
 /**
  * Reads an action sent by a client. Strict: an object with exactly the fields of its type, a UUID id,
- * a known building, site, report id, research, slot or troop type. Anything else gives null. Never throws.
+ * a known building, site, report id, research, slot, troop type or raft building. Anything else gives null. Never throws.
  */
 export function parseAction(raw: unknown): GameAction | null {
   try {
@@ -104,9 +112,17 @@ export function parseAction(raw: unknown): GameAction | null {
         const tech = o.tech;
         return shortText(tech) && Object.prototype.hasOwnProperty.call(TECHS, tech) ? { id, type: t, tech: tech as TechId } : null;
       }
-      case "dockRaft": {
+      case "dockRaft":
+      case "upgradeRaft": {
+        // The slot only: the level is the city's, never the client's.
         const slot = o.slot;
         return shortText(slot, 8) && SLOTS.has(slot) ? { id, type: t, slot } : null;
+      }
+      case "installOnRaft": {
+        const { slot, building } = o;
+        return shortText(slot, 8) && SLOTS.has(slot) && shortText(building) && Object.prototype.hasOwnProperty.call(RAFT_BUILDINGS, building)
+          ? { id, type: t, slot, building: building as RaftBuildingId }
+          : null;
       }
       case "train":
       case "promote": {

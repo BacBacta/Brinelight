@@ -5,7 +5,7 @@
  * applyAction for each accepted action), and the server's city is compared with it after every case.
  */
 import { randomBytes, randomUUID } from "node:crypto";
-import { PROMOTE_TIME, RAFT_BUILD_TIME, RAFT_MAX_HP, RAFT_SLOTS, applyAction, catchUp, emptyTroops, healTime, newPlayerState, raftCap, totalTroops, trainTime, type GameAction, type PlayerState } from "@brinelight/shared";
+import { PROMOTE_TIME, RAFT_BUILD_TIME, RAFT_INSTALL_TIME, RAFT_MAX_HP, RAFT_SLOTS, applyAction, catchUp, emptyTroops, healTime, newPlayerState, raftCap, raftUpgradeTime, totalTroops, trainTime, type GameAction, type PlayerState } from "@brinelight/shared";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
@@ -307,6 +307,62 @@ describe("a modified client cannot change the rules", () => {
     await expectRules(server, p);
     expect(p.ref.now().rafts[inner[1]!]).toEqual(sound);
   });
+  it("buildings on rafts: a raft taken, no raft, an unknown type, a third copy, above level 3, the shipyard busy, the resources, a level sent", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const inner = RAFT_SLOTS.filter((s) => s.ring === 3).map((s) => s.key);
+    const [a, b, c, d] = inner as [string, string, string, string];
+    const free = { hp: RAFT_MAX_HP, building: null, level: 0 };
+    const rich = { oil: 9000, fish: 9000, wood: 9000, rope: 50 };
+    const city = {
+      ...base,
+      buildings: { ...base.buildings, lighthouse: 6 },
+      stock: rich,
+      rafts: { [a]: { hp: RAFT_MAX_HP, building: "greenhouse" as const, level: 3 }, [b]: { hp: RAFT_MAX_HP, building: "greenhouse" as const, level: 1 }, [c]: free },
+    };
+
+    const p = await player(city);
+    await expectRefused(server, p, action({ type: "installOnRaft", slot: a, building: "smokehouse" }), "This raft already has a building");
+    await expectRefused(server, p, action({ type: "installOnRaft", slot: d, building: "smokehouse" }), "There is no raft here");
+    await expectRefused(server, p, action({ type: "upgradeRaft", slot: d }), "There is no raft here");
+    await expectRefused(server, p, action({ type: "upgradeRaft", slot: c }), "Put a building on this raft first");
+    await expectRefused(server, p, action({ type: "installOnRaft", slot: c, building: "greenhouse" }), "Each type is limited to 2 rafts");
+    await expectRefused(server, p, action({ type: "upgradeRaft", slot: a }), "Max level");
+    for (const building of ["casino", "toString", "__proto__", ""]) await expectInvalid(server, p, { action: { ...action({ type: "installOnRaft", slot: c, building: "watchtower" }), building } });
+    for (const slot of ["0,0", "1,-3", "toString"]) await expectInvalid(server, p, { action: { ...action({ type: "upgradeRaft", slot: b }), slot } });
+    // The level and the cost are the rule's.
+    await expectInvalid(server, p, { action: { ...action({ type: "upgradeRaft", slot: b }), level: 3 } });
+    await expectInvalid(server, p, { action: { ...action({ type: "installOnRaft", slot: c, building: "watchtower" }), level: 3 } });
+    const poor = await player({ ...city, stock: { oil: 119, fish: 9000, wood: 9000, rope: 50 } });
+    await expectRefused(server, poor, action({ type: "installOnRaft", slot: c, building: "watchtower" }), "Not enough resources");
+
+    await expectApplied(server, p, action({ type: "installOnRaft", slot: c, building: "watchtower" }));
+    expect(p.ref.now().yard).toMatchObject({ slot: c, kind: "install", building: "watchtower" });
+    later(1000);
+    await expectRefused(server, p, action({ type: "upgradeRaft", slot: b }), "The shipyard is busy");
+    await expectRefused(server, p, action({ type: "dockRaft", slot: d }), "The shipyard is busy");
+  });
+
+  it("from shipyard to fleet: the server puts the Watchtower on its raft by its clock, then a fleet sails with it", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const slot = RAFT_SLOTS.find((s) => s.ring === 3)!.key;
+    const p = await player({ ...base, buildings: { ...base.buildings, lighthouse: 4 }, stock: { oil: 9000, fish: 9000, wood: 9000, rope: 50 }, rafts: { [slot]: { hp: RAFT_MAX_HP, building: null, level: 0 } } });
+    await expectApplied(server, p, action({ type: "installOnRaft", slot, building: "watchtower" }));
+    later(RAFT_INSTALL_TIME * 1000 - 1000);
+    await expectRules(server, p);
+    expect(p.ref.now().rafts[slot]).toMatchObject({ building: null, level: 0 });
+    later(1000);
+    await expectRules(server, p);
+    expect(p.ref.now().rafts[slot]).toMatchObject({ building: "watchtower", level: 1 });
+    await expectApplied(server, p, action({ type: "upgradeRaft", slot }));
+    later(raftUpgradeTime(1) * 1000);
+    await expectRules(server, p);
+    expect(p.ref.now().rafts[slot]).toMatchObject({ building: "watchtower", level: 2 });
+    await expectApplied(server, p, action({ type: "sail", site: "camp-1" }));
+    expect(p.ref.now().fleets[0]!.watchtowers).toBe(2);
+  });
+
   it("training: no Barracks, one already underway, not enough resources, an unknown troop type, a number of soldiers sent", async () => {
     const server = await buildApp({ db, now: () => clock });
     const base = newPlayerState();

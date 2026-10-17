@@ -166,6 +166,20 @@ Up to 39 rafts can sit around the island. Each part (deck, planks, free slots, t
 
 To check on a phone, with `?fps`: a city with the Lighthouse at level 10 and its 39 rafts, in the city view, against the same city without rafts. The container has no graphics chip, so this measure is to be made on the phone.
 
+## Buildings on rafts (week 5, task 4)
+
+The Kelp Greenhouse, the Smokehouse and the Watchtower stand on the rafts that carry them: one `InstancedMesh` per type, with room for the 2 rafts a type may have, hidden while no raft carries one. So they add at most 3 draw calls (and 3 in the shadow pass), whatever the number of rafts. Their three models (464 kB) are loaded once the city shows, so the first screen waits for nothing more.
+
+Measured in the container (Chromium, 412 × 915, quality 2, cache off, `?fps` 12 s after the city shows), on a city with all nine buildings, the Lighthouse at level 6 and six rafts, before (`29ac133`) and after:
+
+| | Downloaded | Six free rafts | Six rafts with buildings (two of each type) |
+| --- | --- | --- | --- |
+| Before | 5.18 MB | 39 calls, 72.3 k triangles | 39 calls, 72.3 k triangles (not shown yet) |
+| After | 5.62 MB | 39 calls, 72.3 k triangles | 42 calls, 86.6 k triangles |
+
+- A city with no building on its rafts draws exactly as before.
+- Six buildings add 3 calls and 14.3 k triangles (about 2 400 each). The FPS of the container (9 before, 7 after with six buildings) only says it draws on the processor; the phone's numbers decide.
+
 ## If a phone stays under 30 FPS
 
 From the simplest to the heaviest:
