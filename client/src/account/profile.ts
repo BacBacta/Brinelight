@@ -1,7 +1,7 @@
 /** The Profile sheet (tap the Power card). */
 import type { Wallet } from "@wallet-standard/base";
 import { NO_SIGN_IN, canSignIn, isPhone, phantomLink } from "./wallets.js";
-import { box, button, createSheetView, esc, why } from "../ui/components.js";
+import { box, button, createSheetView, esc, listRow, why } from "../ui/components.js";
 
 export const PROFILE_TEXT = {
   local: "Playing without an account. Your city is saved on this device.",
@@ -11,6 +11,8 @@ export const PROFILE_TEXT = {
   saved: "Your city is saved on your account.",
   signOut: "Sign out",
   unavailable: "Accounts are not open yet. Your city is saved on this device.",
+  sounds: "Sounds",
+  soundsNote: "Wood and rope, quiet. Kept on this device.",
 } as const;
 
 /** "7Hc3wTfa…3tPq" → "7Hc3…3tPq". */
@@ -54,13 +56,21 @@ export function profileHtml(v: ProfileView, page: { href: string; origin: string
   return body;
 }
 
+/** The sounds' switch, under every Profile: you can turn them off with or without an account. */
+export const soundsHtml = (on: boolean): string =>
+  `<div class="list">${listRow(PROFILE_TEXT.sounds, `<small>${PROFILE_TEXT.soundsNote}</small>`, button(on ? "On" : "Off", "sm", "sound", "", undefined, ` aria-pressed="${on}"`), "", ' data-sounds=""')}</div>`;
+
 export function createProfile(
   root: HTMLElement,
-  actions: { view(): ProfileView; signIn(wallet: Wallet): void; signOut(): void },
+  actions: { view(): ProfileView; signIn(wallet: Wallet): void; signOut(): void; sound(): boolean; toggleSound(): void },
 ) {
   const sheet = createSheetView(root, "profile", (act, data) => {
     if (act === "close") sheet.hide();
     if (act === "sign-out") actions.signOut();
+    if (act === "sound") {
+      actions.toggleSound();
+      render();
+    }
     if (act === "sign-in") {
       const w = actions.view().wallets[Number(data.i)];
       if (w) actions.signIn(w);
@@ -68,7 +78,7 @@ export function createProfile(
   });
 
   const render = () => {
-    sheet.draw("Profile", profileHtml(actions.view(), { href: location.href, origin: location.origin, userAgent: navigator.userAgent }));
+    sheet.draw("Profile", profileHtml(actions.view(), { href: location.href, origin: location.origin, userAgent: navigator.userAgent }) + soundsHtml(actions.sound()));
   };
 
   return {

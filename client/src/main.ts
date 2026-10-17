@@ -7,7 +7,8 @@
  * Week 3: sign in with your wallet (Profile, on the Power card) to keep your city on your account.
  * Week 4: signed in, every action is sent to the server, which decides; the city shown is the server's.
  * Week 5: troops are trained at the Barracks, and the wounded healed at the Infirmary.
- * Week 6: what ends is celebrated, and at launch what ended while you were away (compared with the last city seen here).
+ * Week 6: what ends is celebrated, and at launch what ended while you were away (compared with the last city seen here);
+ * light sounds of wood and rope, made by the game, that you can turn off in the Profile.
  * The reference prototype stays playable at /prototype/.
  */
 import { HOME, applyAction, type GameAction } from "@brinelight/shared";
@@ -26,10 +27,14 @@ import { fpsWanted } from "./ui/fpsMeter.js";
 import { createCaptainsSheet } from "./ui/captains.js";
 import { createCelebrations } from "./ui/celebrate.js";
 import { createUi } from "./ui/index.js";
+import { createSound, type SoundId } from "./ui/sound.js";
 import { DEVICE, DEV_SPEED, SAVE_EVERY_MS, accountOwner, awayEvents, browserStore, elapse, eventsBetween, openSave, readSeen, saveGame, writeSeen, type PlayerState } from "./state/index.js";
 import "./style.css";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
+
+/** The actions that start a work: they knock twice on wood. */
+const WORKS = new Set<ActionInput["type"]>(["upgrade", "research", "train", "promote", "heal", "dockRaft", "installOnRaft", "upgradeRaft", "sail"]);
 
 /** What the screen shows: changes here open a report, refresh a sheet, and save the city of this device. */
 const signature = (s: PlayerState): string =>
@@ -46,6 +51,8 @@ if (new URLSearchParams(location.search).has("rules")) {
   const store = browserStore();
   // The last city seen on this device, read before anything writes it: at launch, what ended since is told once.
   const seen = readSeen(store);
+  // Sounds: none before your first tap, and none when turned off on this device.
+  const sound = createSound(store);
 
   // The account: only with a server address. Without one, or without signing in, nothing goes on the network.
   const server = apiUrl();
@@ -122,7 +129,7 @@ if (new URLSearchParams(location.search).has("rules")) {
   );
   ui.update(state);
   if (opened?.rejected) ui.toast("Your saved city could not be read. A copy was kept.", "bad", "!");
-  const celebrations = createCelebrations(app);
+  const celebrations = createCelebrations(app, (c) => sound.play(c.sound));
   /** The city has arrived: what ended since the last city seen on this device, if it is the same owner's, is told. */
   const arrive = () => {
     if (shownCity) return;
@@ -141,12 +148,27 @@ if (new URLSearchParams(location.search).has("rules")) {
     if (!r.ok) {
       // The sheet shows the reason too; the toast answers the tap.
       ui.toast(r.reason, "bad", "!");
+      sound.play("refused");
       return;
     }
+    sound.play(WORKS.has(input.type) ? "start" : "tap");
     state = r.state;
     refresh();
     save();
   };
+
+  // A tap on a button that is not an action (the menu, the Power card, "+N more") knocks once; a sheet that opens or
+  // closes sounds like a rope.
+  app.addEventListener("click", (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLElement>("button, [role=button]");
+    if (b && !b.dataset.act) sound.play("tap");
+  });
+  new MutationObserver((changes) => {
+    for (const c of changes) {
+      const el = c.target as HTMLElement;
+      if (el.classList.contains("sheet") && (c.oldValue !== null) !== el.hidden) sound.play((el.hidden ? "close" : "open") satisfies SoundId);
+    }
+  }).observe(app, { subtree: true, attributes: true, attributeFilter: ["hidden"], attributeOldValue: true });
 
   const captains = createCaptainsSheet(app, {
     setLead: (captain) => act({ type: "setLead", captain }),
@@ -246,6 +268,11 @@ if (new URLSearchParams(location.search).has("rules")) {
   let signingIn = false;
   const profile = createProfile(app, {
     view: () => ({ available: !!account, wallet: account?.wallet ?? null, wallets, busy: signingIn }),
+    sound: () => sound.on,
+    toggleSound: () => {
+      sound.on = !sound.on;
+      sound.play("tap");
+    },
     signIn: async (wallet) => {
       if (!account || signingIn) return;
       signingIn = true;

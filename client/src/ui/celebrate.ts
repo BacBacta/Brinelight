@@ -7,9 +7,10 @@
 import { BUILDINGS, CAPTAINS, RAFT_BUILDINGS, TECHS, trainingName, type GameEvent } from "@brinelight/shared";
 import { esc } from "./components.js";
 import { captainPortrait } from "./portraits.js";
+import type { SoundId } from "./sound.js";
 
 export type CelebrationKind = "float" | "lighthouse" | "captain" | "away";
-export type Celebration = { kind: CelebrationKind; title: string; lines: string[]; portrait?: string };
+export type Celebration = { kind: CelebrationKind; title: string; lines: string[]; sound: SoundId; portrait?: string };
 
 /** How long each kind stays on screen, in ms, unless tapped. */
 export const CELEBRATION_MS: Record<CelebrationKind, number> = { float: 1200, lighthouse: 2500, captain: 2500, away: 6000 };
@@ -40,9 +41,9 @@ export function eventText(e: GameEvent): string {
 
 /** The celebration of one event. */
 export function celebrationOf(e: GameEvent): Celebration {
-  if (e.kind === "building" && e.building === "lighthouse") return { kind: "lighthouse", title: eventText(e), lines: ["Your light reaches farther."] };
-  if (e.kind === "captain") return { kind: "captain", title: eventText(e), lines: [], portrait: captainPortrait(e.captain, 512) };
-  return { kind: "float", title: eventText(e), lines: [] };
+  if (e.kind === "building" && e.building === "lighthouse") return { kind: "lighthouse", title: eventText(e), lines: ["Your light reaches farther."], sound: "lighthouse" };
+  if (e.kind === "captain") return { kind: "captain", title: eventText(e), lines: [], sound: "captain", portrait: captainPortrait(e.captain, 512) };
+  return { kind: "float", title: eventText(e), lines: [], sound: e.kind === "troops" || e.kind === "veterans" ? "troops" : "done" };
 }
 
 /**
@@ -53,7 +54,7 @@ export function celebrationsFor(events: readonly GameEvent[], away = false): Cel
   if (!away || events.length < 2) return events.map(celebrationOf);
   const lines = events.slice(0, AWAY_LINES).map(eventText);
   if (events.length > AWAY_LINES) lines.push(`And ${events.length - AWAY_LINES} more`);
-  return [{ kind: "away", title: "While you were away", lines }];
+  return [{ kind: "away", title: "While you were away", lines, sound: "away" }];
 }
 
 /** A queue that plays one item at a time: `play` calls `done` once the item is over (only the first call counts). */

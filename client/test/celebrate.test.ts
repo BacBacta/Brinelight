@@ -33,11 +33,15 @@ describe("what a celebration says", () => {
 
   it("floating gold text for a work, the full screen for the Lighthouse, the 512 px portrait for a captain", () => {
     expect(celebrationOf({ kind: "building", building: "fishery", level: 2 }).kind).toBe("float");
-    expect(celebrationOf({ kind: "building", building: "lighthouse", level: 5 })).toEqual({ kind: "lighthouse", title: "Lighthouse level 5", lines: ["Your light reaches farther."] });
+    expect(celebrationOf({ kind: "building", building: "lighthouse", level: 5 })).toEqual({ kind: "lighthouse", title: "Lighthouse level 5", lines: ["Your light reaches farther."], sound: "lighthouse" });
     const c = celebrationOf({ kind: "captain", captain: "sel", level: 3 });
     expect(c.kind).toBe("captain");
     expect(c.portrait).toMatch(/captains\/sel-512\.webp$/);
     expect(CELEBRATION_MS.float).toBeLessThan(CELEBRATION_MS.lighthouse);
+    // Each with its sound: troops have theirs, the other works the marimba.
+    expect(celebrationOf({ kind: "troops", troop: "boarders", count: 60 }).sound).toBe("troops");
+    expect(celebrationOf({ kind: "research", tech: "nets", level: 1 }).sound).toBe("done");
+    expect(c.sound).toBe("captain");
   });
 
   it("while you were away: one card for several, a normal celebration for one, nothing for none", () => {
@@ -46,7 +50,7 @@ describe("what a celebration says", () => {
       { kind: "research", tech: "saws", level: 1 },
       { kind: "troops", troop: "boarders", count: 60 },
     ];
-    expect(celebrationsFor(events, true)).toEqual([{ kind: "away", title: "While you were away", lines: ["Refinery level 4", "Tide Saws level 1", "60 boarders ready"] }]);
+    expect(celebrationsFor(events, true)).toEqual([{ kind: "away", title: "While you were away", lines: ["Refinery level 4", "Tide Saws level 1", "60 boarders ready"], sound: "away" }]);
     expect(celebrationsFor(events.slice(0, 1), true)).toEqual([celebrationOf(events[0]!)]);
     expect(celebrationsFor([], true)).toEqual([]);
     const many: GameEvent[] = Array.from({ length: AWAY_LINES + 3 }, (_, i) => ({ kind: "healed", count: i + 1 }));

@@ -729,6 +729,60 @@ describe("celebrations", () => {
   });
 });
 
+describe("sounds", () => {
+  it("nothing before the first tap; turned off in the Profile, without an account, they stay off after a reload", async () => {
+    const p = await newPlayer(false);
+    // Counts the AudioContexts the page makes, and the notes it starts.
+    await p.context.addInitScript(() => {
+      const w = window as unknown as { AudioContext: typeof AudioContext; __audio: { made: number; notes: number } };
+      w.__audio = { made: 0, notes: 0 };
+      const Real = w.AudioContext;
+      w.AudioContext = class extends Real {
+        constructor(...a: ConstructorParameters<typeof AudioContext>) {
+          super(...a);
+          w.__audio.made++;
+          const make = this.createOscillator.bind(this);
+          this.createOscillator = () => {
+            const o = make();
+            const start = o.start.bind(o);
+            o.start = (...t: Parameters<OscillatorNode["start"]>) => {
+              w.__audio.notes++;
+              start(...t);
+            };
+            return o;
+          };
+        }
+      };
+    });
+    const audio = (page: Page) => page.evaluate(() => (window as unknown as { __audio: { made: number; notes: number } }).__audio);
+    const page = await openGame(p.context);
+    await page.waitForTimeout(1500);
+    expect(await audio(page)).toEqual({ made: 0, notes: 0 });
+    // The first tap: the Captains button knocks, and its sheet opens like a rope.
+    await page.locator('.nav button[data-v="captains"]').click();
+    await expect.poll(async () => (await audio(page)).notes).toBeGreaterThan(0);
+    expect((await audio(page)).made).toBe(1);
+    await page.evaluate(() => document.querySelector<HTMLButtonElement>('.sheet:not([hidden]) [data-act="close"]')?.click());
+    // The Profile opens without an account: the switch is there, on.
+    await page.locator(".hud .lvl").click();
+    const button = page.locator('.profile [data-act="sound"]');
+    await expect(button.textContent()).resolves.toBe("On");
+    await button.click();
+    await expect(button.textContent()).resolves.toBe("Off");
+    await expect(button.getAttribute("aria-pressed")).resolves.toBe("false");
+    await page.screenshot({ path: "e2e/.shots/shot-profile-sounds-off.png" });
+    await page.reload();
+    await page.waitForSelector(".labels.city .bl b");
+    await page.locator(".hud .lvl").click();
+    await expect(page.locator('.profile [data-act="sound"]').textContent()).resolves.toBe("Off");
+    await page.locator('.profile [data-act="close"]').click();
+    await page.locator('.nav button[data-v="captains"]').click();
+    await page.waitForTimeout(300);
+    expect(await audio(page)).toEqual({ made: 0, notes: 0 });
+    await p.context.close();
+  });
+});
+
 /**
  * The look of every sheet, compared pixel by pixel with the references in e2e/look/ (week 6, task 2: the shared
  * interface components must not change it). The page's clock is fixed (page.clock), the 3D view and its labels are
