@@ -842,6 +842,54 @@ describe("short motions", () => {
   });
 });
 
+describe("building tiers", () => {
+  it("every building at level 1, 5 and 10: the three tiers, captured, with their draw calls and FPS (?fps)", async () => {
+    const rows: string[] = [];
+    for (const [tier, level, lighthouse] of [
+      [1, 1, 4],
+      [2, 5, 9],
+      [3, 10, 12],
+    ] as const) {
+      const base = newPlayerState();
+      const city: PlayerState = { ...base, buildings: { lighthouse, refinery: level, fishery: level, lumberyard: level, shelters: level, barracks: level, harbor: level, observatory: level, infirmary: level } };
+      const p = await newPlayer(false);
+      await p.context.addInitScript(({ key, file }) => localStorage.setItem(key, file), { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: Date.now(), state: city }) });
+      const page = await p.context.newPage();
+      await page.goto(`${GAME}/?quality=2&fps`);
+      await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
+      await page.waitForSelector(".labels.city .bl b");
+      await page.waitForTimeout(1000);
+      await page.screenshot({ path: `e2e/.shots/shot-tier-${tier}.png` });
+      // As the art direction asks: each building by its silhouette, close up, without the labels.
+      await page.addStyleTag({ content: ".labels{visibility:hidden}" });
+      await page.mouse.move(206, 470);
+      await page.mouse.wheel(0, -900);
+      await page.waitForTimeout(800);
+      await page.screenshot({ path: `e2e/.shots/shot-tier-${tier}-near.png` });
+      await page.mouse.wheel(0, 900);
+      // The counter needs a few seconds of frames.
+      await page.waitForTimeout(12_000);
+      rows.push(`tier ${tier} (level ${level}, Lighthouse ${lighthouse}): ${(await page.locator(".fps").textContent())!.replace(/\n/g, " · ")}`);
+      await p.context.close();
+    }
+    // During the Lighthouse's full-screen celebration (2.5 s): the counter shows the last second.
+    const base = newPlayerState();
+    const p = await newPlayer(false);
+    const city: PlayerState = { ...base, buildings: { ...base.buildings, lighthouse: 9 }, queue: [{ id: "lighthouse", left: 35, duration: 600 }] };
+    await p.context.addInitScript(({ key, file }) => localStorage.setItem(key, file), { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: Date.now(), state: city }) });
+    const page = await p.context.newPage();
+    await page.goto(`${GAME}/?quality=2&fps`);
+    await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
+    await page.locator(".celebration.lighthouse").waitFor({ timeout: 60_000 });
+    await page.waitForTimeout(1600);
+    rows.push(`during the Lighthouse's celebration: ${(await page.locator(".fps").textContent())!.replace(/\n/g, " · ")}`);
+    await p.context.close();
+    mkdirSync("e2e/.shots", { recursive: true });
+    writeFileSync("e2e/.shots/tiers.txt", rows.join("\n") + "\n");
+    console.log(`Building tiers:\n${rows.join("\n")}`);
+  });
+});
+
 /**
  * The look of every sheet, compared pixel by pixel with the references in e2e/look/ (week 6, task 2: the shared
  * interface components must not change it). The page's clock is fixed (page.clock), the 3D view and its labels are
@@ -904,7 +952,8 @@ describe("the look", () => {
     await page.evaluate(() => {
       const s = document.createElement("style");
       s.id = "look-hide";
-      s.textContent = "#cv,.labels{visibility:hidden!important}";
+      // The celebrations are captured standing still (as with reduced motion): their motions run on the real clock.
+      s.textContent = "#cv,.labels{visibility:hidden!important}.celebration *{animation:none!important}";
       document.head.appendChild(s);
     });
     const png = await what.screenshot({ animations: "disabled", caret: "hide" });
@@ -1119,6 +1168,35 @@ describe("the look", () => {
       await look(page, page.locator(".queue"), `queue-folded-${w}`);
       await page.locator(".queue .more").click();
       await look(page, page.locator(".queue"), `queue-open-${w}`);
+      await page.context().close();
+
+      // The celebrations (week 6, task 3): a work that ends, the Lighthouse, a captain who rises a level.
+      const ending: PlayerState = {
+        ...base,
+        buildings: { ...base.buildings, lighthouse: 4, refinery: 2 },
+        stock: { oil: 9000, fish: 9000, wood: 9000, rope: 10 },
+        pearls: 500,
+        queue: [
+          { id: "refinery", left: 600, duration: 900 },
+          { id: "lighthouse", left: 1200, duration: 1800 },
+        ],
+        captains: { ...base.captains, [base.lead!]: { level: 1, xp: 79, stars: 1 } },
+      };
+      page = await frozenGame(size, ending);
+      await page.clock.fastForward(600_000);
+      await page.clock.runFor(200);
+      await look(page, page.locator(".celebration.float"), `celebrate-work-${w}`);
+      await page.clock.runFor(1300);
+      await page.clock.fastForward(600_000);
+      await page.clock.runFor(200);
+      await look(page, page.locator(".celebration.lighthouse"), `celebrate-lighthouse-${w}`);
+      await page.locator(".celebration.lighthouse").click();
+      await page.locator('.nav button[data-v="captains"]').click();
+      await page.locator('.sheet.captains [data-act="logbook"]').click();
+      await page.clock.runFor(100);
+      const card = page.locator(".celebration.captain");
+      await expect.poll(() => card.locator("img").evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth === 512)).toBe(true);
+      await look(page, card.locator(".cel-card"), `celebrate-captain-${w}`);
       await page.context().close();
     }
     writeFileSync(`${OUT}/pairs.txt`, [...pairs].sort().join("\n") + "\n");

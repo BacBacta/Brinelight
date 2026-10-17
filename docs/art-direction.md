@@ -37,7 +37,7 @@ Three states, with a fade between them.
 ## Buildings
 
 - Each building is recognizable by its silhouette alone, at thumbnail size.
-- Three visual tiers (levels 1 to 3, 4 to 7, 8 and up): each tier grows and adds one element.
+- Three visual tiers (levels 1 to 4, 5 to 9, 10 and up): each tier grows and adds one element (week 6: a flag at the second tier; crates, a barrel and a lantern at the third). The Lighthouse grows with its level, and its lantern shines brighter with each tier.
 - All stand on stilts or a rock plinth, never on grass.
 - A flag or a lantern on each building.
 - Up to 2 500 triangles per building, with flat colors per face.

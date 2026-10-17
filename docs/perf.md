@@ -218,3 +218,20 @@ The game's own JavaScript and CSS (`client/dist/assets/index-*.js` and `index-*.
 The goal was no growth at all; gzipped, it is missed by 132 B (0.31 %), which the owner accepted on 17 October. **The rule for a tidying-up of the code (no new feature) is now: the raw size does not grow, and the gzipped size does not grow by more than 0.5 %.** The CSS's 59 B are the invisible 44 px tap areas (the sheets' close button has its own, placed from the sheet, so that its ✕ is drawn as before). The JS's 73 B are the components themselves: the same HTML written again in every sheet compressed very well, and a function that writes it costs a little more than the copies it replaces. Tried and left out because they were heavier: the interface's own shades as CSS variables (+150 B gzipped), full class names in the buttons' calls, a component for paragraphs, the top bar and the queue on components.
 
 The 44 look references in `e2e/look/` (42 captures, and the second reference of `captains-top` at both sizes) weigh 1 956 368 B in git.
+
+## Feel: celebrations, sounds, motions, building tiers (week 6, task 3)
+
+Measured in the container (Chromium, software rendering, 412 × 915, `?quality=2&fps`), 12 s after the city shows, on a city with every building at the same level. "Before" is the code just before the tiers (`95fb056`), with the same cities. The container only shows the order of the costs: the phone rows of this file decide whether the goal of 30 FPS is met.
+
+| City | Before: FPS, draw calls, triangles | After: FPS, draw calls, triangles |
+| --- | --- | --- |
+| Tier 1: every building at level 1, Lighthouse 4 | 8, 38, 64.1 k | 9, 38, 64.1 k |
+| Tier 2: level 5, Lighthouse 9 | 10, 38, 64.5 k | 9, 39, 64.9 k |
+| Tier 3: level 10, Lighthouse 12 | 9, 38, 64.5 k | 9, 40, 68.1 k |
+| During the Lighthouse's full-screen celebration (Lighthouse 9 → 10) | – | 9 at quality step 2 (5 with the beam still turning) |
+
+- The flags, crates and barrels of every plot are one merged mesh, and the lanterns one InstancedMesh: one draw call more from the second tier, two from the third, whatever the number of buildings.
+- The full-screen celebration's turning beam cost almost half of the frames in the container (5 FPS instead of 9): at the lowest quality step (2), the beam is not shown, and the celebration costs nothing measurable. The automatic tuning lowers the step on a phone that stays under 30 FPS for 3 seconds.
+- To check on the entry-level phone (and the S22) with `?fps`, with the protocol at the top of this file: the city at the three tiers, and a Lighthouse celebration.
+
+The game's own JavaScript and CSS (as in the section above): from 118 675 B (42 467 B gzipped) after task 2 to 131 113 B (46 793 B gzipped), +10 % gzipped: the celebrations, the ten sounds made in code, the motions and the tiers. This is new work, not a tidying-up: the 0.5 % rule does not apply.

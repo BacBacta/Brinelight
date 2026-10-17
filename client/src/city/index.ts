@@ -45,9 +45,10 @@ export function createCity(
 ): City {
   const buildings = createCityBuildings(kit, models, (o) => scene.add(o));
   const rafts = createCityRafts(kit, others.raft, (o) => scene.add(o));
-  // Labels float just above each model; the Lighthouse's grows with its level.
-  const labels = createLabels(root, scene, (id, lighthouse) =>
-    id === "lighthouse" ? (models.lighthouse.height + LABEL_GAP) * lighthouseScale(lighthouse) : models[id].height + LABEL_GAP,
+  // Labels float just above each model at its full size (a smaller tier leaves them where they were, so they keep their
+  // places among the others); the Lighthouse's grows with its level.
+  const labels = createLabels(root, scene, (id, levels) =>
+    id === "lighthouse" ? (models.lighthouse.height + LABEL_GAP) * lighthouseScale(levels.lighthouse) : models[id].height + LABEL_GAP,
   );
   const queue = createQueue(root, () => game.toCity());
   const sheet = createSheet(root, {

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { loadBuildings, type BuildingModels } from "./buildings.js";
+import { loadBuildings, tierOf, type BuildingModels } from "./buildings.js";
 import { fitIsland, loadModels, loadRaftBuildings, type Models, type RaftBuildingModels } from "./models.js";
 import { createCamera, createControls, frameCity } from "./camera.js";
 import { createIsland, type Kit } from "./island.js";
@@ -102,6 +102,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       gltf.scenes.forEach((sc) => (kit[sc.name] = sc));
       scene.add(createIsland(fitIsland(models.island)));
       lighthouse.useModel(buildings.lighthouse);
+      sizeLighthouse();
       options.onLoaded?.(kit, buildings, models);
       loadRaftBuildings(loader).then(
         (m) => !disposed && options.onRaftBuildings?.(m),
@@ -114,6 +115,13 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     },
   );
 
+  /** Its level's size, as wide as its plot allows (it then only grows taller), and its tier's lantern. */
+  function sizeLighthouse(): void {
+    const s = lighthouseScale(level);
+    const w = Math.min(s, lighthouse.widthCap);
+    lighthouse.group.scale.set(w, s, w);
+    lighthouse.setTier(tierOf(level));
+  }
   const frameCallbacks: ((now: number, view: View) => void)[] = [];
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
@@ -150,7 +158,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   const handle: SceneHandle = {
     setLighthouseLevel(l) {
       level = l;
-      lighthouse.group.scale.setScalar(lighthouseScale(l));
+      sizeLighthouse();
       layout();
     },
     setView(v) {

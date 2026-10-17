@@ -175,6 +175,7 @@ h4.with-icon .icon{width:22px;height:22px}
 .cel-card h2{margin:8px 0 4px;font:400 22px var(--f-d);color:var(--gold)}
 .cel-card p{margin:2px 0;font-weight:800;font-size:14px;color:var(--cream)}
 .cel-card.captain img{width:160px;height:160px;border-radius:20px;border:3px solid var(--gold);object-fit:cover;display:block;margin:0 auto}
+.low .cel-full .beam{display:none}
 @keyframes rise{0%{transform:translateY(12px);opacity:0}15%{transform:none;opacity:1}75%{opacity:1}100%{transform:translateY(-36px);opacity:0}}
 @keyframes fade{0%,100%{opacity:0}12%,85%{opacity:1}}
 @keyframes sweep{from{transform:rotate(-34deg)}to{transform:rotate(6deg)}}

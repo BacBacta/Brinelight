@@ -257,6 +257,8 @@ if (new URLSearchParams(location.search).has("rules")) {
     }
     if (now - uiAt > 250 || changed) {
       uiAt = now;
+      // At the lowest quality step, the costly motions stop (the celebrations' beam).
+      document.body.classList.toggle("low", scene.stats().step === 2);
       refresh();
       if (changed) {
         save();

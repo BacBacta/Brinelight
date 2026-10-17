@@ -1,4 +1,4 @@
-import { BUILDINGS, BUILDING_IDS, type BuildingId } from "@brinelight/shared";
+import { BUILDINGS, BUILDING_IDS, type BuildingId, type Buildings } from "@brinelight/shared";
 import type { SceneHandle } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 import { plotPosition } from "./buildings.js";
@@ -6,8 +6,8 @@ import { layoutLabels, type LabelBox } from "./overlap.js";
 import { progress, suggestedUpgrades } from "./suggest.js";
 
 /** Level labels above the buildings, as in the prototype. */
-/** `heightOf` gives the height of a building's label above the ground, from its model (and the Lighthouse's level). */
-export function createLabels(root: HTMLElement, scene: SceneHandle, heightOf: (id: BuildingId, lighthouseLevel: number) => number) {
+/** `heightOf` gives the height of a building's label above the ground, from its model and the levels (its tier, the Lighthouse's growth). */
+export function createLabels(root: HTMLElement, scene: SceneHandle, heightOf: (id: BuildingId, levels: Buildings) => number) {
   const layer = document.createElement("div");
   layer.className = "labels city";
   layer.setAttribute("aria-hidden", "true");
@@ -35,12 +35,12 @@ export function createLabels(root: HTMLElement, scene: SceneHandle, heightOf: (i
     L.compactH = L.el.offsetHeight;
     L.el.classList.remove("compact");
   };
-  let lighthouseLevel = 0;
+  let levels: Buildings | null = null;
 
   return {
     /** Text, arrows and progress bars, from the state. */
     update(state: PlayerState) {
-      lighthouseLevel = state.buildings.lighthouse;
+      levels = state.buildings;
       const suggested = suggestedUpgrades(state);
       for (const id of BUILDING_IDS) {
         const L = els[id];
@@ -69,7 +69,7 @@ export function createLabels(root: HTMLElement, scene: SceneHandle, heightOf: (i
       const boxes: (LabelBox & { id: BuildingId })[] = [];
       for (const id of BUILDING_IDS) {
         const { x, z } = plotPosition(id);
-        const p = scene.project(x, heightOf(id, lighthouseLevel), z);
+        const p = scene.project(x, levels ? heightOf(id, levels) : 0, z);
         const L = els[id];
         L.el.style.display = p.visible ? "" : "none";
         if (!p.visible) continue;

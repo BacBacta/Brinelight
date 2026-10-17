@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { BUILDING_FIX, type BuildingModel } from "./buildings.js";
+import { BUILDING_FIX, PLOT_ROOM, footprintReach, type BuildingModel, type Tier } from "./buildings.js";
 
 /** Size of the Lighthouse in the city: it grows with its level, up to 1.25 (prototype). */
 export function lighthouseScale(level: number): number {
@@ -11,6 +11,13 @@ export type Lighthouse = {
   animate(seconds: number): void;
   /** In the city: the painted model takes the place of the tower built in code; the beams and the light stay, at its lantern. */
   useModel(model: BuildingModel): void;
+  /**
+   * The widest it may grow and stay within its plot (PLOT_ROOM): past it, it only grows taller. Infinity before its
+   * model is there.
+   */
+  readonly widthCap: number;
+  /** Its lantern shines brighter with each visual tier. */
+  setTier(tier: Tier): void;
 };
 
 /**
@@ -67,8 +74,16 @@ export function createLighthouse(opts: { gold?: boolean; light?: boolean } = {})
     g.add(light);
   }
 
+  let widthCap = Infinity;
   return {
     group: g,
+    get widthCap() {
+      return widthCap;
+    },
+    setTier(tier) {
+      lampM.emissiveIntensity = [1.6, 1.6, 2.2, 3][tier]!;
+      if (light) light.intensity = [5, 5, 6, 7][tier]!;
+    },
     animate(now) {
       pivot.rotation.y = now;
       beamM.opacity = 0.12 * (1 + Math.sin(now * 6) * 0.05);
@@ -76,6 +91,7 @@ export function createLighthouse(opts: { gold?: boolean; light?: boolean } = {})
     useModel(model) {
       for (const m of tower) m.visible = m === lamp;
       g.add(model.object);
+      widthCap = PLOT_ROOM / footprintReach(model.object);
       const lantern = model.height * (BUILDING_FIX.lighthouse.lantern ?? 0.8);
       lamp.position.y = lantern;
       pivot.position.y = lantern;
