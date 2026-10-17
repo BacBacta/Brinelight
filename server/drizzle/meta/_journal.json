@@ -22,6 +22,13 @@
       "when": 1792144797361,
       "tag": "0002_applied_actions",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792222578550,
+      "tag": "0003_city_shape",
+      "breakpoints": true
     }
   ]
 }

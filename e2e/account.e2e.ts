@@ -2,16 +2,19 @@
  * Sign in from the game, end to end: the real server (PGlite), the built client in Chromium, and a test wallet.
  * Signed in, every action goes to the server, which decides; the city shown is the server's.
  */
-import type { BrowserContext, Page } from "playwright-core";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpus } from "node:os";
+import type { BrowserContext, Locator, Page } from "playwright-core";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import * as THREE from "three";
-import { HOUR, PROMOTE_TIME, RAFT_INSTALL_TIME, RAFT_SLOTS, advance, heal, newPlayerState, promote, raftUpgradeTime, research, sail, upgrade, type ActionResult, type PlayerState, type RaftBuildingId } from "@brinelight/shared";
+import { HOUR, PROMOTE_TIME, RAFT_INSTALL_TIME, RAFT_SLOTS, advance, heal, installOnRaft, newPlayerState, promote, raftUpgradeTime, research, sail, upgrade, type ActionResult, type PlayerState, type RaftBuildingId } from "@brinelight/shared";
 import { frameCity } from "../client/src/scene/camera.js";
 import { SHORE_RADIUS } from "../client/src/scene/models.js";
 import { CITY_KEY_PREFIX } from "../client/src/account/actions.js";
 import { PROFILE_TEXT } from "../client/src/account/profile.js";
 import { TEXT } from "../client/src/account/index.js";
 import { installFakeWallet, type TestWallet } from "./fakeWallet.js";
+import { comparePixels, decodePng } from "./png.js";
 import { API, GAME, holdActions, startHarness, type Harness } from "./harness.js";
 
 const SAVE_KEY = "brinelight-client-v1";
@@ -153,6 +156,8 @@ async function signOut(page: Page): Promise<void> {
 }
 
 const queued = (c: City | null) => (c?.queue ?? []).map((j) => j.id).sort();
+/** Until no celebration is on screen: one would take the next tap (a tap closes it). */
+const calm = (page: Page) => expect.poll(() => page.locator(".celebration").count(), { timeout: 15_000, interval: 100 }).toBe(0);
 /** For a poll that waits on the network (an answer, a retry): longer than the default second. */
 const NET = { timeout: 15_000, interval: 100 };
 
@@ -570,6 +575,679 @@ describe("captains", () => {
   });
 });
 
+describe("celebrations", () => {
+  const SEEN_KEY = "brinelight-seen-v1";
+  /** A city whose works end 10 and 20 minutes after it is saved, with the lead captain one experience point from level 2. */
+  const ending = (): PlayerState => {
+    const base = newPlayerState();
+    return {
+      ...base,
+      buildings: { ...base.buildings, lighthouse: 4, refinery: 2, fishery: 2 },
+      stock: { oil: 9000, fish: 9000, wood: 9000, rope: 10 },
+      pearls: 500,
+      queue: [
+        { id: "refinery", left: 600, duration: 900 },
+        { id: "lighthouse", left: 1200, duration: 1800 },
+      ],
+      captains: { ...base.captains, [base.lead!]: { level: 1, xp: 79, stars: 1 } },
+    };
+  };
+  /** At most one celebration on screen at any time, checked every 50 ms while `run` goes on. */
+  async function oneAtATime(page: Page, run: () => Promise<void>): Promise<number> {
+    let most = 0;
+    let going = true;
+    const watch = (async () => {
+      while (going) {
+        most = Math.max(most, await page.locator(".celebration").count());
+        await page.waitForTimeout(50);
+      }
+    })();
+    await run();
+    going = false;
+    await watch;
+    return most;
+  }
+
+  it("a work that ends: gold text; the Lighthouse: the full screen; a captain: the 512 px portrait; one at a time, at 412 and 360 px", async () => {
+    for (const size of SIZES) {
+      const p = await newPlayer(false, size);
+      const t0 = Date.now();
+      await p.context.addInitScript(({ key, file }) => localStorage.setItem(key, file), { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: t0, state: ending() }) });
+      // The page's clock waits for the test: the works end when the test says, however long the loading takes.
+      const page = await p.context.newPage();
+      await page.clock.install({ time: t0 });
+      await page.clock.pauseAt(t0 + 500);
+      await page.goto(`${GAME}/?quality=2`);
+      await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
+      await page.waitForSelector(".labels.city .bl b");
+      const most = await oneAtATime(page, async () => {
+        expect(await page.locator(".celebration").count()).toBe(0);
+        await page.clock.fastForward(600_000);
+        await page.clock.runFor(200);
+        const float = page.locator(".celebration.float");
+        await float.waitFor();
+        await expect(float.textContent()).resolves.toBe("Refinery level 3");
+        // Its rise runs on the real clock, its life on the page's: held at mid-way for the picture.
+        await float.evaluate((e) => {
+          const f = e.firstElementChild as HTMLElement;
+          f.style.animation = "none";
+          void f.offsetWidth;
+          f.style.animation = "rise 1.2s ease-out -0.4s paused both";
+        });
+        await page.screenshot({ path: `e2e/.shots/shot-celebrate-work-${size.width}.png` });
+        await page.clock.runFor(1300);
+        await float.waitFor({ state: "detached" });
+        await page.clock.fastForward(600_000);
+        await page.clock.runFor(200);
+        const full = page.locator(".celebration.lighthouse");
+        await full.waitFor();
+        await expect(full.textContent()).resolves.toContain("Lighthouse level 5");
+        await page.waitForTimeout(600);
+        await page.screenshot({ path: `e2e/.shots/shot-celebrate-lighthouse-${size.width}.png` });
+        // A tap closes it.
+        await full.click();
+        await full.waitFor({ state: "detached" });
+        // The Logbook takes the lead captain one level up.
+        await page.locator('.nav button[data-v="captains"]').click();
+        await page.locator('.sheet.captains [data-act="logbook"]').click();
+        await page.clock.runFor(100);
+        const card = page.locator(".celebration.captain");
+        await card.waitFor();
+        await expect(card.textContent()).resolves.toContain("reached level 2");
+        await expect.poll(() => card.locator("img").evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth === 512 && i.src.endsWith("-512.webp"))).toBe(true);
+        await page.screenshot({ path: `e2e/.shots/shot-celebrate-captain-${size.width}.png` });
+        await page.clock.runFor(2600);
+        await card.waitFor({ state: "detached" });
+      });
+      expect(most).toBe(1);
+      await p.context.close();
+    }
+  });
+
+  it("at launch: one card for what ended while you were away; nothing on the very first launch", async () => {
+    // Saved and last seen two hours ago, with two works that ended since.
+    const city = { ...ending(), research: { id: "saws", left: 60, duration: 600 }, buildings: { ...ending().buildings, observatory: 1 } };
+    for (const first of [false, true]) {
+      const p = await newPlayer(false);
+      const savedAt = Date.now() - 2 * 3600_000;
+      await p.context.addInitScript(
+        ({ save, seen, file, owner }) => {
+          if (sessionStorage.getItem("e2e-injected")) return;
+          localStorage.setItem(save, file);
+          if (owner) localStorage.setItem(seen, owner);
+          sessionStorage.setItem("e2e-injected", "1");
+        },
+        { save: SAVE_KEY, seen: SEEN_KEY, file: JSON.stringify({ v: 1, savedAt, state: city }), owner: first ? "" : JSON.stringify({ owner: "device", state: city }) },
+      );
+      const page = await openGame(p.context);
+      if (first) {
+        await page.waitForTimeout(1500);
+        expect(await page.locator(".celebration").count()).toBe(0);
+        // From now on, this city is the one seen here.
+        await expect.poll(() => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? "null")?.owner, SEEN_KEY)).toBe("device");
+      } else {
+        const card = page.locator(".celebration.away");
+        await card.waitFor();
+        const text = await card.textContent();
+        expect(text).toContain("While you were away");
+        for (const line of ["Refinery level 3", "Lighthouse level 5", "Tide Saws level 1"]) expect(text).toContain(line);
+        await page.screenshot({ path: "e2e/.shots/shot-celebrate-away.png" });
+        // Reloaded at once: nothing more ended, nothing told.
+        await page.reload();
+        await page.waitForSelector(".labels.city .bl b");
+        await page.waitForTimeout(1500);
+        expect(await page.locator(".celebration").count()).toBe(0);
+      }
+      await p.context.close();
+    }
+  });
+
+  it("signed in: nothing when the account's city takes the screen; at the next launch, what ended on the server while you were away", async () => {
+    const p = await signedInPlayer();
+    const base = newPlayerState();
+    // The account's city is ahead of the city of this device; sign out, then in again: it takes the screen, silently.
+    await h.putCity(p.playerId, { ...base, buildings: { ...base.buildings, lighthouse: 5, refinery: 4, observatory: 1 }, stock: { oil: 9000, fish: 9000, wood: 9000, rope: 10 } });
+    await signOut(p.page);
+    await signIn(p.page);
+    await p.page.locator(".toast", { hasText: TEXT.signedIn }).waitFor();
+    await expect.poll(async () => (await copyOf(p.page, p.playerId))?.server?.state.buildings.refinery, NET).toBe(4);
+    await p.page.waitForTimeout(1500);
+    expect(await p.page.locator(".celebration").count()).toBe(0);
+    // Away: on the server, two works end.
+    const token = (await session(p.page))!.token;
+    const now = (await serverCity(token))!.state as unknown as PlayerState;
+    await p.page.close();
+    await h.putCity(p.playerId, { ...now, queue: [{ id: "refinery", left: 1, duration: 60 }], research: { id: "nets", left: 1, duration: 60 } });
+    await new Promise((r) => setTimeout(r, 2500));
+    const page = await openGame(p.context);
+    const card = page.locator(".celebration.away");
+    await card.waitFor({ timeout: 15_000 });
+    const text = await card.textContent();
+    for (const line of ["While you were away", "Refinery level 5", "Braided Nets level 1"]) expect(text).toContain(line);
+    expect(p.problems).toEqual([]);
+    await p.context.close();
+  });
+});
+
+describe("the Mist's mood", () => {
+  it("?mist: the banner says Mist, and the 3D view shows its look (the veil, the beams); without it, calm, as before", async () => {
+    const look = async (query: string) => {
+      const p = await newPlayer(false);
+      const page = await p.context.newPage();
+      await page.goto(`${GAME}/?quality=2&fps${query}`);
+      await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
+      await page.waitForSelector(".labels.city .bl b");
+      await expect.poll(() => page.locator(".fps").innerText(), NET).toMatch(/calls/);
+      await page.waitForTimeout(1500);
+      const banner = await page.locator('.sub [data-k="mist"]').innerText();
+      const fps = await page.locator(".fps").innerText();
+      await page.screenshot({ path: `e2e/.shots/shot-mood${query ? "-mist" : "-calm"}.png` });
+      await p.context.close();
+      return { banner, fps, calls: Number(/(\d+) calls/.exec(fps)![1]) };
+    };
+    const calm = await look("");
+    const mist = await look("&mist");
+    expect(calm.banner).toMatch(/^Calm sea · /);
+    expect(calm.fps).not.toMatch(/Mist/);
+    expect(mist.banner).toMatch(/^Mist · /);
+    expect(mist.fps).toMatch(/City · Mist/);
+    // The veil on the horizon (+1), and the Lighthouse's two beams, hidden in calm and sweeping in the Mist (+4: each
+    // cone is drawn on both sides).
+    console.log(`The Mist's mood: calm ${calm.calls} calls, Mist ${mist.calls} calls`);
+    expect(mist.calls).toBe(calm.calls + 5);
+  });
+});
+
+describe("sounds", () => {
+  it("nothing before the first tap; turned off in the Profile, without an account, they stay off after a reload", async () => {
+    const p = await newPlayer(false);
+    // Counts the AudioContexts the page makes, and the notes it starts.
+    await p.context.addInitScript(() => {
+      const w = window as unknown as { AudioContext: typeof AudioContext; __audio: { made: number; notes: number } };
+      w.__audio = { made: 0, notes: 0 };
+      const Real = w.AudioContext;
+      w.AudioContext = class extends Real {
+        constructor(...a: ConstructorParameters<typeof AudioContext>) {
+          super(...a);
+          w.__audio.made++;
+          const make = this.createOscillator.bind(this);
+          this.createOscillator = () => {
+            const o = make();
+            const start = o.start.bind(o);
+            o.start = (...t: Parameters<OscillatorNode["start"]>) => {
+              w.__audio.notes++;
+              start(...t);
+            };
+            return o;
+          };
+        }
+      };
+    });
+    const audio = (page: Page) => page.evaluate(() => (window as unknown as { __audio: { made: number; notes: number } }).__audio);
+    const page = await openGame(p.context);
+    await page.waitForTimeout(1500);
+    expect(await audio(page)).toEqual({ made: 0, notes: 0 });
+    // The first tap: the Captains button knocks, and its sheet opens like a rope.
+    await page.locator('.nav button[data-v="captains"]').click();
+    await expect.poll(async () => (await audio(page)).notes).toBeGreaterThan(0);
+    expect((await audio(page)).made).toBe(1);
+    await page.evaluate(() => document.querySelector<HTMLButtonElement>('.sheet:not([hidden]) [data-act="close"]')?.click());
+    // The Profile opens without an account: the switch is there, on.
+    await page.locator(".hud .lvl").click();
+    const button = page.locator('.profile [data-act="sound"]');
+    await expect(button.textContent()).resolves.toBe("On");
+    await button.click();
+    await expect(button.textContent()).resolves.toBe("Off");
+    await expect(button.getAttribute("aria-pressed")).resolves.toBe("false");
+    await page.screenshot({ path: "e2e/.shots/shot-profile-sounds-off.png" });
+    await page.reload();
+    await page.waitForSelector(".labels.city .bl b");
+    await page.locator(".hud .lvl").click();
+    await expect(page.locator('.profile [data-act="sound"]').textContent()).resolves.toBe("Off");
+    await page.locator('.profile [data-act="close"]').click();
+    await page.locator('.nav button[data-v="captains"]').click();
+    await page.waitForTimeout(300);
+    expect(await audio(page)).toEqual({ made: 0, notes: 0 });
+    await p.context.close();
+  });
+});
+
+describe("short motions", () => {
+  /** The animations and transitions running in the page, by name (CSS animation) or property (transition). */
+  const running = (page: Page) =>
+    page.evaluate(() => document.getAnimations().map((a) => (a as CSSAnimation).animationName ?? (a as CSSTransition).transitionProperty));
+
+  it("a sheet opens with \"up\" and closes down, already hidden and out of the way of taps; a button pressed sinks", async () => {
+    const p = await newPlayer(false);
+    const page = await openGame(p.context);
+    // Opened and closed, the motions are read in the same task as the tap: the container draws slowly, and a 220 ms
+    // motion can be over before a later read.
+    const opening = await page.evaluate(() => {
+      document.querySelector<HTMLButtonElement>('.nav button[data-v="captains"]')!.click();
+      return document.getAnimations().map((a) => (a as CSSAnimation).animationName);
+    });
+    expect(opening).toContain("up");
+    // Its "up" starts on the next frame drawn: wait for it to end, however slowly the container draws.
+    await expect.poll(() => running(page), NET).not.toContain("up");
+    // Closed: at once [hidden] and out of the way of taps, while its picture goes down for 160 ms.
+    const closing = await page.evaluate(() => {
+      const e = document.querySelector<HTMLElement>(".sheet.captains")!;
+      e.querySelector<HTMLButtonElement>('[data-act="close"]')!.click();
+      return { hidden: e.hidden, taps: getComputedStyle(e).pointerEvents, moving: document.getAnimations().map((a) => (a as CSSTransition).transitionProperty) };
+    });
+    expect(closing).toEqual({ hidden: true, taps: "none", moving: expect.arrayContaining(["translate", "opacity", "display"]) });
+    await page.waitForTimeout(300);
+    expect(await page.locator(".sheet.captains").evaluate((e) => getComputedStyle(e).display)).toBe("none");
+    // A pressed button sinks by 2 px and shrinks a little.
+    await page.locator('.nav button[data-v="captains"]').click();
+    const lead = page.locator('.sheet.captains .b').first();
+    const box = (await lead.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(150);
+    expect(await lead.evaluate((e) => getComputedStyle(e).transform)).toBe("matrix(0.97, 0, 0, 0.97, 0, 2)");
+    await page.mouse.up();
+    await p.context.close();
+  });
+
+  it("with reduced motion on the device: nothing moves, the celebrations stand still", async () => {
+    const p = await newPlayer(false);
+    const t0 = Date.now();
+    const city = { ...newPlayerState(), queue: [{ id: "refinery" as const, left: 600, duration: 900 }] };
+    await p.context.addInitScript(({ key, file }) => localStorage.setItem(key, file), { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: t0, state: city }) });
+    const page = await p.context.newPage();
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.clock.install({ time: t0 });
+    await page.clock.pauseAt(t0 + 500);
+    await page.goto(`${GAME}/?quality=2`);
+    await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
+    await page.waitForSelector(".labels.city .bl b");
+    await page.locator('.nav button[data-v="captains"]').click();
+    expect(await running(page)).toEqual([]);
+    await page.locator('.sheet.captains [data-act="close"]').click();
+    expect(await running(page)).toEqual([]);
+    await page.clock.fastForward(600_000);
+    await page.clock.runFor(200);
+    const float = page.locator(".celebration.float .cel-float");
+    await float.waitFor();
+    expect(await running(page)).toEqual([]);
+    expect(await float.evaluate((e) => [getComputedStyle(e).opacity, getComputedStyle(e).transform])).toEqual(["1", "none"]);
+    await p.context.close();
+  });
+});
+
+describe("building tiers", () => {
+  it("every building at level 1, 5 and 10: the three tiers, captured, with their draw calls and FPS (?fps)", async () => {
+    const rows: string[] = [];
+    for (const [tier, level, lighthouse] of [
+      [1, 1, 4],
+      [2, 5, 9],
+      [3, 10, 12],
+    ] as const) {
+      const base = newPlayerState();
+      const city: PlayerState = { ...base, buildings: { lighthouse, refinery: level, fishery: level, lumberyard: level, shelters: level, barracks: level, harbor: level, observatory: level, infirmary: level } };
+      const p = await newPlayer(false);
+      await p.context.addInitScript(({ key, file }) => localStorage.setItem(key, file), { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: Date.now(), state: city }) });
+      const page = await p.context.newPage();
+      await page.goto(`${GAME}/?quality=2&fps`);
+      await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
+      await page.waitForSelector(".labels.city .bl b");
+      await page.waitForTimeout(1000);
+      await page.screenshot({ path: `e2e/.shots/shot-tier-${tier}.png` });
+      // As the art direction asks: each building by its silhouette, close up, without the labels.
+      await page.addStyleTag({ content: ".labels{visibility:hidden}" });
+      await page.mouse.move(206, 470);
+      await page.mouse.wheel(0, -900);
+      await page.waitForTimeout(800);
+      await page.screenshot({ path: `e2e/.shots/shot-tier-${tier}-near.png` });
+      await page.mouse.wheel(0, 900);
+      // The counter needs a few seconds of frames.
+      await page.waitForTimeout(12_000);
+      rows.push(`tier ${tier} (level ${level}, Lighthouse ${lighthouse}): ${(await page.locator(".fps").textContent())!.replace(/\n/g, " · ")}`);
+      await p.context.close();
+    }
+    // During the Lighthouse's full-screen celebration (2.5 s): the counter shows the last second.
+    const base = newPlayerState();
+    const p = await newPlayer(false);
+    const city: PlayerState = { ...base, buildings: { ...base.buildings, lighthouse: 9 }, queue: [{ id: "lighthouse", left: 35, duration: 600 }] };
+    await p.context.addInitScript(({ key, file }) => localStorage.setItem(key, file), { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: Date.now(), state: city }) });
+    const page = await p.context.newPage();
+    await page.goto(`${GAME}/?quality=2&fps`);
+    await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
+    await page.locator(".celebration.lighthouse").waitFor({ timeout: 60_000 });
+    await page.waitForTimeout(1600);
+    rows.push(`during the Lighthouse's celebration: ${(await page.locator(".fps").textContent())!.replace(/\n/g, " · ")}`);
+    await p.context.close();
+    mkdirSync("e2e/.shots", { recursive: true });
+    writeFileSync("e2e/.shots/tiers.txt", rows.join("\n") + "\n");
+    console.log(`Building tiers:\n${rows.join("\n")}`);
+  });
+});
+
+/**
+ * The look of every sheet, compared pixel by pixel with the references in e2e/look/ (week 6, task 2: the shared
+ * interface components must not change it). The page's clock is fixed (page.clock), the 3D view and its labels are
+ * hidden at the moment of each capture, and each capture is cut to its element. LOOK=update writes the references;
+ * every capture is also written to e2e/.shots/look/ (an artifact of the CI's e2e job).
+ * The references are made by the CI's e2e job (its captures, downloaded): another machine draws text a little
+ * differently. So a difference fails the test in the CI (or with LOOK=strict), and is only reported elsewhere.
+ * How to make them: e2e/look/README.md.
+ */
+describe("the look", () => {
+  const T0 = new Date("2026-10-18T12:00:00.000Z");
+  const REF = "e2e/look";
+  const OUT = "e2e/.shots/look";
+  const update = process.env.LOOK === "update";
+  const strict = !!process.env.CI || process.env.LOOK === "strict";
+  const problems: string[] = [];
+  /**
+   * The only captures with a second reference (docs/decisions.md, 17 October): some AMD machines of the CI (EPYC 9V74,
+   * 9V45) draw the left corners of the captain rows a little differently, with the same layout. Any third drawing fails, as
+   * for the others.
+   */
+  const VARIANTS: Readonly<Record<string, readonly string[]>> = { "captains-top-412": ["variant"], "captains-top-360": ["variant"] };
+  /** Which reference each capture with a second one matched. */
+  const matched: string[] = [];
+  /** Taps that miss their button: on every machine, they fail the test. */
+  const missed: string[] = [];
+  /** Neighbor buttons whose 44 px squares overlap: they share the space between them. */
+  const pairs = new Set<string>();
+  const ok = (r: ActionResult) => {
+    if (!r.ok) throw new Error(r.reason);
+    return r.state;
+  };
+
+  /** Opens the game with its clock fixed at T0, a city saved at T0, then pauses the clock 5 minutes later. */
+  async function frozenGame(size: { width: number; height: number }, city: PlayerState): Promise<Page> {
+    const p = await newPlayer(false, size);
+    await p.context.addInitScript(
+      ({ key, file }) => {
+        if (sessionStorage.getItem("e2e-injected")) return;
+        localStorage.setItem(key, file);
+        sessionStorage.setItem("e2e-injected", "1");
+      },
+      { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: T0.getTime(), state: city }) },
+    );
+    const page = await p.context.newPage();
+    // Paused before the game starts: however long the loading takes, the game sees the same times, frame by frame.
+    await page.clock.install({ time: T0 });
+    await page.clock.pauseAt(new Date(T0.getTime() + 1000));
+    await page.goto(`${GAME}/?quality=2`);
+    await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
+    await page.evaluate(() => document.fonts.ready);
+    await page.clock.fastForward(5 * 60_000);
+    await page.clock.runFor(200);
+    await page.waitForSelector(".labels.city .bl b");
+    return page;
+  }
+
+  /** Captures `what`, the 3D view hidden, and compares it with its reference (or writes it, with LOOK=update). */
+  async function look(page: Page, what: Locator, name: string, hide = ""): Promise<void> {
+    await page.evaluate((hide) => {
+      const s = document.createElement("style");
+      s.id = "look-hide";
+      // Captured standing still (as with reduced motion): the celebrations' motions and the bars' 300 ms transitions run
+      // on the real clock. `hide`: what else is hidden for this capture.
+      s.textContent = `#cv,.labels{visibility:hidden!important}.celebration *{animation:none!important}*{transition:none!important}${hide}`;
+      document.head.appendChild(s);
+    }, hide);
+    const png = await what.screenshot({ animations: "disabled", caret: "hide" });
+    await page.evaluate(() => document.getElementById("look-hide")?.remove());
+    mkdirSync(OUT, { recursive: true });
+    writeFileSync(`${OUT}/${name}.png`, png);
+    const ref = `${REF}/${name}.png`;
+    if (update) {
+      mkdirSync(REF, { recursive: true });
+      writeFileSync(ref, png);
+      return;
+    }
+    await taps(what, name);
+    if (!existsSync(ref)) return void problems.push(`${name}: no reference`);
+    const shot = decodePng(png);
+    for (const v of VARIANTS[name] ?? []) {
+      const variant = `${REF}/${name}.${v}.png`;
+      if (!existsSync(variant)) problems.push(`${name}: no reference ${variant}`);
+      else if (comparePixels(decodePng(readFileSync(variant)), shot).differing === 0) return void matched.push(`${name}: ${name}.${v}.png`);
+    }
+    const d = comparePixels(decodePng(readFileSync(ref)), shot);
+    if (VARIANTS[name] && d.size && !d.differing) matched.push(`${name}: ${name}.png`);
+    if (!d.size) problems.push(`${name}: not the same size`);
+    else if (d.differing) problems.push(`${name}: ${d.differing} pixels differ, the first at ${d.first!.x},${d.first!.y}`);
+  }
+
+  /**
+   * Every button in `what` can be tapped on a 44 px square around its center (or its own size when bigger): a tap at
+   * the middle of each side of that square reaches the button, except on the side of a neighbor whose square overlaps
+   * (the pair is listed), outside the screen, or outside the part of a sheet that scrolls.
+   */
+  async function taps(what: Locator, name: string): Promise<void> {
+    const r = await what.evaluate((root) => {
+      const label = (e: HTMLElement) => {
+        const data = Object.entries(e.dataset)
+          .filter(([k]) => k !== "act")
+          .map(([k, v]) => `${k}=${v}`)
+          .join(",");
+        return `${e.dataset.act ?? e.className}${data ? `(${data})` : ""} "${(e.getAttribute("aria-label") ?? e.textContent ?? "").trim().slice(0, 30)}"`;
+      };
+      const all = [root as HTMLElement, ...root.querySelectorAll<HTMLElement>("*")].filter(
+        (e) => e.matches("button, [role=button], .build-badge") && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden",
+      );
+      const squares = all.map((e) => {
+        const b = e.getBoundingClientRect();
+        const w = Math.max(44, b.width);
+        const h = Math.max(44, b.height);
+        const x = b.x + b.width / 2;
+        const y = b.y + b.height / 2;
+        let clip: DOMRect | null = null;
+        for (let a = e.parentElement; a; a = a.parentElement) if (getComputedStyle(a).overflowY !== "visible") clip ??= a.getBoundingClientRect();
+        return { e, x, y, l: x - w / 2, r: x + w / 2, t: y - h / 2, b: y + h / 2, clip };
+      });
+      const misses: string[] = [];
+      const pairs: string[] = [];
+      for (const s of squares) {
+        const others = squares.filter((o) => o !== s && o.l < s.r && s.l < o.r && o.t < s.b && s.t < o.b);
+        for (const o of others) pairs.push([label(s.e), label(o.e)].sort().join(" + "));
+        for (const [px, py] of [[s.x, s.t + 1], [s.x, s.b - 1], [s.l + 1, s.y], [s.r - 1, s.y]] as const) {
+          if (px < 0 || py < 0 || px >= innerWidth || py >= innerHeight) continue;
+          if (s.clip && (px < s.clip.left || px >= s.clip.right || py < s.clip.top || py >= s.clip.bottom)) continue;
+          if (others.some((o) => px >= o.l && px < o.r && py >= o.t && py < o.b)) continue;
+          const hit = document.elementFromPoint(px, py);
+          if (!hit || !s.e.contains(hit)) misses.push(`${label(s.e)} at ${Math.round(px)},${Math.round(py)} gives ${hit ? (hit as HTMLElement).className || hit.tagName : "nothing"}`);
+        }
+      }
+      return { misses, pairs };
+    });
+    for (const m of r.misses) missed.push(`${name}: a tap misses ${m}`);
+    for (const p of r.pairs) pairs.add(p);
+  }
+
+  const sheet = (page: Page) => page.locator(".sheet:not([hidden])").first();
+  const close = (page: Page) => page.evaluate(() => document.querySelector<HTMLButtonElement>('.sheet:not([hidden]) [data-act="close"]')?.click());
+  const toBottom = (page: Page) => page.evaluate(() => document.querySelectorAll(".sheet:not([hidden]) .sh-b").forEach((b) => (b.scrollTop = b.scrollHeight)));
+
+  it("every sheet, the top bar and the queue, at 412 and 360 px", async () => {
+    for (const size of SIZES) {
+      const w = size.width;
+      const clear = slotsOnScreen(6, size.width, size.height);
+      const base = newPlayerState();
+
+      // A built city: every building, a research, a work at the shipyard, rafts, wounded and captains.
+      let town: PlayerState = {
+        ...base,
+        buildings: { lighthouse: 6, refinery: 3, fishery: 6, lumberyard: 2, shelters: 2, barracks: 3, harbor: 1, observatory: 3, infirmary: 1 },
+        techs: { veterans: 1, blades: 1 },
+        troops: { boarders: 60, harpooners: 60, crossbowmen: 60 },
+        wounded: { boarders: 12, harpooners: 5, crossbowmen: 3 },
+        stock: { oil: 9000, fish: 9000, wood: 9000, rope: 10 },
+        captains: { tom: { level: 3, xp: 40, stars: 2 }, sel: { level: 1, xp: 0, stars: 1 } },
+        shards: { sel: 4, mira: 7 },
+        rafts: {
+          [clear[0]!.slot]: { hp: 100, building: null, level: 0 },
+          [clear[1]!.slot]: { hp: 100, building: "greenhouse", level: 2 },
+          [clear[2]!.slot]: { hp: 100, building: null, level: 0 },
+        },
+      };
+      town = ok(upgrade(town, "lumberyard"));
+      town = ok(research(town, "nets"));
+      town = ok(installOnRaft(town, clear[2]!.slot, "watchtower"));
+      let page = await frozenGame(size, town);
+      await look(page, page.locator(".hud"), `hud-${w}`);
+      for (const [name, file] of [
+        ["Refinery", "refinery"],
+        ["Fishery", "fishery"],
+        ["Lumberyard", "lumberyard-working"],
+        ["Barracks", "barracks"],
+        ["Infirmary", "infirmary"],
+      ] as const) {
+        await openSheet(page, name);
+        await look(page, sheet(page), `${file}-${w}`);
+        await close(page);
+      }
+      await openSheet(page, "Observatory");
+      await look(page, sheet(page), `observatory-top-${w}`);
+      await toBottom(page);
+      await look(page, sheet(page), `observatory-bottom-${w}`);
+      await close(page);
+      for (const [i, file] of [
+        [0, "raft-free"],
+        [1, "raft-building"],
+        [2, "raft-working"],
+      ] as const) {
+        await page.mouse.click(clear[i]!.x, clear[i]!.y);
+        await page.locator(".raft-sheet:not([hidden])").waitFor();
+        await look(page, page.locator(".raft-sheet"), `${file}-${w}`);
+        await close(page);
+      }
+      await page.locator('.nav button[data-v="captains"]').click();
+      await look(page, sheet(page), `captains-top-${w}`);
+      // Where the captain rows fall, to the fraction of a pixel: their rounded corners were drawn in two ways by the CI.
+      console.log(
+        `Captain rows at ${w} px (devicePixelRatio ${await page.evaluate(() => devicePixelRatio)}): ` +
+          (await sheet(page).locator(".it.captain").evaluateAll((rows) => rows.map((r) => { const b = r.getBoundingClientRect(); return `${b.top}..${b.bottom} (left ${b.left})`; }))).join(", "),
+      );
+      await toBottom(page);
+      await look(page, sheet(page), `captains-bottom-${w}`);
+      await close(page);
+      await page.locator(".hud .lvl").click();
+      await look(page, page.locator(".sheet.profile"), `profile-${w}`);
+      await page.context().close();
+
+      // A poor city after a victory: the report opens by itself; a refused upgrade; a free slot; the sea's sheets.
+      const sent = sail({ ...base, buildings: { ...base.buildings, lighthouse: 4 }, troops: { boarders: 200, harpooners: 200, crossbowmen: 200 }, shards: { sel: 9 } }, "camp-1");
+      if (!sent.ok) throw new Error(sent.reason);
+      const poor: PlayerState = { ...advance(sent.state, 8 * HOUR), stock: { oil: 50, fish: 50, wood: 50, rope: 0 } };
+      page = await frozenGame(size, poor);
+      await page.locator('.sheet[aria-label="Combat report"]:not([hidden])').waitFor();
+      await look(page, sheet(page), `report-${w}`);
+      await close(page);
+      await page.clock.runFor(200);
+      await openSheet(page, "Refinery");
+      await look(page, sheet(page), `refinery-refused-${w}`);
+      await close(page);
+      const free = slotsOnScreen(4, size.width, size.height)[0]!;
+      await page.mouse.click(free.x, free.y);
+      await page.locator(".raft-sheet:not([hidden])").waitFor();
+      await look(page, page.locator(".raft-sheet"), `raft-slot-${w}`);
+      await close(page);
+      await page.context().close();
+      // At sea, on a page whose clock runs: finding a site needs drawn frames, and a site's sheet holds no time.
+      const seaPlayer = await newPlayer(false, size);
+      await injectCity(seaPlayer.context, { ...poor, reports: poor.reports.map((r) => ({ ...r, read: true })) });
+      page = await openGame(seaPlayer.context);
+      await page.evaluate(() => document.fonts.ready);
+      await page.locator('.nav button[data-v="sea"]').click();
+      await page.waitForTimeout(1500);
+      for (const kind of ["camp", "wreck"] as const) {
+        if (kind === "wreck") {
+          // Farther out: the wrecks are beyond the first view.
+          await page.mouse.move(size.width / 2, size.height / 2);
+          await page.mouse.wheel(0, 1500);
+          await page.waitForTimeout(1000);
+        }
+        const labels = page.locator(`.labels.sea .sl.${kind}:visible`);
+        const site = page.locator(".sheet:not([hidden])", { has: page.locator('[data-act="sail"]') });
+        let found = false;
+        for (let i = 0; i < (await labels.count()) && !found; i++) {
+          const box = (await labels.nth(i).boundingBox())!;
+          for (const dy of [30, 45, 60, 15, 8]) {
+            await page.mouse.click(box.x + box.width / 2, box.y + box.height + dy);
+            if (await site.isVisible()) {
+              found = true;
+              break;
+            }
+          }
+        }
+        if (!found) await page.screenshot({ path: `${OUT}/debug-${kind}-${w}.png` });
+        expect(found, kind).toBe(true);
+        await look(page, site, `${kind}-${w}`);
+        await close(page);
+      }
+      await page.context().close();
+
+      // Six works: the queue folded, then unfolded.
+      let busy: PlayerState = {
+        ...base,
+        buildings: { ...base.buildings, lighthouse: 6, barracks: 3, observatory: 3, infirmary: 1 },
+        techs: { veterans: 1 },
+        troops: { boarders: 25, harpooners: 25, crossbowmen: 25 },
+        wounded: { boarders: 12, harpooners: 5, crossbowmen: 3 },
+        stock: { oil: 50_000, fish: 50_000, wood: 50_000, rope: 3 },
+      };
+      busy = ok(upgrade(busy, "observatory"));
+      busy = ok(upgrade(busy, "infirmary"));
+      busy = ok(research(busy, "warehouses"));
+      busy = ok(promote(busy, "crossbowmen"));
+      busy = ok(heal(busy));
+      busy = ok(sail(busy, "camp-1"));
+      page = await frozenGame(size, busy);
+      await look(page, page.locator(".queue"), `queue-folded-${w}`);
+      await page.locator(".queue .more").click();
+      await look(page, page.locator(".queue"), `queue-open-${w}`);
+      await page.context().close();
+
+      // The celebrations (week 6, task 3): a work that ends, the Lighthouse, a captain who rises a level.
+      const ending: PlayerState = {
+        ...base,
+        buildings: { ...base.buildings, lighthouse: 4, refinery: 2 },
+        stock: { oil: 9000, fish: 9000, wood: 9000, rope: 10 },
+        pearls: 500,
+        queue: [
+          { id: "refinery", left: 600, duration: 900 },
+          { id: "lighthouse", left: 1200, duration: 1800 },
+        ],
+        captains: { ...base.captains, [base.lead!]: { level: 1, xp: 79, stars: 1 } },
+      };
+      page = await frozenGame(size, ending);
+      await page.clock.fastForward(600_000);
+      await page.clock.runFor(200);
+      await look(page, page.locator(".celebration.float"), `celebrate-work-${w}`);
+      await page.clock.runFor(1300);
+      await page.clock.fastForward(600_000);
+      await page.clock.runFor(200);
+      // The top bar and the line under it are hidden under the veil: the CI draws their rounded bars there in two ways
+      // (week 6), and they have their own captures.
+      await look(page, page.locator(".celebration.lighthouse"), `celebrate-lighthouse-${w}`, ".hud,.sub{visibility:hidden!important}");
+      await page.locator(".celebration.lighthouse").click();
+      await page.locator('.nav button[data-v="captains"]').click();
+      await page.locator('.sheet.captains [data-act="logbook"]').click();
+      await page.clock.runFor(100);
+      const card = page.locator(".celebration.captain");
+      await expect.poll(() => card.locator("img").evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth === 512)).toBe(true);
+      await look(page, card.locator(".cel-card"), `celebrate-captain-${w}`);
+      await page.context().close();
+    }
+    writeFileSync(`${OUT}/pairs.txt`, [...pairs].sort().join("\n") + "\n");
+    // Two CI machines can draw a rounded corner a little differently (week 6): which processor drew these captures.
+    const flags = existsSync("/proc/cpuinfo") ? readFileSync("/proc/cpuinfo", "utf8") : "";
+    console.log(`Drawn on: ${cpus()[0]?.model ?? "?"}, AVX-512 ${/\bavx512f\b/.test(flags) ? "yes" : "no"}`);
+    console.log(`References matched: ${matched.join(", ") || "none"}`);
+    console.log(`Neighbor buttons sharing their 44 px squares:\n${[...pairs].sort().join("\n")}`);
+    expect(missed).toEqual([]);
+    if (strict) expect(problems).toEqual([]);
+    else if (problems.length) console.warn(`The look differs from the CI's references on this machine (LOOK=strict to fail):\n${problems.join("\n")}`);
+  });
+});
+
 describe("signed in", () => {
   it("the account has its own city: one message; an upgrade goes to the server, and is found again after a reload", async () => {
     const p = await newPlayer(true);
@@ -984,6 +1662,7 @@ describe("signed in", () => {
     await show(p.page);
     await expect.poll(async () => (await copyOf(p.page, p.playerId))?.server?.state.buildings.lighthouse, NET).toBe(4);
     await p.page.waitForTimeout(500);
+    await calm(p.page);
 
     // Where a slot of the first ring is on screen, from the game's own starting camera for this Lighthouse level.
     const { slot, x, y } = slotOnScreen(4);
@@ -1047,6 +1726,8 @@ describe("signed in", () => {
     await show(p.page);
     await expect.poll(async () => Object.keys(((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.rafts ?? {}), NET).toEqual([slot]);
     await p.page.waitForTimeout(500);
+    // The Lighthouse rose to level 4 on the server: its celebration goes first.
+    await calm(p.page);
     await p.page.mouse.click(x, y);
     const sheet = p.page.locator(".raft-sheet:not([hidden])");
     await sheet.waitFor();

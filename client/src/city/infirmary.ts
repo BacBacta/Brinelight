@@ -5,6 +5,7 @@
 import { canHeal, healCost, hospitalCapacity, maxLevel, totalTroops, woundedSaved, type Buildings } from "@brinelight/shared";
 import type { PlayerState } from "../state/index.js";
 import { TROOP_NAMES, TROOP_TYPES } from "../sea/text.js";
+import { actionButton, box, keyValues, kv } from "../ui/components.js";
 import { ICONS } from "../ui/icons.js";
 import { formatAmount, formatTimeLeft } from "./format.js";
 
@@ -20,7 +21,7 @@ export const healingName = (count: number): string => `Healing · ${count} wound
 export function bedsHtml(buildings: Buildings): string {
   const level = buildings.infirmary;
   const next = level < maxLevel("infirmary", buildings);
-  return `<div class="kv"><span>Beds</span><span>${hospitalCapacity(level)}</span>${next ? `<span>At level ${level + 1}</span><span>${hospitalCapacity(level + 1)}</span>` : ""}</div>`;
+  return keyValues(kv("Beds", hospitalCapacity(level)) + (next ? kv(`At level ${level + 1}`, hospitalCapacity(level + 1)) : ""));
 }
 
 export function infirmaryHtml(state: PlayerState, speed: number): string {
@@ -28,17 +29,15 @@ export function infirmaryHtml(state: PlayerState, speed: number): string {
   const n = totalTroops(w);
   const job = state.healing;
   const check = canHeal({ infirmary: state.buildings.infirmary, wounded: w, busy: job !== null, stock: state.stock });
-  const kv =
-    TROOP_TYPES.map((k) => `<span class="with-icon">${ICONS[k]}${TROOP_NAMES[k]}</span><span>${w[k]}</span>`).join("") +
-    `<span>Beds in use</span><span>${n} / ${hospitalCapacity(state.buildings.infirmary)}</span>` +
-    `<span>Battle losses saved</span><span>${Math.round(woundedSaved(state.techs.stretchers ?? 0) * 100)}%</span>`;
+  const rows =
+    TROOP_TYPES.map((k) => kv(`${ICONS[k]}${TROOP_NAMES[k]}`, w[k], "with-icon")).join("") +
+    kv("Beds in use", `${n} / ${hospitalCapacity(state.buildings.infirmary)}`) +
+    kv("Battle losses saved", `${Math.round(woundedSaved(state.techs.stretchers ?? 0) * 100)}%`);
   let action: string;
   if (job) action = `<p class="p in-progress">Healing: ${totalTroops(job.wounded)} soldiers · ${formatTimeLeft(job.left / speed)}</p>`;
   else if (n > 0)
     action =
-      // Still tappable when refused: the tap shows the reason in a toast, as for an upgrade.
-      `<button class="b green" data-act="heal" aria-disabled="${!check.ok}" style="margin-top:8px;width:100%">Heal ${n} wounded · ${formatAmount(healCost(n).fish!)} fish</button>` +
-      (check.ok ? "" : `<p class="why">${check.reason}</p>`);
+      actionButton(`Heal ${n} wounded · ${formatAmount(healCost(n).fish!)} fish`, check, "green", "heal", ' style="margin-top:8px;width:100%"');
   else action = `<p class="p" style="margin-top:6px">${INFIRMARY_TEXT.none}</p>`;
-  return `<div class="box"><h4 class="with-icon">${ICONS.wounded}Wounded</h4><div class="kv">${kv}</div>${action}<p class="p" style="font-size:12px;margin-top:6px">${INFIRMARY_TEXT.note}</p></div>`;
+  return box(`${ICONS.wounded}Wounded`, `${keyValues(rows)}${action}<p class="p" style="font-size:12px;margin-top:6px">${INFIRMARY_TEXT.note}</p>`, "", "with-icon");
 }

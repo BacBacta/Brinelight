@@ -8,6 +8,7 @@ import { chromium, type Browser } from "playwright-core";
 import { build, preview, type PreviewServer } from "vite";
 import { buildApp } from "../server/src/app.js";
 import { loadConfig } from "../server/src/config.js";
+import { CITY_SHAPE } from "@brinelight/shared";
 import { sql } from "drizzle-orm";
 import { openDatabase, schema, type Database } from "../server/src/db/index.js";
 
@@ -55,8 +56,8 @@ export async function startHarness(): Promise<Harness> {
       const savedAt = new Date();
       await database.db
         .insert(schema.cities)
-        .values({ playerId, state, version: 1, savedAt })
-        .onConflictDoUpdate({ target: schema.cities.playerId, set: { state, savedAt, version: sql`${schema.cities.version} + 1` } });
+        .values({ playerId, state, version: 1, shape: CITY_SHAPE, savedAt })
+        .onConflictDoUpdate({ target: schema.cities.playerId, set: { state, savedAt, shape: CITY_SHAPE, version: sql`${schema.cities.version} + 1` } });
     },
     async close() {
       const step = async (name: string, f: () => Promise<unknown>) => {

@@ -1,0 +1,1 @@
+ALTER TABLE "cities" ADD COLUMN "shape" integer DEFAULT 4 NOT NULL;

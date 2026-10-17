@@ -68,7 +68,7 @@ Sign-in is a sensitive area: add it to the protected areas of CLAUDE.md ("sign-i
   - no city on the account: the local city is sent;
   - a city on the account and a local city: ask "Keep the city saved on your account, or replace it with this one?";
   - then save to the server every 30 s and when the page is hidden.
-- The session token is kept in localStorage this week (simple, works across domains). To be reviewed before payments (week 13), with a cookie on a shared domain. Write it in `docs/decisions.md`.
+- The session token is kept in localStorage this week (simple, works across domains). To be reviewed before payments (week 14), with a cookie on a shared domain. Write it in `docs/decisions.md`.
 - Server address from `VITE_API_URL`. Without it, the Profile says accounts are not open yet, and nothing goes on the network.
 - Saves to the account: every 30 s and when the page is hidden, only if the city changed. `version_conflict`: reload the account city and show "Your city changed on another device. We loaded the latest one."; `signed_out`: back to playing on the device, with "Please sign in again"; no network: keep the city on the device and try again later, without a message each time.
 - The city on the device is a backup copy: never erased by signing in. Signing out erases the token, not the city.
@@ -77,7 +77,7 @@ Sign-in is a sensitive area: add it to the protected areas of CLAUDE.md ("sign-i
 
 ## Task 6 · Put the server online
 
-**Status: Ready, not deployed: the deploy kit is tested in CI; renting the server waits until week 7 at the latest.** Meanwhile, a real wallet can be tested from your computer through temporary tunnels (`docs/deploy.md`, "Test with a real wallet without a server").
+**Status: Ready, not deployed: the deploy kit is tested in CI; renting the server waits until week 8 at the latest.** Meanwhile, a real wallet can be tested from your computer through temporary tunnels (`docs/deploy.md`, "Test with a real wallet without a server").
 
 Your part (Claude Code cannot do it): buy a domain (about €15 a year), rent a Hetzner CX23 server (Ubuntu 24.04) in Germany (about €5 a month), point the domain to it. The client can then move to `play.<domain>` and the server to `api.<domain>`.
 
@@ -93,4 +93,4 @@ Claude Code's part, in `deploy/` and `docs/deploy.md`:
 
 ## Not this week
 
-Actions checked by the server (week 4), the embedded wallet for players without a wallet (week 13), payments (week 14), multiplayer.
+Actions checked by the server (week 4), the embedded wallet for players without a wallet (week 14), payments (week 14), multiplayer (weeks 9 to 13).

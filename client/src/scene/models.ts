@@ -72,6 +72,28 @@ export function fitIsland(model: THREE.Object3D): THREE.Object3D {
   return fitted;
 }
 
+/** The island's texture is filtered along the slant up to this many samples (anisotropy), where the device allows. */
+export const ISLAND_ANISOTROPY = 8;
+
+/**
+ * The island's texture as the camera sees it, at a slant (its shore most of all): mipmaps with trilinear filtering
+ * (the file's sampler asks for it; set again here), and anisotropic filtering up to `anisotropy`.
+ */
+export function filterTexture(model: THREE.Object3D, anisotropy: number): void {
+  model.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+      const map = (m as THREE.MeshStandardMaterial).map;
+      if (!map) continue;
+      map.generateMipmaps = true;
+      map.minFilter = THREE.LinearMipmapLinearFilter;
+      map.anisotropy = anisotropy;
+      map.needsUpdate = true;
+    }
+  });
+}
+
 /**
  * One geometry and one material from a model, with its own transform baked in, for an InstancedMesh.
  * The model's meshes are merged when it has several; quantized attributes become plain numbers on the way.

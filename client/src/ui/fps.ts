@@ -21,7 +21,7 @@ export function createFpsCounter(root: HTMLElement, scene: SceneHandle) {
     const s = scene.stats();
     el.textContent =
       `${round(meter.avg)} FPS · min ${round(fpsMin(meter))}\n` +
-      `Quality ${s.step} ${s.forced ? "forced" : "auto"} · ${VIEW_NAMES[view]}\n` +
+      `Quality ${s.step} ${s.forced ? "forced" : "auto"} · ${VIEW_NAMES[view]}${s.mood === "mist" ? " · Mist" : ""}\n` +
       `${s.calls} calls · ${(s.triangles / 1000).toFixed(1)} k tris`;
   });
 

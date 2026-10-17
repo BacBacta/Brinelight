@@ -3,6 +3,7 @@ import { BUILDING_IDS, type BuildingId } from "@brinelight/shared";
 import { hexX, hexZ, kitModel, lighthouseScale, type BuildingModels, type Kit } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 import { PLOTS } from "./plots.js";
+import { TIER_SCALE, createTierDetails, tierOf } from "./tiers.js";
 
 type Plot = { group: THREE.Group; hit: THREE.Mesh; key: string };
 
@@ -21,6 +22,7 @@ export const plotPosition = (id: BuildingId) => {
 };
 
 export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: THREE.Object3D) => void): CityBuildings {
+  const details = createTierDetails(kit, plotPosition, add);
   const hitMaterial = new THREE.MeshBasicMaterial({ visible: false });
   const plots = {} as Record<BuildingId, Plot>;
 
@@ -51,8 +53,10 @@ export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: T
     const p = plots[id];
     p.group.children.filter((c) => c !== p.hit).forEach((c) => p.group.remove(c));
     if (level > 0) {
-      // One visual tier for now: the building's own model at every level.
-      p.group.add(models[id].object.clone(true));
+      // Its tier's size; its tier's details are placed by `details`.
+      const model = models[id].object.clone(true);
+      model.scale.setScalar(TIER_SCALE[tierOf(level)]);
+      p.group.add(model);
     }
     if (level === 0 || working) {
       const s = kitModel(kit, "building_scaffolding");
@@ -65,6 +69,7 @@ export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: T
   return {
     hits: BUILDING_IDS.map((id) => plots[id].hit),
     refresh(state) {
+      details.refresh(state.buildings);
       for (const id of BUILDING_IDS) {
         if (id === "lighthouse") continue;
         const level = state.buildings[id];

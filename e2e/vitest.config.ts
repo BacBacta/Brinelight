@@ -7,7 +7,8 @@ export default defineConfig({
     root: fileURLToPath(new URL("..", import.meta.url)),
     include: ["e2e/**/*.e2e.ts"],
     environment: "node",
-    testTimeout: 90_000,
+    // The slowest CI machines need about 90 s for the look and the celebrations (week 6).
+    testTimeout: 180_000,
     hookTimeout: 180_000,
     fileParallelism: false,
   },

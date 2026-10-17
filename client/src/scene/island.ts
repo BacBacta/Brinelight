@@ -32,32 +32,22 @@ export function kitModel(kit: Kit, name: string): THREE.Object3D {
 export const PLOT_OUTLINE = { color: "#FFF4DA", opacity: 0.55, inner: 0.98, outer: 1.08 } as const;
 
 /**
- * The empty island: the island model (fitted by fitIsland: shore on ring 3, meadow at y = 0), the outlines of the
- * 19 plots of rings 0 to 2 (one mesh), and the foam on ring 3, as in the prototype.
+ * The empty island: the island model (fitted by fitIsland: shore on ring 3, meadow at y = 0) and the outlines of the
+ * 19 plots of rings 0 to 2 (one mesh). The prototype's foam hexagons on ring 3 are gone: the model has its own shore,
+ * and at y = -0.36 they lay inside the waves (-0.59 to -0.25), which crossed them on every frame.
  */
 export function createIsland(model: THREE.Object3D): THREE.Group {
   const island = new THREE.Group();
   island.add(model);
-  const foamM = new THREE.MeshBasicMaterial({ color: "#fff", transparent: true, opacity: 0.5, depthWrite: false });
-  const foamG = hexGeometry(1.4);
   const outlines: THREE.BufferGeometry[] = [];
-  for (let q = -3; q <= 3; q++)
-    for (let r = -3; r <= 3; r++) {
-      const ring = Math.max(Math.abs(q), Math.abs(r), Math.abs(-q - r));
-      if (ring > 3) continue;
-      const x = hexX(q, r);
-      const z = hexZ(r);
-      if (ring <= 2) {
-        const g = new THREE.RingGeometry(PLOT_OUTLINE.inner, PLOT_OUTLINE.outer, 6, 1);
-        g.rotateX(-Math.PI / 2);
-        g.rotateY(Math.PI / 6);
-        g.translate(x, 0.015, z);
-        outlines.push(g);
-      } else {
-        const foam = new THREE.Mesh(foamG, foamM);
-        foam.position.set(x, -0.36, z);
-        island.add(foam);
-      }
+  for (let q = -2; q <= 2; q++)
+    for (let r = -2; r <= 2; r++) {
+      if (Math.max(Math.abs(q), Math.abs(r), Math.abs(-q - r)) > 2) continue;
+      const g = new THREE.RingGeometry(PLOT_OUTLINE.inner, PLOT_OUTLINE.outer, 6, 1);
+      g.rotateX(-Math.PI / 2);
+      g.rotateY(Math.PI / 6);
+      g.translate(hexX(q, r), 0.015, hexZ(r));
+      outlines.push(g);
     }
   const outline = new THREE.Mesh(
     mergeGeometries(outlines),

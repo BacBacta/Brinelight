@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { newPlayerState, sail } from "@brinelight/shared";
 import { NAV_ITEMS } from "../src/ui/nav.js";
 import { MAX_TOASTS, keepToasts } from "../src/ui/toast.js";
-import { FULL_AT, cityPower, fillRatio, longAmount, mistText, rateText, shortAmount, survivorsText } from "../src/ui/values.js";
+import { FULL_AT, cityPower, fillRatio, longAmount, mistText, rateText, seaMood, shortAmount, survivorsText } from "../src/ui/values.js";
 
 describe("amounts", () => {
   it("short amounts for the pills, as in the prototype", () => {
@@ -69,6 +69,18 @@ describe("top bar values from the shared rules", () => {
     expect(mistText({ ...noRefinery, stock: { ...s.stock, oil: 110 } })).toBe("Calm sea · oil for 10 h 00 in the Mist");
     expect(mistText({ ...noRefinery, stock: { ...s.stock, oil: 5 } })).toBe("Calm sea · oil for 27 min in the Mist");
   });
+
+  it("the sea's mood: calm, unless ?mist shows the Mist's look; the banner says so", () => {
+    expect(seaMood("")).toBe("calm");
+    expect(seaMood("?quality=2&fps")).toBe("calm");
+    expect(seaMood("?mist")).toBe("mist");
+    expect(seaMood("?fps&mist")).toBe("mist");
+    const s = newPlayerState();
+    const noRefinery = { ...s, buildings: { ...s.buildings, refinery: 0 }, stock: { ...s.stock, oil: 110 } };
+    expect(mistText(noRefinery, "mist")).toBe("Mist · oil for 10 h 00");
+    expect(mistText({ ...s, buildings: { ...s.buildings, refinery: 5 } }, "mist")).toBe("Mist · your oil holds");
+    expect(mistText(noRefinery, "calm")).toBe(mistText(noRefinery));
+  });
 });
 
 describe("menus and toasts", () => {
@@ -81,5 +93,18 @@ describe("menus and toasts", () => {
     expect(MAX_TOASTS).toBe(2);
     expect(keepToasts(["a"], "b")).toEqual(["a", "b"]);
     expect(keepToasts(["a", "b"], "c")).toEqual(["b", "c"]);
+  });
+});
+
+describe("a number that rolls", () => {
+  it("from its old value to its new one in ROLL_MS, fast at first, then easing into place", async () => {
+    const { ROLL_MS, rolled } = await import("../src/ui/values.js");
+    expect(ROLL_MS).toBe(400);
+    expect(rolled(1000, 400, 0)).toBe(1000);
+    expect(rolled(1000, 400, ROLL_MS)).toBe(400);
+    expect(rolled(1000, 400, 10 * ROLL_MS)).toBe(400);
+    // Halfway in time, more than halfway in value.
+    expect(rolled(1000, 400, ROLL_MS / 2)).toBeLessThan(700);
+    expect(rolled(0, 100, -5)).toBe(0);
   });
 });

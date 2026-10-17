@@ -19,6 +19,7 @@ import { attackInput } from "./odds.js";
 import { siteLabel } from "./labels.js";
 import { ICONS } from "../ui/icons.js";
 import { portraitImg } from "../ui/captains.js";
+import { actionButton, chip, createSheetView, keyValues, kv, verdict } from "../ui/components.js";
 import { ODDS_TEXT, TROOP_NAMES, TROOP_TYPES, counterTip } from "./text.js";
 
 const HOLD_NOTE = { tom: " (Old Tom +30%)" } as Record<string, string>;
@@ -53,7 +54,7 @@ export function reportHtml(r: Report): string {
     return `<tr><td>${TROOP_NAMES[k]}${adv}</td><td>${r.sent[k]}${vets}</td><td class="l">${losses ? `−${losses}` : "0"}</td><td>${r.enemy[k]}</td></tr>`;
   }).join("");
   return (
-    `<div class="verd ${r.win ? "easy" : "hard"}">${r.win ? "Victory" : "Defeat"} · ${name} level ${r.level}</div>` +
+    verdict(r.win ? "easy" : "hard", `${r.win ? "Victory" : "Defeat"} · ${name} level ${r.level}`) +
     `<div class="vs"><i style="width:${((r.attack / (r.attack + r.defense)) * 100).toFixed(1)}%;background:#3BC6FF"></i><i style="flex:1;background:#FF7A5A"></i></div>` +
     `<div class="row" style="justify-content:space-between;font-size:12px;font-weight:900"><span style="color:#9FD8FF">Your strength ${Math.round(r.attack)}</span><span style="color:#FF9A86">Pirates ${Math.round(r.defense)}</span></div>` +
     `<table class="rep"><tr><th></th><th>Sent</th><th>Losses</th><th>Pirates</th></tr>${rows}</table>` +
@@ -78,33 +79,21 @@ export function shardsForText(state: Pick<PlayerState, "captains" | "shards">, i
 
 /** The sheet of a camp or a wreck, and the combat reports. */
 export function createSeaSheet(root: HTMLElement, actions: { sail(site: string): void; closeReport(reportId: string): void }) {
-  const el = document.createElement("section");
-  el.className = "sheet card";
-  el.hidden = true;
-  el.setAttribute("role", "dialog");
-  root.appendChild(el);
   let site: string | null = null;
   let report: Report | null = null;
-  let key = "";
-
-  el.addEventListener("click", (e) => {
-    const b = (e.target as HTMLElement).closest("button");
-    if (!b) return;
-    if (b.dataset.act === "close") close();
-    if (b.dataset.act === "sail" && site) actions.sail(site);
+  const sheet = createSheetView(root, "", (act) => {
+    if (act === "close") close();
+    if (act === "sail" && site) actions.sail(site);
   });
 
   const close = () => {
     const shown = report;
     site = null;
     report = null;
-    el.hidden = true;
+    sheet.hide();
     // The report you saw is the one marked read, even if a newer one arrived meanwhile.
     if (shown) actions.closeReport(shown.id);
   };
-
-  const frame = (title: string, body: string) =>
-    `<div class="sh-h"><h2>${title}</h2><button class="x" data-act="close" aria-label="Close">✕</button></div><div class="sh-b">${body}</div>`;
 
   const siteHtml = (id: string, state: PlayerState, speed: number): string => {
     const s = seaSite(id)!;
@@ -112,8 +101,7 @@ export function createSeaSheet(root: HTMLElement, actions: { sail(site: string):
     const trip = formatTimeLeft(travelTime(s, state.techs, lead) / speed);
     const check = canSendFleet(id, state);
     const mine = state.fleets.filter((f) => f.site === id);
-    const busy = mine.length ? `<div class="row"><span class="chip ok">Your fleet is ${mine[0]!.phase === "out" ? "on the way" : mine[0]!.phase === "stay" ? "there" : "coming back"}</span></div>` : "";
-    const why = check.ok ? "" : `<p class="why">${check.reason}</p>`;
+    const busy = mine.length ? `<div class="row">${chip(`Your fleet is ${mine[0]!.phase === "out" ? "on the way" : mine[0]!.phase === "stay" ? "there" : "coming back"}`, "ok")}</div>` : "";
     if (s.kind === "camp") {
       const level = state.world.camps[id] ?? s.level ?? 1;
       const enemy = pirateCamp(level);
@@ -125,49 +113,41 @@ export function createSeaSheet(root: HTMLElement, actions: { sail(site: string):
       return (
         `<p class="p">Pirates out of the Mist. Beat them for loot.</p>` +
         busy +
-        `<div class="kv"><span>Level</span><span>${level}</span>${TROOP_TYPES.map((k) => `<span>${TROOP_NAMES[k]}</span><span>${enemy[k]}</span>`).join("")}` +
-        `<span>Your troops</span><span>${totalTroops(state.troops)}</span>` +
-        (totalTroops(state.veterans) ? `<span>Your veterans</span><span>${totalTroops(state.veterans)}</span>` : "") +
-        `<span>Trip</span><span>${trip} one way</span></div>` +
+        keyValues(
+          kv("Level", level) +
+            TROOP_TYPES.map((k) => kv(TROOP_NAMES[k], enemy[k])).join("") +
+            kv("Your troops", totalTroops(state.troops)) +
+            (totalTroops(state.veterans) ? kv("Your veterans", totalTroops(state.veterans)) : "") +
+            kv("Trip", `${trip} one way`),
+        ) +
         `<div class="shards-for" data-shards-for="${cid}"><div class="ph portrait">${portraitImg(cid)}</div><span>${shardsForText(state, cid)}</span></div>` +
-        `<div class="verd ${o}">${ODDS_TEXT[o]}</div>` +
+        verdict(o, ODDS_TEXT[o]) +
         `<p class="p" style="font-size:12.5px">Tip: their ${TROOP_NAMES[top].toLowerCase()} are beaten by ${TROOP_NAMES[counter].toLowerCase()}. Train them at the Barracks.</p>` +
-        `<button class="b red xl" data-act="sail" aria-disabled="${!check.ok}">Attack with all your troops</button>` +
-        why
+        actionButton("Attack with all your troops", check, "red xl", "sail")
       );
     }
     const hold = holdCapacity(state.buildings.harbor, state.techs, lead);
     return (
       `<p class="p">A wreck to loot. Other fleets may come to fight over it.</p>` +
       busy +
-      `<div class="kv"><span>Oil</span><span>${formatAmount(state.world.wrecks[id] ?? s.amount ?? 0)}</span>` +
-      `<span>Your hold</span><span>${formatAmount(hold)}${lead ? (HOLD_NOTE[lead.id] ?? "") : ""}</span><span>Trip</span><span>${trip} one way</span></div>` +
-      `<button class="b gold xl" data-act="sail" aria-disabled="${!check.ok}">Send a fleet</button>` +
-      why
+      keyValues(kv("Oil", formatAmount(state.world.wrecks[id] ?? s.amount ?? 0)) + kv("Your hold", `${formatAmount(hold)}${lead ? (HOLD_NOTE[lead.id] ?? "") : ""}`) + kv("Trip", `${trip} one way`)) +
+      actionButton("Send a fleet", check, "gold xl", "sail")
     );
   };
 
   const render = (state: PlayerState, speed: number) => {
     if (report) {
-      const k = `r|${JSON.stringify(report)}`;
-      if (k === key) return;
-      key = k;
-      el.setAttribute("aria-label", "Combat report");
-      el.innerHTML = frame("Combat report", reportHtml(report));
+      if (!sheet.drawn(`r|${JSON.stringify(report)}`)) sheet.draw("Combat report", reportHtml(report));
       return;
     }
     if (!site) return;
     const body = siteHtml(site, state, speed);
-    const k = `s|${body}`;
-    if (k === key) return;
-    key = k;
-    el.setAttribute("aria-label", siteLabel(site, state));
-    el.innerHTML = frame(siteLabel(site, state), body);
+    if (!sheet.drawn(`s|${body}`)) sheet.draw(siteLabel(site, state), body);
   };
 
   return {
     get open() {
-      return !el.hidden;
+      return sheet.shown;
     },
     get showsReport() {
       return report !== null;
@@ -175,19 +155,17 @@ export function createSeaSheet(root: HTMLElement, actions: { sail(site: string):
     openSite(id: string, state: PlayerState, speed: number) {
       site = id;
       report = null;
-      key = "";
-      el.hidden = false;
+      sheet.show();
       render(state, speed);
     },
     openReport(r: Report, state: PlayerState, speed: number) {
       site = null;
       report = r;
-      key = "";
-      el.hidden = false;
+      sheet.show();
       render(state, speed);
     },
     update(state: PlayerState, speed: number) {
-      if (!el.hidden) render(state, speed);
+      if (sheet.shown) render(state, speed);
     },
     close,
   };

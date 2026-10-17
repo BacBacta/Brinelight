@@ -1,5 +1,6 @@
 import { CAPTAINS, oilAutonomy, power, storeCap, survivorCap, type CaptainId, type Troops } from "@brinelight/shared";
 import type { PlayerState } from "../state/index.js";
+import type { SeaMood } from "../scene/look.js";
 
 /** Short amounts for the pills, as in the prototype: "520", "1.2 k", "12 k". */
 export function shortAmount(n: number): string {
@@ -40,15 +41,33 @@ export function cityPower(state: PlayerState): number {
 export const survivorsText = (state: PlayerState): string => `${state.survivors}/${survivorCap(state.buildings.shelters)}`;
 
 /**
+ * The sea's mood the game shows, read by the banner and the 3D view alike: calm, until the Mist's calendar comes from
+ * the server (week 7). `?mist` in the address shows the Mist's look, to see it and measure it: no rule depends on it.
+ */
+export function seaMood(search: string): SeaMood {
+  return new URLSearchParams(search).has("mist") ? "mist" : "calm";
+}
+
+/**
  * The Mist banner, with no countdown (the Mist calendar will come from the server):
  * how long your oil lasts with the Lighthouse stoked, from oilAutonomy in the shared rules.
  */
-export function mistText(state: PlayerState): string {
+export function mistText(state: PlayerState, mood: SeaMood = "calm"): string {
   const s = oilAutonomy(state, state.stock.oil);
-  if (!Number.isFinite(s)) return "Calm sea · your oil holds in the Mist";
+  const mist = mood === "mist";
+  if (!Number.isFinite(s)) return mist ? "Mist · your oil holds" : "Calm sea · your oil holds in the Mist";
   const minutes = Math.round(s / 60);
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   const time = h >= 100 ? "99+ h" : h > 0 ? `${h} h ${String(m).padStart(2, "0")}` : `${m} min`;
-  return `Calm sea · oil for ${time} in the Mist`;
+  return mist ? `Mist · oil for ${time}` : `Calm sea · oil for ${time} in the Mist`;
+}
+
+/** How long a number of the top bar takes to roll to its new value, in ms. */
+export const ROLL_MS = 400;
+
+/** The value shown `elapsed` ms into a roll from `from` to `to`: fast at first, then easing into place. */
+export function rolled(from: number, to: number, elapsed: number): number {
+  const t = Math.min(1, Math.max(0, elapsed / ROLL_MS));
+  return from + (to - from) * (1 - (1 - t) ** 3);
 }
