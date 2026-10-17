@@ -7,6 +7,7 @@
  * Week 3: sign in with your wallet (Profile, on the Power card) to keep your city on your account.
  * Week 4: signed in, every action is sent to the server, which decides; the city shown is the server's.
  * Week 5: troops are trained at the Barracks, and the wounded healed at the Infirmary.
+ * Week 6: what ends is celebrated, and at launch what ended while you were away (compared with the last city seen here).
  * The reference prototype stays playable at /prototype/.
  */
 import { HOME, applyAction, type GameAction } from "@brinelight/shared";
@@ -23,8 +24,9 @@ import { createSea, type Sea } from "./sea/index.js";
 import { createFpsCounter } from "./ui/fps.js";
 import { fpsWanted } from "./ui/fpsMeter.js";
 import { createCaptainsSheet } from "./ui/captains.js";
+import { createCelebrations } from "./ui/celebrate.js";
 import { createUi } from "./ui/index.js";
-import { DEV_SPEED, SAVE_EVERY_MS, browserStore, elapse, openSave, saveGame, type PlayerState } from "./state/index.js";
+import { DEVICE, DEV_SPEED, SAVE_EVERY_MS, accountOwner, awayEvents, browserStore, elapse, eventsBetween, openSave, readSeen, saveGame, writeSeen, type PlayerState } from "./state/index.js";
 import "./style.css";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -42,6 +44,8 @@ if (new URLSearchParams(location.search).has("rules")) {
   const canvas = app.querySelector<HTMLCanvasElement>("#cv")!;
 
   const store = browserStore();
+  // The last city seen on this device, read before anything writes it: at launch, what ended since is told once.
+  const seen = readSeen(store);
 
   // The account: only with a server address. Without one, or without signing in, nothing goes on the network.
   const server = apiUrl();
@@ -72,6 +76,16 @@ if (new URLSearchParams(location.search).has("rules")) {
     if (!onAccount) saveGame(store, state, Date.now());
   };
   const speed = () => (onAccount && account ? account.speed : DEV_SPEED);
+  /** Whose city is shown: the city of this device, or the account's. */
+  const owner = () => (onAccount && account?.wallet ? accountOwner(account.wallet) : DEVICE);
+  /**
+   * The city last shown, to tell what ended since; null until the city has arrived (signed in: the server's answer at
+   * launch), so that nothing is celebrated twice.
+   */
+  let shownCity: PlayerState | null = null;
+  const remember = () => {
+    if (shownCity) writeSeen(store, owner(), state);
+  };
 
   let city: City | null = null;
   let sea: Sea | null = null;
@@ -108,6 +122,15 @@ if (new URLSearchParams(location.search).has("rules")) {
   );
   ui.update(state);
   if (opened?.rejected) ui.toast("Your saved city could not be read. A copy was kept.", "bad", "!");
+  const celebrations = createCelebrations(app);
+  /** The city has arrived: what ended since the last city seen on this device, if it is the same owner's, is told. */
+  const arrive = () => {
+    if (shownCity) return;
+    if (onAccount && account) state = account.city()!;
+    celebrations.add(awayEvents(seen, owner(), state), true);
+    shownCity = state;
+    remember();
+  };
 
   /**
    * An action from a sheet: applied, or refused with the reason of the shared rules in a toast.
@@ -141,6 +164,9 @@ if (new URLSearchParams(location.search).has("rules")) {
       save();
       onAccount = now;
       state = onAccount ? account!.city()! : openSave(store, Date.now()).state;
+      // The other city takes the screen: that is not news, nothing is celebrated.
+      if (shownCity) shownCity = state;
+      remember();
       city?.closeSheet();
       sea?.closeSheet();
       refresh();
@@ -201,10 +227,17 @@ if (new URLSearchParams(location.search).has("rules")) {
     const sig = signature(state);
     const changed = sig !== shown;
     shown = sig;
+    if (changed && shownCity) {
+      celebrations.add(eventsBetween(shownCity, state));
+      shownCity = state;
+    }
     if (now - uiAt > 250 || changed) {
       uiAt = now;
       refresh();
-      if (changed) save();
+      if (changed) {
+        save();
+        remember();
+      }
     }
   };
   frame = requestAnimationFrame(loop);
@@ -235,19 +268,26 @@ if (new URLSearchParams(location.search).has("rules")) {
       profile.refresh();
     });
     ui.signedIn(account.signedIn);
-    void account.start();
+    void account.start().then(arrive, arrive);
   }
+  if (!onAccount) arrive();
 
-  const saveTimer = setInterval(save, SAVE_EVERY_MS);
+  const saveTimer = setInterval(() => {
+    save();
+    remember();
+  }, SAVE_EVERY_MS);
   // Hidden: the city of this device is saved. Shown again, or back online: what waits is sent now.
   const onVisibility = () => {
-    if (document.visibilityState === "hidden") save();
-    else account?.wake();
+    if (document.visibilityState === "hidden") {
+      save();
+      remember();
+    } else account?.wake();
   };
   const onOnline = () => account?.wake();
   document.addEventListener("visibilitychange", onVisibility);
   addEventListener("online", onOnline);
   addEventListener("pagehide", save);
+  addEventListener("pagehide", remember);
 
   if (import.meta.env.DEV) Object.defineProperty(window, "__state", { get: () => state, configurable: true });
 
@@ -258,6 +298,7 @@ if (new URLSearchParams(location.search).has("rules")) {
     document.removeEventListener("visibilitychange", onVisibility);
     removeEventListener("online", onOnline);
     removeEventListener("pagehide", save);
+    removeEventListener("pagehide", remember);
     scene.dispose();
   });
 }

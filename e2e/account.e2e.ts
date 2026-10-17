@@ -156,6 +156,8 @@ async function signOut(page: Page): Promise<void> {
 }
 
 const queued = (c: City | null) => (c?.queue ?? []).map((j) => j.id).sort();
+/** Until no celebration is on screen: one would take the next tap (a tap closes it). */
+const calm = (page: Page) => expect.poll(() => page.locator(".celebration").count(), { timeout: 15_000, interval: 100 }).toBe(0);
 /** For a poll that waits on the network (an answer, a retry): longer than the default second. */
 const NET = { timeout: 15_000, interval: 100 };
 
@@ -570,6 +572,160 @@ describe("captains", () => {
       expect(p.apiCalls).toEqual([]);
       await p.context.close();
     }
+  });
+});
+
+describe("celebrations", () => {
+  const SEEN_KEY = "brinelight-seen-v1";
+  /** A city whose works end 10 and 20 minutes after it is saved, with the lead captain one experience point from level 2. */
+  const ending = (): PlayerState => {
+    const base = newPlayerState();
+    return {
+      ...base,
+      buildings: { ...base.buildings, lighthouse: 4, refinery: 2, fishery: 2 },
+      stock: { oil: 9000, fish: 9000, wood: 9000, rope: 10 },
+      pearls: 500,
+      queue: [
+        { id: "refinery", left: 600, duration: 900 },
+        { id: "lighthouse", left: 1200, duration: 1800 },
+      ],
+      captains: { ...base.captains, [base.lead!]: { level: 1, xp: 79, stars: 1 } },
+    };
+  };
+  /** At most one celebration on screen at any time, checked every 50 ms while `run` goes on. */
+  async function oneAtATime(page: Page, run: () => Promise<void>): Promise<number> {
+    let most = 0;
+    let going = true;
+    const watch = (async () => {
+      while (going) {
+        most = Math.max(most, await page.locator(".celebration").count());
+        await page.waitForTimeout(50);
+      }
+    })();
+    await run();
+    going = false;
+    await watch;
+    return most;
+  }
+
+  it("a work that ends: gold text; the Lighthouse: the full screen; a captain: the 512 px portrait; one at a time, at 412 and 360 px", async () => {
+    for (const size of SIZES) {
+      const p = await newPlayer(false, size);
+      const t0 = Date.now();
+      await p.context.addInitScript(({ key, file }) => localStorage.setItem(key, file), { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: t0, state: ending() }) });
+      // The page's clock waits for the test: the works end when the test says, however long the loading takes.
+      const page = await p.context.newPage();
+      await page.clock.install({ time: t0 });
+      await page.clock.pauseAt(t0 + 500);
+      await page.goto(`${GAME}/?quality=2`);
+      await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
+      await page.waitForSelector(".labels.city .bl b");
+      const most = await oneAtATime(page, async () => {
+        expect(await page.locator(".celebration").count()).toBe(0);
+        await page.clock.fastForward(600_000);
+        await page.clock.runFor(200);
+        const float = page.locator(".celebration.float");
+        await float.waitFor();
+        await expect(float.textContent()).resolves.toBe("Refinery level 3");
+        // Its rise runs on the real clock, its life on the page's: held at mid-way for the picture.
+        await float.evaluate((e) => {
+          const f = e.firstElementChild as HTMLElement;
+          f.style.animation = "none";
+          void f.offsetWidth;
+          f.style.animation = "rise 1.2s ease-out -0.4s paused both";
+        });
+        await page.screenshot({ path: `e2e/.shots/shot-celebrate-work-${size.width}.png` });
+        await page.clock.runFor(1300);
+        await float.waitFor({ state: "detached" });
+        await page.clock.fastForward(600_000);
+        await page.clock.runFor(200);
+        const full = page.locator(".celebration.lighthouse");
+        await full.waitFor();
+        await expect(full.textContent()).resolves.toContain("Lighthouse level 5");
+        await page.waitForTimeout(600);
+        await page.screenshot({ path: `e2e/.shots/shot-celebrate-lighthouse-${size.width}.png` });
+        // A tap closes it.
+        await full.click();
+        await full.waitFor({ state: "detached" });
+        // The Logbook takes the lead captain one level up.
+        await page.locator('.nav button[data-v="captains"]').click();
+        await page.locator('.sheet.captains [data-act="logbook"]').click();
+        await page.clock.runFor(100);
+        const card = page.locator(".celebration.captain");
+        await card.waitFor();
+        await expect(card.textContent()).resolves.toContain("reached level 2");
+        await expect.poll(() => card.locator("img").evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth === 512 && i.src.endsWith("-512.webp"))).toBe(true);
+        await page.screenshot({ path: `e2e/.shots/shot-celebrate-captain-${size.width}.png` });
+        await page.clock.runFor(2600);
+        await card.waitFor({ state: "detached" });
+      });
+      expect(most).toBe(1);
+      await p.context.close();
+    }
+  });
+
+  it("at launch: one card for what ended while you were away; nothing on the very first launch", async () => {
+    // Saved and last seen two hours ago, with two works that ended since.
+    const city = { ...ending(), research: { id: "saws", left: 60, duration: 600 }, buildings: { ...ending().buildings, observatory: 1 } };
+    for (const first of [false, true]) {
+      const p = await newPlayer(false);
+      const savedAt = Date.now() - 2 * 3600_000;
+      await p.context.addInitScript(
+        ({ save, seen, file, owner }) => {
+          if (sessionStorage.getItem("e2e-injected")) return;
+          localStorage.setItem(save, file);
+          if (owner) localStorage.setItem(seen, owner);
+          sessionStorage.setItem("e2e-injected", "1");
+        },
+        { save: SAVE_KEY, seen: SEEN_KEY, file: JSON.stringify({ v: 1, savedAt, state: city }), owner: first ? "" : JSON.stringify({ owner: "device", state: city }) },
+      );
+      const page = await openGame(p.context);
+      if (first) {
+        await page.waitForTimeout(1500);
+        expect(await page.locator(".celebration").count()).toBe(0);
+        // From now on, this city is the one seen here.
+        await expect.poll(() => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? "null")?.owner, SEEN_KEY)).toBe("device");
+      } else {
+        const card = page.locator(".celebration.away");
+        await card.waitFor();
+        const text = await card.textContent();
+        expect(text).toContain("While you were away");
+        for (const line of ["Refinery level 3", "Lighthouse level 5", "Tide Saws level 1"]) expect(text).toContain(line);
+        await page.screenshot({ path: "e2e/.shots/shot-celebrate-away.png" });
+        // Reloaded at once: nothing more ended, nothing told.
+        await page.reload();
+        await page.waitForSelector(".labels.city .bl b");
+        await page.waitForTimeout(1500);
+        expect(await page.locator(".celebration").count()).toBe(0);
+      }
+      await p.context.close();
+    }
+  });
+
+  it("signed in: nothing when the account's city takes the screen; at the next launch, what ended on the server while you were away", async () => {
+    const p = await signedInPlayer();
+    const base = newPlayerState();
+    // The account's city is ahead of the city of this device; sign out, then in again: it takes the screen, silently.
+    await h.putCity(p.playerId, { ...base, buildings: { ...base.buildings, lighthouse: 5, refinery: 4, observatory: 1 }, stock: { oil: 9000, fish: 9000, wood: 9000, rope: 10 } });
+    await signOut(p.page);
+    await signIn(p.page);
+    await p.page.locator(".toast", { hasText: TEXT.signedIn }).waitFor();
+    await expect.poll(async () => (await copyOf(p.page, p.playerId))?.server?.state.buildings.refinery, NET).toBe(4);
+    await p.page.waitForTimeout(1500);
+    expect(await p.page.locator(".celebration").count()).toBe(0);
+    // Away: on the server, two works end.
+    const token = (await session(p.page))!.token;
+    const now = (await serverCity(token))!.state as unknown as PlayerState;
+    await p.page.close();
+    await h.putCity(p.playerId, { ...now, queue: [{ id: "refinery", left: 1, duration: 60 }], research: { id: "nets", left: 1, duration: 60 } });
+    await new Promise((r) => setTimeout(r, 2500));
+    const page = await openGame(p.context);
+    const card = page.locator(".celebration.away");
+    await card.waitFor({ timeout: 15_000 });
+    const text = await card.textContent();
+    for (const line of ["While you were away", "Refinery level 5", "Braided Nets level 1"]) expect(text).toContain(line);
+    expect(p.problems).toEqual([]);
+    await p.context.close();
   });
 });
 
@@ -1278,6 +1434,7 @@ describe("signed in", () => {
     await show(p.page);
     await expect.poll(async () => (await copyOf(p.page, p.playerId))?.server?.state.buildings.lighthouse, NET).toBe(4);
     await p.page.waitForTimeout(500);
+    await calm(p.page);
 
     // Where a slot of the first ring is on screen, from the game's own starting camera for this Lighthouse level.
     const { slot, x, y } = slotOnScreen(4);
@@ -1341,6 +1498,8 @@ describe("signed in", () => {
     await show(p.page);
     await expect.poll(async () => Object.keys(((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.rafts ?? {}), NET).toEqual([slot]);
     await p.page.waitForTimeout(500);
+    // The Lighthouse rose to level 4 on the server: its celebration goes first.
+    await calm(p.page);
     await p.page.mouse.click(x, y);
     const sheet = p.page.locator(".raft-sheet:not([hidden])");
     await sheet.waitFor();

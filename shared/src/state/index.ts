@@ -4,3 +4,4 @@ export { MAX_REPORTS, addStar, advance, catchUp, dockRaft, heal, installOnRaft, 
 export { MAX_REPORT_SEQ, REPORT_ID, cleanFleets, cleanQueue, parseState } from "./parse.js";
 export { CITY_SHAPE, MIN_CITY_SHAPE, migrateCity, upgradeShape } from "./migrate.js";
 export { ACTION_ID, applyAction, parseAction, type GameAction, type GameActionType } from "./actions.js";
+export { eventsBetween, type GameEvent } from "./events.js";

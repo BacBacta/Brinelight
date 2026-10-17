@@ -160,3 +160,20 @@ h4.with-icon .icon{width:22px;height:22px}
    on the CI's machines. Its area is placed from the sheet instead: the header's padding (14 px, 16 px) less 5 px. */
 .b::after,.queue .more::after,.build-badge::after{content:"";position:absolute;inset:min(0px,calc(50% - 22px))}
 .sh-h .x::after{content:"";position:absolute;top:9px;right:11px;width:44px;height:44px}
+
+/* Celebrations (client/src/ui/celebrate.ts): one at a time, a tap closes it. */
+.celebration{position:fixed;z-index:40;inset:0;display:grid;place-items:center;pointer-events:none}
+.celebration>*{pointer-events:auto}
+.celebration.float{inset:auto 0 calc(96px + env(safe-area-inset-bottom,0px));place-items:end center}
+.cel-float{font:400 26px var(--f-d);color:var(--gold);text-shadow:0 2px 0 #4A2C00,0 0 12px rgba(0,0,0,.6);padding:4px 12px;animation:rise 1.2s ease-out both}
+.cel-full{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:6px;background:rgba(6,16,36,.86);text-align:center;overflow:hidden;animation:fade 2.5s ease-in-out both}
+.cel-full .beam{position:absolute;left:50%;top:50%;width:160vmax;height:28vmax;translate:-50% -50%;background:linear-gradient(90deg,transparent,rgba(255,200,58,.22),transparent);transform:rotate(-14deg);animation:sweep 2.5s ease-in-out both}
+.cel-full h2{position:relative;margin:0;font:400 34px var(--f-d);color:var(--gold);text-shadow:0 3px 0 #4A2C00}
+.cel-full p{position:relative;margin:0;font-weight:800;color:var(--cream)}
+.cel-card{width:min(300px,calc(100% - 48px));padding:16px;text-align:center;animation:pop .3s cubic-bezier(.2,1.5,.4,1)}
+.cel-card h2{margin:8px 0 4px;font:400 22px var(--f-d);color:var(--gold)}
+.cel-card p{margin:2px 0;font-weight:800;font-size:14px;color:var(--cream)}
+.cel-card.captain img{width:160px;height:160px;border-radius:20px;border:3px solid var(--gold);object-fit:cover;display:block;margin:0 auto}
+@keyframes rise{0%{transform:translateY(12px);opacity:0}15%{transform:none;opacity:1}75%{opacity:1}100%{transform:translateY(-36px);opacity:0}}
+@keyframes fade{0%,100%{opacity:0}12%,85%{opacity:1}}
+@keyframes sweep{from{transform:rotate(-34deg)}to{transform:rotate(6deg)}}
