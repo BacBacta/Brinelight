@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import * as THREE from "three";
 import { BUILDING_IDS, RAFT_SLOTS } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
-import { PLOT_OUTLINE, createIsland } from "../src/scene/island.js";
+import { PLOT_OUTLINE, createIsland, hexX, hexZ } from "../src/scene/island.js";
 import { ISLAND_TURN, MODEL_IDS, SHORE_RADIUS, fitIsland, modelUrl } from "../src/scene/models.js";
 import { buildingUrl } from "../src/scene/buildings.js";
 import { plotPosition } from "../src/city/buildings.js";
@@ -100,7 +100,7 @@ describe("the island under the city", () => {
     expect(outline.geometry.boundingBox!.min.y).toBeGreaterThan(0);
   });
 
-  it("no relief of the island (its pine) stands on a building plot or a raft slot", () => {
+  it("no relief of the island (its pine) stands in a plot's tile, built or empty, or within a raft of a raft slot", () => {
     // The island file read as the game places it: decoded, centered, scaled by fitIsland, turned by ISLAND_TURN.
     const file = `${PUBLIC}${modelUrl("island")}`;
     const bytes = readFileSync(file);
@@ -120,11 +120,15 @@ describe("the island under the city", () => {
     const center = box.getCenter(new THREE.Vector3());
     const scale = (2 * SHORE_RADIUS) / Math.max(size.x, size.z);
     const turn = new THREE.Matrix4().makeRotationY(ISLAND_TURN);
-    // Above the meadow (at y = 0 in the file) stand only reliefs: today, one windswept pine.
+    // Above the meadow (at y = 0 in the file) stand only reliefs: today, one windswept pine on the rim.
     const reliefs = points.filter((p) => p.y > 0.02).map((p) => new THREE.Vector3((p.x - center.x) * scale, p.y * scale, (p.z - center.z) * scale).applyMatrix4(turn));
     expect(reliefs.length).toBeGreaterThan(100);
-    // A plot is a hexagon 2 / sqrt(3) from its center to a corner; a raft is RAFT_WIDTH wide.
-    const plots = BUILDING_IDS.map(plotPosition);
+    // The 19 tiles of rings 0 to 2, built or not, each counted 1 around its center; a raft is RAFT_WIDTH wide.
+    const plots: { x: number; z: number }[] = [];
+    for (let q = -2; q <= 2; q++) for (let r = -2; r <= 2; r++) if (Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)) <= 2) plots.push({ x: hexX(q, r), z: hexZ(r) });
+    expect(plots).toHaveLength(19);
+    // The building plots are among them.
+    for (const id of BUILDING_IDS) expect(plots.some((p) => Math.hypot(p.x - plotPosition(id).x, p.z - plotPosition(id).z) < 1e-9), id).toBe(true);
     const rafts = RAFT_SLOTS.map((s) => slotPosition(s.key));
     let nearestPlot = Infinity;
     let nearestRaft = Infinity;
@@ -132,7 +136,7 @@ describe("the island under the city", () => {
       for (const p of plots) nearestPlot = Math.min(nearestPlot, Math.hypot(r.x - p.x, r.z - p.z));
       for (const p of rafts) nearestRaft = Math.min(nearestRaft, Math.hypot(r.x - p.x, r.z - p.z));
     }
-    expect(nearestPlot).toBeGreaterThan(2 / Math.sqrt(3));
+    expect(nearestPlot).toBeGreaterThan(1);
     expect(nearestRaft).toBeGreaterThan(RAFT_WIDTH / 2);
   });
 });

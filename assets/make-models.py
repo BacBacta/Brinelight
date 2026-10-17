@@ -30,12 +30,20 @@ BUILDINGS = ["lighthouse", "refinery", "fishery", "lumberyard", "shelters", "bar
 OTHERS = ["island", "raft", "wreck", "camp", "boat", "greenhouse", "smokehouse", "watchtower"]
 # Texture size, 512 px unless set here: the island is the largest thing on screen.
 TEXTURE = {"island": 1024}
-# Parts of a model removed before anything else: the vertices above `above` inside the box `x` × `z` (the original's
-# units), with every triangle that uses them. The island loses its second pine, which stood where rafts moor.
-REMOVE = {"island": [{"above": 0.08, "x": (0.3, 1.0), "z": (0.2, 1.0)}]}
+# The island's two windswept pines, found by their box (x, z in the original's units) and their height: the vertices
+# above `above`. Where the model put them, one stood in an empty plot of ring 2 and the other where rafts moor. The
+# only place clear of every plot and raft slot is the rim at the pier's gap (no raft slot there), and it holds one
+# pine: the smaller one moves there, turned by `turn` degrees around its trunk so it still leans out to sea, its
+# trunk at `to` and its foot down at `base`; the other one goes. The triangles that joined a pine to the ground go
+# with it. Under each pine, what lay flat (its lowest branches and flowers, flattened later) takes the meadow's texture.
+PINES = {
+    "island": [
+        {"x": (-0.62, -0.24), "z": (-0.9, -0.45), "above": 0.08},
+        {"x": (0.56, 0.86), "z": (0.34, 0.74), "above": 0.08, "to": (-0.395, -0.827), "turn": -152.4, "base": -0.098},
+    ]
+}
 # The island's meadow, and the height up to which its bumps (grass tufts, the edge of the meadow) are flattened onto
-# it, in the original's units. The meadow is flat at -0.07; above 0.08 stands its windswept pine (up to 0.30), which
-# stays as it is.
+# it, in the original's units. The meadow is flat at -0.07; above 0.08 stand its windswept pines (up to 0.30).
 FLATTEN = {"island": {"ground": -0.07, "top": 0.08}}
 
 FLOAT, BYTE, SHORT, USHORT, UINT = 5126, 5120, 5122, 5123, 5125
@@ -78,21 +86,50 @@ def convert(cid, src_dir, out_dir):
     normals = accessor(doc, binary, attrs["NORMAL"])
     uvs = accessor(doc, binary, attrs["TEXCOORD_0"])
     indices = [i[0] for i in accessor(doc, binary, prim["indices"])]
-    removed = 0
-    for cut in REMOVE.get(cid, []):
-        (x0, x1), (z0, z1) = cut["x"], cut["z"]
-        gone = {i for i, p in enumerate(positions) if p[1] > cut["above"] and x0 <= p[0] <= x1 and z0 <= p[2] <= z1}
-        removed += len(gone)
-        kept = [t for t in range(0, len(indices), 3) if not gone.intersection(indices[t : t + 3])]
+    removed = moved = 0
+    # The vertices a moved pine brings: never flattened.
+    keep_shape = [False] * len(positions)
+    if cid in PINES:
+        ground = FLATTEN[cid]["ground"]
+        # A texel of the meadow: the meadow's vertex nearest the island's center.
+        meadow = min((i for i, p in enumerate(positions) if abs(p[1] - ground) < 0.002), key=lambda i: math.hypot(positions[i][0], positions[i][2]))
+        gone = set()
+        cut = set()
+        for pine in PINES[cid]:
+            (x0, x1), (z0, z1) = pine["x"], pine["z"]
+            inside = [i for i, p in enumerate(positions) if x0 <= p[0] <= x1 and z0 <= p[2] <= z1]
+            tall = {i for i in inside if positions[i][1] > pine["above"]}
+            for i in inside:
+                if ground + 0.001 < positions[i][1] <= pine["above"]:
+                    uvs[i] = uvs[meadow]
+            # The triangles between the pine and the ground: the pine leaves them.
+            cut.update(t for t in range(0, len(indices), 3) if 0 < len(tall.intersection(indices[t : t + 3])) < 3)
+            if "to" not in pine:
+                gone |= tall
+                continue
+            mx = sum(positions[i][0] for i in tall) / len(tall)
+            mz = sum(positions[i][2] for i in tall) / len(tall)
+            a = math.radians(pine["turn"])
+            ca, sa = math.cos(a), math.sin(a)
+            drop = pine["base"] - min(positions[i][1] for i in tall)
+            for i in tall:
+                x, y, z = positions[i][0] - mx, positions[i][1], positions[i][2] - mz
+                positions[i] = (pine["to"][0] + x * ca - z * sa, y + drop, pine["to"][1] + x * sa + z * ca)
+                nx, ny, nz = normals[i]
+                normals[i] = (nx * ca - nz * sa, ny, nx * sa + nz * ca)
+                keep_shape[i] = True
+            moved += len(tall)
+        removed = len(gone)
+        kept = [t for t in range(0, len(indices), 3) if t not in cut and not gone.intersection(indices[t : t + 3])]
         used = sorted({indices[t + k] for t in kept for k in range(3)})
         renumber = {old: new for new, old in enumerate(used)}
         indices = [renumber[indices[t + k]] for t in kept for k in range(3)]
-        positions, normals, uvs = ([v[i] for i in used] for v in (positions, normals, uvs))
+        positions, normals, uvs, keep_shape = ([v[i] for i in used] for v in (positions, normals, uvs, keep_shape))
     flattened = 0
     if cid in FLATTEN:
         ground, top = FLATTEN[cid]["ground"], FLATTEN[cid]["top"]
         for i, p in enumerate(positions):
-            if ground < p[1] <= top:
+            if ground < p[1] <= top and not keep_shape[i]:
                 positions[i] = (p[0], ground, p[2])
                 normals[i] = (0.0, 1.0, 0.0)
                 flattened += 1
@@ -188,7 +225,7 @@ def convert(cid, src_dir, out_dir):
     # The largest position error, in model units, against the original.
     error = max(abs(center[k] + q[k] / 32767 * s - p[k]) for p, q in zip(positions, qpos) for k in range(3))
     before = (src_dir / f"{cid}.glb").stat().st_size / 1024
-    return {"removed": removed, "id": cid, "before kB": before, "kB": len(glb) / 1024, "triangles": len(tris) // 3, "vertices": count, "was": len(positions), "error": error, "flattened": flattened}
+    return {"removed": removed, "moved": moved, "id": cid, "before kB": before, "kB": len(glb) / 1024, "triangles": len(tris) // 3, "vertices": count, "was": len(positions), "error": error, "flattened": flattened}
 
 
 for ids, src_dir, out_dir in [(BUILDINGS, here / "buildings" / "src", public / "buildings"), (OTHERS, here / "models" / "src", public / "models")]:
@@ -197,6 +234,6 @@ for ids, src_dir, out_dir in [(BUILDINGS, here / "buildings" / "src", public / "
     for cid in ids:
         r = convert(cid, src_dir, out_dir)
         total += r["kB"]
-        flat = (f"  {r['removed']} vertices removed" if r["removed"] else "") + (f"  {r['flattened']} vertices flattened" if r["flattened"] else "")
+        flat = "".join(f"  {r[k]} vertices {k}" for k in ("removed", "moved", "flattened") if r[k])
         print(f"{r['id']:<12} {r['before kB']:6.0f} kB -> {r['kB']:4.0f} kB  {r['triangles']} triangles  {r['vertices']} vertices (was {r['was']})  largest position error {r['error']:.6f}{flat}")
     print(f"{'total':<12} {total:23.0f} kB  ({out_dir.relative_to(here.parent)})")

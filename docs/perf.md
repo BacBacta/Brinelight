@@ -121,14 +121,13 @@ New models from the art direction, made by `assets/make-models.py` from `assets/
 
 Before quantizing, the island is flattened:
 - its meadow is flat at -0.07 in the original's units;
-- its second pine, which stood where rafts moor, is removed (422 vertices);
-- its 2 552 vertices between the meadow and 0.08 (grass tufts, the edge of the meadow) are brought down to it;
-- the meadow then moves to y = 0;
-- its windswept pine (up to 0.30) stays as it is.
+- its two windswept pines stood inside plots: the smaller one (422 vertices) moves to the rim at the pier's gap, turned to lean out to sea; the other one's top (1 113 vertices) goes. What lay flat under them takes the meadow's texture;
+- its 2 512 vertices between the meadow and 0.08 (grass tufts, the edge of the meadow) are brought down to it;
+- the meadow then moves to y = 0.
 
 | Model | Original | Served | Triangles | Loaded |
 | --- | --- | --- | --- | --- |
-| Island | 3 666 kB | 235 kB | 2 850 | yes |
+| Island | 3 666 kB | 218 kB | 2 517 | yes |
 | Raft | 3 290 kB | 101 kB | 1 384 | yes |
 | Wreck | 3 552 kB | 157 kB | 2 452 | yes |
 | Pirate camp | 3 639 kB | 167 kB | 2 930 | yes |
@@ -136,12 +135,12 @@ Before quantizing, the island is flattened:
 | Kelp Greenhouse | 3 631 kB | 156 kB | 2 309 | not yet (week 5, task 4) |
 | Smokehouse | 3 071 kB | 145 kB | 2 332 | not yet (week 5, task 4) |
 | Watchtower | 3 491 kB | 151 kB | 2 498 | not yet (week 5, task 4) |
-| **Total** | | **1 231 kB** | | |
+| **Total** | | **1 214 kB** | | |
 
 The 24 icons (`assets/icons/make-icons.py`, from the sheet) weigh 256 kB in all, at 48 and 96 px.
 
 What changed on screen:
-- the island replaces the 19 grass tiles and the ring of sand. Turned by 15°, its pine stands 2 or more from every building plot and 1.1 from the nearest raft slot, and 96% of the 19 plots' area is on its meadow, 4% on sand (part of the Infirmary's plot and of an empty plot next to it), none on rock;
+- the island replaces the 19 grass tiles and the ring of sand. Turned by 15°, its pine stands 1.75 from the center of the nearest tile and 1.74 from the nearest raft slot, and 96% of the 19 plots' area is on its meadow, 4% on sand (part of the Infirmary's plot and of an empty plot next to it), none on rock;
 - one raft model replaces the deck and the planks (still one InstancedMesh for up to 39 rafts);
 - at sea, a wreck model replaces the ruined house and the barrel, and the pirate camp floats as one model; your boat is one model;
 - the kit's flags on the buildings are gone.

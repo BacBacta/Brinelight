@@ -112,7 +112,7 @@ Generated from this page (GPT Image and Meshy, through Higgsfield):
 - on 2026-10-16: the nine building concepts and meshes, in `assets/concepts/` and `assets/buildings/src/`;
 - on 2026-10-16: seven objects, the raft, the wreck, the pirate camp, your boat, and the three buildings on rafts (Kelp Greenhouse, Smokehouse, Watchtower). Their concepts are in `assets/concepts/` and their meshes in `assets/models/src/`;
 - on 2026-10-16: the icon sheet (24 icons, flat two-tone: a palette color with a night-blue outline), in `assets/icons/sheet.png`;
-- on 2026-10-17: the island, a green meadow on dark rock with moss, dune grass, a sandy corner and a windswept pine, in `assets/concepts/island.png` and `assets/models/src/island.glb` (the model's second pine is removed by `assets/make-models.py`: it stood where rafts moor). It follows "No neon lawn". It replaces a first, sandy island, which looked too barren for an inhabited place.
+- on 2026-10-17: the island, a green meadow on dark rock with moss, dune grass, a sandy corner and a windswept pine, in `assets/concepts/island.png` and `assets/models/src/island.glb`. The model had two pines inside the plots; `assets/make-models.py` moves the smaller one to the rim, at the pier's gap (the only place clear of every plot and raft slot), and drops the other. It follows "No neon lawn". It replaces a first, sandy island, which looked too barren for an inhabited place.
 
 `assets/make-models.py` and `assets/icons/make-icons.py` make the files the game serves.
 

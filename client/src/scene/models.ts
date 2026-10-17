@@ -28,8 +28,8 @@ export async function loadModels(loader: GLTFLoader): Promise<Models> {
  */
 export const SHORE_RADIUS = 5.6;
 /**
- * The island's turn around its vertical axis: its windswept pine then stands 2 or more from every building plot,
- * and clear of every raft slot (its second pine, on the edge of ring 3 whatever the turn, is removed by make-models.py).
+ * The island's turn around its vertical axis. make-models.py places the island's pine for this turn: on the rim at
+ * the pier's gap, clear of every plot's tile and of every raft slot (a test checks it).
  */
 export const ISLAND_TURN = -Math.PI / 12;
 
