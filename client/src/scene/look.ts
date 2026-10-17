@@ -4,6 +4,7 @@
  */
 import * as THREE from "three";
 import type { Sky } from "./sky.js";
+import type { WaterOptions } from "./water.js";
 
 export type Look = {
   /** The sky's gradient, top to horizon. */
@@ -35,6 +36,12 @@ export const SEA_CALM: Look = {
   sun: { color: "#FFC98A", intensity: 3.2 },
   hemi: { sky: "#FFE6C7", ground: "#3A6B8A", intensity: 1 },
 };
+
+/** The city's water: turquoise around the island and its rafts, navy from 30 m out, reflecting the calm sky. */
+export const CITY_WATER: WaterOptions = { size: 160, near: "#17A7CF", far: "#16508C", radii: [9, 30], sky: CITY_CALM.sky };
+
+/** The sea map's water: one deep blue (its islands are small and many), reflecting the same sky. */
+export const SEA_WATER: WaterOptions = { size: 400, near: "#1E7DBE", far: "#1E7DBE", radii: [0, 1], sky: SEA_CALM.sky };
 
 /** The lights and the sky of a scene, which a look sets. */
 export type LookParts = { scene: THREE.Scene; sky: Sky; sun: THREE.DirectionalLight; hemi: THREE.HemisphereLight };

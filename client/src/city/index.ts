@@ -5,7 +5,7 @@ import { createCityBuildings } from "./buildings.js";
 import { createLabels } from "./labels.js";
 import { createQueue } from "./queue.js";
 import { createRaftSheet } from "./raftSheet.js";
-import { createCityRafts } from "./rafts.js";
+import { RAFT_WIDTH, createCityRafts, raftSlots, slotPosition } from "./rafts.js";
 import { createSheet } from "./sheet.js";
 
 export type City = {
@@ -110,6 +110,8 @@ export function createCity(
     update(state) {
       buildings.refresh(state);
       rafts.refresh(state);
+      // The foam goes around the rafts afloat and the shipyard at work.
+      scene.setMoored(raftSlots(state).filter((s) => s.view !== "free").map((s) => ({ ...slotPosition(s.key), r: RAFT_WIDTH / 2 })));
       raftSheet.update(state, game.speed());
       labels.update(state);
       queue.update(state, game.speed());

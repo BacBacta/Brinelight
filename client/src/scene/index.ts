@@ -8,18 +8,21 @@ import { createLighthouse, lighthouseScale } from "./lighthouse.js";
 import { applyQualityStep, createQualityMonitor, type QualityStep } from "./quality.js";
 import { createRenderer } from "./renderer.js";
 import { createSky } from "./sky.js";
-import { CITY_CALM, addLook } from "./look.js";
+import { CITY_CALM, CITY_WATER, addLook } from "./look.js";
 import { createSeaView } from "./sea.js";
 import { createWater } from "./water.js";
+import { createShore, type Disc } from "./shore.js";
 
 export type { Kit } from "./island.js";
 export { BUILDING_FIX, buildingUrl, normalizeBuilding, type BuildingModel, type BuildingModels } from "./buildings.js";
 export { ISLAND_TURN, MODEL_IDS, RAFT_BUILDING_IDS, SHORE_RADIUS, bakeModel, fitIsland, modelUrl, type Models, type RaftBuildingModels } from "./models.js";
 export { hexGeometry, hexX, hexZ, kitModel } from "./island.js";
 export { createLighthouse, lighthouseScale } from "./lighthouse.js";
+export { WAVE_HEIGHT } from "./water.js";
 
 export type View = "city" | "sea";
 export type { QualityStep } from "./quality.js";
+export type { Disc } from "./shore.js";
 export { forcedQuality } from "./quality.js";
 
 /** What the ?fps counter shows about rendering. */
@@ -42,6 +45,8 @@ export type SceneHandle = {
   project(x: number, y: number, z: number): ScreenPoint;
   /** Called on every drawn frame, before rendering, with the scene clock in seconds and the shown view. */
   onFrame(cb: (now: number, view: View) => void): void;
+  /** The rafts moored around the island (and the shipyard at work): the foam goes around them. */
+  setMoored(discs: readonly Disc[]): void;
   /** Quality step and the last frame's draw calls and triangles (renderer.info). */
   stats(): RenderStats;
   /** Stops the loop and removes the listeners. */
@@ -67,8 +72,12 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   const renderer = createRenderer(canvas);
   const scene = new THREE.Scene();
   const { sun } = addLook(scene, createSky(CITY_CALM.sky), CITY_CALM, true);
-  const water = createWater(160, "#2A9AD8");
+  const water = createWater(CITY_WATER);
   scene.add(water.mesh);
+  water.useRenderer(renderer);
+  // The foam goes along the island's shore and around the rafts moored there (setMoored).
+  let shore: ReturnType<typeof createShore> | null = null;
+  let moored: readonly Disc[] = [];
   const lighthouse = createLighthouse();
   scene.add(lighthouse.group);
 
@@ -78,6 +87,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   let level = 0;
 
   const sea = createSeaView(canvas);
+  sea.water.useRenderer(renderer);
   sea.controls.enabled = false;
   const home = options.home ?? { x: 0, z: 0 };
   let view: View = "city";
@@ -100,7 +110,10 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       const kit: Kit = {};
       gltf.scenes.forEach((sc) => (kit[sc.name] = sc));
       filterTexture(models.island, Math.min(ISLAND_ANISOTROPY, renderer.capabilities.getMaxAnisotropy()));
-      scene.add(createIsland(fitIsland(models.island)));
+      const island = fitIsland(models.island);
+      scene.add(createIsland(island));
+      shore = createShore(island);
+      water.setShore(shore.distances(moored));
       lighthouse.useModel(buildings.lighthouse);
       sizeLighthouse();
       options.onLoaded?.(kit, buildings, models);
@@ -129,7 +142,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
 
   const forced = options.quality ?? null;
   let step: QualityStep = forced ?? 0;
-  if (forced !== null) applyQualityStep(renderer, sun, forced);
+  if (forced !== null) applyQualityStep(renderer, sun, forced, [water, sea.water]);
   const quality = forced === null ? createQualityMonitor() : null;
   const clock = new THREE.Clock();
   let frame = 0;
@@ -140,7 +153,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     const next = quality?.tick(dt) ?? null;
     if (next !== null) {
       step = next;
-      applyQualityStep(renderer, sun, next);
+      applyQualityStep(renderer, sun, next, [water, sea.water]);
       layout();
     }
     const v = shown();
@@ -168,6 +181,10 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     },
     get view() {
       return view;
+    },
+    setMoored(discs) {
+      moored = discs;
+      if (shore) water.setShore(shore.distances(discs));
     },
     stats() {
       return { step, forced: forced !== null, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles };

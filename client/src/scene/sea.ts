@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { PORTRAIT_ASPECT } from "./camera.js";
 import { createSky } from "./sky.js";
-import { SEA_CALM, addLook } from "./look.js";
+import { SEA_CALM, SEA_WATER, addLook } from "./look.js";
 import { createWater, type Water } from "./water.js";
 
 /** How far the sea camera can pan from the center of the map (prototype). */
@@ -21,7 +21,7 @@ export type SeaView = {
 export function createSeaView(dom: HTMLElement): SeaView {
   const scene = new THREE.Scene();
   addLook(scene, createSky(SEA_CALM.sky), SEA_CALM, false);
-  const water = createWater(400, "#2287CC");
+  const water = createWater(SEA_WATER);
   scene.add(water.mesh);
 
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 400);
