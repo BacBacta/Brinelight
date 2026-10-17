@@ -30,9 +30,12 @@ BUILDINGS = ["lighthouse", "refinery", "fishery", "lumberyard", "shelters", "bar
 OTHERS = ["island", "raft", "wreck", "camp", "boat", "greenhouse", "smokehouse", "watchtower"]
 # Texture size, 512 px unless set here: the island is the largest thing on screen.
 TEXTURE = {"island": 1024}
+# Parts of a model removed before anything else: the vertices above `above` inside the box `x` × `z` (the original's
+# units), with every triangle that uses them. The island loses its second pine, which stood where rafts moor.
+REMOVE = {"island": [{"above": 0.08, "x": (0.3, 1.0), "z": (0.2, 1.0)}]}
 # The island's meadow, and the height up to which its bumps (grass tufts, the edge of the meadow) are flattened onto
-# it, in the original's units. The meadow is flat at -0.07; above 0.08 stand its two windswept pines (up to 0.30),
-# which stay as they are.
+# it, in the original's units. The meadow is flat at -0.07; above 0.08 stands its windswept pine (up to 0.30), which
+# stays as it is.
 FLATTEN = {"island": {"ground": -0.07, "top": 0.08}}
 
 FLOAT, BYTE, SHORT, USHORT, UINT = 5126, 5120, 5122, 5123, 5125
@@ -75,6 +78,16 @@ def convert(cid, src_dir, out_dir):
     normals = accessor(doc, binary, attrs["NORMAL"])
     uvs = accessor(doc, binary, attrs["TEXCOORD_0"])
     indices = [i[0] for i in accessor(doc, binary, prim["indices"])]
+    removed = 0
+    for cut in REMOVE.get(cid, []):
+        (x0, x1), (z0, z1) = cut["x"], cut["z"]
+        gone = {i for i, p in enumerate(positions) if p[1] > cut["above"] and x0 <= p[0] <= x1 and z0 <= p[2] <= z1}
+        removed += len(gone)
+        kept = [t for t in range(0, len(indices), 3) if not gone.intersection(indices[t : t + 3])]
+        used = sorted({indices[t + k] for t in kept for k in range(3)})
+        renumber = {old: new for new, old in enumerate(used)}
+        indices = [renumber[indices[t + k]] for t in kept for k in range(3)]
+        positions, normals, uvs = ([v[i] for i in used] for v in (positions, normals, uvs))
     flattened = 0
     if cid in FLATTEN:
         ground, top = FLATTEN[cid]["ground"], FLATTEN[cid]["top"]
@@ -175,7 +188,7 @@ def convert(cid, src_dir, out_dir):
     # The largest position error, in model units, against the original.
     error = max(abs(center[k] + q[k] / 32767 * s - p[k]) for p, q in zip(positions, qpos) for k in range(3))
     before = (src_dir / f"{cid}.glb").stat().st_size / 1024
-    return {"id": cid, "before kB": before, "kB": len(glb) / 1024, "triangles": len(tris) // 3, "vertices": count, "was": len(positions), "error": error, "flattened": flattened}
+    return {"removed": removed, "id": cid, "before kB": before, "kB": len(glb) / 1024, "triangles": len(tris) // 3, "vertices": count, "was": len(positions), "error": error, "flattened": flattened}
 
 
 for ids, src_dir, out_dir in [(BUILDINGS, here / "buildings" / "src", public / "buildings"), (OTHERS, here / "models" / "src", public / "models")]:
@@ -184,6 +197,6 @@ for ids, src_dir, out_dir in [(BUILDINGS, here / "buildings" / "src", public / "
     for cid in ids:
         r = convert(cid, src_dir, out_dir)
         total += r["kB"]
-        flat = f"  {r['flattened']} vertices flattened" if r["flattened"] else ""
+        flat = (f"  {r['removed']} vertices removed" if r["removed"] else "") + (f"  {r['flattened']} vertices flattened" if r["flattened"] else "")
         print(f"{r['id']:<12} {r['before kB']:6.0f} kB -> {r['kB']:4.0f} kB  {r['triangles']} triangles  {r['vertices']} vertices (was {r['was']})  largest position error {r['error']:.6f}{flat}")
     print(f"{'total':<12} {total:23.0f} kB  ({out_dir.relative_to(here.parent)})")

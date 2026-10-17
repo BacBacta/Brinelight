@@ -28,15 +28,15 @@ export async function loadModels(loader: GLTFLoader): Promise<Models> {
  */
 export const SHORE_RADIUS = 5.6;
 /**
- * The island's turn around its vertical axis: its two windswept pines then stand 2 or more from every building plot,
- * and as far as they can from the raft slots (one stands on the edge of ring 3 whatever the turn).
+ * The island's turn around its vertical axis: its windswept pine then stands 2 or more from every building plot,
+ * and clear of every raft slot (its second pine, on the edge of ring 3 whatever the turn, is removed by make-models.py).
  */
 export const ISLAND_TURN = -Math.PI / 12;
 
 /**
  * The island under the city: centered, its meadow (at y = 0 in the file: make-models.py puts it there) at y = 0 where
  * the buildings stand, scaled so its widest side reaches SHORE_RADIUS from the center, and turned by ISLAND_TURN.
- * Its pines stand above the meadow, and its sides go down into the sea.
+ * Its pine stands above the meadow, and its sides go down into the sea.
  */
 export function fitIsland(model: THREE.Object3D): THREE.Object3D {
   model.updateMatrixWorld(true);
