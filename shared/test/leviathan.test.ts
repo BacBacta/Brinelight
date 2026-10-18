@@ -77,13 +77,13 @@ describe("the Leviathan's health, damage and rewards", () => {
     expect(huntAttack({ ...fleet, lead })).toBeCloseTo(strengths({ troops: fleet.troops, enemy: emptyTroops(), captain: { cls: "boarders", rarity: lead!.rarity, level: 10 } }).attack);
   });
 
-  it("20 + 180 × your share of its health in Pearls; the share never above 1", () => {
-    expect(huntPearls(0)).toBe(20);
-    expect(huntPearls(0.5)).toBe(110);
-    expect(huntPearls(1)).toBe(200);
+  it("10 + 90 × your share of its health in Pearls; the share never above 1", () => {
+    expect(huntPearls(0)).toBe(10);
+    expect(huntPearls(0.5)).toBe(55);
+    expect(huntPearls(1)).toBe(100);
     expect(huntShare(1000, 1)).toBe(0.25);
     expect(huntShare(99_999, 1)).toBe(1);
-    expect(huntPearls(huntShare(1000, 2))).toBe(50);
+    expect(huntPearls(huntShare(1000, 2))).toBe(25);
   });
 });
 
@@ -156,7 +156,7 @@ describe("a hunt", () => {
     expect(fleetCheck(home, LEVIATHAN_SITE).ok).toBe(false);
   });
 
-  it("killed: 200 Pearls, 3 shards of the captain who led, its level up, the fleet home at once", () => {
+  it("killed: 100 Pearls, 3 shards of the captain who led, its level up, the fleet home at once", () => {
     const s = city(at(13), 5000);
     const t = trip(s);
     const sent = ok(sail(s, LEVIATHAN_SITE));
@@ -166,7 +166,7 @@ describe("a hunt", () => {
     expect(before.leviathan.over).toBe(false);
     const killed = advance(sent, kill + 1);
     expect(killed.leviathan).toEqual({ level: 2, hunt: at(13), damage: 4000, over: true });
-    expect(killed.pearls - before.pearls).toBe(200);
+    expect(killed.pearls - before.pearls).toBe(100);
     expect(killed.shards.tom).toBe((s.shards.tom ?? 0) + HUNT_SHARDS);
     expect(reportOf(killed)).toMatchObject({ win: true, shards: { id: "tom", count: HUNT_SHARDS }, hunt: { damage: 4000, health: 4000, share: 1 } });
     expect(killed.fleets[0]).toMatchObject({ phase: "back" });

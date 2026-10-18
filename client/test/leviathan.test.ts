@@ -39,12 +39,12 @@ describe("the hunt's report", () => {
     expect(html).toContain("your fleet brings every troop home");
   });
 
-  it("killed: 200 Pearls and 3 shards for the captain who led", () => {
+  it("killed: 100 Pearls and 3 shards for the captain who led", () => {
     const r = hunt(5000).reports[0]!;
     const html = huntReportHtml(r);
     expect(html).toContain("Killed · Leviathan level 1");
     expect(html).toContain("4,000 of 4,000 (100 %)");
-    expect(html).toContain("<span>Pearls</span><span>+200</span>");
+    expect(html).toContain("<span>Pearls</span><span>+100</span>");
     expect(html).toContain("+3 for Old Tom");
     expect(html).toContain("It comes back one level stronger.");
     // A camp's report stays a combat report.

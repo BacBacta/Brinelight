@@ -1845,7 +1845,7 @@ describe("signed in", () => {
       if (await sheet.isVisible()) break;
     }
     await expect.poll(() => sheet.locator(".kv span", { hasText: "Health" }).count(), NET).toBe(1);
-    expect(await sheet.innerText()).toContain("20 + 180 × your share of its health");
+    expect(await sheet.innerText()).toContain("10 + 90 × your share of its health");
     await p.page.screenshot({ path: "e2e/.shots/shot-leviathan.png" });
     await sheet.locator('[data-act="sail"]').click();
     await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).fleets, NET).toMatchObject([{ site: "leviathan", kind: "hunt" }]);
@@ -1860,7 +1860,7 @@ describe("signed in", () => {
     await show(p.page);
     const after = (await serverCity(p.token))!.state as unknown as PlayerState;
     expect(after.leviathan).toMatchObject({ level: 1, hunt: rise, over: true });
-    expect(after.reports.at(-1)).toMatchObject({ site: "leviathan", win: false, loot: { pearls: 27 } });
+    expect(after.reports.at(-1)).toMatchObject({ site: "leviathan", win: false, loot: { pearls: 13 } });
     expect(after.fleets).toMatchObject([{ site: "leviathan", phase: "back" }]);
     const report = p.page.locator(".sheet:not([hidden])", { hasText: "It dived · Leviathan level 1" });
     await expect.poll(() => report.count(), NET).toBe(1);

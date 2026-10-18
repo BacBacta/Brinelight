@@ -168,7 +168,7 @@ Decided by the owner (18 October):
 
 1. **The calendar:** twice a day, at 13:00 and 19:00 UTC, each hunt lasting 2 hours (provisional UTC hours, as the Mist's).
 2. **Its health:** 4,000 at level 1, ×1.5 a level; its level rises by one after each kill.
-3. **The rewards:** 20 + 180 × your share of its health in Pearls; 3 shards of the captain who led the hunt when you kill it; +30 experience for that captain. Never anything for sale.
+3. **The rewards:** 20 + 180 × your share of its health in Pearls (10 + 90 since the owner's decision after task 4); 3 shards of the captain who led the hunt when you kill it; +30 experience for that captain. Never anything for sale.
 4. **No troop is lost.**
 
 **Done (18 October).**
