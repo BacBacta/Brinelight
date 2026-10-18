@@ -974,8 +974,9 @@ describe("the look", () => {
   };
 
   /**
-   * The city's own clock for the captures: 06:00 UTC, just after a Mist. The 5 minutes the page runs are 5 hours of game
-   * time in the e2e build (DEV_SPEED 60), so the city stays in calm weather until 11:00: the references are calm.
+   * The city's own clock for the captures: 06:00 UTC, just after a Mist, whatever time the city was advanced to. The
+   * captures stay in calm weather, and the Mist banner, whose card's shadow reaches the top bar and the queue, always
+   * says the same thing.
    */
   const CALM = 6 * HOUR;
   /** Opens the game with its clock fixed at T0, a city saved at T0 (in calm weather), then pauses the clock 5 minutes later. */
