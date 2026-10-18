@@ -11,6 +11,7 @@ Do the tasks in order, one per session. For each one: read CLAUDE.md, say what y
 - **Nothing for sale is ever a reward.** The Leviathan, the objectives and the daily tasks give resources, Pearls and captain shards only. They never give convenience time (the "speedups" of the prototype are paid convenience: `COMFORT_CAP`), never a recruitment, never anything bought.
 - **No randomness.** The prototype draws the Mist's next hour, the Leviathan's next rise and the captain who gets the Leviathan's shards at random; here all three are fixed and published. The daily recruitment (week 15) stays the only random draw.
 - No multiplayer: no alliance help, no treasury, no Sea Pact, no notarization on Solana (week 8 at the earliest). The Leviathan is hunted alone this week.
+- Recurring hours (the Mist, the Leviathan, the daily reset) are fixed UTC hours for now, provisional: they become hours per server with multiplayer.
 - The city gets new fields: each task that adds some raises `CITY_SHAPE` by one, with its step in `shared/src/state/migrate.ts` (it adds what is missing, never changes a value) and its test with the week 6 city.
 - Player text in English, short, second person. Every new sheet or banner is checked at 412 × 915 and 360 × 800; the look references that change are made again by the CI (`e2e/look/README.md`), and the owner is told which ones before they are committed.
 - What the player sees never decides anything: the countdowns, banners and celebrations follow the city the rules made.
@@ -21,14 +22,14 @@ What it does:
 
 - **A clock in the city.** The city gets `clock`: its game time, in seconds since 1 January 1970 (UTC), that `advance` moves forward. The server sets it when the city is made, and the migration of the stored cities sets it from their last save. The client never sends it. With `DEV_SPEED`, the clock runs faster, like the rest of the game.
 - **A fixed calendar, the same for every city** (`shared/src/rules/mist.ts`): `mistAt(clock)` says whether the Mist is on, when it starts and when it ends. Every Mist is announced one hour before it starts. A fixed calendar lets the alliances of weeks 9 to 13 face the same Mist without changing the rule.
-- **Stoking is an order that stays.** The action `stoke { on }` ("Keep the Lighthouse stoked") can be given at any time; it applies during every Mist, offline too, as long as there is oil. During the Mist:
+- **Stoking is an order that stays, on by default.** The action `stoke { on }` ("Keep the Lighthouse stoked") can be given at any time; it applies during every Mist, offline too, as long as there is oil. During the Mist:
   - stoked: the Lighthouse burns 2.2 times its oil (`STOKE_MULTIPLIER`, already in the rules), production stays normal;
   - not stoked, or out of oil: production of oil, fish and wood is cut by 30 % (`MIST_PENALTY`, already in the rules).
 - **What it hides.** During the Mist, the sea beyond the Lighthouse's light is hidden: you cannot send a new fleet to a site farther from your city than `lightRadius(lighthouse, stoked)`. Fleets already at sea carry on. Refusal: "The Mist hides this place. Stoke the Lighthouse or wait for it to lift."
 - **What pushes it back.** The light's reach grows with the Lighthouse's level, and stoking adds to it.
 - **Held or not.** A Mist is held when the Lighthouse stayed stoked from its start to its end without running out of oil.
   - Held: +30 Pearls, as in the prototype.
-  - Not held: each raft loses 35 sturdiness (`MIST_RAFT_DAMAGE` and `applyMistDamage`, already in the rules, never used until now).
+  - Not held: each raft loses 35 sturdiness, never below 25 (`MIST_RAFT_DAMAGE` and `applyMistDamage`, already in the rules, never used until now).
   - Either way, the end of a Mist is an event of `advance` (one celebration: "You held the Mist · +30 Pearls" or "The Mist damaged 4 rafts. Repair them.").
 - `advance` cuts at each Mist's start and end, as it does for the other events: advancing 10 hours at once gives the same city as ten times one hour.
 - **Client:**
@@ -53,24 +54,20 @@ How it is tested:
 - State tests:
   - production and oil during a Mist, stoked or not;
   - running out of oil in the middle (the Mist is then not held, and production drops at that moment);
-  - held → +30 Pearls; not held → every raft −35, never below 0;
+  - held → +30 Pearls; not held → every raft −35, never below 25;
   - one long `advance` equals many short ones, across several Mists.
 - Migration 5 → 6 with the week 6 city; `parseState` refuses a city without a clock.
 - Server cheat cases: a client sending a clock, Pearls or raft sturdiness gets the server's city; `stoke` with anything but a boolean is refused.
 - e2e: the banner counts down to a Mist (server with `DEV_SPEED`); the stoke switch is applied by the server and found again after a reload.
 
-Open questions for the owner:
+Decided by the owner (18 October):
 
-1. **When does the Mist come?** The prototype: every 9.7 to 11.7 h, at random, for 2 h 12.
-   - **Recommendation:** three times a day, every 8 hours, each lasting 2 hours, at fixed UTC hours: 04:00, 12:00 and 20:00 UTC (6:00, 14:00, 22:00 in Paris in summer). A player with three sessions a day meets most of them, and the one at night only matters if stoking was left off.
-2. **Stoking: an order that stays, or a tap during each Mist?** The prototype asks for a tap once the Mist is there, which an offline player can never give.
-   - **Recommendation:** an order that stays, on until you turn it off. The cost is the oil, not your presence.
-3. **The light's reach.** Today your city is 15 map units from the nearest wreck and 59 from the farthest camp.
-   - **Recommendation:** 15 + 2 × the Lighthouse's level, +10 when stoked. This gives 19 at Lighthouse 2 (the nearest wreck), 35 at 10, 45 at 15, and everything from 23 (from 18 when stoked).
-4. **The reward for a Mist held:** **Recommendation:** +30 Pearls, as in the prototype (Pearls are never for sale).
-5. **The damage when not held:** **Recommendation:** −35 sturdiness per raft, as in the prototype and the rules: two missed Mists put a raft below 60, at half efficiency.
-6. **Morale and survivors in the Mist** (the prototype lowers morale, and survivors leave below 30).
-   - **Recommendation:** not this week. Morale does not move at all in the rules today, and making it move is a task of its own.
+1. **The calendar:** three Mists a day, every 8 hours, each lasting 2 hours, at 04:00, 12:00 and 20:00 UTC, announced one hour before. These fixed UTC hours are provisional: they become hours per server with multiplayer (`docs/decisions.md`).
+2. **Stoking is an order that stays, on by default for a new city.** The Mist punishes a lack of oil, never an absence. A stored city gets it on too.
+3. **The light's reach:** 15 + 2 × the Lighthouse's level map units, +10 when stoked.
+4. **A Mist held:** +30 Pearls.
+5. **A Mist not held:** each raft loses 35 sturdiness, **never below 25**. A raft is never stopped: below 60 it runs at half efficiency, as today. An absent player does not find a city at a standstill.
+6. **Morale and survivors:** not this week.
 
 ## Task 2 · Repairing the rafts
 
@@ -81,7 +78,7 @@ What it does:
 - **What it unlocks:**
   - a raft back at 100 runs at full efficiency again (below 60 it runs at half, as today);
   - a raft below 60 cannot be upgraded until it is repaired ("Repair this raft first");
-  - **new:** a raft at 0 stops its building altogether.
+  - a raft never goes below 25, and is never stopped (owner's decision).
 - **Client:**
   - the raft's sheet shows the sturdiness, the cost and the button;
   - the shipyard's queue row says "Repairing 4 rafts";
@@ -99,23 +96,17 @@ How it is tested:
   - the cost and duration for one and several rafts and at several Lighthouse levels;
   - nothing to repair → "Your rafts are in good shape";
   - shipyard busy, not enough resources;
-  - efficiency at 100, 59 and 0;
+  - efficiency at 100, 59 and 25;
   - upgrade refused below 60.
 - State tests: the repair ends as an event of `advance`, every repaired raft at 100.
 - Migration (a yard of kind `repair` is new: shape 7), parse, server cheat cases, e2e (a city damaged by a Mist under `DEV_SPEED`, repaired from a raft's sheet).
 
-Open questions for the owner:
+Decided by the owner (18 October):
 
-1. **The cost.**
-   - **Recommendation:** per missing sturdiness point, 2 × the Lighthouse's level in oil and 1 wood.
-   - One missed Mist on one raft (35 points) costs 700 oil and 35 wood at Lighthouse 10, and 1,400 oil at Lighthouse 20.
-   - 17 rafts after one missed Mist at Lighthouse 20 cost 23,800 oil.
-   - Task 5 measures whether it is enough for the oil to stop overflowing.
-2. **The duration.**
-   - **Recommendation:** 6 minutes of shipyard per 35 points per raft: 10 rafts after one missed Mist take an hour.
-3. **All at once or one raft at a time?**
-   - **Recommendation:** all at once, one tap.
-4. **A raft at 0 stops its building:** **Recommendation:** yes. Without it, missing every Mist only halves the rafts, and the repair is optional for good.
+1. **The cost:** per missing sturdiness point, 2 × the Lighthouse's level in oil and 1 wood.
+2. **The duration:** 6 minutes of shipyard per 35 missing points (per raft), every damaged raft in one work.
+3. **All at once:** one tap repairs every damaged raft.
+4. **No raft is ever stopped:** a raft never goes below 25 (task 1), and below 60 its building runs at half efficiency, never at a standstill. What the repair unlocks: full efficiency again, and the raft's building can be upgraded again (refused below 60: "Repair this raft first").
 
 ## Task 3 · The Leviathan
 
@@ -159,20 +150,12 @@ How it is tested:
   - one long `advance` equals many short ones.
 - Migration (`leviathan` in the city, the fleet kind `hunt`: shape 8), parse, server cheat cases (a client sending damage or Pearls), e2e (the hunt under `DEV_SPEED`: send, report).
 
-Open questions for the owner:
+Decided by the owner (18 October):
 
-1. **How many times a day, and for how long?** The prototype: every 14 to 17 h at random, a 30 s hunt (3 h at our scale).
-   - **Recommendation:** twice a day, at 13:00 and 19:00 UTC (15:00 and 21:00 in Paris in summer), each hunt lasting 2 hours. This leaves room for the Mist of 12:00 UTC to be over first.
-2. **Its health.** **Recommendation:**
-   - 4,000 at level 1, ×1.5 each level;
-   - set so that a regular player's army kills the first one in about an hour on site, and later ones get harder like the camps.
-   - Task 5 checks it with the three profiles.
-3. **The rewards.** **Recommendation:**
-   - **Pearls:** 20 + 180 × your share, up to 200 for a kill.
-   - **Shards:** 3 shards of the captain who led the hunt when you kill it; none otherwise. It is fixed and chosen by the player. The alternative is shards of Nera only, the Mist's admiral.
-   - **Experience:** +30 for the lead captain, as in the prototype.
-   - **Never anything for sale.**
-4. **Troops lost:** **Recommendation:** none, as in the prototype. The cost is the army's time away from the camps.
+1. **The calendar:** twice a day, at 13:00 and 19:00 UTC, each hunt lasting 2 hours (provisional UTC hours, as the Mist's).
+2. **Its health:** 4,000 at level 1, ×1.5 a level; its level rises by one after each kill.
+3. **The rewards:** 20 + 180 × your share of its health in Pearls; 3 shards of the captain who led the hunt when you kill it; +30 experience for that captain. Never anything for sale.
+4. **No troop is lost.**
 
 ## Task 4 · Objectives and daily tasks
 
@@ -197,7 +180,7 @@ What it does:
   | 9 | Beat a pirate camp | 150 Pearls |
   | 10 | Build the Infirmary | 250 fish |
   | 11 | Keep the Lighthouse stoked through a Mist | 250 oil |
-  | 12 | Join the Leviathan hunt | 300 wood (3 speedups) |
+  | 12 | Upgrade the Lumberyard to level 3 | 300 fish (the prototype's "Join the Leviathan hunt", which needs you online at a fixed hour) |
   | 13 | Upgrade the Shelters to level 3 | 300 fish |
   | 14 | Upgrade the Lighthouse to level 4 | 400 oil, 400 wood, 400 fish |
   | 15 | Moor your first raft | 2 rope, 300 wood |
@@ -231,26 +214,28 @@ How it is tested:
   - the reset at midnight UTC, including across an `advance` that spans midnight.
 - Migration (`objective`, `daily`, counters: shape 9), parse, server cheat cases (claiming an unmet objective, a chest twice, a chest from yesterday), e2e (claim the first objective, open a chest), look captures of the new sheets.
 
-Open questions for the owner:
+Decided by the owner (18 October):
 
-1. **The objectives list and rewards.** **Recommendation:** the table above. The rewards are the prototype's small amounts: they matter in the first hours and fade later, which is the point.
-2. **The daily tasks and chests.** **Recommendation:**
-   - Tasks:
-     - "Start 2 upgrades" (20);
-     - "Gather at sea 3 times" (20);
-     - "Beat 2 pirate camps" (20);
-     - "Train troops" (10);
-     - "Keep the Lighthouse stoked through a Mist" (20);
-     - "Join the Leviathan hunt" (20).
-     That makes 110 points, so a player can skip one.
-   - Chests, all scaled by the Lighthouse's level so they stay worth it:
-     - at 20: 300 wood and 300 fish × the Lighthouse's level / 5;
-     - at 40: 400 oil × the level / 5 (5 speedups in the prototype);
-     - at 60: 100 Pearls;
-     - at 80: 400 oil and 2 rope;
-     - at 100: 200 Pearls.
-3. **The reset hour:** **Recommendation:** 00:00 UTC (2:00 in Paris in summer), as in the prototype.
-4. **Points: counted alone, or claimed task by task?** **Recommendation:** counted alone (one action less per task). Only the chests are claimed, which gives the moment of the reward.
+- **No objective and no daily task asks you to be online at a fixed hour.**
+  - "Keep the Lighthouse stoked through a Mist" stays: stoking is on by default and works offline, so only oil counts.
+  - "Join the Leviathan hunt" is out of both lists, unless task 3 lets you join any rising of the day without being there at that hour (for instance a fleet ordered ahead to wait for the next rising). That is decided with task 3.
+1. **The objectives:** the table above, with objective 12 replaced by "Upgrade the Lumberyard to level 3" (300 fish).
+2. **The daily tasks**, 110 points, so one can be skipped:
+   - "Start 3 upgrades" (30);
+   - "Gather at sea 3 times" (20);
+   - "Beat 2 pirate camps" (20);
+   - "Train troops" (10);
+   - "Keep the Lighthouse stoked through a Mist" (20);
+   - "Start a research" (10).
+
+   The chests:
+   - 20: 300 wood and 300 fish × the Lighthouse's level / 5;
+   - 40: 400 oil × the level / 5;
+   - 60: 100 Pearls;
+   - 80: 400 oil and 2 rope;
+   - 100: 200 Pearls.
+3. **The reset:** 00:00 UTC (provisional, as the Mist's hours).
+4. **Points are counted alone;** only the chests are claimed.
 
 ## Task 5 · The balance, with the new rules
 
@@ -277,8 +262,9 @@ How it is tested:
 
 - The simulation's tests (determinism, every city readable by `parseState`, the committed files up to date) and the new ±10 % test.
 
-Open questions for the owner:
+Decided by the owner (18 October):
 
-1. **The 10 % against what?** **Recommendation:** against the days of week 6 (`c307f9f`), milestone by milestone, per profile: for example, Lighthouse 15 for the regular player between day 17.7 and 21.7.
-2. **The target for oil.** **Recommendation:** the regular player's hours with full oil in the first 90 days fall by at least half (651 today).
-3. **Which profile skips the Mist?** **Recommendation:** none. All three keep the order to stoke on, and the casual player shows what a city with little oil goes through. A fourth profile that never stokes would show the cost of the repairs; it can be added if you want it.
+1. **The 10 %:** against the days of week 6 (`c307f9f`), milestone by milestone, per profile.
+2. **The target for oil:** the regular player's hours with full oil in the first 90 days fall by at least half (651 today).
+3. **Two more profiles:** "never stokes" (the order turned off at the start) and "away 3 days, then back" (a regular player who stops on day 20 and comes back on day 23). For each, the report gives what they find on their return, and the oil and time it takes to repair everything.
+4. **The Pearls:** per profile, Pearls earned a day and from what (the Mist, the Leviathan, objectives, chests), against what Pearls can buy today. If nothing spends them yet, say so and propose where, without applying it.
