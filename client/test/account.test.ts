@@ -539,10 +539,11 @@ describe("the account's actions", () => {
     const server = fakeServer();
     const answer = held<ApiResult<unknown>>();
     const t = queueSetup({ ...server.routes, "GET /city": () => answer.promise });
+    const born = t.clock.wall();
     void t.q.start();
     expect(t.q.hasCity).toBe(false);
     await t.clock.pass(HOUR * 1000);
-    expect(t.q.city()).toEqual(newPlayerState());
+    expect(t.q.city()).toEqual(newPlayerState(born / 1000));
     answer.release(ok(server.city()));
     await flush();
     expect(t.q.hasCity).toBe(true);
@@ -582,7 +583,7 @@ describe("the account's copy on this device", () => {
     const later = fakeClock();
     later.moveWall(clock.wall() - later.wall() + 2 * HOUR * 1000);
     const back = queueSetup(server.routes, { store: t.store, clock: later });
-    const r = upgrade(advance(json(server.city().state), 2 * HOUR), "refinery");
+    const r = applyAction(advance(json(server.city().state), 2 * HOUR), { id: uuid(1), type: "upgrade", building: "refinery" });
     expect(back.q.city()).toEqual(r.ok && r.state);
     await back.q.start();
     expect(sent(back.api).map((a) => a.id)).toEqual([uuid(1)]);

@@ -2,12 +2,13 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { DAY, HOUR, newPlayerState, parseState, upgradeCost, upgradeTime, type PlayerState } from "@brinelight/shared";
-import { FOUNDED, PROFILES, missing, reserve, simulate, simulateAll, wallAt } from "./simulate.js";
+import { FOUNDED, MORE_PROFILES, PROFILES, missing, reserve, simulate, simulateAll, wallAt } from "./simulate.js";
 import { DAYS, MARK_END, MARK_START, toCsv, toMarkdown, toSvg } from "./report.js";
 
 const docs = fileURLToPath(new URL("../../docs/", import.meta.url));
 const [casual, regular, dedicated] = PROFILES as [(typeof PROFILES)[number], (typeof PROFILES)[number], (typeof PROFILES)[number]];
 const runs = simulateAll(DAYS);
+const more = MORE_PROFILES.map((p) => simulate(p, DAYS));
 
 describe("the balance simulation", () => {
   it("gives the same result at every run: no clock, no randomness", () => {
@@ -18,7 +19,7 @@ describe("the balance simulation", () => {
   });
 
   it("plays only with the rules: every city it makes is a city the server would read", () => {
-    for (const r of [...runs, simulate(dedicated, 3), simulate(casual, 20)]) {
+    for (const r of [...runs, ...more, simulate(dedicated, 3), simulate(casual, 20)]) {
       expect(parseState(JSON.parse(JSON.stringify(r.last))), r.profile.id).not.toBeNull();
     }
     // A new city is its own: the simulation never changes the starting values.
@@ -34,6 +35,41 @@ describe("the balance simulation", () => {
       expect(r.days.every((d) => d.sessions === count), profile.id).toBe(true);
     }
     expect(dedicated.sessions.at(-1)).toBe(22 * HOUR);
+  });
+
+  it("plays the rules of week 7: the Mist stoked, the Leviathan hunted, every objective and chest claimed; two more players", () => {
+    const reg = runs.find((r) => r.profile.id === "regular")!;
+    expect(reg.mists.held).toBeGreaterThan(3 * (DAYS - 2));
+    expect(reg.hunts.joined).toBeGreaterThan(DAYS);
+    expect(reg.claims.objectives).toBe(18);
+    expect(reg.claims.chests).toBeGreaterThan(DAYS);
+    expect(reg.pearls.mist).toBe(30 * reg.mists.held);
+    const [never, away] = more as [(typeof more)[number], (typeof more)[number]];
+    // Never stokes: the order off from the first session, every Mist missed.
+    expect(never.last.mist.stoke).toBe(false);
+    expect(never.mists.held).toBe(0);
+    expect(never.mists.missed).toBeGreaterThan(3 * (DAYS - 2));
+    // Away: no session on days 20, 21 and 22; what it finds on day 23 is told.
+    expect(away.days.slice(19, 22).map((d) => d.sessions)).toEqual([0, 0, 0]);
+    expect(away.days[22]!.sessions).toBe(6);
+    expect(away.returned?.day).toBe(23);
+  });
+
+  it("keeps every Lighthouse milestone within 10 % of week 6 with all of week 7 played (owner's decision, 18 October)", () => {
+    // The days each profile reached Lighthouse 5, 10, 15, 20, 25 and 30 with the rules of week 6 (commit c307f9f).
+    const WEEK_6: Record<string, Record<number, number>> = {
+      casual: { 5: 1.1, 10: 7.6, 15: 26.0, 20: 63.0, 25: 152.4, 30: 371.4 },
+      regular: { 5: 1.1, 10: 5.8, 15: 19.7, 20: 52.6, 25: 122.7, 30: 321.4 },
+      dedicated: { 5: 1.1, 10: 5.7, 15: 17.5, 20: 45.2, 25: 119.4, 30: 325.8 },
+    };
+    // The casual player reaches Lighthouse 30 after a year: its run goes on a little longer.
+    const long = [...runs.filter((r) => r.profile.id !== "casual"), simulate(casual, 380)];
+    for (const r of long) {
+      for (const [level, week6] of Object.entries(WEEK_6[r.profile.id]!)) {
+        const day = r.lighthouse[Number(level)]! / 24;
+        expect(Math.abs(day - week6) / week6, `${r.profile.id}, Lighthouse ${level}: day ${day.toFixed(1)}, week 6 ${week6}`).toBeLessThanOrEqual(0.1);
+      }
+    }
   });
 
   it("the Lighthouse's milestones match the days: a level counts from the hour its work ends", () => {
@@ -83,6 +119,6 @@ describe("the balance simulation", () => {
     expect(readFileSync(`${docs}balance/days.csv`, "utf8")).toBe(toCsv(runs));
     expect(readFileSync(`${docs}balance/lighthouse.svg`, "utf8")).toBe(toSvg(runs));
     const doc = readFileSync(`${docs}balance.md`, "utf8");
-    expect(doc.slice(doc.indexOf(MARK_START), doc.indexOf(MARK_END) + MARK_END.length)).toBe(toMarkdown(runs));
+    expect(doc.slice(doc.indexOf(MARK_START), doc.indexOf(MARK_END) + MARK_END.length)).toBe(toMarkdown(runs, more));
   });
 });

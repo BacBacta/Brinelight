@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   ATTACK_STAY,
   HOUR,
+  MIST_DURATION,
+  MIST_HELD_PEARLS,
   MAX_REPORTS,
   STARTING_BUILDINGS,
   STARTING_STOCK,
@@ -156,7 +158,9 @@ describe("long time away", () => {
     const after = catchUp(r.state, DAYS_3);
     expect(after.fleets).toEqual([]);
     expect(after.troops).toEqual({ boarders: 13, harpooners: 13, crossbowmen: 13 });
-    expect(after.pearls).toBe(216);
+    // The camp's 16 Pearls, and 30 for each of the 9 Mists the Lighthouse held in 3 days.
+    expect(after.mist.held).toBe(9);
+    expect(after.pearls).toBe(216 + 9 * MIST_HELD_PEARLS);
     expect(after.stock.rope).toBe(r.state.stock.rope + 1);
     expect(after.reports).toHaveLength(1);
     expect(after.reports[0]).toMatchObject({ site: "camp-1", win: true, read: false });
@@ -166,9 +170,13 @@ describe("long time away", () => {
     const s = newPlayerState();
     const cap = storeCap(s.buildings.lighthouse, s.techs);
     const rates = netRates(s);
+    // 9 Mists in 3 days, all held: production stays full, and the stoked Lighthouse burns more oil while they last.
+    const mist = netRates(s, { mist: true, stoked: true });
+    const inMist = 9 * MIST_DURATION;
     const after = catchUp(s, DAYS_3);
+    expect(after.mist).toMatchObject({ held: 9, missed: 0 });
     for (const k of ["oil", "fish", "wood"] as const) {
-      expect(after.stock[k], k).toBeCloseTo(Math.min(cap, Math.max(0, s.stock[k] + (rates[k] * DAYS_3) / 3600)));
+      expect(after.stock[k], k).toBeCloseTo(Math.min(cap, Math.max(0, s.stock[k] + (rates[k] * (DAYS_3 - inMist) + mist[k] * inMist) / 3600)));
     }
     // 60 days fill the storage; longer still changes nothing.
     const full = catchUp(s, 60 * 24 * HOUR);
@@ -196,7 +204,8 @@ describe("Pearls", () => {
   });
 
   it("are not capped by storage and do not change with production", () => {
-    const s = { ...newPlayerState(), pearls: 1_000_000 };
+    // The order to stoke off: no Mist held, no Pearls from the Mist.
+    const s = { ...newPlayerState(), pearls: 1_000_000, mist: { ...newPlayerState().mist, stoke: false } };
     expect(advance(s, 1000 * HOUR).pearls).toBe(1_000_000);
   });
 });
@@ -222,7 +231,9 @@ describe("fleets", () => {
     const after = catchUp(s0, 8 * HOUR);
     expect(after.fleets).toEqual([]);
     expect(after.troops).toEqual({ boarders: 13, harpooners: 13, crossbowmen: 13 });
-    expect(after.pearls).toBe(216);
+    // The camp's 16 Pearls, and the Mist of 04:00 held.
+    expect(after.mist.held).toBe(1);
+    expect(after.pearls).toBe(216 + MIST_HELD_PEARLS);
     expect(after.world.camps["camp-1"]).toBe(2);
     expect(after.reports).toHaveLength(1);
     expect(after.reports[0]).toMatchObject({ site: "camp-1", level: 1, win: true, read: false, losses: { boarders: 12, harpooners: 12, crossbowmen: 12 } });
@@ -354,6 +365,20 @@ describe("parseState: strict reading of a city", () => {
     expect(parseState(json({ ...s, world: { ...s.world, camps: { ...s.world.camps, "camp-1": 0 } } }))).toBeNull();
     // More oil in a wreck than it ever holds.
     expect(parseState(json({ ...s, world: { ...s.world, wrecks: { ...s.world.wrecks, "wreck-1": 99_999 } } }))).toBeNull();
+  });
+
+  it("reads an empty wreck with its wait, and refuses an empty wreck without one, a wait too long, or a wait for a wreck that is not empty", () => {
+    const s = newPlayerState();
+    const empty = { ...s.world.wrecks, "wreck-1": 0 };
+    const ok = { ...s, world: { ...s.world, wrecks: empty, refill: { "wreck-1": 1200 } } };
+    expect(parseState(json(ok))).toEqual(ok);
+    expect(parseState(json({ ...s, world: { ...s.world, wrecks: empty } }))).toBeNull();
+    expect(parseState(json({ ...s, world: { ...s.world, wrecks: empty, refill: { "wreck-1": 2 * HOUR + 1 } } }))).toBeNull();
+    expect(parseState(json({ ...s, world: { ...s.world, wrecks: empty, refill: { "wreck-1": 0 } } }))).toBeNull();
+    expect(parseState(json({ ...s, world: { ...s.world, refill: { "wreck-1": 1200 } } }))).toBeNull();
+    expect(parseState(json({ ...s, world: { ...s.world, refill: { "camp-1": 1200 } } }))).toBeNull();
+    const { refill: _r, ...noRefill } = s.world;
+    expect(parseState(json({ ...s, world: noRefill }))).toBeNull();
   });
 
   it("refuses a report without a good id, ids used twice, or a counter below an id", () => {

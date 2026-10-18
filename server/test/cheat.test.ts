@@ -539,4 +539,136 @@ describe("a modified client cannot change the rules", () => {
     expect(totalTroops(p.ref.now().troops)).toBe(totalTroops(back.troops) + saved);
     expect(p.ref.now().healing).toBeNull();
   });
+
+  it("the Mist: a client sends only the order to stoke; the server's clock decides when the Mist comes and lifts", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    // T0 is 12:00 UTC: a Mist is on until 14:00.
+    const slot = RAFT_SLOTS[0]!.key;
+    const p = await player({ ...newPlayerState(T0.getTime() / 1000), rafts: { [slot]: { hp: RAFT_MAX_HP, building: null, level: 0 } } });
+    expect(p.ref.now().mist.stoke).toBe(true);
+    await expectRefused(server, p, action({ type: "sail", site: "wreck-1" }), "The Mist hides this place. Wait for it to lift.");
+    // No clock, Pearls, oil or sturdiness rides with the order, and the order is a boolean.
+    const order = action({ type: "stoke", on: true });
+    for (const extra of [{ clock: 0 }, { pearls: 1e6 }, { oil: 500 }, { hp: RAFT_MAX_HP }, { on: "yes" }]) await expectInvalid(server, p, { action: { ...order, ...extra } });
+    // Taken back during the Mist: the Lighthouse goes dark, and the Mist lifts at 14:00 not held.
+    await expectApplied(server, p, action({ type: "stoke", on: false }));
+    later(2 * 3600_000);
+    await expectRules(server, p);
+    expect(p.ref.now().mist).toMatchObject({ held: 0, missed: 1 });
+    expect(p.ref.now().rafts[slot]!.hp).toBe(RAFT_MAX_HP - 35);
+    // Given again: the Mist of 20:00 is held, +30 Pearls.
+    const pearls = p.ref.now().pearls;
+    await expectApplied(server, p, action({ type: "stoke", on: true }));
+    later(8 * 3600_000);
+    await expectRules(server, p);
+    expect(p.ref.now().mist).toMatchObject({ held: 1, missed: 1 });
+    expect(p.ref.now().pearls).toBe(pearls + 30);
+  });
+
+  it("repairs: nothing to repair, the shipyard busy, not enough oil, fields sent; the server decides when the rafts are sound", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const [a, b] = RAFT_SLOTS.map((s) => s.key) as [string, string];
+    const base = newPlayerState();
+    const sound = await player({ ...base, rafts: { [a]: { hp: RAFT_MAX_HP, building: null, level: 0 } } });
+    await expectRefused(server, sound, action({ type: "repairRafts" }), "Your rafts are in good shape");
+    const damaged = { ...base, buildings: { ...base.buildings, lighthouse: 5 }, rafts: { [a]: { hp: 65, building: null, level: 0 }, [b]: { hp: 25, building: "greenhouse" as const, level: 1 } } };
+    const poor = await player({ ...damaged, stock: { ...damaged.stock, oil: 0 } });
+    await expectRefused(server, poor, action({ type: "repairRafts" }), "Not enough resources");
+    const p = await player({ ...damaged, stock: { oil: 5000, fish: 5000, wood: 5000, rope: 5 } });
+    // A client cannot name the rafts, their sturdiness or the cost.
+    const order = action({ type: "repairRafts" });
+    for (const extra of [{ slots: [a] }, { hp: RAFT_MAX_HP }, { oil: 0 }]) await expectInvalid(server, p, { action: { ...order, ...extra } });
+    await expectApplied(server, p, action({ type: "repairRafts" }));
+    await expectRefused(server, p, action({ type: "repairRafts" }), "The shipyard is busy");
+    // 110 points missing: 110 / 35 × 6 minutes, on the server's clock.
+    later(Math.floor((110 / 35) * 360 * 1000) - 1000);
+    await expectRules(server, p);
+    expect(p.ref.now().rafts[b]!.hp).toBe(25);
+    later(2000);
+    await expectRules(server, p);
+    expect(Object.values(p.ref.now().rafts).map((r) => r.hp)).toEqual([RAFT_MAX_HP, RAFT_MAX_HP]);
+  });
+
+  it("the Leviathan: a client sends only the site; the server's clock decides the hunt, the damage and the Pearls", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    // T0 is 12:00 UTC: the Leviathan rises at 13:00.
+    const p = await player(newPlayerState(T0.getTime() / 1000));
+    await expectRefused(server, p, action({ type: "sail", site: "leviathan" }), "The Leviathan is not at sea. Wait for it to rise.");
+    later(3600_000);
+    // No damage, share, Pearls, level or shards ride with the fleet.
+    const hunt = action({ type: "sail", site: "leviathan" });
+    for (const extra of [{ damage: 4000 }, { share: 1 }, { pearls: 200 }, { level: 9 }, { shards: 3 }]) await expectInvalid(server, p, { action: { ...hunt, ...extra } });
+    await expectApplied(server, p, action({ type: "sail", site: "leviathan" }));
+    const sent = p.ref.now();
+    // 15:00: the Leviathan dives; the Pearls follow the damage the rules give, and every troop comes home.
+    later(2 * 3600_000 + 3600_000);
+    await expectRules(server, p);
+    const after = p.ref.now();
+    const report = after.reports.at(-1)!;
+    expect(report).toMatchObject({ site: "leviathan", win: false, losses: emptyTroops() });
+    expect(after.pearls).toBe(sent.pearls + 30 + report.loot!.pearls);
+    expect(after.leviathan).toMatchObject({ level: 1, over: true });
+    expect(totalTroops(after.troops)).toBe(totalTroops(newPlayerState().troops));
+    await expectRefused(server, p, action({ type: "sail", site: "leviathan" }), "The Leviathan is not at sea. Wait for it to rise.");
+  });
+
+  it("the Lighthouse's last levels: without their Pearls, refused with how many it needs; a number of Pearls sent is never read", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState(T0.getTime() / 1000);
+    const rich = { oil: 50_000_000, fish: 50_000_000, wood: 50_000_000, rope: 1000 };
+    const p = await player({ ...base, buildings: { ...base.buildings, lighthouse: 27 }, stock: rich, pearls: 6999 });
+    await expectRefused(server, p, action({ type: "upgrade", building: "lighthouse" }), "You need 7,000 Pearls for this level.");
+    await expectInvalid(server, p, { action: { ...action({ type: "upgrade", building: "lighthouse" }), pearls: 0 } });
+    const q = await player({ ...base, buildings: { ...base.buildings, lighthouse: 27 }, stock: rich, pearls: 7000 });
+    await expectApplied(server, q, action({ type: "upgrade", building: "lighthouse" }));
+    expect(q.ref.now().pearls).toBe(0);
+  });
+
+  it("an emptied wreck: no fleet while it waits, and the server's clock decides when it fills again", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    // T0 is 12:00 UTC, in a Mist: 14:00, it has lifted. The nearest wreck holds 100 oil, less than a hold.
+    const base = newPlayerState(T0.getTime() / 1000);
+    const p = await player({ ...base, world: { ...base.world, wrecks: { ...base.world.wrecks, "wreck-8": 100 } } });
+    later(2 * 3600_000);
+    await expectApplied(server, p, action({ type: "sail", site: "wreck-8" }));
+    // 1 h 20 later, the fleet has emptied it and sails home.
+    later(80 * 60_000);
+    await expectRules(server, p);
+    expect(p.ref.now().world).toMatchObject({ wrecks: { "wreck-8": 0 } });
+    await expectRefused(server, p, action({ type: "sail", site: "wreck-8" }), "This wreck is empty. Wait for it to fill again.");
+    // 2 hours later, it has filled again with its 420 oil.
+    later(2 * 3600_000);
+    await expectRules(server, p);
+    expect(p.ref.now().world.wrecks["wreck-8"]).toBe(420);
+    expect(p.ref.now().world.refill).toEqual({});
+    await expectApplied(server, p, action({ type: "sail", site: "wreck-8" }));
+  });
+
+  it("objectives and chests: an unmet objective, a reward or points sent, a chest twice, yesterday's chest", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    // T0 is 12:00 UTC.
+    const base = newPlayerState(T0.getTime() / 1000);
+    const p = await player({ ...base, buildings: { ...base.buildings, barracks: 1 }, stock: { oil: 50_000, fish: 50_000, wood: 50_000, rope: 10 } });
+    await expectRefused(server, p, action({ type: "claimObjective" }), "Finish your current objective first");
+    for (const extra of [{ objective: 1 }, { reward: { pearls: 300 } }]) await expectInvalid(server, p, { action: { ...action({ type: "claimObjective" }), ...extra } });
+    await expectRefused(server, p, action({ type: "claimChest", chest: 20 }), "Not enough points yet");
+    for (const extra of [{ points: 100 }, { pearls: 200 }]) await expectInvalid(server, p, { action: { ...action({ type: "claimChest", chest: 20 }), ...extra } });
+    await expectInvalid(server, p, { action: { ...action({ type: "claimChest", chest: 20 }), chest: 30 } });
+    // The Refinery to level 2, by the server's clock: the first objective can be claimed, once.
+    await expectApplied(server, p, action({ type: "upgrade", building: "refinery" }));
+    later(2 * 3600_000);
+    await expectApplied(server, p, action({ type: "claimObjective" }));
+    expect(p.ref.now().objective).toBe(1);
+    await expectApplied(server, p, action({ type: "claimObjective" }));
+    await expectRefused(server, p, action({ type: "claimObjective" }), "Finish your current objective first");
+    // Three upgrades started today (the Refinery, the Fishery, the Lumberyard): 30 points, the first chest, once.
+    await expectApplied(server, p, action({ type: "upgrade", building: "fishery" }));
+    await expectApplied(server, p, action({ type: "upgrade", building: "lumberyard" }));
+    await expectApplied(server, p, action({ type: "claimChest", chest: 20 }));
+    await expectRefused(server, p, action({ type: "claimChest", chest: 20 }), "You already opened this chest today");
+    // After midnight UTC, yesterday's points are gone: the chest waits for today's.
+    later(10 * 3600_000);
+    await expectRefused(server, p, action({ type: "claimChest", chest: 20 }), "Not enough points yet");
+    expect(p.ref.now().daily.chests).toEqual([]);
+  });
 });

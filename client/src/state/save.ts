@@ -41,7 +41,7 @@ export type OpenedSave = {
  */
 export function openSave(store: KeyValueStore | null, nowMs: number): OpenedSave {
   const raw = readRaw(store);
-  if (raw === null) return { state: newPlayerState(), rejected: false };
+  if (raw === null) return { state: newPlayerState(nowMs / 1000), rejected: false };
   const file = readSave(raw);
   if (file) return { state: catchUp(file.state, (nowMs - file.savedAt) / 1000), rejected: false };
   try {
@@ -49,7 +49,7 @@ export function openSave(store: KeyValueStore | null, nowMs: number): OpenedSave
   } catch {
     // Storage full or blocked: the copy is lost, the game goes on.
   }
-  return { state: newPlayerState(), rejected: true };
+  return { state: newPlayerState(nowMs / 1000), rejected: true };
 }
 
 /** The saved city caught up to `nowMs`, or a new city when there is no readable save. */
@@ -70,11 +70,11 @@ const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object
  * Brings an old local save up to date, then reads it with the strict parseState of the shared rules.
  * Only fields that did not exist in older saves are filled in: the Pearls (week 2, task 4), the build queue
  * (task 3), the sea (task 5), the report ids with their counter (week 4: reports kept in a save without
- * ids are numbered r1, r2… in their order), the research and shipyard work in progress (week 4, task 6: none), and, with the shared step of the stored cities (upgradeShape), the training and healing, the veterans in the city and in each fleet, and the captains' shards (week 5: none). A field that exists but is invalid is not repaired: parseState refuses it.
+ * ids are numbered r1, r2… in their order), the research and shipyard work in progress (week 4, task 6: none), and, with the shared step of the stored cities (upgradeShape), the training and healing, the veterans in the city and in each fleet, and the captains' shards (week 5: none), and the city's clock (`clock`: the time of the save, in seconds) with the order to stoke the Lighthouse (week 7). A field that exists but is invalid is not repaired: parseState refuses it.
  * The fills before week 5 live only in the client (no city was stored on a server before week 4); the server brings its
  * stored cities up to date with migrateCity, from shape 4.
  */
-export function migrateSave(raw: unknown): PlayerState | null {
+export function migrateSave(raw: unknown, clock: number): PlayerState | null {
   if (!isObj(raw)) return null;
   const s = { ...raw };
   if (!("pearls" in s)) s.pearls = STARTING_PEARLS;
@@ -91,15 +91,16 @@ export function migrateSave(raw: unknown): PlayerState | null {
     s.reports = reports.map((r, i) => (isObj(r) && !("id" in r) ? { ...r, id: `r${i + 1}` } : r));
     s.reportSeq = reports.length;
   }
-  // Week 5 (training, healing, veterans, shards): the same step as for the cities stored on the server.
-  return parseState(upgradeShape(s, MIN_CITY_SHAPE));
+  // Week 5 (training, healing, veterans, shards) and week 7 (the clock, from `clock`, and the Mist): the same steps as
+  // for the cities stored on the server.
+  return parseState(upgradeShape(s, MIN_CITY_SHAPE, { clock }));
 }
 
 function readSave(raw: string): SaveFile | null {
   try {
     const o: unknown = JSON.parse(raw);
     if (!isObj(o) || o.v !== VERSION || typeof o.savedAt !== "number" || !Number.isFinite(o.savedAt)) return null;
-    const state = migrateSave(o.state);
+    const state = migrateSave(o.state, o.savedAt / 1000);
     return state ? { v: VERSION, savedAt: o.savedAt, state } : null;
   } catch {
     return null;

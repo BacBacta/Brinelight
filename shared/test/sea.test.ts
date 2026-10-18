@@ -7,6 +7,7 @@ import {
   STARTING_BUILDINGS,
   STARTING_STOCK,
   STARTING_TROOPS,
+  WRECK_REFILL,
   advanceFleets,
   distance,
   emptyTroops,
@@ -18,9 +19,11 @@ import {
   resolveCombat,
   seaSite,
   sendFleet,
+  startingLeviathan,
   startingSeaWorld,
   storeCap,
   travelTime,
+  wreckOil,
   type SeaState,
 } from "../src/index.js";
 
@@ -38,6 +41,8 @@ const start = (): SeaState => ({
   shards: {},
   fleets: [],
   world: startingSeaWorld(),
+  clock: 0,
+  leviathan: startingLeviathan(),
 });
 
 const send = (id: string, s: SeaState): SeaState => {
@@ -47,9 +52,9 @@ const send = (id: string, s: SeaState): SeaState => {
 };
 
 describe("sea map (prototype values)", () => {
-  it("40 sites with unique ids, your city at (-14, 12)", () => {
-    expect(SEA_SITES).toHaveLength(40);
-    expect(new Set(SEA_SITES.map((s) => s.id)).size).toBe(40);
+  it("41 sites with unique ids (the prototype's 40 and the Leviathan), your city at (-14, 12)", () => {
+    expect(SEA_SITES).toHaveLength(41);
+    expect(new Set(SEA_SITES.map((s) => s.id)).size).toBe(41);
     expect(HOME).toEqual({ x: -14, z: 12 });
     expect(SEA_SITES.filter((s) => s.kind === "wreck")).toHaveLength(8);
     expect(SEA_SITES.filter((s) => s.kind === "camp").map((s) => s.level)).toEqual([1, 2, 3, 4, 5, 6]);
@@ -213,11 +218,33 @@ describe("salvage", () => {
     expect(advanceFleets(send("wreck-2", over), t + COLLECT_STAY + t).state.stock.oil).toBe(cap + 500);
   });
 
-  it("an emptied wreck refills at once to its starting amount", () => {
+  it("an emptied wreck waits 2 hours, then fills again to its starting amount", () => {
+    expect(WRECK_REFILL).toBe(2 * 3600);
     const t1 = travelTime(seaSite("wreck-1")!, {}, tom);
     const r = advanceFleets(send("wreck-1", start()), t1 + COLLECT_STAY);
     expect(r.state.fleets[0]!.cargo).toEqual({ oil: 240, rope: 2 });
-    expect(r.state.world.wrecks["wreck-1"]).toBe(240);
+    expect(r.state.world.wrecks["wreck-1"]).toBe(0);
+    expect(r.state.world.refill).toEqual({ "wreck-1": WRECK_REFILL });
+    // No fleet can sail to it while it waits.
+    expect(sendFleet("wreck-1", { ...r.state, fleets: [] })).toEqual({ ok: false, reason: "This wreck is empty. Wait for it to fill again." });
+    // It counts down only the time after its salvage, in one step or many.
+    const later = advanceFleets(send("wreck-1", start()), t1 + COLLECT_STAY + WRECK_REFILL - 1).state;
+    expect(later.world.wrecks["wreck-1"]).toBe(0);
+    expect(later.world.refill).toEqual({ "wreck-1": 1 });
+    let steps = r.state;
+    for (let i = 0; i < 4; i++) steps = advanceFleets(steps, WRECK_REFILL / 4).state;
+    expect(steps.world.wrecks["wreck-1"]).toBe(240);
+    expect(steps.world.refill).toEqual({});
+    expect(advanceFleets(r.state, WRECK_REFILL).state.world).toEqual(steps.world);
+  });
+
+  it("past Lighthouse 24, a salvage brings 25 % more oil per level above 24", () => {
+    expect(wreckOil(400, 24)).toBe(400);
+    expect(wreckOil(400, 25)).toBe(500);
+    expect(wreckOil(400, 30)).toBe(1000);
+    const t1 = travelTime(seaSite("wreck-1")!, {}, tom);
+    const rich = { ...start(), buildings: { ...STARTING_BUILDINGS, lighthouse: 26 } };
+    expect(advanceFleets(send("wreck-1", rich), t1 + COLLECT_STAY).state.fleets[0]!.cargo).toEqual({ oil: 360, rope: 2 });
   });
 
   it("two fleets ending at the same moment end in the order they left", () => {
@@ -227,8 +254,18 @@ describe("salvage", () => {
     let s = send("wreck-2", s0);
     s = send("wreck-2", s);
     const r = advanceFleets(s, t + COLLECT_STAY);
-    // The first one takes 715; the second one takes the 285 left, and the wreck refills to 480.
+    // The first one takes 715; the second one takes the 285 left, and the wreck waits to fill again.
     expect(r.state.fleets.map((f) => f.cargo.oil)).toEqual([715, 285]);
-    expect(r.state.world.wrecks["wreck-2"]).toBe(480);
+    expect(r.state.world.wrecks["wreck-2"]).toBe(0);
+    expect(r.state.world.refill).toEqual({ "wreck-2": WRECK_REFILL });
+  });
+
+  it("a fleet that finds its wreck emptied by another one comes back with nothing, and the wait does not start again", () => {
+    const s0 = { ...start(), buildings: { ...STARTING_BUILDINGS, harbor: 1 } };
+    s0.world.wrecks["wreck-2"] = 300;
+    const s = send("wreck-2", send("wreck-2", s0));
+    const r = advanceFleets(s, t + COLLECT_STAY);
+    expect(r.state.fleets.map((f) => f.cargo)).toEqual([{ oil: 300, rope: 2 }, {}]);
+    expect(r.state.world.refill).toEqual({ "wreck-2": WRECK_REFILL });
   });
 });

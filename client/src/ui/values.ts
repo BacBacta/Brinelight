@@ -1,4 +1,4 @@
-import { CAPTAINS, oilAutonomy, power, storeCap, survivorCap, type CaptainId, type Troops } from "@brinelight/shared";
+import { CAPTAINS, MIST_DURATION, huntAt, isLit, leviathanUp, mistAt, oilAutonomy, power, storeCap, survivorCap, type CaptainId, type Troops } from "@brinelight/shared";
 import type { PlayerState } from "../state/index.js";
 import type { SeaMood } from "../scene/look.js";
 
@@ -40,27 +40,43 @@ export function cityPower(state: PlayerState): number {
 
 export const survivorsText = (state: PlayerState): string => `${state.survivors}/${survivorCap(state.buildings.shelters)}`;
 
-/**
- * The sea's mood the game shows, read by the banner and the 3D view alike: calm, until the Mist's calendar comes from
- * the server (week 7). `?mist` in the address shows the Mist's look, to see it and measure it: no rule depends on it.
- */
-export function seaMood(search: string): SeaMood {
-  return new URLSearchParams(search).has("mist") ? "mist" : "calm";
+/** `?mist` in the address: the Mist's look, to see and measure it, whatever the calendar. No rule depends on it. */
+export const mistPreview = (search: string): boolean => new URLSearchParams(search).has("mist");
+
+/** The sea's mood the game shows, read by the banner and the 3D view alike: the Mist when the rules say it is on. */
+export function seaMood(state: PlayerState, preview = false): SeaMood {
+  return preview || mistAt(state.clock).on ? "mist" : "calm";
+}
+
+/** A time from now, rounded up to the minute: "52 min", "3 h 05", "99+ h". */
+export function inMinutes(seconds: number): string {
+  const minutes = Math.max(1, Math.ceil(seconds / 60));
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h >= 100 ? "99+ h" : h > 0 ? `${h} h ${String(m).padStart(2, "0")}` : `${m} min`;
 }
 
 /**
- * The Mist banner, with no countdown (the Mist calendar will come from the server):
- * how long your oil lasts with the Lighthouse stoked, from oilAutonomy in the shared rules.
+ * The Mist banner, from the rules: before a Mist, when it comes and whether your oil lasts through it with the
+ * Lighthouse stoked (oilAutonomy); during it, how long it has left and whether the Lighthouse is stoked or dark.
+ * With `?mist` and no Mist on, how long your oil lasts stoked, as the preview of week 6.
  */
-export function mistText(state: PlayerState, mood: SeaMood = "calm"): string {
-  const s = oilAutonomy(state, state.stock.oil);
-  const mist = mood === "mist";
-  if (!Number.isFinite(s)) return mist ? "Mist · your oil holds" : "Calm sea · your oil holds in the Mist";
-  const minutes = Math.round(s / 60);
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  const time = h >= 100 ? "99+ h" : h > 0 ? `${h} h ${String(m).padStart(2, "0")}` : `${m} min`;
-  return mist ? `Mist · oil for ${time}` : `Calm sea · oil for ${time} in the Mist`;
+export function mistText(state: PlayerState, preview = false): string {
+  const w = mistAt(state.clock);
+  if (w.on) return `Mist · ${inMinutes(w.end - state.clock)} left · ${isLit(state.clock, state.mist) ? "Lighthouse stoked" : "Lighthouse dark"}`;
+  const autonomy = oilAutonomy(state, state.stock.oil);
+  if (preview) return Number.isFinite(autonomy) ? `Mist · oil for ${inMinutes(autonomy)}` : "Mist · your oil holds";
+  const until = `Mist in ${inMinutes(w.start - state.clock)}`;
+  if (!state.mist.stoke) return `${until} · stoking off`;
+  return `${until} · ${autonomy >= MIST_DURATION ? "enough oil" : "not enough oil"}`;
+}
+
+/** The Leviathan's label on the sea map, from the rules: how long its hunt has left, or when it rises next. */
+export function leviathanText(state: PlayerState): string {
+  const w = huntAt(state.clock);
+  if (leviathanUp(state.clock, state.leviathan)) return `Leviathan · ${inMinutes(w.end - state.clock)} left`;
+  const next = w.on ? huntAt(w.end).start : w.start;
+  return `Leviathan in ${inMinutes(next - state.clock)}`;
 }
 
 /** How long a number of the top bar takes to roll to its new value, in ms. */

@@ -1,14 +1,20 @@
 /**
- * The balance simulation (week 6, task 5): a new city played for days with the rules of shared/ alone (advance and
- * applyAction), by three players who only differ in how often they open the game. No server, no browser, no clock and
- * no randomness: the same run gives the same numbers. It changes no value: it shows what the rules give.
+ * The balance simulation (week 6, task 5; week 7, task 5): a new city played for days with the rules of shared/ alone
+ * (advance and applyAction), by three players who only differ in how often they open the game, and two more (one who
+ * never stokes, one away three days). No server, no browser, no clock and no randomness: the same run gives the same
+ * numbers. It changes no value: it shows what the rules give.
  *
- * What it leaves out: the Mist (always calm, the Lighthouse never stoked), the Leviathan, objectives and daily tasks,
- * other players, the daily recruitment.
+ * The players play the Mist (the order to stoke on, unless they never stoke), repair their rafts below 60, join every
+ * Leviathan hunt they are there for when a fleet stays free for the wrecks, and claim every objective and chest at
+ * their sessions. What it leaves out: other
+ * players, the daily recruitment.
  */
 import {
   BUILDERS,
   BUILDING_IDS,
+  CHESTS,
+  LEVIATHAN_SITE,
+  MIST_HELD_PEARLS,
   CAPTAINS,
   CAPTAIN_MAX_LEVEL,
   DAY,
@@ -23,6 +29,14 @@ import {
   TECHS,
   advance,
   applyAction,
+  fleetCheck,
+  fleetsMax,
+  huntAt,
+  isLit,
+  leviathanUp,
+  netRates,
+  repairCost,
+  repairTime,
   distance,
   newPlayerState,
   odds,
@@ -34,6 +48,7 @@ import {
   techLevel,
   totalTroops,
   upgradeCost,
+  upgradePearls,
   type BuildingId,
   type CaptainId,
   type Cost,
@@ -46,8 +61,19 @@ import {
   type TroopType,
 } from "@brinelight/shared";
 
-export type ProfileId = "casual" | "regular" | "dedicated";
-export type Profile = { id: ProfileId; name: string; /** When the player opens the game, in seconds after midnight. */ sessions: readonly number[] };
+export type ProfileId = "casual" | "regular" | "dedicated" | "neverStokes" | "away";
+export type Profile = {
+  id: ProfileId;
+  name: string;
+  /** When the player opens the game, in seconds after midnight. */
+  sessions: readonly number[];
+  /** Turns the order to stoke off at the first session, and never back on. */
+  neverStokes?: boolean;
+  /** No session from the start of day `from` to the start of day `to` (days counted from 1). */
+  away?: { from: number; to: number };
+  /** What the player leaves out, to measure what each new rule changes (all played when absent). */
+  skip?: { hunts?: boolean; objectives?: boolean; chests?: boolean; repairs?: boolean };
+};
 
 const at = (hours: number, minutes = 0) => hours * HOUR + minutes * 60;
 
@@ -56,6 +82,14 @@ export const PROFILES: readonly Profile[] = [
   { id: "casual", name: "Casual (3 sessions)", sessions: [at(8), at(13), at(21)] },
   { id: "regular", name: "Regular (6 sessions)", sessions: [at(7), at(10), at(13), at(16), at(19), at(22)] },
   { id: "dedicated", name: "Dedicated (10 sessions)", sessions: Array.from({ length: 10 }, (_, i) => at(7) + i * at(1, 40)) },
+];
+
+const REGULAR = PROFILES[1]!.sessions;
+
+/** Two more players (week 7, task 5): a regular player who never stokes, and one away from day 20 to day 23. */
+export const MORE_PROFILES: readonly Profile[] = [
+  { id: "neverStokes", name: "Never stokes (6 sessions)", sessions: REGULAR, neverStokes: true },
+  { id: "away", name: "Away 3 days (6 sessions, none on days 20 to 22)", sessions: REGULAR, away: { from: 20, to: 23 } },
 ];
 
 /** The city is founded on day 1 at 8:00, in a first session; the profile's sessions follow. */
@@ -77,7 +111,7 @@ const WRECKS = SEA_SITES.filter((s) => s.kind === "wreck").sort((a, b) => distan
 const CAMPS = SEA_SITES.filter((s) => s.kind === "camp");
 
 /** Why a builder stayed free at the end of a session. */
-export type Block = { reason: "resources"; resource: Resource } | { reason: "capped" };
+export type Block = { reason: "resources"; resource: Resource } | { reason: "pearls" } | { reason: "capped" };
 
 export type DayRow = {
   profile: ProfileId;
@@ -121,11 +155,23 @@ export type Run = {
   lighthouse: Record<number, number>;
   /** Other first times, in hours after the city was founded. */
   firsts: { refinery2: number | null; barracks1: number | null; campBeaten: number | null };
-  /** Per resource, how many sessions it blocked a builder; and the blocks by the Lighthouse's cap. */
-  blocks: Record<Resource | "capped", number>;
+  /** Per resource, how many sessions it blocked a builder; the blocks by the Pearls of the Lighthouse's last levels; and by the Lighthouse's cap. */
+  blocks: Record<Resource | "pearls" | "capped", number>;
   /** Hours each resource spent full (production lost). */
   fullHours: Record<Resource, number>;
   walls: Wall[];
+  /** Hours the oil spent full in the first 90 days. */
+  oilFull90: number;
+  /** Oil spent on stoking (what the stoked Lighthouse burns above its usual oil) and on repairs; the repairs made. */
+  oilSpent: { stoking: number; repairs: number; repairsMade: number };
+  mists: { held: number; missed: number };
+  hunts: { joined: number; killed: number };
+  /** Pearls earned, by source, and spent on Logbooks. */
+  pearls: { mist: number; leviathan: number; camps: number; objectives: number; chests: number; logbook: number };
+  /** Objectives claimed, and chests opened. */
+  claims: { objectives: number; chests: number };
+  /** What a player away finds on return, before the first session: the rafts, the Mists missed, the oil and the repair. */
+  returned: { day: number; rafts: number; damaged: number; lowest: number; missed: number; oil: number; storage: number; repairOil: number; repairWood: number; repairHours: number } | null;
   /** The last city, to check it. */
   last: PlayerState;
 };
@@ -177,18 +223,30 @@ export function wallAt(s: PlayerState): { resource: Resource; cost: number; stor
 
 /** Plays a new city for `days` days with a profile's sessions. */
 export function simulate(profile: Profile, days: number): Run {
-  let s = newPlayerState();
-  let t = FOUNDED; // seconds since day 1, 0:00
+  // Day 1 is 1 January 1970 on the city's clock: the Mist comes at 04:00, 12:00 and 20:00 UTC, as every day.
+  let s = newPlayerState(FOUNDED);
+  let t = FOUNDED; // seconds since day 1, 0:00, and the city's clock
   let ids = 0;
   let turn = 0;
   const lighthouse: Record<number, number> = { [s.buildings.lighthouse]: 0 };
   const firsts: Run["firsts"] = { refinery2: null, barracks1: null, campBeaten: null };
-  const blocks: Run["blocks"] = { oil: 0, fish: 0, wood: 0, rope: 0, capped: 0 };
+  const blocks: Run["blocks"] = { oil: 0, fish: 0, wood: 0, rope: 0, pearls: 0, capped: 0 };
   const fullHours: Run["fullHours"] = { oil: 0, fish: 0, wood: 0, rope: 0 };
   const walls: Wall[] = [];
   const rows: DayRow[] = [];
   const since = (time: number) => (time - FOUNDED) / HOUR;
   let today = newDay();
+  /** The hunt last joined (when it rose), so that a second fleet to the same hunt is not counted twice. */
+  let huntJoined = -1;
+  const run = {
+    oilFull90: 0,
+    oilSpent: { stoking: 0, repairs: 0, repairsMade: 0 },
+    mists: { held: 0, missed: 0 },
+    hunts: { joined: 0, killed: 0 },
+    pearls: { mist: 0, leviathan: 0, camps: 0, objectives: 0, chests: 0, logbook: 0 },
+    claims: { objectives: 0, chests: 0 },
+    returned: null as Run["returned"],
+  };
 
   function newDay() {
     return { idle: 0, sessions: 0, salvages: 0, blocked: 0, empty: 0, by: new Map<string, number>(), started: [] as string[] };
@@ -199,6 +257,15 @@ export function simulate(profile: Profile, days: number): Run {
     const r = applyAction(s, { ...action, id: actionId(ids + 1) } as GameAction);
     if (!r.ok || (keep && !covers(r.state.stock, reserve(s)))) return false;
     ids++;
+    const pearls = r.state.pearls - s.pearls;
+    if (action.type === "claimObjective") (run.pearls.objectives += pearls), run.claims.objectives++;
+    if (action.type === "claimChest") (run.pearls.chests += pearls), run.claims.chests++;
+    if (action.type === "logbook") run.pearls.logbook -= pearls;
+    if (action.type === "repairRafts") (run.oilSpent.repairs += s.stock.oil - r.state.stock.oil), run.oilSpent.repairsMade++;
+    if (action.type === "sail" && action.site === LEVIATHAN_SITE && huntAt(s.clock).start !== huntJoined) {
+      run.hunts.joined++;
+      huntJoined = huntAt(s.clock).start;
+    }
     s = r.state;
     // Salvages repeat at every session: counted, not listed.
     if (action.type === "sail" && label.startsWith("salvage")) today.salvages++;
@@ -227,7 +294,8 @@ export function simulate(profile: Profile, days: number): Run {
       const first = candidates[0];
       if (!first) return { reason: "capped" };
       const lack = missing(s.stock, upgradeCost(first, s.buildings[first]));
-      return lack ? { reason: "resources", resource: lack } : { reason: "capped" };
+      if (lack) return { reason: "resources", resource: lack };
+      return s.pearls < upgradePearls(first, s.buildings[first]) ? { reason: "pearls" } : { reason: "capped" };
     }
   };
 
@@ -253,6 +321,10 @@ export function simulate(profile: Profile, days: number): Run {
   const sea = () => {
     let any = false;
     const lead = s.lead ? s.captains[s.lead] : undefined;
+    // The Leviathan first, when it is at sea and a fleet stays free for the wrecks (owner's decision, 18 October): all
+    // the troops sail to it, and no camp is attacked meanwhile.
+    const spare = fleetsMax(s.buildings.harbor) - s.fleets.length >= 2;
+    if (!profile.skip?.hunts && spare && leviathanUp(s.clock, s.leviathan)) any = act({ type: "sail", site: LEVIATHAN_SITE }, "hunt the Leviathan") || any;
     const army = totalTroops(s.troops) + totalTroops(s.veterans);
     if (army >= MIN_ATTACK_TROOPS) {
       // The lowest camp, if the odds are "easy"; all the troops sail.
@@ -268,8 +340,13 @@ export function simulate(profile: Profile, days: number): Run {
       });
       if (chance === "easy") any = act({ type: "sail", site: camp.id }, `attack ${camp.id} (level ${level})`) || any;
     }
-    // Every other fleet salvages the nearest wreck (oil and rope).
-    while (act({ type: "sail", site: WRECKS[0]!.id }, `salvage ${WRECKS[0]!.id}`)) any = true;
+    // Every other fleet salvages the nearest wreck it can sail to (oil and rope), one fleet a wreck: an emptied wreck
+    // waits before it fills again.
+    for (;;) {
+      const w = WRECKS.find((x) => !s.fleets.some((f) => f.site === x.id) && fleetCheck(s, x.id).ok);
+      if (!w || !act({ type: "sail", site: w.id }, `salvage ${w.id}`)) break;
+      any = true;
+    }
     return any;
   };
 
@@ -289,6 +366,10 @@ export function simulate(profile: Profile, days: number): Run {
 
   const shipyard = () => {
     if (s.yard) return false;
+    // Rafts below 60 are repaired first: their buildings run at half, and cannot be upgraded. As every other spending,
+    // a repair leaves the Lighthouse's reserve untouched (it did not before 18 October: the player who never stokes
+    // spent the Lighthouse's oil on repairs every day).
+    if (!profile.skip?.repairs && Object.values(s.rafts).some((r) => r.hp < 60)) return act({ type: "repairRafts" }, "repair the rafts", true);
     const slots = RAFT_SLOTS.map((x) => x.key);
     const empty = slots.find((k) => s.rafts[k] && !s.rafts[k]!.building);
     if (empty) {
@@ -302,9 +383,18 @@ export function simulate(profile: Profile, days: number): Run {
     return !!free && act({ type: "dockRaft", slot: free.key }, `raft at ${free.key}`, true);
   };
 
+  /** Every objective done and every chest the day's points open. */
+  const claims = () => {
+    let any = false;
+    if (!profile.skip?.objectives) while (act({ type: "claimObjective" }, "claim an objective")) any = true;
+    if (!profile.skip?.chests) for (const chest of CHESTS) any = act({ type: "claimChest", chest }, `open chest ${chest}`) || any;
+    return any;
+  };
+
   /** A session: the player does everything the rules allow, in the order of play, then leaves. */
   const session = () => {
     const before = ids;
+    if (profile.neverStokes && s.mist.stoke) act({ type: "stoke", on: false }, "stoking off");
     let block: Block | null = null;
     for (let round = 0; round < 20; round++) {
       const mark = ids;
@@ -315,13 +405,14 @@ export function simulate(profile: Profile, days: number): Run {
       sea();
       captains();
       shipyard();
+      claims();
       if (ids === mark) break;
     }
     today.sessions++;
     if (ids === before) today.empty++;
     if (block) {
       today.blocked++;
-      const key = block.reason === "capped" ? "capped" : block.resource;
+      const key = block.reason === "resources" ? block.resource : block.reason;
       blocks[key]++;
       today.by.set(key, (today.by.get(key) ?? 0) + 1);
     }
@@ -340,11 +431,25 @@ export function simulate(profile: Profile, days: number): Run {
         else walls.push({ level: s.buildings.lighthouse, ...wall, hours: step / HOUR, escaped: false });
       }
       const reports = s.reportSeq;
+      const mist = { ...s.mist };
+      // What the stoked Lighthouse burns above its usual oil, for the hour it is lit.
+      if (isLit(s.clock, s.mist)) run.oilSpent.stoking += ((netRates(s).oil - netRates(s, { mist: true, stoked: true }).oil) * step) / HOUR;
       s = advance(s, step);
       t += step;
+      run.mists.held += s.mist.held - mist.held;
+      run.mists.missed += s.mist.missed - mist.missed;
+      run.pearls.mist += (s.mist.held - mist.held) * MIST_HELD_PEARLS;
+      for (const r of s.reports.slice(s.reports.length - Math.min(s.reports.length, s.reportSeq - reports))) {
+        const pearls = r.loot?.pearls ?? 0;
+        if (r.site === LEVIATHAN_SITE) {
+          run.pearls.leviathan += pearls;
+          if (r.win) run.hunts.killed++;
+        } else run.pearls.camps += pearls;
+      }
       if (s.reportSeq > reports && firsts.campBeaten === null && s.reports.some((r) => r.win)) firsts.campBeaten = since(t);
       const cap = storeCap(s.buildings.lighthouse, s.techs);
       for (const k of ["oil", "fish", "wood"] as const) if (s.stock[k] >= cap) fullHours[k] += step / HOUR;
+      if (s.stock.oil >= cap && t <= FOUNDED + 90 * DAY) run.oilFull90 += step / HOUR;
       for (const w of walls) if (s.buildings.lighthouse > w.level || s.queue.some((j) => j.id === "lighthouse" && s.buildings.lighthouse === w.level)) w.escaped = true;
       if (t % DAY === 0) endOfDay(t / DAY);
     }
@@ -394,15 +499,39 @@ export function simulate(profile: Profile, days: number): Run {
   // Day 1: the city is founded at 8:00, in a first session; then the profile's sessions, day after day.
   session();
   for (let day = 0; day < days; day++) {
+    // Away: no session on these days (counted from 1).
+    if (profile.away && day + 1 >= profile.away.from && day + 1 < profile.away.to) {
+      wait((day + 1) * DAY);
+      continue;
+    }
     for (const time of profile.sessions) {
       const when = day * DAY + time;
       if (when <= FOUNDED) continue;
       wait(when);
+      if (profile.away && day + 1 === profile.away.to && !run.returned) run.returned = returnOf(s, day + 1);
       session();
     }
     wait((day + 1) * DAY);
   }
-  return { profile, days: rows, lighthouse, firsts, blocks, fullHours, walls, last: s };
+  return { profile, days: rows, lighthouse, firsts, blocks, fullHours, walls, ...run, last: s };
+}
+
+/** What a player finds on return: the rafts and their sturdiness, the Mists missed, the oil, and what repairing costs. */
+function returnOf(s: PlayerState, day: number): NonNullable<Run["returned"]> {
+  const rafts = Object.values(s.rafts);
+  const cost = repairCost(s.rafts);
+  return {
+    day,
+    rafts: rafts.length,
+    damaged: rafts.filter((r) => r.hp < 100).length,
+    lowest: Math.min(100, ...rafts.map((r) => r.hp)),
+    missed: s.mist.missed,
+    oil: Math.floor(s.stock.oil),
+    storage: storeCap(s.buildings.lighthouse, s.techs),
+    repairOil: cost.oil ?? 0,
+    repairWood: cost.wood ?? 0,
+    repairHours: repairTime(s.rafts) / HOUR,
+  };
 }
 
 /** The three profiles, for `days` days. */

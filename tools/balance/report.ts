@@ -119,8 +119,21 @@ const days = (hours: number | null | undefined) => (hours === null || hours === 
 const n = (v: number) => v.toLocaleString("en-US");
 const RES: readonly Resource[] = ["oil", "fish", "wood", "rope"];
 
+/** The new rules of week 7: oil spent and full, the Mist, the Leviathan, the claims. */
+function week7Rows(r: Run): string {
+  return `| ${r.profile.name} | ${n(Math.round(r.oilFull90))} | ${n(Math.round(r.oilSpent.stoking))} | ${r.oilSpent.repairsMade} (${n(Math.round(r.oilSpent.repairs))} oil) | ${r.mists.held} | ${r.mists.missed} | ${r.hunts.joined} | ${r.hunts.killed} | ${r.claims.objectives} | ${r.claims.chests} |`;
+}
+
+/** Pearls a day, by source, over the whole run; spent on Logbooks; and held at its end. */
+function pearlRow(r: Run): string {
+  const per = (v: number) => (v / Math.max(1, r.days.length)).toFixed(1);
+  const p = r.pearls;
+  const earned = p.mist + p.leviathan + p.camps + p.objectives + p.chests;
+  return `| ${r.profile.name} | ${per(p.mist)} | ${per(p.leviathan)} | ${per(p.camps)} | ${per(p.objectives)} | ${per(p.chests)} | ${per(earned)} | ${per(p.logbook)} | ${n(r.last.pearls)} |`;
+}
+
 /** The tables of docs/balance.md: milestones, the checkpoint days, waits and blocks, the storage walls, the storage by level. */
-export function toMarkdown(runs: readonly Run[]): string {
+export function toMarkdown(runs: readonly Run[], more: readonly Run[] = []): string {
   const head = (cols: string[]) => [`| ${cols.join(" | ")} |`, `| ${cols.map(() => "---").join(" | ")} |`];
   const out: string[] = [MARK_START, "", "### Milestones (days after the city is founded)", ""];
   out.push(...head(["Profile", "Lighthouse 5", "Lighthouse 10", "Lighthouse 15", "Lighthouse 20", "Lighthouse 25", "Lighthouse 30", "Refinery 2", "Barracks 1", "First camp beaten"]));
@@ -141,8 +154,28 @@ export function toMarkdown(runs: readonly Run[]): string {
     const sessions = r.days.reduce((s, d) => s + d.sessions, 0);
     const blocked = r.days.reduce((s, d) => s + d.blockedSessions, 0);
     const empty = r.days.reduce((s, d) => s + d.emptySessions, 0);
-    const by = [...RES, "capped" as const].filter((k) => r.blocks[k] > 0).map((k) => `${k} ${r.blocks[k]}`).join(", ") || "none";
+    const by = [...RES, "pearls" as const, "capped" as const].filter((k) => r.blocks[k] > 0).map((k) => `${k} ${r.blocks[k]}`).join(", ") || "none";
     out.push(`| ${r.profile.name} | ${idle(0, 30)} | ${idle(30, 90)} | ${idle(90, 365)} | ${blocked} of ${sessions} (${Math.round((100 * blocked) / Math.max(1, sessions))} %) | ${empty} | ${by} | ${Math.round(r.fullHours.oil)}, ${Math.round(r.fullHours.fish)}, ${Math.round(r.fullHours.wood)} |`);
+  }
+  out.push("", "### Oil, the Mist, the Leviathan and the claims (whole run)", "");
+  out.push(...head(["Profile", "Hours of full oil (days 1–90)", "Oil spent stoking", "Repairs (oil)", "Mists held", "Mists missed", "Hunts joined", "Leviathans killed", "Objectives claimed", "Chests opened"]));
+  for (const r of [...runs, ...more]) out.push(week7Rows(r));
+  out.push("", "### Pearls a day, by source (average over the whole run)", "");
+  out.push(...head(["Profile", "Mist", "Leviathan", "Camps", "Objectives", "Chests", "Earned", "Spent on Logbooks", "Pearls at the end"]));
+  for (const r of [...runs, ...more]) out.push(pearlRow(r));
+  if (more.length) {
+    out.push("", "### Two more players: milestones", "");
+    out.push(...head(["Profile", "Lighthouse 5", "Lighthouse 10", "Lighthouse 15", "Lighthouse 20", "Lighthouse 25", "Lighthouse 30"]));
+    for (const r of more) out.push(`| ${r.profile.name} | ${days(r.lighthouse[5])} | ${days(r.lighthouse[10])} | ${days(r.lighthouse[15])} | ${days(r.lighthouse[20])} | ${days(r.lighthouse[25])} | ${days(r.lighthouse[30])} |`);
+    const back = more.filter((r) => r.returned);
+    if (back.length) {
+      out.push("", "### What a player away finds on return (before the first session)", "");
+      out.push(...head(["Profile", "Day", "Rafts", "Damaged", "Lowest sturdiness", "Mists missed so far", "Oil (storage)", "Repairing everything: oil, wood, time"]));
+      for (const r of back) {
+        const b = r.returned!;
+        out.push(`| ${r.profile.name} | ${b.day} | ${b.rafts} | ${b.damaged} | ${b.lowest} | ${b.missed} | ${n(b.oil)} (${n(b.storage)}) | ${n(b.repairOil)}, ${n(b.repairWood)}, ${b.repairHours.toFixed(1)} h |`);
+      }
+    }
   }
   out.push("", "### The storage wall", "");
   out.push(...head(["Profile", "Lighthouse level", "Next level costs", "Storage holds", "Days at the wall", "Got past it"]));
@@ -162,9 +195,9 @@ export function toMarkdown(runs: readonly Run[]): string {
 }
 
 /** docs/balance.md with its generated part replaced (the rest is written by hand). */
-export function withTables(doc: string, runs: readonly Run[]): string {
+export function withTables(doc: string, runs: readonly Run[], more: readonly Run[] = []): string {
   const a = doc.indexOf(MARK_START);
   const b = doc.indexOf(MARK_END);
   if (a < 0 || b < a) throw new Error("docs/balance.md has no generated part (its two markers)");
-  return doc.slice(0, a) + toMarkdown(runs) + doc.slice(b + MARK_END.length);
+  return doc.slice(0, a) + toMarkdown(runs, more) + doc.slice(b + MARK_END.length);
 }

@@ -1,9 +1,13 @@
 import { BUILDERS, BUILDING_IDS, LIGHTHOUSE_MAX, type UpgradeJob } from "../rules/buildings.js";
 import { CAPTAINS, CAPTAIN_MAX_LEVEL, CAPTAIN_MAX_STARS, xpNeeded, type CaptainId } from "../rules/captains.js";
+import { CHESTS, DAILY_TASKS, dailyPoints, dayOf, type DailyState } from "../rules/daily.js";
 import type { HealingJob } from "../rules/healing.js";
+import { HUNT_DURATION, type LeviathanState } from "../rules/leviathan.js";
+import { OBJECTIVES, type Progress } from "../rules/objectives.js";
+import type { MistState } from "../rules/mist.js";
 import { RAFT_BUILDINGS, RAFT_BUILDING_MAX_COPIES, RAFT_BUILDING_MAX_LEVEL, RAFT_MAX_HP, RAFT_SLOTS, raftBuildingCopies, type RaftBuildingId, type Rafts, type YardJob } from "../rules/rafts.js";
 import { TECHS, techLevel, type ResearchJob, type TechId, type Techs } from "../rules/research.js";
-import { ATTACK_STAY, COLLECT_STAY, SEA_SITES, fleetsMax, hospitalCapacity, seaSite, type Fleet, type SeaWorld } from "../rules/sea.js";
+import { ATTACK_STAY, COLLECT_STAY, SEA_SITES, WRECK_REFILL, fleetsMax, hospitalCapacity, seaSite, type Fleet, type SeaWorld } from "../rules/sea.js";
 import { PROMOTE_BARRACKS, PROMOTE_COUNT, TRAIN_PER_LEVEL, type TrainingJob } from "../rules/training.js";
 import type { Troops } from "../rules/types.js";
 import { MAX_REPORTS } from "./state.js";
@@ -57,6 +61,44 @@ const isRafts = (r: unknown) =>
       (v.building === null ? v.level === 0 : typeof v.building === "string" && has(RAFT_BUILDINGS, v.building) && isWhole(v.level, 1, RAFT_BUILDING_MAX_LEVEL)),
   );
 
+/** The Mist as the city knows it: the order to stoke, the Lighthouse dark or not, and whole counts of Mists. */
+const isMist = (m: unknown): m is MistState =>
+  isObj(m) &&
+  Object.keys(m).sort().join() === "damaged,dark,held,missed,stoke" &&
+  typeof m.stoke === "boolean" &&
+  typeof m.dark === "boolean" &&
+  isWhole(m.held) &&
+  isWhole(m.missed) &&
+  isWhole(m.damaged);
+
+/** The Leviathan as the city knows it: a level from 1, the hunt it took part in (its start time), the damage dealt in it. */
+const isLeviathan = (l: unknown): l is LeviathanState =>
+  isObj(l) &&
+  Object.keys(l).sort().join() === "damage,hunt,level,over" &&
+  isWhole(l.level, 1) &&
+  isNum(l.hunt) &&
+  l.hunt >= 0 &&
+  isNum(l.damage) &&
+  l.damage >= 0 &&
+  typeof l.over === "boolean";
+
+/** What the city has done since it was founded: whole counts. */
+const isProgress = (p: unknown): p is Progress =>
+  isObj(p) && Object.keys(p).sort().join() === "camps,gathers,trained" && isWhole(p.camps) && isWhole(p.gathers) && isWhole(p.trained);
+
+/**
+ * A day of daily tasks: a day no later than the city's clock, a whole count for each task, and the chests opened that
+ * day, each once and none beyond the day's points.
+ */
+function isDaily(d: unknown, clock: number): d is DailyState {
+  if (!isObj(d) || Object.keys(d).sort().join() !== "chests,counts,day" || !isWhole(d.day, 0, dayOf(clock))) return false;
+  const counts = d.counts;
+  if (!isObj(counts) || Object.keys(counts).sort().join() !== DAILY_TASKS.map((t) => t.id).sort().join() || !Object.values(counts).every((v) => isWhole(v))) return false;
+  const chests = d.chests;
+  if (!Array.isArray(chests) || new Set(chests).size !== chests.length || !chests.every((c) => (CHESTS as readonly unknown[]).includes(c))) return false;
+  return chests.every((c: number) => c <= dailyPoints(d as DailyState));
+}
+
 const isJob = (j: unknown): j is UpgradeJob =>
   isObj(j) && typeof j.id === "string" && (BUILDING_IDS as string[]).includes(j.id) && isNum(j.left) && isNum(j.duration) && j.duration > 0;
 
@@ -79,7 +121,7 @@ export function cleanQueue(raw: readonly unknown[]): UpgradeJob[] {
 function isFleet(f: unknown): f is Fleet {
   if (!isObj(f) || typeof f.site !== "string") return false;
   const site = seaSite(f.site);
-  const kind = site?.kind === "camp" ? "attack" : site?.kind === "wreck" ? "collect" : null;
+  const kind = site?.kind === "camp" ? "attack" : site?.kind === "wreck" ? "collect" : site?.kind === "leviathan" ? "hunt" : null;
   const lead = f.lead;
   const leadOk =
     lead === null ||
@@ -111,7 +153,8 @@ function isFleet(f: unknown): f is Fleet {
  * This can only make the player lose a fleet, never gain.
  */
 export function cleanFleets(raw: readonly unknown[], harbor: number): Fleet[] {
-  const longest = (f: Fleet) => (f.phase === "stay" ? (f.kind === "attack" ? ATTACK_STAY : COLLECT_STAY) : f.travel);
+  const stay = { attack: ATTACK_STAY, collect: COLLECT_STAY, hunt: HUNT_DURATION };
+  const longest = (f: Fleet) => (f.phase === "stay" ? stay[f.kind] : f.travel);
   return raw
     .filter(isFleet)
     .slice(0, fleetsMax(harbor))
@@ -133,13 +176,20 @@ function parseResearch(raw: unknown, techs: Techs): ResearchJob | null | undefin
 
 /**
  * The work at the shipyard: none (null), a new raft on a known slot with no raft yet, a building put on a free raft,
- * or a raft building below its highest level taken one level up; with its time left brought back between 0 and its
- * duration. Anything else refuses the city.
+ * a raft building below its highest level taken one level up, or a repair of rafts the city has; with its time left
+ * brought back between 0 and its duration. Anything else refuses the city.
  */
 function parseYard(raw: unknown, rafts: Rafts): YardJob | null | undefined {
   if (raw === null) return null;
   if (!isObj(raw)) return undefined;
   const { slot, kind, left, duration } = raw;
+  if (kind === "repair") {
+    // The rafts being repaired: at least one, each a raft of the city, none twice.
+    const slots = raw.slots;
+    if (Object.keys(raw).sort().join() !== "duration,kind,left,slots" || !isNum(left) || !isNum(duration) || duration <= 0) return undefined;
+    if (!Array.isArray(slots) || slots.length === 0 || new Set(slots).size !== slots.length || !slots.every((k) => typeof k === "string" && has(rafts, k))) return undefined;
+    return { slots: [...(slots as string[])], kind, left: Math.min(Math.max(0, left), duration), duration };
+  }
   if (typeof slot !== "string" || !SLOTS.has(slot) || !isNum(left) || !isNum(duration) || duration <= 0) return undefined;
   const time = { left: Math.min(Math.max(0, left), duration), duration };
   const keys = Object.keys(raw).sort().join();
@@ -188,10 +238,14 @@ function parseHealing(raw: unknown, infirmary: number): HealingJob | null | unde
   return { wounded: { ...wounded }, left: Math.min(Math.max(0, left), duration), duration };
 }
 
-/** Camp levels and wrecks: every camp and every wreck of the map, each with a valid value. */
+/**
+ * Camp levels and wrecks: every camp and every wreck of the map, each with a valid value. An empty wreck has its wait
+ * before it fills again, from more than 0 to WRECK_REFILL; no other wreck has one.
+ */
 function parseWorld(raw: unknown): SeaWorld | null {
-  if (!isObj(raw) || !isObj(raw.camps) || !isObj(raw.wrecks)) return null;
-  const world: SeaWorld = { camps: {}, wrecks: {} };
+  if (!isObj(raw) || !isObj(raw.camps) || !isObj(raw.wrecks) || !isObj(raw.refill)) return null;
+  const world: SeaWorld = { camps: {}, wrecks: {}, refill: {} };
+  const refills = raw.refill;
   for (const s of SEA_SITES) {
     if (s.kind === "camp") {
       const v = raw.camps[s.id];
@@ -200,10 +254,16 @@ function parseWorld(raw: unknown): SeaWorld | null {
     }
     if (s.kind === "wreck") {
       const v = raw.wrecks[s.id];
-      if (!isNum(v) || v <= 0 || v > (s.amount ?? 0)) return null;
+      if (!isNum(v) || v < 0 || v > (s.amount ?? 0)) return null;
       world.wrecks[s.id] = v;
+      if (v === 0) {
+        const wait = refills[s.id];
+        if (!isNum(wait) || wait <= 0 || wait > WRECK_REFILL) return null;
+        world.refill[s.id] = wait;
+      }
     }
   }
+  if (Object.keys(refills).some((id) => !(id in world.refill))) return null;
   return world;
 }
 
@@ -236,7 +296,18 @@ const isReport = (r: unknown): r is Report =>
   // Reports from before the captains' experience and shards have neither.
   (r.captainXp === undefined ||
     (isObj(r.captainXp) && typeof r.captainXp.id === "string" && has(CAPTAINS, r.captainXp.id) && isWhole(r.captainXp.xp) && isWhole(r.captainXp.levels))) &&
-  (r.shards === undefined || (isObj(r.shards) && typeof r.shards.id === "string" && has(CAPTAINS, r.shards.id) && isWhole(r.shards.count, 1)));
+  (r.shards === undefined || (isObj(r.shards) && typeof r.shards.id === "string" && has(CAPTAINS, r.shards.id) && isWhole(r.shards.count, 1))) &&
+  // Only a hunt of the Leviathan has one.
+  (r.hunt === undefined ||
+    (isObj(r.hunt) &&
+      Object.keys(r.hunt).sort().join() === "damage,health,share" &&
+      isNum(r.hunt.damage) &&
+      r.hunt.damage >= 0 &&
+      isNum(r.hunt.health) &&
+      r.hunt.health > 0 &&
+      isNum(r.hunt.share) &&
+      r.hunt.share >= 0 &&
+      r.hunt.share <= 1));
 
 /**
  * Reads a city sent or stored as JSON. Strict: a missing or invalid field gives null, and nothing is filled in,
@@ -271,7 +342,14 @@ export function parseState(raw: unknown): PlayerState | null {
       !Array.isArray(s.reports) ||
       s.reports.length > MAX_REPORTS ||
       !s.reports.every(isReport) ||
-      !isWhole(s.reportSeq, 0, MAX_REPORT_SEQ)
+      !isWhole(s.reportSeq, 0, MAX_REPORT_SEQ) ||
+      !isNum(s.clock) ||
+      s.clock < 0 ||
+      !isMist(s.mist) ||
+      !isLeviathan(s.leviathan) ||
+      !isWhole(s.objective, 0, OBJECTIVES.length) ||
+      !isProgress(s.progress) ||
+      !isDaily(s.daily, s.clock)
     ) {
       return null;
     }
@@ -314,6 +392,12 @@ export function parseState(raw: unknown): PlayerState | null {
       wounded: { ...s.wounded },
       reports: s.reports.map((r) => ({ ...r })),
       reportSeq: s.reportSeq,
+      clock: s.clock,
+      mist: { ...(s.mist as MistState) },
+      leviathan: { ...(s.leviathan as LeviathanState) },
+      objective: s.objective,
+      progress: { ...(s.progress as Progress) },
+      daily: { day: (s.daily as DailyState).day, counts: { ...(s.daily as DailyState).counts }, chests: [...(s.daily as DailyState).chests] },
     };
   } catch {
     return null;

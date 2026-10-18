@@ -18,8 +18,10 @@ export const RAFT_MAX_HP = 100;
 export const RAFT_BUILDING_MAX_COPIES = 2;
 /** Condition below which a raft runs at half capacity. */
 export const RAFT_DAMAGED_BELOW = 60;
-/** Condition lost when the Mist strikes and the Lighthouse was not stoked. */
+/** Condition lost when a Mist ends that the Lighthouse did not hold. */
 export const MIST_RAFT_DAMAGE = 35;
+/** The Mist never takes a raft below this: a raft is never stopped, below RAFT_DAMAGED_BELOW it runs at half. */
+export const RAFT_MIN_HP = 25;
 
 /** Rafts allowed by Lighthouse level. Prototype table up to level 10, capped after that. */
 const RAFT_CAP_TABLE = [0, 0, 0, 0, 6, 10, 14, 17, 25, 33, 39];
@@ -79,15 +81,34 @@ export function raftEffect(rafts: Rafts, id: RaftBuildingId): number {
   return Object.values(rafts).reduce((sum, r) => sum + (r.building === id ? r.level * efficiency(r) : 0), 0);
 }
 
-/** Mist wear: each raft loses MIST_RAFT_DAMAGE if the Lighthouse was not stoked. */
+/** Mist wear: each raft loses MIST_RAFT_DAMAGE if the Lighthouse did not hold the Mist, never below RAFT_MIN_HP. */
 export function applyMistDamage(rafts: Rafts, held: boolean): Rafts {
   if (held) return rafts;
   const out: Rafts = {};
-  for (const [k, r] of Object.entries(rafts)) out[k] = { ...r, hp: Math.max(0, r.hp - MIST_RAFT_DAMAGE) };
+  for (const [k, r] of Object.entries(rafts)) out[k] = { ...r, hp: Math.min(r.hp, Math.max(RAFT_MIN_HP, r.hp - MIST_RAFT_DAMAGE)) };
   return out;
 }
 
-export const repairCost = (r: Raft): Cost => ({ wood: (RAFT_MAX_HP - r.hp) * 3 });
+/**
+ * What repairing costs per missing sturdiness point: oil (tar for the hulls), and nothing else (owner's decision,
+ * 18 October; it was 2 × the Lighthouse's level in oil and 1 wood).
+ */
+export const REPAIR_OIL = 2;
+/** Shipyard time per 35 missing points (one Mist not held) on one raft: 6 real minutes (1 prototype second). */
+export const REPAIR_TIME_PER_MIST = protoSeconds(1);
+
+/** The rafts below their full sturdiness, by slot, in the order of the slots. */
+export const damagedRafts = (rafts: Rafts): string[] => RAFT_SLOTS.map((s) => s.key).filter((k) => rafts[k] && rafts[k]!.hp < RAFT_MAX_HP);
+
+const missingPoints = (rafts: Rafts): number => damagedRafts(rafts).reduce((n, k) => n + (RAFT_MAX_HP - rafts[k]!.hp), 0);
+
+/** Repairing every damaged raft: 2 oil per missing point, whatever the Lighthouse's level. */
+export function repairCost(rafts: Rafts): Cost {
+  return { oil: missingPoints(rafts) * REPAIR_OIL };
+}
+
+/** How long repairing every damaged raft takes, in real seconds: 6 minutes per 35 missing points. */
+export const repairTime = (rafts: Rafts): number => (missingPoints(rafts) / MIST_RAFT_DAMAGE) * REPAIR_TIME_PER_MIST;
 
 /** Real duration (seconds) of putting a building on a raft (prototype: 8 seconds). */
 export const RAFT_INSTALL_TIME = protoSeconds(8);
@@ -96,12 +117,17 @@ export const raftUpgradeTime = (level: number): number => protoSeconds(8 * 1.5 *
 
 /**
  * The work at the shipyard: one at a time, as in the prototype. A new raft on a slot (`raft`), a building put on a
- * free raft (`install`, at level 1 when done), or a raft building taken one level up (`upgrade`).
+ * free raft (`install`, at level 1 when done), a raft building taken one level up (`upgrade`), or every damaged raft
+ * repaired at once (`repair`, its rafts by slot).
  */
 export type YardJob =
   | { slot: string; kind: "raft"; left: number; duration: number }
   | { slot: string; kind: "install"; building: RaftBuildingId; left: number; duration: number }
-  | { slot: string; kind: "upgrade"; left: number; duration: number };
+  | { slot: string; kind: "upgrade"; left: number; duration: number }
+  | { slots: string[]; kind: "repair"; left: number; duration: number };
+
+/** The slot the shipyard works on, for a work on one raft; null while it repairs. */
+export const yardSlot = (job: YardJob | null): string | null => (job && job.kind !== "repair" ? job.slot : null);
 
 export type StartYard = { ok: true; stock: Stock; yard: YardJob } | { ok: false; reason: string };
 
@@ -150,6 +176,7 @@ export function canUpgradeRaft(ctx: { rafts: Rafts; slot: string; stock: Stock; 
   if (!raft) return refuse("There is no raft here");
   if (!raft.building) return refuse("Put a building on this raft first");
   if (raft.level >= RAFT_BUILDING_MAX_LEVEL) return refuse("Max level");
+  if (raft.hp < RAFT_DAMAGED_BELOW) return refuse("Repair this raft first");
   if (ctx.yard) return refuse("The shipyard is busy");
   if (!canPay(ctx.stock, raftBuildingCost(raft.building, raft.level))) return refuse("Not enough resources");
   return OK;
@@ -164,13 +191,35 @@ export function startRaftUpgrade(ctx: { rafts: Rafts; slot: string; stock: Stock
   return { ok: true, stock: payCost(ctx.stock, raftBuildingCost(raft.building!, raft.level)), yard: { slot: ctx.slot, kind: "upgrade", left: duration, duration } };
 }
 
+/** Can you repair your rafts now? */
+export function canRepair(ctx: { rafts: Rafts; stock: Stock; yard: YardJob | null }): Check {
+  if (damagedRafts(ctx.rafts).length === 0) return refuse("Your rafts are in good shape");
+  if (ctx.yard) return refuse("The shipyard is busy");
+  if (!canPay(ctx.stock, repairCost(ctx.rafts))) return refuse("Not enough resources");
+  return OK;
+}
+
+/** Repairs every damaged raft: checked with canRepair, paid at once, all back to full sturdiness after repairTime. */
+export function startRepair(ctx: { rafts: Rafts; stock: Stock; yard: YardJob | null }): StartYard {
+  const check = canRepair(ctx);
+  if (!check.ok) return check;
+  const duration = repairTime(ctx.rafts);
+  return { ok: true, stock: payCost(ctx.stock, repairCost(ctx.rafts)), yard: { slots: damagedRafts(ctx.rafts), kind: "repair", left: duration, duration } };
+}
+
 /**
  * Advances the work at the shipyard by `seconds` real seconds. Once done: the new raft is moored on its slot, the
- * building stands on its raft at level 1, or the raft's building is one level up. Its effect starts at that moment.
+ * building stands on its raft at level 1, the raft's building is one level up, or the repaired rafts are back to full
+ * sturdiness (a Mist not held while they were repaired is mended with them). Its effect starts at that moment.
  */
 export function advanceYard(rafts: Rafts, job: YardJob | null, seconds: number): { rafts: Rafts; yard: YardJob | null } {
   if (!job) return { rafts, yard: null };
   if (job.left > Math.max(0, seconds)) return { rafts, yard: { ...job, left: job.left - Math.max(0, seconds) } };
+  if (job.kind === "repair") {
+    const out = { ...rafts };
+    for (const k of job.slots) if (out[k]) out[k] = { ...out[k]!, hp: RAFT_MAX_HP };
+    return { rafts: out, yard: null };
+  }
   const raft = rafts[job.slot];
   if (job.kind === "raft") return { rafts: { ...rafts, [job.slot]: { hp: RAFT_MAX_HP, building: null, level: 0 } }, yard: null };
   // The raft is always there: nothing removes one while the shipyard works on it.

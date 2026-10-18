@@ -29,6 +29,14 @@ describe("what a celebration says", () => {
     expect(said({ kind: "veterans", troop: "harpooners", count: 10 })).toBe("10 veteran harpooners ready");
     expect(said({ kind: "healed", count: 8 })).toBe("8 wounded healed");
     expect(said({ kind: "captain", captain: "tom", level: 4 })).toBe("Old Tom reached level 4");
+    expect(said({ kind: "mistHeld", count: 1, pearls: 30 })).toBe("You held the Mist · +30 Pearls");
+    expect(said({ kind: "mistHeld", count: 3, pearls: 90 })).toBe("You held 3 Mists · +90 Pearls");
+    expect(said({ kind: "mistMissed", count: 1, rafts: 4 })).toBe("Your Lighthouse went dark in the Mist · 4 rafts damaged");
+    expect(said({ kind: "mistMissed", count: 2, rafts: 1 })).toBe("Your Lighthouse went dark in 2 Mists · 1 raft damaged");
+    expect(said({ kind: "mistMissed", count: 1, rafts: 0 })).toBe("Your Lighthouse went dark in the Mist");
+    // A Mist not held is no celebration: a dull sound.
+    expect(celebrationOf({ kind: "mistMissed", count: 1, rafts: 4 }).sound).toBe("refused");
+    expect(celebrationOf({ kind: "mistHeld", count: 1, pearls: 30 }).sound).toBe("done");
   });
 
   it("floating gold text for a work, the full screen for the Lighthouse, the 512 px portrait for a captain", () => {
@@ -101,9 +109,10 @@ describe("at launch, what ended while you were away", () => {
   });
 
   it("the same owner's city: what ended since is told", () => {
-    expect(awayEvents({ owner: DEVICE, state: before }, DEVICE, after).map((e) => e.kind)).toEqual(["building", "research", "troops"]);
+    // The day away also had its Mists, held.
+    expect(awayEvents({ owner: DEVICE, state: before }, DEVICE, after).map((e) => e.kind)).toEqual(["building", "research", "troops", "mistHeld"]);
     const owner = accountOwner("Wa11et");
-    expect(awayEvents({ owner, state: before }, owner, after)).toHaveLength(3);
+    expect(awayEvents({ owner, state: before }, owner, after)).toHaveLength(4);
   });
 
   it("the very first launch: nothing seen yet, nothing told", () => {

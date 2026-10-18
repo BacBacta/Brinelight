@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { newPlayerState, sail } from "@brinelight/shared";
 import { NAV_ITEMS } from "../src/ui/nav.js";
 import { MAX_TOASTS, keepToasts } from "../src/ui/toast.js";
-import { FULL_AT, cityPower, fillRatio, longAmount, mistText, rateText, seaMood, shortAmount, survivorsText } from "../src/ui/values.js";
+import { FULL_AT, cityPower, fillRatio, longAmount, mistPreview, mistText, rateText, seaMood, shortAmount, survivorsText } from "../src/ui/values.js";
 
 describe("amounts", () => {
   it("short amounts for the pills, as in the prototype", () => {
@@ -60,26 +60,39 @@ describe("top bar values from the shared rules", () => {
     expect(survivorsText(newPlayerState())).toBe("8/10");
   });
 
-  it("the Mist banner has no countdown and says how long the oil lasts", () => {
+  it("the Mist banner, before a Mist: when it comes, and whether your oil lasts through it stoked", () => {
+    // Clock 0 is midnight UTC: the next Mist is at 04:00.
     const s = newPlayerState();
-    expect(mistText({ ...s, buildings: { ...s.buildings, refinery: 5 } })).toBe("Calm sea · your oil holds in the Mist");
-    // No Refinery: the stoked Lighthouse level 2 burns 11 oil per hour (oilAutonomy), so 110 oil last 10 h.
+    expect(mistText({ ...s, buildings: { ...s.buildings, refinery: 5 } })).toBe("Mist in 4 h 00 · enough oil");
+    // No Refinery: the stoked Lighthouse level 2 burns 7.5 oil per hour (oilAutonomy), so 75 oil last 10 h; 5 oil, 40 min.
     const noRefinery = { ...s, buildings: { ...s.buildings, refinery: 0 } };
-    expect(oilAutonomy(noRefinery, 110)).toBeCloseTo(10 * 3600);
-    expect(mistText({ ...noRefinery, stock: { ...s.stock, oil: 110 } })).toBe("Calm sea · oil for 10 h 00 in the Mist");
-    expect(mistText({ ...noRefinery, stock: { ...s.stock, oil: 5 } })).toBe("Calm sea · oil for 27 min in the Mist");
+    expect(oilAutonomy(noRefinery, 75)).toBeCloseTo(10 * 3600);
+    expect(mistText({ ...noRefinery, stock: { ...s.stock, oil: 75 } })).toBe("Mist in 4 h 00 · enough oil");
+    expect(mistText({ ...noRefinery, stock: { ...s.stock, oil: 5 } })).toBe("Mist in 4 h 00 · not enough oil");
+    expect(mistText({ ...s, clock: 3 * 3600 + 8 * 60 + 30 })).toBe("Mist in 52 min · enough oil");
+    expect(mistText({ ...s, mist: { ...s.mist, stoke: false } })).toBe("Mist in 4 h 00 · stoking off");
   });
 
-  it("the sea's mood: calm, unless ?mist shows the Mist's look; the banner says so", () => {
-    expect(seaMood("")).toBe("calm");
-    expect(seaMood("?quality=2&fps")).toBe("calm");
-    expect(seaMood("?mist")).toBe("mist");
-    expect(seaMood("?fps&mist")).toBe("mist");
+  it("the Mist banner, during a Mist: how long it has left, the Lighthouse stoked or dark", () => {
+    const s = { ...newPlayerState(), clock: 4 * 3600 + 50 * 60 };
+    expect(mistText(s)).toBe("Mist · 1 h 10 left · Lighthouse stoked");
+    expect(mistText({ ...s, mist: { ...s.mist, dark: true } })).toBe("Mist · 1 h 10 left · Lighthouse dark");
+  });
+
+  it("the sea's mood: the Mist when the rules say so, or with ?mist to see its look", () => {
     const s = newPlayerState();
-    const noRefinery = { ...s, buildings: { ...s.buildings, refinery: 0 }, stock: { ...s.stock, oil: 110 } };
-    expect(mistText(noRefinery, "mist")).toBe("Mist · oil for 10 h 00");
-    expect(mistText({ ...s, buildings: { ...s.buildings, refinery: 5 } }, "mist")).toBe("Mist · your oil holds");
-    expect(mistText(noRefinery, "calm")).toBe(mistText(noRefinery));
+    expect(mistPreview("")).toBe(false);
+    expect(mistPreview("?quality=2&fps")).toBe(false);
+    expect(mistPreview("?mist")).toBe(true);
+    expect(mistPreview("?fps&mist")).toBe(true);
+    expect(seaMood(s)).toBe("calm");
+    expect(seaMood(s, true)).toBe("mist");
+    expect(seaMood({ ...s, clock: 4 * 3600 })).toBe("mist");
+    expect(seaMood({ ...s, clock: 6 * 3600 })).toBe("calm");
+    // ?mist outside a Mist: how long your oil lasts stoked, as in week 6.
+    const noRefinery = { ...s, buildings: { ...s.buildings, refinery: 0 }, stock: { ...s.stock, oil: 75 } };
+    expect(mistText(noRefinery, true)).toBe("Mist · oil for 10 h 00");
+    expect(mistText({ ...s, buildings: { ...s.buildings, refinery: 5 } }, true)).toBe("Mist · your oil holds");
   });
 });
 

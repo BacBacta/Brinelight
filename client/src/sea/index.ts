@@ -1,3 +1,4 @@
+import { LEVIATHAN_SITE, leviathanUp } from "@brinelight/shared";
 import type { Kit, Models, SceneHandle } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 import { createFleetMarks } from "./fleets.js";
@@ -11,7 +12,7 @@ export type Sea = {
   closeSheet(): void;
 };
 
-/** The sea view: the map, your fleets, the sheets of camps and wrecks, and the combat reports. */
+/** The sea view: the map, your fleets, the sheets of camps, wrecks and the Leviathan, and the reports. */
 export function createSea(
   kit: Kit,
   models: Models,
@@ -38,8 +39,10 @@ export function createSea(
 
   scene.onFrame((now, view) => {
     if (view !== "sea") return;
+    const state = game.state();
+    map.setLeviathan(leviathanUp(state.clock, state.leviathan));
     map.animate(now, scene.beams);
-    marks.place(game.state().fleets, now);
+    marks.place(state.fleets, now);
     labels.place();
   });
 
@@ -53,7 +56,7 @@ export function createSea(
     if (moved || sheet.showsReport) return;
     const id = scene.pick(e.clientX, e.clientY, map.hits)[0]?.object.userData.site as string | undefined;
     if (!id) return sheet.close();
-    if (id.startsWith("camp-") || id.startsWith("wreck-")) sheet.openSite(id, game.state(), game.speed());
+    if (id.startsWith("camp-") || id.startsWith("wreck-") || id === LEVIATHAN_SITE) sheet.openSite(id, game.state(), game.speed());
     else {
       sheet.close();
       game.soon();

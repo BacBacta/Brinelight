@@ -23,7 +23,7 @@ export function createFleetMarks(model: THREE.Object3D, add: (o: THREE.Object3D)
     const boat = new THREE.Group();
     boat.add(boatModel.clone(true));
     const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(HOME.x, -0.2, HOME.z), new THREE.Vector3(site.x, -0.2, site.z)]);
-    const line = new THREE.Line(geo, new THREE.LineDashedMaterial({ color: f.kind === "attack" ? "#FF7A5A" : "#FFE27A", dashSize: 0.7, gapSize: 0.45, transparent: true, opacity: 0.9 }));
+    const line = new THREE.Line(geo, new THREE.LineDashedMaterial({ color: f.kind === "attack" ? "#FF7A5A" : f.kind === "hunt" ? "#7CFFD8" : "#FFE27A", dashSize: 0.7, gapSize: 0.45, transparent: true, opacity: 0.9 }));
     line.computeLineDistances();
     add(boat);
     add(line);

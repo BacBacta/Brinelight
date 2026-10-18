@@ -6,7 +6,7 @@
  * per type, with room for the RAFT_BUILDING_MAX_COPIES rafts a type may have. No 3D label: the sheet and the queue say it.
  */
 import * as THREE from "three";
-import { RAFT_BUILDING_MAX_COPIES, RAFT_DAMAGED_BELOW, RAFT_SLOTS, raftCap, slotOpen, type RaftBuildingId } from "@brinelight/shared";
+import { RAFT_BUILDING_MAX_COPIES, RAFT_DAMAGED_BELOW, RAFT_SLOTS, raftCap, slotOpen, yardSlot, type RaftBuildingId } from "@brinelight/shared";
 import { RAFT_BUILDING_IDS, bakeModel, hexX, hexZ, kitModel, type Kit, type RaftBuildingModels } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 
@@ -21,7 +21,7 @@ export function raftSlots(state: PlayerState): { key: string; view: RaftSlotView
   for (const s of RAFT_SLOTS) {
     const raft = state.rafts[s.key];
     if (raft) out.push({ key: s.key, view: raft.hp < RAFT_DAMAGED_BELOW ? "damaged" : "raft" });
-    else if (state.yard?.slot === s.key) out.push({ key: s.key, view: "building" });
+    else if (yardSlot(state.yard) === s.key) out.push({ key: s.key, view: "building" });
     else if (open && slotOpen(s.ring, lighthouse)) out.push({ key: s.key, view: "free" });
   }
   return out;

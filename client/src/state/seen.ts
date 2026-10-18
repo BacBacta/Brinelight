@@ -15,7 +15,8 @@ export function readSeen(store: KeyValueStore | null): Seen | null {
   try {
     const o: unknown = JSON.parse(store?.getItem(SEEN_KEY) ?? "null");
     if (typeof o !== "object" || o === null || typeof (o as Seen).owner !== "string") return null;
-    const state = migrateSave((o as Seen).state);
+    // Its clock is never read here, only what ended: a seen city from before the Mist gets 0.
+    const state = migrateSave((o as Seen).state, 0);
     return state ? { owner: (o as Seen).owner, state } : null;
   } catch {
     return null;

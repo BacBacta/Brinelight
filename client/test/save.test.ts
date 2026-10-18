@@ -50,18 +50,18 @@ describe("save and time away", () => {
 
   it("starts a new city when the save is missing, corrupt or from another version", () => {
     const store = memoryStore();
-    expect(loadGame(store, t0)).toEqual(newPlayerState());
+    expect(loadGame(store, t0)).toEqual(newPlayerState(t0 / 1000));
     store.data.set(SAVE_KEY, "{not json");
-    expect(loadGame(store, t0)).toEqual(newPlayerState());
+    expect(loadGame(store, t0)).toEqual(newPlayerState(t0 / 1000));
     store.data.set(SAVE_KEY, JSON.stringify({ v: 2, savedAt: t0, state: newPlayerState() }));
-    expect(loadGame(store, t0)).toEqual(newPlayerState());
+    expect(loadGame(store, t0)).toEqual(newPlayerState(t0 / 1000));
     store.data.set(SAVE_KEY, JSON.stringify({ v: 1, savedAt: t0, state: { ...newPlayerState(), stock: { oil: "lots" } } }));
-    expect(loadGame(store, t0)).toEqual(newPlayerState());
+    expect(loadGame(store, t0)).toEqual(newPlayerState(t0 / 1000));
   });
 
   it("works without any storage", () => {
     expect(() => saveGame(null, newPlayerState(), t0)).not.toThrow();
-    expect(loadGame(null, t0)).toEqual(newPlayerState());
+    expect(loadGame(null, t0)).toEqual(newPlayerState(t0 / 1000));
   });
 });
 
@@ -193,12 +193,12 @@ describe("fleets", () => {
 describe("migrateSave: old local saves", () => {
   it("fills in what older saves did not have: Pearls, build queue, sea", () => {
     const { pearls: _p, queue: _q, fleets: _f, world: _w, wounded: _wd, reports: _r, lead: _l, ...week2task2 } = newPlayerState();
-    expect(migrateSave(JSON.parse(JSON.stringify(week2task2)))).toEqual(newPlayerState());
+    expect(migrateSave(JSON.parse(JSON.stringify(week2task2)), 0)).toEqual(newPlayerState());
   });
 
   it("uses the shared starting values", () => {
     const { pearls: _p, world: _w, ...old } = newPlayerState();
-    const s = migrateSave(old)!;
+    const s = migrateSave(old, 0)!;
     expect(s.pearls).toBe(STARTING_PEARLS);
     expect(s.world).toEqual(startingSeaWorld());
   });
@@ -212,7 +212,7 @@ describe("migrateSave: old local saves", () => {
     }
     const { reportSeq: _seq, ...rest } = JSON.parse(JSON.stringify(city));
     const old = { ...rest, reports: rest.reports.map(({ id: _id, ...r }: { id: string }) => r) };
-    const s = migrateSave(old)!;
+    const s = migrateSave(old, 0)!;
     expect(s.reports.map((r) => r.id)).toEqual(["r1", "r2", "r3"]);
     expect(s.reportSeq).toBe(3);
     expect(s).toEqual(city);
@@ -222,7 +222,7 @@ describe("migrateSave: old local saves", () => {
     const r = sail(newPlayerState(), "camp-1");
     if (!r.ok) throw new Error(r.reason);
     const city = advance(r.state, 8 * HOUR);
-    expect(migrateSave(JSON.parse(JSON.stringify(city)))).toEqual(city);
+    expect(migrateSave(JSON.parse(JSON.stringify(city)), 0)).toEqual(city);
   });
 
   it("gives a save from before the veterans none, in the city and in each fleet at sea", () => {
@@ -231,12 +231,18 @@ describe("migrateSave: old local saves", () => {
     const city = advance(r.state, 600);
     const { veterans: _v, ...rest } = JSON.parse(JSON.stringify(city));
     const old = { ...rest, fleets: rest.fleets.map(({ veterans: _fv, ...f }: { veterans: unknown }) => f) };
-    expect(migrateSave(old)).toEqual(city);
+    expect(migrateSave(old, 0)).toEqual(city);
+  });
+
+  it("gives a save from before the Mist its clock, at the time of the save, and the order to stoke on", () => {
+    // A save from before the Mist has none of the fields of week 7.
+    const { clock: _c, mist: _m, leviathan: _l, objective: _o, progress: _p, daily: _d, ...old } = JSON.parse(JSON.stringify(newPlayerState()));
+    expect(migrateSave(old, 1_800_000_000)).toEqual(newPlayerState(1_800_000_000));
   });
 
   it("does not repair a field that exists but is invalid: parseState refuses it", () => {
-    expect(migrateSave({ ...newPlayerState(), pearls: "lots" })).toBeNull();
-    expect(migrateSave({ ...newPlayerState(), world: { camps: {}, wrecks: {} } })).toBeNull();
+    expect(migrateSave({ ...newPlayerState(), pearls: "lots" }, 0)).toBeNull();
+    expect(migrateSave({ ...newPlayerState(), world: { camps: {}, wrecks: {} } }, 0)).toBeNull();
   });
 
   it("an invalid field in a save starts a new city", () => {
@@ -244,7 +250,7 @@ describe("migrateSave: old local saves", () => {
     const t0 = Date.UTC(2026, 9, 15, 12);
     const s = { ...advance(newPlayerState(), HOUR), pearls: -5 };
     store.data.set(SAVE_KEY, JSON.stringify({ v: 1, savedAt: t0, state: s }));
-    expect(loadGame(store, t0)).toEqual(newPlayerState());
+    expect(loadGame(store, t0)).toEqual(newPlayerState(t0 / 1000));
   });
 });
 
@@ -257,7 +263,7 @@ describe("a save that cannot be read", () => {
     store.data.set(SAVE_KEY, broken);
     const r = openSave(store, t0);
     expect(r.rejected).toBe(true);
-    expect(r.state).toEqual(newPlayerState());
+    expect(r.state).toEqual(newPlayerState(t0 / 1000));
     expect(store.data.get(REJECTED_KEY)).toBe(broken);
   });
 
@@ -287,6 +293,6 @@ describe("a save that cannot be read", () => {
   });
 
   it("works without any storage", () => {
-    expect(openSave(null, t0)).toEqual({ state: newPlayerState(), rejected: false });
+    expect(openSave(null, t0)).toEqual({ state: newPlayerState(t0 / 1000), rejected: false });
   });
 });

@@ -43,5 +43,9 @@ describe("the interface's shared pieces", () => {
     expect(costLine({ wood: 500, oil: 10, fish: 0, rope: 0 }, { wood: 200, oil: 80 })).toBe(
       `<div class="cost"><span class="" title="wood">${resourceIcon("wood")}200</span><span class="no" title="oil">${resourceIcon("oil")}80</span></div>`,
     );
+    // The Lighthouse's last levels: the Pearls come last, marked when you lack them; none when the level asks none.
+    const lighthouse = costLine({ wood: 500, oil: 100, fish: 0, rope: 0 }, { wood: 200 }, { need: 7000, have: 6999 });
+    expect(lighthouse).toBe(`<div class="cost"><span class="" title="wood">${resourceIcon("wood")}200</span><span class="no" title="Pearls">${resourceIcon("pearl")}7,000</span></div>`);
+    expect(costLine({ wood: 500, oil: 100, fish: 0, rope: 0 }, { wood: 200 }, { need: 0, have: 0 })).toBe(costLine({ wood: 500, oil: 100, fish: 0, rope: 0 }, { wood: 200 }));
   });
 });

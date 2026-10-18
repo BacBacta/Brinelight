@@ -2,7 +2,7 @@
 
 A mobile and web strategy game in a drowned world: a floating city around its Lighthouse, the Mist, alliances, the Leviathan. USDC payments on Solana, no token, no airdrop.
 
-Status: **week 6 of the roadmap** (`docs/tasks/week-6.md`). The whole city of the prototype is decided by the server; the plan of each week is in `docs/tasks/`, and the decisions in `docs/decisions.md`.
+Status: **week 7 of the roadmap** (`docs/tasks/week-7.md`). The whole city of the prototype is decided by the server; the plan of each week is in `docs/tasks/`, and the decisions in `docs/decisions.md`.
 
 ## Getting started
 

@@ -13,6 +13,7 @@ import {
   techCost,
   techTime,
   type PlayerState,
+  countDone,
 } from "../src/index.js";
 
 const json = <T>(v: T): T => JSON.parse(JSON.stringify(v));
@@ -86,7 +87,9 @@ describe("research at the Observatory", () => {
 
   it("an action: applyAction gives the same city as the rule; parseAction reads only known research", () => {
     const s = withObservatory();
-    expect(applyAction(s, { id: ID, type: "research", tech: "nets" })).toEqual(research(s, "nets"));
+    // What it starts also counts for today's tasks.
+    const r = research(s, "nets");
+    expect(applyAction(s, { id: ID, type: "research", tech: "nets" })).toEqual(r.ok ? { ...r, state: countDone(r.state, "research") } : r);
     expect(parseAction({ id: ID, type: "research", tech: "nets" })).toEqual({ id: ID, type: "research", tech: "nets" });
     for (const tech of ["teleport", "toString", "constructor", "", 3, null]) expect(parseAction({ id: ID, type: "research", tech }), String(tech)).toBeNull();
     expect(parseAction({ id: ID, type: "research", tech: "nets", level: 3 })).toBeNull();

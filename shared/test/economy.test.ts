@@ -49,10 +49,10 @@ describe("economy", () => {
     expect(r.wood).toBeCloseTo(42 * 0.7, 6);
   });
 
-  it("stoking the Lighthouse multiplies its consumption by 2.2", () => {
+  it("stoking the Lighthouse multiplies its consumption by 1.5", () => {
     const r = netRates(base, { mist: true, stoked: true });
-    // 1.1 − 0.25 × 2 × 2.2 = 0 → 0 /h
-    expect(r.oil).toBeCloseTo(0, 6);
+    // 1.1 − 0.25 × 2 × 1.5 = 0.35 → 3.5 /h
+    expect(r.oil).toBeCloseTo(3.5, 6);
   });
 
   it("a level 2 Kelp Greenhouse adds 9 fish per hour", () => {
@@ -85,7 +85,7 @@ describe("economy", () => {
 
   it("oil duration is computed when the Lighthouse burns more than it gets", () => {
     const s = { ...base, buildings: { ...STARTING_BUILDINGS, lighthouse: 6 } };
-    // 1.1 − 0.25 × 6 × 2.2 = −2.2 /proto s → −22 /h; 220 oil = 10 h
-    expect(oilAutonomy(s, 220)).toBeCloseTo(10 * 3600, 3);
+    // 1.1 − 0.25 × 6 × 1.5 = −1.15 /proto s → −11.5 /h; 115 oil = 10 h
+    expect(oilAutonomy(s, 115)).toBeCloseTo(10 * 3600, 3);
   });
 });

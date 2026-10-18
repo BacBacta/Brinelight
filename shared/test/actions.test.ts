@@ -12,6 +12,7 @@ import {
   upgrade,
   type GameAction,
   type PlayerState,
+  countDone,
 } from "../src/index.js";
 
 const ID = "3f2b8c1e-9d4a-4f6b-8e2c-1a7d5b9c0e4f";
@@ -36,7 +37,9 @@ const withReport = (): PlayerState => {
 describe("applyAction", () => {
   it("an upgrade gives the same city as the rule itself", () => {
     const s = newPlayerState();
-    expect(applyAction(s, { id: ID, type: "upgrade", building: "refinery" })).toEqual(upgrade(s, "refinery"));
+    // What it starts also counts for today's tasks.
+    const r = upgrade(s, "refinery");
+    expect(applyAction(s, { id: ID, type: "upgrade", building: "refinery" })).toEqual(r.ok ? { ...r, state: countDone(r.state, "upgrades") } : r);
   });
 
   it("sending a fleet gives the same city as the rule itself", () => {

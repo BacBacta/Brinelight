@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { CITY_SHAPE, applyAction, catchUp, migrateCity, parseState, type GameAction, type PlayerState } from "@brinelight/shared";
 import { and, eq, lt } from "drizzle-orm";
-import { ensureCity, gameSeconds, type DbLog } from "./cities.js";
+import { ensureCity, gameSeconds, savedClock, type DbLog } from "./cities.js";
 import type { Db } from "./index.js";
 import { appliedActions, cities } from "./schema.js";
 
@@ -45,7 +45,7 @@ export async function applyPlayerAction(db: Db, playerId: string, action: GameAc
   return db.transaction(async (tx) => {
     await ensureCity(tx, playerId, now);
     const [row] = await tx.select().from(cities).where(eq(cities.playerId, playerId)).for("update");
-    const stored = row ? migrateCity(row.state, row.shape) : null;
+    const stored = row ? migrateCity(row.state, row.shape, savedClock(row.savedAt)) : null;
     if (!row || !stored) {
       log?.error({ playerId, version: row?.version, shape: row?.shape }, "Stored city refused by migrateCity");
       return { kind: "unreadable" } as const;
