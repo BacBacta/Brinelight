@@ -26,6 +26,8 @@ export function eventText(e: GameEvent): string {
       return `${TECHS[e.tech].name} level ${e.level}`;
     case "raft":
       return "A new raft is moored";
+    case "repaired":
+      return e.count === 1 ? "A raft repaired" : `${e.count} rafts repaired`;
     case "raftBuilding":
       return e.level === 1 ? `${RAFT_BUILDINGS[e.building].name} built` : `${RAFT_BUILDINGS[e.building].name} level ${e.level}`;
     case "troops":

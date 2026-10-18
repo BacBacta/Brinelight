@@ -11,7 +11,7 @@
  * light sounds of wood and rope, made by the game, that you can turn off in the Profile.
  * The reference prototype stays playable at /prototype/.
  */
-import { HOME, applyAction, type GameAction } from "@brinelight/shared";
+import { HOME, applyAction, yardSlot, type GameAction } from "@brinelight/shared";
 import type { Wallet } from "@wallet-standard/base";
 import type { ActionInput } from "./account/actions.js";
 import { createAccount, isUntouched } from "./account/index.js";
@@ -35,11 +35,11 @@ import "./style.css";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 
 /** The actions that start a work: they knock twice on wood. */
-const WORKS = new Set<ActionInput["type"]>(["upgrade", "research", "train", "promote", "heal", "dockRaft", "installOnRaft", "upgradeRaft", "sail"]);
+const WORKS = new Set<ActionInput["type"]>(["upgrade", "research", "train", "promote", "heal", "dockRaft", "installOnRaft", "upgradeRaft", "repairRafts", "sail"]);
 
 /** What the screen shows: changes here open a report, refresh a sheet, and save the city of this device. */
 const signature = (s: PlayerState): string =>
-  `${s.queue.map((j) => j.id).join()}|${s.research?.id ?? ""}|${JSON.stringify(s.techs)}|${s.yard ? `${s.yard.kind}${s.yard.slot}` : ""}|${JSON.stringify(s.rafts)}|${s.training ? `${s.training.kind}${s.training.troop}` : ""}|${s.healing ? "h" : ""}|${JSON.stringify(s.troops)}|${JSON.stringify(s.veterans)}|${s.lead}|${JSON.stringify(s.captains)}|${JSON.stringify(s.shards)}|${s.reports.map((r) => `${r.id}${r.read ? "+" : "-"}`).join()}|${s.fleets.map((f) => f.phase).join()}|${s.mist.stoke}${s.mist.dark}${s.mist.held}.${s.mist.missed}`;
+  `${s.queue.map((j) => j.id).join()}|${s.research?.id ?? ""}|${JSON.stringify(s.techs)}|${s.yard ? `${s.yard.kind}${yardSlot(s.yard) ?? ""}` : ""}|${JSON.stringify(s.rafts)}|${s.training ? `${s.training.kind}${s.training.troop}` : ""}|${s.healing ? "h" : ""}|${JSON.stringify(s.troops)}|${JSON.stringify(s.veterans)}|${s.lead}|${JSON.stringify(s.captains)}|${JSON.stringify(s.shards)}|${s.reports.map((r) => `${r.id}${r.read ? "+" : "-"}`).join()}|${s.fleets.map((f) => f.phase).join()}|${s.mist.stoke}${s.mist.dark}${s.mist.held}.${s.mist.missed}`;
 
 if (new URLSearchParams(location.search).has("rules")) {
   showRules(app);
@@ -215,7 +215,7 @@ if (new URLSearchParams(location.search).has("rules")) {
     onLoaded: (kit, buildings, models) => {
       status.remove();
       fps?.modelsLoaded();
-      city = createCity(kit, buildings, models, scene, canvas, app, { state: () => state, upgrade: (building) => act({ type: "upgrade", building }), research: (tech) => act({ type: "research", tech }), train: (troop) => act({ type: "train", troop }), promote: (troop) => act({ type: "promote", troop }), heal: () => act({ type: "heal" }), stoke: (on) => act({ type: "stoke", on }), dockRaft: (slot) => act({ type: "dockRaft", slot }), installOnRaft: (slot, building) => act({ type: "installOnRaft", slot, building }), upgradeRaft: (slot) => act({ type: "upgradeRaft", slot }), toCity: () => ui.showView("city"), speed });
+      city = createCity(kit, buildings, models, scene, canvas, app, { state: () => state, upgrade: (building) => act({ type: "upgrade", building }), research: (tech) => act({ type: "research", tech }), train: (troop) => act({ type: "train", troop }), promote: (troop) => act({ type: "promote", troop }), heal: () => act({ type: "heal" }), stoke: (on) => act({ type: "stoke", on }), dockRaft: (slot) => act({ type: "dockRaft", slot }), installOnRaft: (slot, building) => act({ type: "installOnRaft", slot, building }), upgradeRaft: (slot) => act({ type: "upgradeRaft", slot }), repairRafts: () => act({ type: "repairRafts" }), toCity: () => ui.showView("city"), speed });
       sea = createSea(kit, models, scene, canvas, app, {
         state: () => state,
         sail: (site) => {

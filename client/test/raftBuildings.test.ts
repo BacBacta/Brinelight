@@ -98,6 +98,32 @@ describe("the sheet of a raft", () => {
   });
 });
 
+describe("repairing the rafts, on a raft's sheet", () => {
+  const damaged = (): PlayerState => {
+    const s = carrying(moored(), A, "greenhouse", 1);
+    return { ...s, rafts: { ...s.rafts, [A]: { ...s.rafts[A]!, hp: 65 }, [B]: { ...s.rafts[B]!, hp: 25 } } };
+  };
+
+  it("while rafts are damaged, every raft's sheet offers to repair them all: the cost in oil and wood, the time", () => {
+    const html = raftSheetHtml(damaged(), C, 1)!.body;
+    // 35 + 75 = 110 points at Lighthouse 6: 1,320 oil and 110 wood, 110 / 35 × 6 minutes.
+    expect(html).toContain("Repair the 2 damaged rafts");
+    expect(html).toContain('data-act="repair"');
+    expect(html).toContain("1,320");
+    expect(html).toContain("Time: 19 min");
+    expect(raftSheetHtml(damaged(), A, 1)!.body).toContain("Repair the 2 damaged rafts");
+    expect(raftSheetHtml(moored(), A, 1)!.body).not.toContain('data-act="repair"');
+  });
+
+  it("while they are repaired: their sheets show the work, the queue names it", () => {
+    const r = applyAction(damaged(), { id: "", type: "repairRafts" });
+    if (!r.ok) throw new Error(r.reason);
+    expect(raftSheetHtml(r.state, B, 1)!.body).toContain("Repairing 2 rafts.");
+    expect(raftSheetHtml(r.state, C, 1)!.body).not.toContain('data-act="repair"');
+    expect(yardName(r.state)).toBe("Shipyard · repairing 2 rafts");
+  });
+});
+
 describe("the queue", () => {
   it("names the shipyard's work: a raft, a building put on a raft, a building one level up", () => {
     const docked = applyAction(moored(), { id: "", type: "dockRaft", slot: INNER[4]! });

@@ -731,17 +731,25 @@ describe("celebrations", () => {
 
 describe("the Mist's mood", () => {
   it("the Mist's mood: calm before a Mist, the Mist's look when the rules say it is on, and with ?mist to see it", async () => {
-    /** A city saved now, its own clock at `clock` (UTC seconds): the banner and the 3D view read the rules on it. */
+    /**
+     * A city saved at T, its own clock at `clock` (UTC seconds): the banner and the 3D view read the rules on it. The
+     * page's clock is paused at T + 1 s, so no game time passes before the banner is read: the e2e build runs a city
+     * without an account 60 times faster (DEV_SPEED, docs/decisions.md), and a page that lived 5 seconds would count
+     * 5 minutes down. Then the clock runs for the FPS counter.
+     */
+    const T = new Date("2026-10-18T12:00:00.000Z").getTime();
     const look = async (query: string, clock: number) => {
       const p = await newPlayer(false);
-      await p.context.addInitScript(({ key, file }) => localStorage.setItem(key, file), { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: Date.now(), state: newPlayerState(clock) }) });
+      await p.context.addInitScript(({ key, file }) => localStorage.setItem(key, file), { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: T, state: newPlayerState(clock) }) });
       const page = await p.context.newPage();
+      await page.clock.install({ time: T });
+      await page.clock.pauseAt(new Date(T + 1000));
       await page.goto(`${GAME}/?quality=2&fps${query}`);
       await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
-      await page.waitForSelector(".labels.city .bl b");
-      await expect.poll(() => page.locator(".fps").innerText(), NET).toMatch(/calls/);
-      await page.waitForTimeout(1500);
       const banner = await page.locator('.sub [data-k="mist"]').innerText();
+      // Frames for the counter: the page's clock runs 200 ms at a time until it shows the draw calls.
+      for (let i = 0; i < 50 && !/calls/.test(await page.locator(".fps").innerText().catch(() => "")); i++) await page.clock.runFor(200);
+      await page.clock.runFor(1500);
       const fps = await page.locator(".fps").innerText();
       await page.screenshot({ path: `e2e/.shots/shot-mood-${query ? "preview" : clock % (24 * HOUR) >= 4 * HOUR ? "mist" : "calm"}.png` });
       await p.context.close();
@@ -752,10 +760,9 @@ describe("the Mist's mood", () => {
     const calm = await look("", day + HOUR);
     const mist = await look("", day + 4.5 * HOUR);
     const preview = await look("&mist", day + HOUR);
-    // Loading takes a few minutes here: the countdown has gone on meanwhile.
-    expect(calm.banner).toMatch(/^Mist in [23] h \d\d · enough oil$/);
+    expect(calm.banner).toBe("Mist in 3 h 00 · enough oil");
     expect(calm.fps).not.toMatch(/Mist/);
-    expect(mist.banner).toMatch(/^Mist · (1 h \d\d|\d+ min) left · Lighthouse stoked$/);
+    expect(mist.banner).toBe("Mist · 1 h 30 left · Lighthouse stoked");
     expect(mist.fps).toMatch(/City · Mist/);
     expect(preview.banner).toMatch(/^Mist · /);
     expect(preview.fps).toMatch(/City · Mist/);
@@ -966,7 +973,12 @@ describe("the look", () => {
     return r.state;
   };
 
-  /** Opens the game with its clock fixed at T0, a city saved at T0, then pauses the clock 5 minutes later. */
+  /**
+   * The city's own clock for the captures: 06:00 UTC, just after a Mist. The 5 minutes the page runs are 5 hours of game
+   * time in the e2e build (DEV_SPEED 60), so the city stays in calm weather until 11:00: the references are calm.
+   */
+  const CALM = 6 * HOUR;
+  /** Opens the game with its clock fixed at T0, a city saved at T0 (in calm weather), then pauses the clock 5 minutes later. */
   async function frozenGame(size: { width: number; height: number }, city: PlayerState): Promise<Page> {
     const p = await newPlayer(false, size);
     await p.context.addInitScript(
@@ -975,7 +987,7 @@ describe("the look", () => {
         localStorage.setItem(key, file);
         sessionStorage.setItem("e2e-injected", "1");
       },
-      { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: T0.getTime(), state: city }) },
+      { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: T0.getTime(), state: { ...city, clock: CALM } }) },
     );
     const page = await p.context.newPage();
     // Paused before the game starts: however long the loading takes, the game sees the same times, frame by frame.
@@ -1719,7 +1731,7 @@ describe("signed in", () => {
     await expect(sheet.textContent()).resolves.toContain("You can moor a raft here");
     await p.page.screenshot({ path: "e2e/.shots/shot-raft-slot.png" });
     await sheet.locator('[data-act="dock"]').click();
-    await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).yard?.slot, NET).toBe(slot);
+    await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).yard, NET).toMatchObject({ kind: "raft", slot });
     await expect.poll(() => p.page.locator(".queue .n", { hasText: "Shipyard · raft" }).count(), NET).toBe(1);
 
     // 3 seconds from the end of the work: the server moors the raft on its own clock.
@@ -1761,6 +1773,39 @@ describe("signed in", () => {
     await sheet.locator('[data-act="logbook"]').click();
     await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).captains.sel, NET).toEqual({ level: 1, xp: 40, stars: 1 });
     expect(((await serverCity(p.token))!.state as unknown as PlayerState).pearls).toBe(base.pearls - 50);
+    expect(p.problems).toEqual([]);
+    await p.context.close();
+  });
+
+  it("repairing the rafts: from a raft's sheet, all damaged rafts at once, paid in oil, sound again by the server's clock", async () => {
+    const p = await signedInPlayer();
+    const base = newPlayerState();
+    const { slot, x, y } = slotOnScreen(4);
+    const other = RAFT_SLOTS.find((s) => s.ring === 3 && s.key !== slot)!.key;
+    // Two rafts after Mists not held (the e2e harness only).
+    await h.putCity(p.playerId, { ...base, buildings: { ...base.buildings, lighthouse: 4 }, stock: { oil: 5000, fish: 5000, wood: 5000, rope: 20 }, rafts: { [slot]: { hp: 65, building: null, level: 0 }, [other]: { hp: 25, building: null, level: 0 } } });
+    await show(p.page);
+    await expect.poll(async () => Object.keys(((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.rafts ?? {}).length, NET).toBe(2);
+    await p.page.waitForTimeout(500);
+    await calm(p.page);
+    await p.page.mouse.click(x, y);
+    const sheet = p.page.locator(".raft-sheet:not([hidden])");
+    await sheet.waitFor();
+    await expect.poll(() => sheet.locator(".box", { hasText: "Repair the 2 damaged rafts" }).count(), NET).toBe(1);
+    await p.page.screenshot({ path: "e2e/.shots/shot-repair.png" });
+    await sheet.locator('[data-act="repair"]').click();
+    // 110 points at Lighthouse 4: 880 oil and 110 wood, paid at once.
+    await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).yard, NET).toMatchObject({ kind: "repair" });
+    const started = (await serverCity(p.token))!.state as unknown as PlayerState;
+    expect(started.stock.oil).toBeLessThan(5000 - 880 + 50);
+    await expect.poll(() => p.page.locator(".queue .n", { hasText: "Shipyard · repairing 2 rafts" }).count(), NET).toBe(1);
+    // 3 seconds from its end: the server makes them sound on its own clock.
+    await h.putCity(p.playerId, { ...started, yard: { ...started.yard!, left: 3 } });
+    await show(p.page);
+    await p.page.waitForTimeout(4000);
+    const done = (await serverCity(p.token))!.state as unknown as PlayerState;
+    expect([done.rafts[slot]!.hp, done.rafts[other]!.hp]).toEqual([100, 100]);
+    expect(done.yard).toBeNull();
     expect(p.problems).toEqual([]);
     await p.context.close();
   });

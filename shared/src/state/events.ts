@@ -16,6 +16,7 @@ export type GameEvent =
   | { kind: "research"; tech: TechId; level: number }
   | { kind: "raft"; slot: string }
   | { kind: "raftBuilding"; slot: string; building: RaftBuildingId; level: number }
+  | { kind: "repaired"; count: number }
   | { kind: "troops"; troop: TroopType; count: number }
   | { kind: "veterans"; troop: TroopType; count: number }
   | { kind: "healed"; count: number }
@@ -44,6 +45,8 @@ export function eventsBetween(before: PlayerState, after: PlayerState): GameEven
     if (!was) out.push({ kind: "raft", slot });
     if (raft.building && (!was || was.building !== raft.building || raft.level > was.level)) out.push({ kind: "raftBuilding", slot, building: raft.building, level: raft.level });
   }
+  const repaired = Object.entries(after.rafts).filter(([slot, r]) => before.rafts[slot] && r.hp > before.rafts[slot]!.hp).length;
+  if (repaired > 0) out.push({ kind: "repaired", count: repaired });
   const t = before.training;
   if (t && !goesOn(t, after.training, (a, b) => a.kind === b.kind && a.troop === b.troop && a.count === b.count)) {
     out.push({ kind: t.kind === "train" ? "troops" : "veterans", troop: t.troop, count: t.count });

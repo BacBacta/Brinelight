@@ -39,6 +39,7 @@ export function createCity(
     dockRaft(slot: string): void;
     installOnRaft(slot: string, building: RaftBuildingId): void;
     upgradeRaft(slot: string): void;
+    repairRafts(): void;
     toCity(): void;
     /** How much faster than real time the city runs: the server's speed when signed in. */
     speed(): number;
@@ -68,6 +69,7 @@ export function createCity(
     dock: (slot) => game.dockRaft(slot),
     install: (slot, building) => game.installOnRaft(slot, building),
     upgrade: (slot) => game.upgradeRaft(slot),
+    repair: () => game.repairRafts(),
     close: () => raftSheet.close(),
   });
 

@@ -24,6 +24,7 @@ import {
   upgradeRaft,
   type PlayerState,
   type RaftBuildingId,
+  type YardJob,
 } from "../src/index.js";
 
 const json = <T>(v: T): T => JSON.parse(JSON.stringify(v));
@@ -221,7 +222,7 @@ describe("parseState: buildings on rafts and the shipyard's work", () => {
     expect(parseState(json({ ...upgrading, yard: { ...upgrading.yard!, left: 1e9 } }))?.yard?.left).toBe(upgrading.yard!.duration);
   });
 
-  const job = installing.yard!;
+  const job = installing.yard as Extract<YardJob, { slot: string }>;
   const bad: [string, unknown][] = [
     ["a raft with no building above level 0", { ...moored(), rafts: { [A]: { ...free, level: 1 } } }],
     ["a raft with a building at level 0", carrying(moored(), A, "greenhouse", 0)],

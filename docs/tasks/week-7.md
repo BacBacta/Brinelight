@@ -115,6 +115,13 @@ Decided by the owner (18 October):
 3. **All at once:** one tap repairs every damaged raft.
 4. **No raft is ever stopped:** a raft never goes below 25 (task 1), and below 60 its building runs at half efficiency, never at a standstill. What the repair unlocks: full efficiency again, and the raft's building can be upgraded again (refused below 60: "Repair this raft first").
 
+**Done (18 October).**
+- **Rule:** `repairRafts` repairs every damaged raft at once at the shipyard: 2 × the Lighthouse's level in oil and 1 wood per missing point, 6 minutes per 35 points; a raft below 60 must be repaired before its building is upgraded.
+- **Client:** every raft's sheet offers the repair while some rafts are damaged (cost, time), the rafts under repair show it, the queue says "Shipyard · repairing 2 rafts", and "2 rafts repaired" is celebrated.
+- **Tests:** `shared/test/repair.test.ts`, the server's cheat case, an e2e scenario (repaired from a raft's sheet, sound again by the server's clock).
+- **No shape change:** the plan's shape 7 was not needed, since the repair adds no field to the city.
+- **What it cannot do alone:** halve the oil that overflows. The regular and dedicated players never miss a Mist, so they never repair; task 5 measures this.
+
 ## Task 3 · The Leviathan
 
 What it does:

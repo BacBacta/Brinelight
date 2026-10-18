@@ -4,7 +4,7 @@ import { canSetLead, starWithShards, unlockWithShards, useLogbook, type CaptainI
 import { advanceStock, netRates, storeCap, type Weather } from "../rules/economy.js";
 import { advanceHealing, startHealing } from "../rules/healing.js";
 import { MIST_HELD_PEARLS, isLit, mistAt, seaReach, startingMist } from "../rules/mist.js";
-import { advanceYard, applyMistDamage, startInstall, startRaft, startRaftUpgrade, type RaftBuildingId } from "../rules/rafts.js";
+import { advanceYard, applyMistDamage, startInstall, startRaft, startRaftUpgrade, startRepair, type RaftBuildingId } from "../rules/rafts.js";
 import { advanceResearch, startResearch, type TechId } from "../rules/research.js";
 import { advanceFleets, leadOf, sendFleet, startingSeaWorld, type CombatReport, type SeaState, type Sight } from "../rules/sea.js";
 import { STARTING_CAPTAIN, STARTING_LEAD, STARTING_MORALE, STARTING_PEARLS, STARTING_STOCK, STARTING_SURVIVORS, STARTING_TROOPS } from "../rules/start.js";
@@ -238,6 +238,12 @@ export function installOnRaft(state: PlayerState, slot: string, building: RaftBu
 /** Takes the building on the raft of a slot one level up with the shared rule; a refusal comes with its reason. */
 export function upgradeRaft(state: PlayerState, slot: string): ActionResult {
   const r = startRaftUpgrade({ rafts: state.rafts, slot, stock: state.stock, yard: state.yard });
+  return r.ok ? { ok: true, state: { ...state, stock: r.stock, yard: r.yard } } : r;
+}
+
+/** Repairs every damaged raft at the shipyard with the shared rule; a refusal comes with its reason. */
+export function repairRafts(state: PlayerState): ActionResult {
+  const r = startRepair({ rafts: state.rafts, lighthouse: state.buildings.lighthouse, stock: state.stock, yard: state.yard });
   return r.ok ? { ok: true, state: { ...state, stock: r.stock, yard: r.yard } } : r;
 }
 

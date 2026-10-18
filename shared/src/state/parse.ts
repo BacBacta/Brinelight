@@ -144,13 +144,20 @@ function parseResearch(raw: unknown, techs: Techs): ResearchJob | null | undefin
 
 /**
  * The work at the shipyard: none (null), a new raft on a known slot with no raft yet, a building put on a free raft,
- * or a raft building below its highest level taken one level up; with its time left brought back between 0 and its
- * duration. Anything else refuses the city.
+ * a raft building below its highest level taken one level up, or a repair of rafts the city has; with its time left
+ * brought back between 0 and its duration. Anything else refuses the city.
  */
 function parseYard(raw: unknown, rafts: Rafts): YardJob | null | undefined {
   if (raw === null) return null;
   if (!isObj(raw)) return undefined;
   const { slot, kind, left, duration } = raw;
+  if (kind === "repair") {
+    // The rafts being repaired: at least one, each a raft of the city, none twice.
+    const slots = raw.slots;
+    if (Object.keys(raw).sort().join() !== "duration,kind,left,slots" || !isNum(left) || !isNum(duration) || duration <= 0) return undefined;
+    if (!Array.isArray(slots) || slots.length === 0 || new Set(slots).size !== slots.length || !slots.every((k) => typeof k === "string" && has(rafts, k))) return undefined;
+    return { slots: [...(slots as string[])], kind, left: Math.min(Math.max(0, left), duration), duration };
+  }
   if (typeof slot !== "string" || !SLOTS.has(slot) || !isNum(left) || !isNum(duration) || duration <= 0) return undefined;
   const time = { left: Math.min(Math.max(0, left), duration), duration };
   const keys = Object.keys(raw).sort().join();

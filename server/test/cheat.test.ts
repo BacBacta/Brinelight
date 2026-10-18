@@ -564,4 +564,28 @@ describe("a modified client cannot change the rules", () => {
     expect(p.ref.now().mist).toMatchObject({ held: 1, missed: 1 });
     expect(p.ref.now().pearls).toBe(pearls + 30);
   });
+
+  it("repairs: nothing to repair, the shipyard busy, not enough oil, fields sent; the server decides when the rafts are sound", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const [a, b] = RAFT_SLOTS.map((s) => s.key) as [string, string];
+    const base = newPlayerState();
+    const sound = await player({ ...base, rafts: { [a]: { hp: RAFT_MAX_HP, building: null, level: 0 } } });
+    await expectRefused(server, sound, action({ type: "repairRafts" }), "Your rafts are in good shape");
+    const damaged = { ...base, buildings: { ...base.buildings, lighthouse: 5 }, rafts: { [a]: { hp: 65, building: null, level: 0 }, [b]: { hp: 25, building: "greenhouse" as const, level: 1 } } };
+    const poor = await player({ ...damaged, stock: { ...damaged.stock, oil: 0 } });
+    await expectRefused(server, poor, action({ type: "repairRafts" }), "Not enough resources");
+    const p = await player({ ...damaged, stock: { oil: 5000, fish: 5000, wood: 5000, rope: 5 } });
+    // A client cannot name the rafts, their sturdiness or the cost.
+    const order = action({ type: "repairRafts" });
+    for (const extra of [{ slots: [a] }, { hp: RAFT_MAX_HP }, { oil: 0 }]) await expectInvalid(server, p, { action: { ...order, ...extra } });
+    await expectApplied(server, p, action({ type: "repairRafts" }));
+    await expectRefused(server, p, action({ type: "repairRafts" }), "The shipyard is busy");
+    // 110 points missing: 110 / 35 × 6 minutes, on the server's clock.
+    later(Math.floor((110 / 35) * 360 * 1000) - 1000);
+    await expectRules(server, p);
+    expect(p.ref.now().rafts[b]!.hp).toBe(25);
+    later(2000);
+    await expectRules(server, p);
+    expect(Object.values(p.ref.now().rafts).map((r) => r.hp)).toEqual([RAFT_MAX_HP, RAFT_MAX_HP]);
+  });
 });

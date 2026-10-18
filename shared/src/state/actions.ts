@@ -10,7 +10,7 @@ import { TECHS, type TechId } from "../rules/research.js";
 import { seaSite } from "../rules/sea.js";
 import type { BuildingId, TroopType } from "../rules/types.js";
 import { REPORT_ID } from "./parse.js";
-import { addStar, dockRaft, heal, installOnRaft, logbook, promote, readReport, research, sail, setLead, stoke, train, unlockCaptain, upgrade, upgradeRaft, type ActionResult } from "./state.js";
+import { addStar, dockRaft, heal, installOnRaft, logbook, promote, readReport, research, sail, repairRafts, setLead, stoke, train, unlockCaptain, upgrade, upgradeRaft, type ActionResult } from "./state.js";
 import type { PlayerState } from "./types.js";
 
 /** Every action carries an id made by the client (a UUID), so the server never applies it twice. */
@@ -29,7 +29,8 @@ export type GameAction =
   | { id: string; type: "logbook" }
   | { id: string; type: "unlockCaptain"; captain: CaptainId }
   | { id: string; type: "addStar"; captain: CaptainId }
-  | { id: string; type: "stoke"; on: boolean };
+  | { id: string; type: "stoke"; on: boolean }
+  | { id: string; type: "repairRafts" };
 
 export type GameActionType = GameAction["type"];
 
@@ -53,6 +54,7 @@ const FIELDS: Record<GameActionType, readonly string[]> = {
   unlockCaptain: ["captain"],
   addStar: ["captain"],
   stoke: ["on"],
+  repairRafts: [],
 };
 
 const SLOTS = new Set(RAFT_SLOTS.map((s) => s.key));
@@ -98,6 +100,8 @@ export function applyAction(state: PlayerState, action: GameAction): ActionResul
       return addStar(state, action.captain);
     case "stoke":
       return stoke(state, action.on);
+    case "repairRafts":
+      return repairRafts(state);
   }
 }
 
@@ -167,6 +171,9 @@ export function parseAction(raw: unknown): GameAction | null {
       case "stoke":
         // The order only: never an amount of oil or a time.
         return typeof o.on === "boolean" ? { id, type: t, on: o.on } : null;
+      case "repairRafts":
+        // No field: never a raft, a sturdiness or a cost.
+        return { id, type: t };
     }
   } catch {
     return null;

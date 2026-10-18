@@ -13,6 +13,7 @@ import {
   raftCost,
   repairCost,
   type PlayerState,
+  type YardJob,
 } from "../src/index.js";
 
 const json = <T>(v: T): T => JSON.parse(JSON.stringify(v));
@@ -67,8 +68,8 @@ describe("rafts around the island", () => {
 
   it("RAFT_MAX_HP is the new raft's sturdiness and what a repair goes back to", () => {
     expect(RAFT_MAX_HP).toBe(100);
-    expect(repairCost({ hp: RAFT_MAX_HP, building: null, level: 0 })).toEqual({ wood: 0 });
-    expect(repairCost({ hp: 40, building: null, level: 0 })).toEqual({ wood: (RAFT_MAX_HP - 40) * 3 });
+    expect(repairCost({ "3,0": { hp: RAFT_MAX_HP, building: null, level: 0 } }, 5)).toEqual({ oil: 0, wood: 0 });
+    expect(repairCost({ "3,0": { hp: 40, building: null, level: 0 } }, 5)).toEqual({ oil: (RAFT_MAX_HP - 40) * 2 * 5, wood: RAFT_MAX_HP - 40 });
   });
 
   it("an action: applyAction gives the same city as the rule; parseAction reads only known slots", () => {
@@ -81,7 +82,7 @@ describe("rafts around the island", () => {
 
 describe("parseState: the shipyard", () => {
   const started = (dockRaft(lit(), INNER[0]!) as { state: PlayerState }).state;
-  const job = started.yard!;
+  const job = started.yard as Extract<YardJob, { slot: string }>;
 
   it("reads none, or a raft being built", () => {
     expect(parseState(json(newPlayerState()))?.yard).toBeNull();
