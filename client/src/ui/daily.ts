@@ -41,7 +41,9 @@ export function dailyHtml(state: PlayerState): string {
   const chests = CHESTS.map((c) => {
     const got = today.chests.includes(c);
     const can = !got && points >= c;
-    return `<button class="ch${got ? " got" : can ? " can" : ""}" data-act="chest" data-chest="${c}" ${can ? "" : 'aria-disabled="true"'} aria-label="Chest ${c}"><span>${got ? "✓" : "▣"}</span><small>${c}</small></button>`;
+    // Never disabled: a chest you cannot open yet says why when tapped (the rules' refusal), and looks grey.
+    const label = got ? `Chest ${c}, opened today` : can ? `Open chest ${c}` : `Chest ${c}, needs ${c} points: tap to see why it is closed`;
+    return `<button class="ch${got ? " got" : can ? " can" : ""}" data-act="chest" data-chest="${c}" aria-label="${label}"><span>${got ? "✓" : "▣"}</span><small>${c}</small></button>`;
   }).join("");
   const tasks = DAILY_TASKS.map((t) => {
     const n = Math.min(t.goal, today.counts[t.id]);

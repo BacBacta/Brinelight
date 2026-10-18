@@ -1899,8 +1899,8 @@ describe("signed in", () => {
     await sheet.locator('[data-act="chest"][data-chest="20"]').click();
     await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).daily.chests, NET).toEqual([20]);
     await expect.poll(() => sheet.locator(".ch.got").count(), NET).toBe(1);
-    // A second tap (the chest stays tappable, aria-disabled): refused by the rules, with their reason.
-    await sheet.locator('[data-act="chest"][data-chest="20"]').click({ force: true });
+    // A second tap on the opened chest: it says why, with the rules' refusal.
+    await sheet.locator('[data-act="chest"][data-chest="20"]').click();
     await expect.poll(() => p.page.locator(".toast", { hasText: "You already opened this chest today" }).count(), NET).toBe(1);
     expect(((await serverCity(p.token))!.state as unknown as PlayerState).daily.chests).toEqual([20]);
     expect(p.problems).toEqual([]);

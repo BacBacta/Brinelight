@@ -39,7 +39,10 @@ describe("the daily tasks", () => {
     expect(html).toContain("00:00 UTC");
     expect((html.match(/data-act="chest"/g) ?? []).length).toBe(5);
     expect(html).toContain('class="ch can" data-act="chest" data-chest="60"');
-    expect(html).toContain('class="ch" data-act="chest" data-chest="80" aria-disabled="true"');
+    // A chest you cannot open yet is grey but never disabled: tapped, it says why.
+    expect(html).toContain('class="ch" data-act="chest" data-chest="80" aria-label="Chest 80, needs 80 points: tap to see why it is closed"');
+    expect(html).not.toContain("aria-disabled");
+    expect(html).toContain('aria-label="Open chest 60"');
     expect(html).toContain("Start 3 upgrades</b><small>3 / 3 · 30 points");
     expect(html).toContain("Gather at sea 3 times</b><small>1 / 3 · 20 points");
     // The next chest's reward, grown with the Lighthouse (level 2): 120 wood and 120 fish.
