@@ -12,8 +12,11 @@ describe("economy", () => {
     expect(storeCap(2)).toBe(6500);
     expect(storeCap(10)).toBe(26500);
     expect(storeCap(15)).toBe(39000);
-    // From the Lighthouse 16, the next level's wood leads: 180 × 1.4¹⁶ = 39,690 → 39,690 × 1.25.
-    expect(storeCap(16)).toBe(Math.round(upgradeCost("lighthouse", 16).wood! * 1.25));
+    // From the Lighthouse 16, the next level's wood leads: 36,400 × 1.25 = 45,500.
+    expect(storeCap(16)).toBe(45500);
+    expect(storeCap(20)).toBe(129963);
+    // The largest: 1.25 × 180 × 1.4¹⁵ × 1.3¹⁵ at the Lighthouse 30.
+    expect(storeCap(LIGHTHOUSE_MAX)).toBe(1791650);
     for (let l = 2; l <= LIGHTHOUSE_MAX; l++) expect(storeCap(l), `Lighthouse ${l}`).toBeGreaterThanOrEqual(upgradeCost("lighthouse", l).wood! * 1.25);
     expect(storeCap(16, { warehouses: 2 })).toBe(Math.round(upgradeCost("lighthouse", 16).wood! * 1.25 * 1.3));
   });

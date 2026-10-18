@@ -75,6 +75,8 @@ Do the tasks in order, one per session. For each one: read CLAUDE.md, say what y
 
 **Rebalanced (18 October), by the owner's decision (options I and J):** the Lighthouse costs ×1.4 a level and takes ×1.35 a level (instead of ×1.62 and ×1.55), the Lumberyard makes 42 wood an hour a level (instead of 14), the storage holds at least 1.25 times the wood of the Lighthouse's next level, and a wreck's oil fills the storage and no more. The simulation now plays 90 days: Lighthouse 15 on day 17.5 to 26.0, no storage wall. The curve after Lighthouse 15 is measured in `docs/balance.md` and waits for the owner's decision.
 
+**After Lighthouse 15 (18 October), by the owner's decision:** each level costs ×1.3 and takes ×1.2 the one before, from level 16 on. The simulation now plays a year: Lighthouse 30 on day 321 to 371.
+
 ## Not this week
 
 The Mist's mechanism and raft repair, the Leviathan, objectives and Daily Tasks (week 7); renting the server, the load test, the first Solana proof (week 8); multiplayer (weeks 9 to 13); the daily recruitment (week 15).

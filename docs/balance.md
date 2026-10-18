@@ -1,6 +1,6 @@
 # Balance
 
-What the rules of `shared/` give over 90 days of play, measured by `npm run balance` (`tools/balance/`, week 6, task 5). The tables are written by the script; `npm test` fails when they no longer match the rules. The CSV of every day is `docs/balance/days.csv`. The script changes no value: the rules it plays are those of `shared/`, rebalanced on 18 October by the owner's decision (options I and J below, `docs/decisions.md`). The curve after Lighthouse 15 was measured on temporary copies of the rules and waits for the owner's decision.
+What the rules of `shared/` give over a year of play (365 days), measured by `npm run balance` (`tools/balance/`, week 6, task 5). The tables are written by the script; `npm test` fails when they no longer match the rules. The CSV of every day is `docs/balance/days.csv`. The script changes no value: the rules it plays are those of `shared/`, rebalanced on 18 October by the owner's decisions (options I and J below, then the gentler curve after Lighthouse 15; `docs/decisions.md`).
 
 ## How the players play
 
@@ -22,7 +22,7 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 6. **Captains:** unlock and add stars as soon as there are shards; the rarest, then highest level, leads; a Logbook while 100 Pearls are left after it.
 7. **Rafts:** a building on an empty raft (Greenhouse, Smokehouse, Watchtower, two of each), else the lowest raft building upgraded, else a new raft.
 
-**The reserve:** while the Lighthouse waits, every other spending leaves untouched the cost of its next level, up to what the storage holds (no one can save more); while the Lighthouse is being built, nothing is kept. A first try without this reserve for the other buildings gave a player who never researched nor trained in 60 days: they spent all the wood on buildings first.
+**The reserve:** while the Lighthouse waits, every other spending leaves untouched the cost of its next level, up to what the storage holds (no one can save more); while the Lighthouse is being built, or once it is at level 30, nothing is kept. A first try without this reserve for the other buildings gave a player who never researched nor trained in 60 days: they spent all the wood on buildings first.
 
 **Not modeled:** the Mist (always calm, the Lighthouse never stoked), the Leviathan, objectives and daily tasks (week 7), other players, the daily recruitment, Fish Shoals and Wooded Isles (fleets cannot go there yet).
 
@@ -34,43 +34,43 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 
 ### Milestones (days after the city is founded)
 
-| Profile | Lighthouse 5 | Lighthouse 10 | Lighthouse 15 | Lighthouse 20 | Refinery 2 | Barracks 1 | First camp beaten |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | day 1.1 | day 7.6 | day 26.0 | day 72.2 | day 4.0 | day 0.0 | day 1.3 |
-| Regular (6 sessions) | day 1.1 | day 5.8 | day 19.7 | day 62.2 | day 2.4 | day 0.0 | day 2.0 |
-| Dedicated (10 sessions) | day 1.1 | day 5.7 | day 17.5 | day 56.2 | day 1.5 | day 0.0 | day 1.1 |
+| Profile | Lighthouse 5 | Lighthouse 10 | Lighthouse 15 | Lighthouse 20 | Lighthouse 25 | Lighthouse 30 | Refinery 2 | Barracks 1 | First camp beaten |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Casual (3 sessions) | day 1.1 | day 7.6 | day 26.0 | day 63.0 | day 152.4 | day 371.4 | day 4.0 | day 0.0 | day 1.3 |
+| Regular (6 sessions) | day 1.1 | day 5.8 | day 19.7 | day 52.6 | day 122.7 | day 321.4 | day 2.4 | day 0.0 | day 2.0 |
+| Dedicated (10 sessions) | day 1.1 | day 5.7 | day 17.5 | day 45.2 | day 119.4 | day 325.8 | day 1.5 | day 0.0 | day 1.1 |
 
 ### Day 30
 
 | Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Casual (3 sessions) | 15 | 65,739 | 28,242 | 35,101 | 7,101 | 56,550 | 495 | 6 (mira, 8, 22★) | 28 | 7 | 40 |
-| Regular (6 sessions) | 16 | 88,955 | 71,650 | 30,833 | 25,181 | 71,050 | 301 | 6 (mira, 14, 30★) | 28 | 7 | 66 |
-| Dedicated (10 sessions) | 17 | 99,848 | 99,470 | 13,730 | 29,014 | 99,470 | 383 | 6 (mira, 20, 30★) | 28 | 7 | 106 |
-
-### Day 60
-
-| Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 19 | 113,905 | 130,303 | 109,648 | 91,554 | 194,971 | 299 | 6 (mira, 15, 30★) | 28 | 7 | 68 |
-| Regular (6 sessions) | 19 | 124,700 | 194,971 | 85,179 | 90,793 | 194,971 | 430 | 6 (mira, 20, 30★) | 28 | 7 | 99 |
-| Dedicated (10 sessions) | 20 | 133,858 | 202,878 | 53,721 | 31,913 | 272,963 | 686 | 6 (mira, 20, 30★) | 28 | 7 | 154 |
+| Regular (6 sessions) | 16 | 89,035 | 65,975 | 30,713 | 28,309 | 65,975 | 301 | 6 (mira, 14, 30★) | 28 | 7 | 66 |
+| Dedicated (10 sessions) | 17 | 99,716 | 90,328 | 10,849 | 46,656 | 85,768 | 562 | 6 (mira, 20, 30★) | 28 | 7 | 112 |
 
 ### Day 90
 
 | Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 20 | 134,991 | 215,003 | 191,879 | 129,925 | 272,963 | 403 | 6 (mira, 19, 30★) | 28 | 7 | 88 |
-| Regular (6 sessions) | 21 | 146,720 | 320,471 | 146,440 | 112,861 | 382,148 | 402 | 6 (mira, 20, 30★) | 28 | 7 | 127 |
-| Dedicated (10 sessions) | 21 | 152,122 | 393,488 | 93,912 | 214,934 | 382,148 | 741 | 6 (mira, 20, 30★) | 28 | 7 | 195 |
+| Casual (3 sessions) | 21 | 139,205 | 193,462 | 190,608 | 87,961 | 244,978 | 452 | 6 (mira, 19, 30★) | 28 | 7 | 88 |
+| Regular (6 sessions) | 23 | 158,254 | 166,846 | 30,587 | 12,841 | 414,011 | 511 | 6 (mira, 20, 30★) | 28 | 7 | 127 |
+| Dedicated (10 sessions) | 23 | 162,058 | 414,011 | 65,207 | 112,462 | 414,011 | 700 | 6 (mira, 20, 30★) | 28 | 7 | 202 |
+
+### Day 365
+
+| Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Casual (3 sessions) | 29 | 237,190 | 345,729 | 998,325 | 538,947 | 1,998,372 | 649 | 6 (mira, 20, 30★) | 28 | 7 | 182 |
+| Regular (6 sessions) | 30 | 252,918 | 2,603,773 | 455,839 | 949,127 | 2,597,893 | 954 | 6 (mira, 20, 30★) | 28 | 7 | 259 |
+| Dedicated (10 sessions) | 30 | 255,126 | 2,603,013 | 373,141 | 1,145,705 | 2,597,893 | 1,270 | 6 (mira, 20, 30★) | 28 | 7 | 355 |
 
 ### Waiting and blocks
 
-| Profile | Builder hours free a day (days 1–30) | (days 31–60) | (days 61–90) | Sessions with a builder free and nothing to start | Sessions with nothing at all | Blocked by (sessions) | Hours full: oil, fish, wood |
+| Profile | Builder hours free a day (days 1–30) | (days 31–90) | (days 91–365) | Sessions with a builder free and nothing to start | Sessions with nothing at all | Blocked by (sessions) | Hours full: oil, fish, wood |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 36.2 | 16.6 | 8.7 | 85 of 270 (31 %) | 0 | oil 6, wood 79 | 0, 0, 0 |
-| Regular (6 sessions) | 25.2 | 9.8 | 6.0 | 132 of 540 (24 %) | 0 | wood 132 | 686, 0, 0 |
-| Dedicated (10 sessions) | 18.8 | 7.3 | 2.1 | 150 of 900 (17 %) | 1 | fish 1, wood 149 | 1263, 0, 0 |
+| Casual (3 sessions) | 36.2 | 15.7 | 12.7 | 341 of 1095 (31 %) | 0 | oil 101, wood 240 | 0, 0, 0 |
+| Regular (6 sessions) | 25.0 | 8.0 | 7.4 | 413 of 2190 (19 %) | 0 | wood 413 | 1331, 0, 0 |
+| Dedicated (10 sessions) | 18.4 | 6.8 | 9.3 | 741 of 3650 (20 %) | 1 | fish 1, wood 740 | 4201, 0, 0 |
 
 ### The storage wall
 
@@ -87,50 +87,51 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 | 5 | 14,000 | 20,300 | 970 | 0.2 days |
 | 10 | 26,500 | 38,425 | 5,210 | 0.8 days |
 | 15 | 39,000 | 56,550 | 28,000 | 3.4 days |
-| 20 | 188,250 | 272,963 | 150,600 | 15.2 days |
-| 25 | 1,012,475 | 1,468,089 | 809,980 | 68.0 days |
-| 29 | 3,889,513 | 5,639,793 | 3,111,610 | 225.8 days |
-| 30 | 5,445,325 | 7,895,721 | – | max level |
+| 20 | 129,963 | 188,446 | 103,970 | 8.4 days |
+| 25 | 482,538 | 699,679 | 386,030 | 20.9 days |
+| 29 | 1,378,188 | 1,998,372 | 1,102,550 | 43.4 days |
+| 30 | 1,791,650 | 2,597,893 | – | max level |
 
 <!-- balance:generated:end -->
 
 ## What it shows
 
-### 1. The pace: in line with the genre up to Lighthouse 15
+### 1. The pace: in line with the genre up to Lighthouse 15, Lighthouse 30 in about a year
 
-- **Lighthouse 10** comes on day 5.7 (dedicated), 5.8 (regular) and 7.6 (casual); **Lighthouse 15** on day 17.5, 19.7 and 26.0; **Lighthouse 20** on day 56.2, 62.2 and 72.2. In Whiteout Survival, an active player reaches the equivalent of level 15 in one to two weeks: the dedicated player is a few days behind it, the casual one about two weeks.
-- From Lighthouse 15, build time leads: the Lighthouse's level 15 to 16 takes 3.4 days, 20 to 21 takes 15.2 days. The three players end within one level of each other (20, 21, 21 on day 90): more sessions bring the next level a few days sooner, not more levels.
+- **Lighthouse 10** comes on day 5.7 (dedicated), 5.8 (regular) and 7.6 (casual); **Lighthouse 15** on day 17.5, 19.7 and 26.0. In Whiteout Survival, an active player reaches the equivalent of level 15 in one to two weeks: the dedicated player is a few days behind it, the casual one about two weeks.
+- After 15, each level costs 1.3 times and takes 1.2 times the one before: **Lighthouse 20** on day 45.2 to 63.0, **25** on day 119.4 to 152.4, **30** on day 321.4 (regular), 325.8 (dedicated) and 371.4 (casual, level 29 on day 365).
+- The longest build is the last one, 29 to 30: 43.4 days. Build time leads after 15: the regular and the dedicated player reach each level within a few days of each other.
 
 ### 2. No storage wall
 
-- The storage always holds 1.25 times the wood of the Lighthouse's next level (39,000 at Lighthouse 15, 188,250 at 20; Sealed Warehouses add 15 % a level). No one meets a wall in 90 days, and the Lighthouse never needs a camp's loot.
-- The other buildings keep their ×1.6 a level: at Lighthouse 30 (7,895,721 with Sealed Warehouses 3), their cost passes the storage from level 24 to 26. No player of the simulation gets near it (they are at level 11 to 14 on day 90).
+- The storage always holds 1.25 times the wood of the Lighthouse's next level: 39,000 at Lighthouse 15, 129,963 at 20, 1,791,650 at 30 (2,597,893 with Sealed Warehouses 3, the most the game holds). No one meets a wall in a year, and the Lighthouse never needs a camp's loot.
+- The other buildings keep their ×1.6 a level: even at Lighthouse 30 with Sealed Warehouses 3, upgrading them costs more than the storage from level 21 (Barracks, Harbor, Observatory) to 23 (Fishery, Lumberyard). The players of the simulation are at level 14 to 18 after a year (open question in `docs/decisions.md`).
 
-### 3. What blocks now
+### 3. What blocks
 
-- **Wood, still, but far less often:** a builder is left free with nothing to start in 17 % (dedicated), 24 % (regular) and 31 % (casual) of the sessions, instead of 76 to 84 %, and nearly always for wood (oil 6 times for the casual player, early on; fish once). Oil and fish do not take wood's place.
-- Builders free: 19 to 36 hours a day out of 48 in the first month, 2 to 9 in the third, when the Lighthouse's long builds keep one builder busy.
-- Oil is plentiful: the regular and dedicated players' oil is full 686 and 1,263 hours in 90 days. A wreck no longer brings oil past the storage (option J).
+- **Wood, in about one session in five:** a builder is left free with nothing to start in 19 % (regular, all for wood) and 20 % (dedicated: wood 740 times, fish once) of the sessions in a year. The casual player is blocked in 31 % of them: wood 240 times, and oil 101 times, nearly all in the second half of the year, when the Lighthouse's last levels ask more oil than three sessions a day bring from the wrecks.
+- Oil is plentiful for the others: it stays full 1,331 hours (regular) and 4,201 hours (dedicated) in a year, 651 and 1,103 in the first 90 days. A wreck no longer brings oil past the storage. Giving it a use is an open question for week 7.
 
 ### 4. Early game
 
 - Lighthouse 5 comes on day 1.1 for everyone; Refinery 2 on day 1.5 (dedicated) to 4.0 (casual); the first camp beaten on day 1.1 to 2.0.
 
-## After Lighthouse 15 (measured, not applied)
+## After Lighthouse 15 (applied: ×1.3 and ×1.2)
 
-The Lighthouse's curves of option I run to level 30 today. Measured over 1,500 days on temporary copies of the rules, the Lighthouse's cost and time changing from its level 15 to 16 on (the levels up to 15 unchanged); "–" is not reached in 1,500 days. "Build time 15 → 30" adds up the Lighthouse's own build times alone.
+Measured on `90cdb9c`, before the owner chose the gentler curve (×1.3 in cost, ×1.2 in time a level from level 16 on). Measured over 1,500 days on temporary copies of the rules, the Lighthouse's cost and time changing from its level 15 to 16 on (the levels up to 15 unchanged); "–" is not reached in 1,500 days. "Build time 15 → 30" adds up the Lighthouse's own build times alone.
 
 | After 15: cost / time a level | Build time 15 → 30 | Lighthouse 20 (casual / regular / dedicated) | Lighthouse 25 | Lighthouse 30 | Level on day 365 | Storage at Lighthouse 30 (without Warehouses) |
 | --- | --- | --- | --- | --- | --- | --- |
-| ×1.4 / ×1.35 (today) | 861 days | 72 / 62 / 56 | 250 / 227 / 215 | 971 / 937 / 917 | 26 / 26 / 26 | 5,445,325 |
-| ×1.5 / ×1.45 (steeper) | 1,971 days | 83 / 72 / 63 | 405 / 373 / 356 | – / – / – | 24 / 24 / 25 | 15,327,525 |
+| ×1.4 / ×1.35 (option I, before) | 861 days | 72 / 62 / 56 | 250 / 227 / 215 | 971 / 937 / 917 | 26 / 26 / 26 | 5,445,325 |
+| ×1.45 / ×1.4 (steeper) | 1,306 days | 78 / 66 / 61 | 314 / 282 / 272 | 1,515 / 1,382 / 1,436 | 25 / 25 / 25 | 9,217,713 |
+| ×1.5 / ×1.45 (steeper still) | 1,971 days | 83 / 72 / 63 | 405 / 373 / 356 | – / – / – | 24 / 24 / 25 | 15,327,525 |
 | ×1.6 / ×1.55 (about the prototype's) | 4,396 days | 95 / 84 / 75 | 619 / 600 / 579 | – / – / – | 23 / 23 / 23 | 40,355,500 |
 | ×1.4 / ×1.2 | 244 days | 67 / 56 / 50 | 198 / 165 / 155 | 687 / 561 / 548 | 27 / 28 / 28 | 5,445,325 |
 | ×1.35 / ×1.25 | 371 days | 66 / 56 / 50 | 176 / 154 / 152 | 549 / 488 / 488 | 28 / 28 / 28 | 3,155,800 |
-| ×1.3 / ×1.2 | 244 days | 63 / 53 / 45 | 152 / 123 / 119 | 371 / 321 / 326 | 29 / 30 / 30 | 1,791,650 |
+| **×1.3 / ×1.2 (applied)** | 244 days | 63 / 53 / 45 | 152 / 123 / 119 | 371 / 321 / 326 | 29 / 30 / 30 | 1,791,650 |
 | ×1.3 / ×1.15 | 161 days | 62 / 50 / 44 | 139 / 111 / 108 | 353 / 286 / 285 | 30 / 30 / 30 | 1,791,650 |
 
-Today's curve already makes Lighthouse 30 a goal of about two and a half years, set by build time (the level 29 to 30 alone takes 226 days). A steeper curve pushes it past four years and the storage into the tens of millions. To make Lighthouse 30 a goal of months (about a year), the curve after 15 has to be gentler, not steeper.
+Option I's curve made Lighthouse 30 a goal of about two and a half years, set by build time (the level 29 to 30 alone took 226 days); a steeper one pushed it past four years and the storage into the tens of millions. The owner chose the gentler curve: Lighthouse 30 in about a year, with levels added later rather than the pace slowed after the fact. (The measures above ran before a fix of the simulator: at level 30, it kept a reserve for a level 31; the milestones did not change.)
 
 ## Measured options (applied: I and J)
 

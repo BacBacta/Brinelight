@@ -13,6 +13,7 @@ import {
   CAPTAIN_MAX_LEVEL,
   DAY,
   HOUR,
+  LIGHTHOUSE_MAX,
   LOGBOOK,
   MIN_ATTACK_TROOPS,
   RAFT_BUILDING_MAX_COPIES,
@@ -155,10 +156,10 @@ export function missing(stock: Record<Resource, number>, cost: Cost): Resource |
 
 /**
  * What every spending but the Lighthouse's leaves untouched: while the Lighthouse waits, the cost of its next level,
- * up to what the storage holds (no one can save more); while it is being built, nothing.
+ * up to what the storage holds (no one can save more); while it is being built, or at its last level, nothing.
  */
 export function reserve(s: PlayerState): Cost {
-  if (s.queue.some((j) => j.id === "lighthouse")) return {};
+  if (s.queue.some((j) => j.id === "lighthouse") || s.buildings.lighthouse >= LIGHTHOUSE_MAX) return {};
   const storage = storeCap(s.buildings.lighthouse, s.techs);
   const cost = upgradeCost("lighthouse", s.buildings.lighthouse);
   return Object.fromEntries(Object.entries(cost).map(([k, v]) => [k, k === "rope" ? v : Math.min(v, storage)]));
@@ -167,6 +168,7 @@ const covers = (stock: Record<Resource, number>, cost: Cost) => RESOURCES.every(
 
 /** The wall at this Lighthouse level, if its next level costs more than the storage holds. */
 export function wallAt(s: PlayerState): { resource: Resource; cost: number; storage: number } | null {
+  if (s.buildings.lighthouse >= LIGHTHOUSE_MAX) return null;
   const cost = upgradeCost("lighthouse", s.buildings.lighthouse);
   const storage = storeCap(s.buildings.lighthouse, s.techs);
   for (const k of RESOURCES) if ((cost[k] ?? 0) > storage) return { resource: k, cost: cost[k]!, storage };
@@ -208,7 +210,7 @@ export function simulate(profile: Profile, days: number): Run {
     for (;;) {
       if (s.queue.length >= BUILDERS) return null;
       const queued = s.queue.map((j) => j.id);
-      const candidates: BuildingId[] = queued.includes("lighthouse") ? [] : ["lighthouse"];
+      const candidates: BuildingId[] = queued.includes("lighthouse") || s.buildings.lighthouse >= LIGHTHOUSE_MAX ? [] : ["lighthouse"];
       const others = BUILD_ORDER.filter((id) => !queued.includes(id) && s.buildings[id] < s.buildings.lighthouse);
       candidates.push(...[...others].sort((a, b) => s.buildings[a] - s.buildings[b]));
       const id = candidates.find((b) => {

@@ -1,5 +1,5 @@
 /**
- * npm run balance: plays the three profiles for 90 days and writes docs/balance/days.csv, docs/balance/lighthouse.svg
+ * npm run balance: plays the three profiles for 365 days and writes docs/balance/days.csv, docs/balance/lighthouse.svg
  * and the tables of docs/balance.md (between its markers). It changes no value of the rules.
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";

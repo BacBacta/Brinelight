@@ -60,6 +60,9 @@ describe("the balance simulation", () => {
     // While the Lighthouse waits, the rest keeps its next cost, up to what the storage holds; while it is built, nothing.
     expect(reserve(at(12, 3))).toEqual(upgradeCost("lighthouse", 12));
     expect(reserve({ ...at(12, 3), queue: [{ id: "lighthouse", left: 10, duration: 10 }] })).toEqual({});
+    // At its last level, the Lighthouse keeps nothing back and meets no wall.
+    expect(reserve(at(30, 3))).toEqual({});
+    expect(wallAt(at(30))).toBeNull();
   });
 
   it("writes one CSV row per profile and day, a chart with one line per profile, and the tables between their markers", () => {
@@ -72,8 +75,8 @@ describe("the balance simulation", () => {
     const md = toMarkdown(runs);
     expect(md.startsWith(MARK_START) && md.endsWith(MARK_END)).toBe(true);
     expect(md).toContain("### Day 30");
-    expect(md).toContain("### Day 60");
     expect(md).toContain("### Day 90");
+    expect(md).toContain("### Day 365");
   });
 
   it("the committed CSV, chart and tables are those the rules give today (npm run balance writes them again)", () => {

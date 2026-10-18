@@ -23,6 +23,23 @@ describe("buildings", () => {
     expect(upgradeTime("lighthouse", 14) / 86400).toBeCloseTo(2.5, 2);
   });
 
+  it("Lighthouse past level 15: ×1.3 a level in cost and ×1.2 in time, the levels up to 15 unchanged", () => {
+    // 15 → 16 keeps ×1.4 and ×1.35: 180 × 1.4¹⁵ = 28,002 → 28,000; 9 × 1.35¹⁵ = 812 prototype seconds.
+    expect(upgradeCost("lighthouse", 15)).toEqual({ wood: 28000, oil: 18670 });
+    expect(upgradeTime("lighthouse", 15)).toBe(Math.round(9 * 1.35 ** 15 * TIME_SCALE));
+    // 16 → 17: 180 × 1.4¹⁵ × 1.3 = 36,403 → 36,400; 9 × 1.35¹⁵ × 1.2.
+    expect(upgradeCost("lighthouse", 16)).toEqual({ wood: 36400, oil: 24270 });
+    expect(upgradeTime("lighthouse", 16)).toBe(Math.round(9 * 1.35 ** 15 * 1.2 * TIME_SCALE));
+    // 29 → 30, the longest: 180 × 1.4¹⁵ × 1.3¹⁴ = 1,102,550 wood; 9 × 1.35¹⁵ × 1.2¹⁴, about 43.4 real days.
+    expect(upgradeCost("lighthouse", 29).wood).toBe(1102550);
+    expect(upgradeTime("lighthouse", 29) / 86400).toBeCloseTo(43.4, 1);
+    let total = 0;
+    for (let l = 15; l < LIGHTHOUSE_MAX; l++) total += upgradeTime("lighthouse", l);
+    expect(total / 86400).toBeCloseTo(243.5, 1);
+    // The other buildings keep one growth.
+    expect(upgradeCost("refinery", 20).wood).toBe(Math.round((90 * 1.6 ** 20) / 10) * 10);
+  });
+
   it("costs are rounded to the nearest ten", () => {
     for (const id of BUILDING_IDS) {
       for (let l = 0; l < 12; l++) {

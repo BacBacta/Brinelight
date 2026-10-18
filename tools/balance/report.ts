@@ -5,9 +5,9 @@
 import { BUILDING_IDS, DAY, LIGHTHOUSE_MAX, storeCap, upgradeCost, upgradeTime, type Resource } from "@brinelight/shared";
 import type { DayRow, Run } from "./simulate.js";
 
-export const DAYS = 90;
+export const DAYS = 365;
 /** The days docs/balance.md compares the profiles at. */
-export const CHECKPOINTS = [30, 60, 90] as const;
+export const CHECKPOINTS = [30, 90, 365] as const;
 /** The Lighthouse levels the storage table shows. */
 export const STORAGE_LEVELS = [5, 10, 15, 20, 25, 29, 30] as const;
 export const MARK_START = "<!-- balance:generated:start (npm run balance) -->";
@@ -78,7 +78,8 @@ export function toSvg(runs: readonly Run[]): string {
     out.push(`<line x1="${L}" x2="${W - R}" y1="${y(level)}" y2="${y(level)}" stroke="${strong ? "#d4d3cf" : "#ecebe8"}" stroke-width="1"/>`);
     if (strong) out.push(`<text x="${L - 8}" y="${y(level) + 4}" text-anchor="end" fill="#52514e">${level}</text>`);
   }
-  for (let day = 0; day <= maxDay; day += 10) {
+  const every = maxDay > 120 ? 30 : 10;
+  for (let day = 0; day <= maxDay; day += every) {
     out.push(`<line x1="${x(day)}" x2="${x(day)}" y1="${T}" y2="${H - B}" stroke="#ecebe8" stroke-width="1"/>`);
     out.push(`<text x="${x(day)}" y="${H - B + 18}" text-anchor="middle" fill="#52514e">${day}</text>`);
   }
@@ -122,8 +123,8 @@ const RES: readonly Resource[] = ["oil", "fish", "wood", "rope"];
 export function toMarkdown(runs: readonly Run[]): string {
   const head = (cols: string[]) => [`| ${cols.join(" | ")} |`, `| ${cols.map(() => "---").join(" | ")} |`];
   const out: string[] = [MARK_START, "", "### Milestones (days after the city is founded)", ""];
-  out.push(...head(["Profile", "Lighthouse 5", "Lighthouse 10", "Lighthouse 15", "Lighthouse 20", "Refinery 2", "Barracks 1", "First camp beaten"]));
-  for (const r of runs) out.push(`| ${r.profile.name} | ${days(r.lighthouse[5])} | ${days(r.lighthouse[10])} | ${days(r.lighthouse[15])} | ${days(r.lighthouse[20])} | ${days(r.firsts.refinery2)} | ${days(r.firsts.barracks1)} | ${days(r.firsts.campBeaten)} |`);
+  out.push(...head(["Profile", "Lighthouse 5", "Lighthouse 10", "Lighthouse 15", "Lighthouse 20", "Lighthouse 25", "Lighthouse 30", "Refinery 2", "Barracks 1", "First camp beaten"]));
+  for (const r of runs) out.push(`| ${r.profile.name} | ${days(r.lighthouse[5])} | ${days(r.lighthouse[10])} | ${days(r.lighthouse[15])} | ${days(r.lighthouse[20])} | ${days(r.lighthouse[25])} | ${days(r.lighthouse[30])} | ${days(r.firsts.refinery2)} | ${days(r.firsts.barracks1)} | ${days(r.firsts.campBeaten)} |`);
   for (const day of CHECKPOINTS) {
     out.push("", `### Day ${day}`, "");
     out.push(...head(["Profile", "Lighthouse", "Power", "Oil", "Fish", "Wood", "Storage", "Troops + veterans", "Captains (lead, level, stars)", "Techs", "Rafts", "Camps beaten"]));
@@ -134,14 +135,14 @@ export function toMarkdown(runs: readonly Run[]): string {
     }
   }
   out.push("", "### Waiting and blocks", "");
-  out.push(...head(["Profile", "Builder hours free a day (days 1–30)", "(days 31–60)", "(days 61–90)", "Sessions with a builder free and nothing to start", "Sessions with nothing at all", "Blocked by (sessions)", "Hours full: oil, fish, wood"]));
+  out.push(...head(["Profile", "Builder hours free a day (days 1–30)", "(days 31–90)", "(days 91–365)", "Sessions with a builder free and nothing to start", "Sessions with nothing at all", "Blocked by (sessions)", "Hours full: oil, fish, wood"]));
   for (const r of runs) {
     const idle = (from: number, to: number) => (r.days.slice(from, to).reduce((s, d) => s + d.idleBuilderHours, 0) / Math.max(1, r.days.slice(from, to).length)).toFixed(1);
     const sessions = r.days.reduce((s, d) => s + d.sessions, 0);
     const blocked = r.days.reduce((s, d) => s + d.blockedSessions, 0);
     const empty = r.days.reduce((s, d) => s + d.emptySessions, 0);
     const by = [...RES, "capped" as const].filter((k) => r.blocks[k] > 0).map((k) => `${k} ${r.blocks[k]}`).join(", ") || "none";
-    out.push(`| ${r.profile.name} | ${idle(0, 30)} | ${idle(30, 60)} | ${idle(60, 90)} | ${blocked} of ${sessions} (${Math.round((100 * blocked) / Math.max(1, sessions))} %) | ${empty} | ${by} | ${Math.round(r.fullHours.oil)}, ${Math.round(r.fullHours.fish)}, ${Math.round(r.fullHours.wood)} |`);
+    out.push(`| ${r.profile.name} | ${idle(0, 30)} | ${idle(30, 90)} | ${idle(90, 365)} | ${blocked} of ${sessions} (${Math.round((100 * blocked) / Math.max(1, sessions))} %) | ${empty} | ${by} | ${Math.round(r.fullHours.oil)}, ${Math.round(r.fullHours.fish)}, ${Math.round(r.fullHours.wood)} |`);
   }
   out.push("", "### The storage wall", "");
   out.push(...head(["Profile", "Lighthouse level", "Next level costs", "Storage holds", "Days at the wall", "Got past it"]));
