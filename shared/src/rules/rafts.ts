@@ -89,9 +89,11 @@ export function applyMistDamage(rafts: Rafts, held: boolean): Rafts {
   return out;
 }
 
-/** What repairing costs per missing sturdiness point: oil (tar for the hulls), times the Lighthouse's level, and wood. */
-export const REPAIR_OIL_PER_LEVEL = 2;
-export const REPAIR_WOOD = 1;
+/**
+ * What repairing costs per missing sturdiness point: oil (tar for the hulls), and nothing else (owner's decision,
+ * 18 October; it was 2 × the Lighthouse's level in oil and 1 wood).
+ */
+export const REPAIR_OIL = 2;
 /** Shipyard time per 35 missing points (one Mist not held) on one raft: 6 real minutes (1 prototype second). */
 export const REPAIR_TIME_PER_MIST = protoSeconds(1);
 
@@ -100,10 +102,9 @@ export const damagedRafts = (rafts: Rafts): string[] => RAFT_SLOTS.map((s) => s.
 
 const missingPoints = (rafts: Rafts): number => damagedRafts(rafts).reduce((n, k) => n + (RAFT_MAX_HP - rafts[k]!.hp), 0);
 
-/** Repairing every damaged raft: 2 × the Lighthouse's level in oil and 1 wood per missing point. */
-export function repairCost(rafts: Rafts, lighthouse: number): Cost {
-  const points = missingPoints(rafts);
-  return { oil: points * REPAIR_OIL_PER_LEVEL * lighthouse, wood: points * REPAIR_WOOD };
+/** Repairing every damaged raft: 2 oil per missing point, whatever the Lighthouse's level. */
+export function repairCost(rafts: Rafts): Cost {
+  return { oil: missingPoints(rafts) * REPAIR_OIL };
 }
 
 /** How long repairing every damaged raft takes, in real seconds: 6 minutes per 35 missing points. */
@@ -191,19 +192,19 @@ export function startRaftUpgrade(ctx: { rafts: Rafts; slot: string; stock: Stock
 }
 
 /** Can you repair your rafts now? */
-export function canRepair(ctx: { rafts: Rafts; lighthouse: number; stock: Stock; yard: YardJob | null }): Check {
+export function canRepair(ctx: { rafts: Rafts; stock: Stock; yard: YardJob | null }): Check {
   if (damagedRafts(ctx.rafts).length === 0) return refuse("Your rafts are in good shape");
   if (ctx.yard) return refuse("The shipyard is busy");
-  if (!canPay(ctx.stock, repairCost(ctx.rafts, ctx.lighthouse))) return refuse("Not enough resources");
+  if (!canPay(ctx.stock, repairCost(ctx.rafts))) return refuse("Not enough resources");
   return OK;
 }
 
 /** Repairs every damaged raft: checked with canRepair, paid at once, all back to full sturdiness after repairTime. */
-export function startRepair(ctx: { rafts: Rafts; lighthouse: number; stock: Stock; yard: YardJob | null }): StartYard {
+export function startRepair(ctx: { rafts: Rafts; stock: Stock; yard: YardJob | null }): StartYard {
   const check = canRepair(ctx);
   if (!check.ok) return check;
   const duration = repairTime(ctx.rafts);
-  return { ok: true, stock: payCost(ctx.stock, repairCost(ctx.rafts, ctx.lighthouse)), yard: { slots: damagedRafts(ctx.rafts), kind: "repair", left: duration, duration } };
+  return { ok: true, stock: payCost(ctx.stock, repairCost(ctx.rafts)), yard: { slots: damagedRafts(ctx.rafts), kind: "repair", left: duration, duration } };
 }
 
 /**

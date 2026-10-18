@@ -117,6 +117,7 @@ Decided by the owner (18 October):
 
 **Done (18 October).**
 - **Rule:** `repairRafts` repairs every damaged raft at once at the shipyard: 2 × the Lighthouse's level in oil and 1 wood per missing point, 6 minutes per 35 points; a raft below 60 must be repaired before its building is upgraded.
+  *Changed in task 5 (18 October, owner's decision): 2 oil per missing point, whatever the Lighthouse's level, and no wood (`docs/decisions.md`).*
 - **Client:** every raft's sheet offers the repair while some rafts are damaged (cost, time), the rafts under repair show it, the queue says "Shipyard · repairing 2 rafts", and "2 rafts repaired" is celebrated.
 - **Tests:** `shared/test/repair.test.ts`, the server's cheat case, an e2e scenario (repaired from a raft's sheet, sound again by the server's clock).
 - **No shape change:** the plan's shape 7 was not needed, since the repair adds no field to the city.

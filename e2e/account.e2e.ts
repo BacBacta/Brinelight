@@ -1809,10 +1809,11 @@ describe("signed in", () => {
     await expect.poll(() => sheet.locator(".box", { hasText: "Repair the 2 damaged rafts" }).count(), NET).toBe(1);
     await p.page.screenshot({ path: "e2e/.shots/shot-repair.png" });
     await sheet.locator('[data-act="repair"]').click();
-    // 110 points at Lighthouse 4: 880 oil and 110 wood, paid at once.
+    // 110 points: 220 oil, and no wood, paid at once.
     await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).yard, NET).toMatchObject({ kind: "repair" });
     const started = (await serverCity(p.token))!.state as unknown as PlayerState;
-    expect(started.stock.oil).toBeLessThan(5000 - 880 + 50);
+    expect(started.stock.oil).toBeLessThan(5000 - 220 + 50);
+    expect(started.stock.wood).toBeGreaterThanOrEqual(5000);
     await expect.poll(() => p.page.locator(".queue .n", { hasText: "Shipyard · repairing 2 rafts" }).count(), NET).toBe(1);
     // 3 seconds from its end: the server makes them sound on its own clock.
     await h.putCity(p.playerId, { ...started, yard: { ...started.yard!, left: 3 } });

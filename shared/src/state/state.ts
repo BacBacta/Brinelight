@@ -306,7 +306,7 @@ export function upgradeRaft(state: PlayerState, slot: string): ActionResult {
 
 /** Repairs every damaged raft at the shipyard with the shared rule; a refusal comes with its reason. */
 export function repairRafts(state: PlayerState): ActionResult {
-  const r = startRepair({ rafts: state.rafts, lighthouse: state.buildings.lighthouse, stock: state.stock, yard: state.yard });
+  const r = startRepair({ rafts: state.rafts, stock: state.stock, yard: state.yard });
   return r.ok ? { ok: true, state: { ...state, stock: r.stock, yard: r.yard } } : r;
 }
 

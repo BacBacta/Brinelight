@@ -104,12 +104,14 @@ describe("repairing the rafts, on a raft's sheet", () => {
     return { ...s, rafts: { ...s.rafts, [A]: { ...s.rafts[A]!, hp: 65 }, [B]: { ...s.rafts[B]!, hp: 25 } } };
   };
 
-  it("while rafts are damaged, every raft's sheet offers to repair them all: the cost in oil and wood, the time", () => {
+  it("while rafts are damaged, every raft's sheet offers to repair them all: the cost in oil, the time", () => {
     const html = raftSheetHtml(damaged(), C, 1)!.body;
-    // 35 + 75 = 110 points at Lighthouse 6: 1,320 oil and 110 wood, 110 / 35 × 6 minutes.
+    // 35 + 75 = 110 points: 220 oil and no wood, whatever the Lighthouse's level; 110 / 35 × 6 minutes.
     expect(html).toContain("Repair the 2 damaged rafts");
     expect(html).toContain('data-act="repair"');
-    expect(html).toContain("1,320");
+    expect(html).toContain('title="oil">');
+    expect(html).toMatch(/title="oil"><span class="ic oil">.*?<\/span>220<\/span>/);
+    expect(html).not.toContain('title="wood"');
     expect(html).toContain("Time: 19 min");
     expect(raftSheetHtml(damaged(), A, 1)!.body).toContain("Repair the 2 damaged rafts");
     expect(raftSheetHtml(moored(), A, 1)!.body).not.toContain('data-act="repair"');

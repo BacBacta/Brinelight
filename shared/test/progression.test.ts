@@ -109,8 +109,8 @@ describe("rafts", () => {
     const rafts = { a: { hp: 100, building: null, level: 0 } };
     expect(applyMistDamage(rafts, true).a?.hp).toBe(100);
     expect(applyMistDamage(rafts, false).a?.hp).toBe(65);
-    // One Mist not held on one raft, at Lighthouse 10: 35 points × 2 × 10 oil, and 35 wood.
-    expect(repairCost({ "3,0": { hp: 65, building: null, level: 0 } }, 10)).toEqual({ oil: 700, wood: 35 });
+    // One Mist not held on one raft: 35 points × 2 oil.
+    expect(repairCost({ "3,0": { hp: 65, building: null, level: 0 } })).toEqual({ oil: 70 });
   });
 });
 

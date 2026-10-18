@@ -519,7 +519,7 @@ export function simulate(profile: Profile, days: number): Run {
 /** What a player finds on return: the rafts and their sturdiness, the Mists missed, the oil, and what repairing costs. */
 function returnOf(s: PlayerState, day: number): NonNullable<Run["returned"]> {
   const rafts = Object.values(s.rafts);
-  const cost = repairCost(s.rafts, s.buildings.lighthouse);
+  const cost = repairCost(s.rafts);
   return {
     day,
     rafts: rafts.length,

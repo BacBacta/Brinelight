@@ -79,17 +79,17 @@ export function yardName(state: PlayerState): string | null {
 const rafts = (n: number): string => `${n} ${n === 1 ? "raft" : "rafts"}`;
 
 /**
- * Repairing every damaged raft, on the sheet of any raft: how many, what it costs (mostly oil) and takes, and the
+ * Repairing every damaged raft, on the sheet of any raft: how many, what it costs (oil only) and takes, and the
  * button; nothing when every raft is sound.
  */
 function repairHtml(state: PlayerState, speed: number): string {
   const damaged = damagedRafts(state.rafts);
   if (damaged.length === 0 || state.yard?.kind === "repair") return "";
-  const check = canRepair({ rafts: state.rafts, lighthouse: state.buildings.lighthouse, stock: state.stock, yard: state.yard });
+  const check = canRepair({ rafts: state.rafts, stock: state.stock, yard: state.yard });
   return (
     box(
       `Repair ${damaged.length === 1 ? "the damaged raft" : `the ${damaged.length} damaged rafts`}`,
-      costLine(state.stock, repairCost(state.rafts, state.buildings.lighthouse)) +
+      costLine(state.stock, repairCost(state.rafts)) +
         `<p class="p" style="font-size:12.5px;margin-top:6px">Time: ${formatDuration(repairTime(state.rafts) / speed)}. Back to full sturdiness, all at once.</p>`,
     ) +
     // Still tappable when refused: the tap shows the reason in a toast too.

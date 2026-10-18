@@ -68,8 +68,8 @@ describe("rafts around the island", () => {
 
   it("RAFT_MAX_HP is the new raft's sturdiness and what a repair goes back to", () => {
     expect(RAFT_MAX_HP).toBe(100);
-    expect(repairCost({ "3,0": { hp: RAFT_MAX_HP, building: null, level: 0 } }, 5)).toEqual({ oil: 0, wood: 0 });
-    expect(repairCost({ "3,0": { hp: 40, building: null, level: 0 } }, 5)).toEqual({ oil: (RAFT_MAX_HP - 40) * 2 * 5, wood: RAFT_MAX_HP - 40 });
+    expect(repairCost({ "3,0": { hp: RAFT_MAX_HP, building: null, level: 0 } })).toEqual({ oil: 0 });
+    expect(repairCost({ "3,0": { hp: 40, building: null, level: 0 } })).toEqual({ oil: (RAFT_MAX_HP - 40) * 2 });
   });
 
   it("an action: applyAction gives the same city as the rule; parseAction reads only known slots", () => {

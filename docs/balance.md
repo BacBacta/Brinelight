@@ -80,7 +80,7 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 | Casual (3 sessions) | 0 | 65,561 | 0 (0 oil) | 1093 | 1 | 362 | 0 | 18 | 755 |
 | Regular (6 sessions) | 125 | 68,441 | 0 (0 oil) | 1094 | 0 | 726 | 0 | 18 | 791 |
 | Dedicated (10 sessions) | 314 | 69,005 | 0 (0 oil) | 1094 | 0 | 704 | 0 | 18 | 826 |
-| Never stokes (6 sessions) | 0 | 0 | 131 (2,996,170 oil) | 0 | 1094 | 726 | 0 | 10 | 418 |
+| Never stokes (6 sessions) | 254 | 0 | 411 (391,470 oil) | 0 | 1094 | 726 | 0 | 10 | 424 |
 | Away 3 days (6 sessions, none on days 20 to 22) | 26 | 68,675 | 0 (0 oil) | 1094 | 0 | 720 | 1 | 18 | 791 |
 
 ### Pearls a day, by source (average over the whole run)
@@ -90,14 +90,14 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 | Casual (3 sessions) | 89.8 | 51.5 | 59.2 | 2.1 | 4.4 | 207.0 | 37.7 | 27,007 |
 | Regular (6 sessions) | 89.9 | 130.1 | 113.2 | 2.1 | 15.1 | 350.3 | 36.7 | 79,673 |
 | Dedicated (10 sessions) | 89.9 | 81.3 | 197.6 | 2.1 | 24.1 | 395.0 | 33.3 | 97,225 |
-| Never stokes (6 sessions) | 0.0 | 109.8 | 75.7 | 0.7 | 4.4 | 190.6 | 26.2 | 34,225 |
+| Never stokes (6 sessions) | 0.0 | 123.3 | 100.9 | 0.7 | 4.9 | 229.8 | 25.8 | 39,689 |
 | Away 3 days (6 sessions, none on days 20 to 22) | 89.9 | 118.3 | 111.6 | 2.1 | 16.7 | 338.6 | 37.0 | 75,302 |
 
 ### Two more players: milestones
 
 | Profile | Lighthouse 5 | Lighthouse 10 | Lighthouse 15 | Lighthouse 20 | Lighthouse 25 | Lighthouse 30 |
 | --- | --- | --- | --- | --- | --- | --- |
-| Never stokes (6 sessions) | day 1.1 | day 6.0 | day 21.6 | day 60.1 | day 169.0 | not reached |
+| Never stokes (6 sessions) | day 1.1 | day 6.0 | day 21.5 | day 58.1 | day 144.9 | day 352.6 |
 | Away 3 days (6 sessions, none on days 20 to 22) | day 1.1 | day 5.6 | day 18.1 | day 47.3 | day 116.9 | day 314.6 |
 
 ### What a player away finds on return (before the first session)
@@ -156,7 +156,7 @@ Written on 18 October, with all of week 7 played and the owner's decisions of th
 
 ### 5. The two more players
 
-- **Never stokes:** every Mist missed, its rafts are damaged three times a day. Repaired as soon as one is below 60, at 2 × the Lighthouse's level in oil per missing point, 131 repairs cost 3.0 million oil and block it in 892 sessions: Lighthouse 20 on day 60.1, 25 on day 169.0, 30 not reached in a year. Never repairing, it reaches Lighthouse 30 on day 362.5. What a repair should cost is an open decision (`docs/decisions.md`).
+- **Never stokes:** every Mist missed, its rafts are damaged three times a day. It repairs them as soon as one is below 60: 411 repairs at 2 oil per missing point cost 0.39 million oil a year (3.0 million at the cost before 18 October), and oil never blocks it. Lighthouse 15 on day 21.5, 20 on day 58.1, 25 on day 144.9, 30 on day 352.6: 11 to 21 % slower than the regular player, the price of the Mist's Pearls and of the camps it cannot reach in the dark. Never repairing, it would reach them on day 22.0, 56.0, 137.4 and 362.5: repairing seems to lose a little at Lighthouse 20 and 25 only because the repaired rafts are then upgraded while wood is short, a choice of the simulated player.
 - **Away 3 days** (no session on days 20 to 22): back on day 23, its rafts are sound (the order to stoke works without it) and its oil at 45,538 of 65,975. It stays within 3 % of the regular player at every milestone.
 
 ### 6. Early game

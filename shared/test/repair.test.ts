@@ -5,6 +5,7 @@ import {
   RAFT_MAX_HP,
   RAFT_MIN_HP,
   RAFT_SLOTS,
+  REPAIR_OIL,
   advance,
   applyAction,
   canRepair,
@@ -41,13 +42,15 @@ const worn = (): PlayerState => {
 };
 
 describe("repairing the rafts", () => {
-  it("costs 2 × the Lighthouse's level in oil and 1 wood per missing point, every damaged raft at once", () => {
+  it("costs 2 oil per missing point, whatever the Lighthouse's level, and no wood; every damaged raft at once", () => {
+    expect(REPAIR_OIL).toBe(2);
     // 35 + 75 = 110 points missing.
     expect(damagedRafts(worn().rafts)).toEqual([B, C].sort((x, y) => RAFT_SLOTS.findIndex((s) => s.key === x) - RAFT_SLOTS.findIndex((s) => s.key === y)));
-    expect(repairCost(worn().rafts, 10)).toEqual({ oil: 110 * 2 * 10, wood: 110 });
-    expect(repairCost(worn().rafts, 20)).toEqual({ oil: 110 * 2 * 20, wood: 110 });
-    // One Mist not held on one raft, at Lighthouse 20: 1,400 oil.
-    expect(repairCost({ [A]: { hp: 65, building: null, level: 0 } }, 20)).toEqual({ oil: 1400, wood: 35 });
+    expect(repairCost(worn().rafts)).toEqual({ oil: 220 });
+    // One Mist not held on one raft: 70 oil, at Lighthouse 10 as at Lighthouse 30.
+    expect(repairCost({ [A]: { hp: 65, building: null, level: 0 } })).toEqual({ oil: 70 });
+    const at30 = { ...worn(), buildings: { ...worn().buildings, lighthouse: 30 } };
+    expect(ok(repairRafts(at30)).stock).toEqual({ ...at30.stock, oil: at30.stock.oil - 220 });
   });
 
   it("takes 6 minutes of shipyard per 35 missing points", () => {
@@ -60,8 +63,8 @@ describe("repairing the rafts", () => {
   it("pays at once, then every repaired raft is back to full sturdiness and full efficiency", () => {
     const s = worn();
     const started = ok(repairRafts(s));
-    expect(started.stock.oil).toBe(s.stock.oil - 2200);
-    expect(started.stock.wood).toBe(s.stock.wood - 110);
+    expect(started.stock.oil).toBe(s.stock.oil - 220);
+    expect(started.stock.wood).toBe(s.stock.wood);
     expect(started.yard).toEqual({ kind: "repair", slots: damagedRafts(s.rafts), left: repairTime(s.rafts), duration: repairTime(s.rafts) });
     expect(raftEffect(started.rafts, "greenhouse")).toBe(2 + 0.5);
     const done = advance(started, repairTime(s.rafts));
@@ -76,8 +79,9 @@ describe("repairing the rafts", () => {
     expect(repairRafts(sound)).toEqual({ ok: false, reason: "Your rafts are in good shape" });
     const busy = ok(repairRafts(worn()));
     expect(repairRafts(busy)).toEqual({ ok: false, reason: "The shipyard is busy" });
-    expect(repairRafts({ ...worn(), stock: { oil: 2199, fish: 0, wood: 5000, rope: 0 } })).toEqual({ ok: false, reason: "Not enough resources" });
-    expect(canRepair({ rafts: worn().rafts, lighthouse: 10, stock: worn().stock, yard: null })).toEqual({ ok: true });
+    expect(repairRafts({ ...worn(), stock: { oil: 219, fish: 0, wood: 0, rope: 0 } })).toEqual({ ok: false, reason: "Not enough resources" });
+    expect(repairRafts({ ...worn(), stock: { oil: 220, fish: 0, wood: 0, rope: 0 } }).ok).toBe(true);
+    expect(canRepair({ rafts: worn().rafts, stock: worn().stock, yard: null })).toEqual({ ok: true });
   });
 
   it("a raft below 60 cannot be upgraded until it is repaired", () => {
