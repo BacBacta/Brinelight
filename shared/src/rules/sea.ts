@@ -1,14 +1,15 @@
 import { CAPTAINS, addXp, combatXp, skillFactor, type CaptainId, type Captains, type Shards } from "./captains.js";
-import { pirateCamp, pirateLoot, resolveCombat } from "./combat.js";
+import { pirateCamp, pirateLoot, resolveCombat, strengths } from "./combat.js";
 import { storeCap } from "./economy.js";
+import { HUNT_SHARDS, HUNT_XP, LEVIATHAN_SITE, huntAt, huntPearls, huntShare, leviathanHealth, type LeviathanState } from "./leviathan.js";
 import { raftEffect, type Rafts } from "./rafts.js";
 import { techLevel, type Techs } from "./research.js";
-import { protoSeconds } from "./time.js";
+import { HOUR, protoSeconds } from "./time.js";
 import { OK, emptyTroops, refuse, totalTroops, type Buildings, type Check, type Rarity, type Stock, type Troops } from "./types.js";
 
 /* ================= The sea map ================= */
 
-export type SiteKind = "grand" | "home" | "city" | "wreck" | "fish" | "isle" | "camp";
+export type SiteKind = "grand" | "home" | "city" | "wreck" | "fish" | "isle" | "camp" | "leviathan";
 export type AllianceColor = "blue" | "green" | "yellow" | "red";
 
 export type SeaSite = {
@@ -43,6 +44,8 @@ const camp = (level: number, x: number, z: number, captain: CaptainId): SeaSite 
  */
 export const SEA_SITES: readonly SeaSite[] = [
   { id: "grand", kind: "grand", name: "Great Lighthouse", x: 0, z: 0 },
+  // The Leviathan rises by the Great Lighthouse, 17 map units from your city, in the sea map's first view (week 7, task 3).
+  { id: LEVIATHAN_SITE, kind: "leviathan", name: "Leviathan", x: -6, z: -3 },
   { id: "home", kind: "home", name: "Your city", x: HOME.x, z: HOME.z },
   city("Lierre", "blue", -31.25, -28.03, 5),
   city("Orme", "blue", 30.52, 12.74, 6),
@@ -149,7 +152,8 @@ export function holdCapacity(harbor: number, techs: Techs, lead: FleetLead): num
   return Math.round(base * tom);
 }
 
-export type FleetKind = "attack" | "collect";
+/** To a camp, to a wreck, to the Leviathan. */
+export type FleetKind = "attack" | "collect" | "hunt";
 
 /**
  * A fleet at sea. It keeps a copy of your research, lead captain, Watchtowers and hold taken when it left:
@@ -192,6 +196,9 @@ export type SeaState = {
   shards: Shards;
   fleets: Fleet[];
   world: SeaWorld;
+  /** The city's clock (seconds since 1970, UTC): the Leviathan's hunts follow it. */
+  clock: number;
+  leviathan: LeviathanState;
 };
 
 export type CombatReport = {
@@ -214,6 +221,8 @@ export type CombatReport = {
   captainXp?: { id: CaptainId; xp: number; levels: number };
   /** The shards a victory gave, to the camp's captain. Absent after a defeat, and from older reports. */
   shards?: { id: CaptainId; count: number };
+  /** A hunt of the Leviathan: the damage your fleets dealt, its health, your share (0 to 1). Absent for a camp. */
+  hunt?: { damage: number; health: number; share: number };
 };
 
 /** How far your fleets can sail now (map units from your city), and whether the Lighthouse is stoked. */
@@ -221,29 +230,40 @@ export type Sight = { reach: number; lit: boolean };
 /** Calm weather: the whole sea. */
 export const CLEAR_SIGHT: Sight = { reach: Infinity, lit: false };
 
-/** Can you send a fleet there now? In the Mist, only within the Lighthouse's light. A refusal comes with its reason. */
-export function canSendFleet(siteId: string, s: Pick<SeaState, "buildings" | "troops" | "veterans" | "fleets">, sight: Sight = CLEAR_SIGHT): Check {
+/** What a check before sailing reads. */
+export type SendCheck = Pick<SeaState, "buildings" | "troops" | "veterans" | "fleets" | "techs" | "lead" | "clock" | "leviathan">;
+
+/**
+ * Can you send a fleet there now? In the Mist, only within the Lighthouse's light; the Leviathan only while it is at
+ * sea, and only if your fleet gets there before it dives (the Mist never hides it). A refusal comes with its reason.
+ */
+export function canSendFleet(siteId: string, s: SendCheck, sight: Sight = CLEAR_SIGHT): Check {
   const site = seaSite(siteId);
-  if (!site || (site.kind !== "camp" && site.kind !== "wreck")) return refuse("You cannot send a fleet there yet");
-  if (distance(site) > sight.reach) {
+  if (!site || (site.kind !== "camp" && site.kind !== "wreck" && site.kind !== "leviathan")) return refuse("You cannot send a fleet there yet");
+  if (site.kind === "leviathan") {
+    const w = huntAt(s.clock);
+    if (!w.on) return refuse("The Leviathan is not at sea. Wait for it to rise.");
+    if (s.leviathan.hunt === w.start && s.leviathan.over) return refuse("The Leviathan has dived. Wait for it to rise again.");
+    if (s.clock + travelTime(site, s.techs, s.lead) >= w.end) return refuse("Your fleet would get there after the Leviathan dives");
+  } else if (distance(site) > sight.reach) {
     return refuse(sight.lit ? "The Mist hides this place. Wait for it to lift." : "The Mist hides this place. Stoke the Lighthouse or wait for it to lift.");
   }
   if (s.fleets.length >= fleetsMax(s.buildings.harbor)) {
     return refuse(s.buildings.harbor < 1 ? "Build the Harbor to send more fleets" : "All your fleets are at sea");
   }
   // Veterans are troops too: they sail with the soldiers.
-  if (site.kind === "camp" && totalTroops(s.troops) + totalTroops(s.veterans) < MIN_ATTACK_TROOPS) return refuse("You do not have enough troops");
+  if (site.kind !== "wreck" && totalTroops(s.troops) + totalTroops(s.veterans) < MIN_ATTACK_TROOPS) return refuse("You do not have enough troops");
   return OK;
 }
 
 export type SendFleet = { ok: true; state: SeaState } | { ok: false; reason: string };
 
-/** Sends a fleet: to a camp with all your troops and veterans, who leave the city; to a wreck to salvage it. */
+/** Sends a fleet: to a camp or the Leviathan with all your troops and veterans, who leave the city; to a wreck to salvage it. */
 export function sendFleet(siteId: string, s: SeaState, sight: Sight = CLEAR_SIGHT): SendFleet {
   const check = canSendFleet(siteId, s, sight);
   if (!check.ok) return check;
   const site = seaSite(siteId)!;
-  const kind: FleetKind = site.kind === "camp" ? "attack" : "collect";
+  const kind: FleetKind = site.kind === "camp" ? "attack" : site.kind === "leviathan" ? "hunt" : "collect";
   const travel = travelTime(site, s.techs, s.lead);
   const fleet: Fleet = {
     site: siteId,
@@ -251,8 +271,8 @@ export function sendFleet(siteId: string, s: SeaState, sight: Sight = CLEAR_SIGH
     phase: "out",
     left: travel,
     travel,
-    troops: kind === "attack" ? { ...s.troops } : emptyTroops(),
-    veterans: kind === "attack" ? { ...s.veterans } : emptyTroops(),
+    troops: kind === "collect" ? emptyTroops() : { ...s.troops },
+    veterans: kind === "collect" ? emptyTroops() : { ...s.veterans },
     techs: { ...s.techs },
     lead: s.lead ? { ...s.lead } : null,
     watchtowers: raftEffect(s.rafts, "watchtower"),
@@ -260,8 +280,8 @@ export function sendFleet(siteId: string, s: SeaState, sight: Sight = CLEAR_SIGH
     cargo: {},
     pearls: 0,
   };
-  const attack = kind === "attack";
-  return { ok: true, state: { ...s, troops: attack ? emptyTroops() : s.troops, veterans: attack ? emptyTroops() : s.veterans, fleets: [...s.fleets, fleet] } };
+  const army = kind !== "collect";
+  return { ok: true, state: { ...s, troops: army ? emptyTroops() : s.troops, veterans: army ? emptyTroops() : s.veterans, fleets: [...s.fleets, fleet] } };
 }
 
 const add = (a: Troops, b: Troops): Troops => ({ boarders: a.boarders + b.boarders, harpooners: a.harpooners + b.harpooners, crossbowmen: a.crossbowmen + b.crossbowmen });
@@ -343,19 +363,98 @@ function dock(f: Fleet, s: SeaState): SeaState {
 }
 
 /**
- * Advances the fleets by `seconds` real seconds. Each step (arrival and combat, end of the stay, return)
- * happens at its exact time; steps at the same moment happen in the order the fleets left.
+ * The damage a fleet deals to the Leviathan per real hour on site: its attack, as against a camp (troops, veterans,
+ * lead captain, Blades, Watchtowers), with no troop of the triangle to counter.
+ */
+export function huntAttack(f: Pick<Fleet, "troops" | "veterans" | "lead" | "techs" | "watchtowers">): number {
+  return strengths({
+    troops: f.troops,
+    veterans: f.veterans,
+    enemy: emptyTroops(),
+    captain: f.lead ? { cls: CAPTAINS[f.lead.id].cls, rarity: f.lead.rarity, level: f.lead.level } : null,
+    techs: { blades: techLevel(f.techs, "blades") },
+    watchtowers: f.watchtowers,
+  }).attack;
+}
+
+const hunting = (f: Fleet) => f.kind === "hunt" && f.phase === "stay";
+
+/** Damage per real second of the fleets at the Leviathan now: none once the hunt is over for you. */
+const huntRate = (s: SeaState): number => (s.leviathan.over ? 0 : s.fleets.filter(hunting).reduce((d, f) => d + huntAttack(f) / HOUR, 0));
+
+/**
+ * The hunt ends for you: killed (its health all taken) or dived at the hunt's end. Pearls by your share, and for the
+ * captain who led your first fleet there, experience and, when killed, shards; one report. The fleets on site sail home
+ * with their troops: no troop is lost.
+ */
+function endHunt(s: SeaState, killed: boolean): { state: SeaState; report: CombatReport } {
+  const l = s.leviathan;
+  const health = leviathanHealth(l.level);
+  const damage = killed ? health : l.damage;
+  const share = huntShare(damage, l.level);
+  const pearls = huntPearls(share);
+  const hunters = s.fleets.filter(hunting);
+  const lead = hunters.find((f) => f.lead)?.lead ?? null;
+  const sailed = lead ? s.captains[lead.id] : undefined;
+  const gained = lead && sailed ? { id: lead.id, ...addXp(sailed, HUNT_XP) } : null;
+  const captains = gained ? { ...s.captains, [gained.id]: { ...sailed!, level: gained.level, xp: gained.xp } } : s.captains;
+  const shards = killed && lead ? { ...s.shards, [lead.id]: (s.shards[lead.id] ?? 0) + HUNT_SHARDS } : s.shards;
+  const report: CombatReport = {
+    site: LEVIATHAN_SITE,
+    level: l.level,
+    win: killed,
+    attack: hunters.reduce((a, f) => a + huntAttack(f), 0),
+    defense: health,
+    sent: hunters.reduce((t, f) => add(t, f.troops), emptyTroops()),
+    losses: emptyTroops(),
+    wounded: emptyTroops(),
+    enemy: emptyTroops(),
+    loot: { oil: 0, wood: 0, pearls, rope: 0 },
+    veteranSent: hunters.reduce((t, f) => add(t, f.veterans), emptyTroops()),
+    veteranLosses: emptyTroops(),
+    infirmary: s.buildings.infirmary > 0,
+    ...(gained ? { captainXp: { id: gained.id, xp: HUNT_XP, levels: gained.levelsGained } } : {}),
+    ...(killed && lead ? { shards: { id: lead.id, count: HUNT_SHARDS } } : {}),
+    // Rounded for the report, so that the same hunt advanced in long or short steps gives the same report.
+    hunt: { damage: Math.round(damage), health, share: Math.round(share * 10_000) / 10_000 },
+  };
+  const fleets = s.fleets.map((f) => (hunting(f) ? { ...f, phase: "back" as const, left: f.travel } : f));
+  const leviathan = { level: killed ? l.level + 1 : l.level, hunt: l.hunt, damage, over: true };
+  return { state: { ...s, pearls: s.pearls + pearls, captains, shards, fleets, leviathan }, report };
+}
+
+/** Moves the clock and the fleets on by `dt` seconds, the fleets at the Leviathan dealing their damage. */
+function elapse(s: SeaState, dt: number): SeaState {
+  const rate = huntRate(s);
+  return {
+    ...s,
+    clock: s.clock + dt,
+    fleets: s.fleets.map((f) => ({ ...f, left: f.left - dt })),
+    leviathan: rate > 0 ? { ...s.leviathan, damage: s.leviathan.damage + rate * dt } : s.leviathan,
+  };
+}
+
+/**
+ * Advances the fleets by `seconds` real seconds. Each step (arrival and combat, end of the stay, return, the
+ * Leviathan killed) happens at its exact time; steps at the same moment happen in the order the fleets left.
  */
 export function advanceFleets(state: SeaState, seconds: number): { state: SeaState; reports: CombatReport[] } {
   let s = state;
   const reports: CombatReport[] = [];
   let rest = Math.max(0, seconds);
   for (;;) {
-    const next = Math.min(...s.fleets.map((f) => Math.max(0, f.left)));
+    const rate = huntRate(s);
+    const toKill = rate > 0 ? Math.max(0, (leviathanHealth(s.leviathan.level) - s.leviathan.damage) / rate) : Infinity;
+    const next = Math.min(...s.fleets.map((f) => Math.max(0, f.left)), toKill);
     if (!(next <= rest)) break;
     rest -= next;
-    let fleets = s.fleets.map((f) => ({ ...f, left: f.left - next }));
-    s = { ...s, fleets };
+    s = elapse(s, next);
+    if (next === toKill) {
+      const r = endHunt(s, true);
+      s = r.state;
+      reports.push(r.report);
+    }
+    let fleets = s.fleets;
     const done: Fleet[] = [];
     for (let i = 0; i < fleets.length; i++) {
       let f = fleets[i]!;
@@ -367,14 +466,32 @@ export function advanceFleets(state: SeaState, seconds: number): { state: SeaSta
           s = r.state;
           reports.push(r.report);
         }
-        f = { ...f, phase: "stay", left: f.kind === "attack" ? ATTACK_STAY : COLLECT_STAY };
+        if (f.kind === "hunt") {
+          // It stays until the hunt ends; it turns back if the Leviathan has already dived or been killed.
+          const w = huntAt(s.clock);
+          const l = s.leviathan;
+          const over = !w.on || (l.hunt === w.start && l.over);
+          if (!over && l.hunt !== w.start) s = { ...s, leviathan: { level: l.level, hunt: w.start, damage: 0, over: false } };
+          f = over ? { ...f, phase: "back", left: f.travel } : { ...f, phase: "stay", left: w.end - s.clock };
+        } else {
+          f = { ...f, phase: "stay", left: f.kind === "attack" ? ATTACK_STAY : COLLECT_STAY };
+        }
       } else if (f.phase === "stay") {
         if (f.kind === "collect") {
           const r = salvage(f, s);
           f = r.fleet;
           s = r.state;
         }
-        f = { ...f, phase: "back", left: f.travel };
+        if (f.kind === "hunt" && !s.leviathan.over) {
+          // The hunt ends: the Leviathan dives. Every fleet still on site sails home with this one.
+          const r = endHunt({ ...s, fleets }, false);
+          s = r.state;
+          reports.push(r.report);
+          fleets = s.fleets;
+          f = fleets[i]!;
+        } else {
+          f = { ...f, phase: "back", left: f.travel };
+        }
       } else {
         s = dock(f, s);
         done.push(f);
@@ -383,6 +500,6 @@ export function advanceFleets(state: SeaState, seconds: number): { state: SeaSta
     }
     s = { ...s, fleets: fleets.filter((f) => !done.includes(f)) };
   }
-  s = { ...s, fleets: s.fleets.map((f) => ({ ...f, left: f.left - rest })) };
+  s = elapse(s, rest);
   return { state: s, reports };
 }

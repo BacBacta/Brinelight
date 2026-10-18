@@ -171,6 +171,14 @@ Decided by the owner (18 October):
 3. **The rewards:** 20 + 180 × your share of its health in Pearls; 3 shards of the captain who led the hunt when you kill it; +30 experience for that captain. Never anything for sale.
 4. **No troop is lost.**
 
+**Done (18 October).**
+- **Rule:** `shared/src/rules/leviathan.ts` (calendar, health, Pearls), and in `sea.ts` the site `leviathan`, the fleet kind `hunt` and the hunt in `advanceFleets`: damage = the fleet's attack as against a camp, with no troop to counter (`huntAttack`), per hour on site; killed when its health is all taken, or it dives at the hunt's end; the rewards then, at once. Refusals: "The Leviathan is not at sea. Wait for it to rise.", "The Leviathan has dived. Wait for it to rise again.", "Your fleet would get there after the Leviathan dives", and those of a camp (fewer than 5 troops, every fleet at sea). The Mist never hides it.
+- **The city** (shape 7): `leviathan { level, hunt, damage, over }`; the report of a hunt is a combat report with `hunt { damage, health, share }`, no loss, its Pearls as loot.
+- **Where:** by the Great Lighthouse, 17 map units from your city (−6, −3), in the sea map's first view; at (1.6, 2.6), 18 units away, it was off screen.
+- **Client:** the prototype's sea serpent, shown while it is at sea for you; its label counts down ("Leviathan · 1 h 59 left", "Leviathan in 4 h 00"); its sheet (level, health, time left, your damage, the rewards, "Send my fleet"); the hunt report.
+- **Tests:** `shared/test/leviathan.test.ts`, migration 6 → 7, a server cheat case (a client sending damage, a share, Pearls, a level or shards), client tests, an e2e scenario (the sheet at sea, the fleet sent, the report when it dives by the server's clock).
+- **Not measured yet:** how much of its health the simulated players take; task 5 adds the hunt to the simulation.
+
 ## Task 4 · Objectives and daily tasks
 
 What it does:

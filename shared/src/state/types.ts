@@ -1,4 +1,5 @@
 import type { CaptainId, Shards } from "../rules/captains.js";
+import type { LeviathanState } from "../rules/leviathan.js";
 import type { MistState } from "../rules/mist.js";
 import type { Rafts, YardJob } from "../rules/rafts.js";
 import type { ResearchJob, Techs } from "../rules/research.js";
@@ -51,6 +52,8 @@ export type PlayerState = {
   clock: number;
   /** The order to stoke the Lighthouse, whether it went dark in the Mist going on, and the Mists held and not held. */
   mist: MistState;
+  /** The Leviathan's level for your city, and the hunt your fleets took part in. */
+  leviathan: LeviathanState;
 };
 
 /** A combat report, with a stable id ("r1", "r2"…) given in the order reports arrive, never reused. */

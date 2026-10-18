@@ -18,6 +18,7 @@ import {
   resolveCombat,
   seaSite,
   sendFleet,
+  startingLeviathan,
   startingSeaWorld,
   storeCap,
   travelTime,
@@ -38,6 +39,8 @@ const start = (): SeaState => ({
   shards: {},
   fleets: [],
   world: startingSeaWorld(),
+  clock: 0,
+  leviathan: startingLeviathan(),
 });
 
 const send = (id: string, s: SeaState): SeaState => {
@@ -47,9 +50,9 @@ const send = (id: string, s: SeaState): SeaState => {
 };
 
 describe("sea map (prototype values)", () => {
-  it("40 sites with unique ids, your city at (-14, 12)", () => {
-    expect(SEA_SITES).toHaveLength(40);
-    expect(new Set(SEA_SITES.map((s) => s.id)).size).toBe(40);
+  it("41 sites with unique ids (the prototype's 40 and the Leviathan), your city at (-14, 12)", () => {
+    expect(SEA_SITES).toHaveLength(41);
+    expect(new Set(SEA_SITES.map((s) => s.id)).size).toBe(41);
     expect(HOME).toEqual({ x: -14, z: 12 });
     expect(SEA_SITES.filter((s) => s.kind === "wreck")).toHaveLength(8);
     expect(SEA_SITES.filter((s) => s.kind === "camp").map((s) => s.level)).toEqual([1, 2, 3, 4, 5, 6]);

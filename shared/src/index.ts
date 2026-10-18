@@ -14,4 +14,5 @@ export * from "./rules/power.js";
 export * from "./rules/start.js";
 export * from "./rules/sea.js";
 export * from "./rules/mist.js";
+export * from "./rules/leviathan.js";
 export * from "./state/index.js";

@@ -2,6 +2,7 @@
  * Cities stored in an older shape are brought up to the current one, step by step, instead of being refused.
  * Pure: no system clock (the time of the last save is given), no randomness. Used by the server for the stored cities, and by the client for old local saves.
  */
+import { startingLeviathan } from "../rules/leviathan.js";
 import { startingMist } from "../rules/mist.js";
 import { emptyTroops } from "../rules/types.js";
 import { parseState } from "./parse.js";
@@ -9,9 +10,9 @@ import type { PlayerState } from "./types.js";
 
 /**
  * The current shape of a city. Shape 4: the city of week 4. Shape 5: week 5 (training, healing, veterans, shards).
- * Shape 6: week 7, the Mist (the city's clock, the order to stoke).
+ * Shape 6: week 7, the Mist (the city's clock, the order to stoke). Shape 7: week 7, the Leviathan (its level, the hunt).
  */
-export const CITY_SHAPE = 6;
+export const CITY_SHAPE = 7;
 /** The oldest shape a stored city can have: nothing was stored before week 4. */
 export const MIN_CITY_SHAPE = 4;
 
@@ -46,6 +47,8 @@ const STEPS: Record<number, (s: Raw, ctx: MigrationContext) => Raw> = {
     if (!("mist" in out)) out.mist = startingMist();
     return out;
   },
+  // Week 7: the Leviathan at level 1, never hunted.
+  6: (s) => ("leviathan" in s ? s : { ...s, leviathan: startingLeviathan() }),
 };
 
 /** Adds the fields of every step from `shape` to the current shape. Does not check the city: parseState does. */

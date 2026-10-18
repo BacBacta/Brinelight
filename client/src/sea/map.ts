@@ -7,6 +7,8 @@ export type SeaMap = {
   hits: THREE.Object3D[];
   /** `beams`: how much the Lighthouses' beams show (hidden in calm weather, sweeping in the Mist). */
   animate(now: number, beams: number): void;
+  /** Shows the Leviathan while it is at sea for you, as the rules say. */
+  setLeviathan(up: boolean): void;
 };
 
 /** The room the wreck and the pirate camp take on the map, and how deep they sit: they float, the hull half sunk. */
@@ -30,6 +32,7 @@ export function createSeaMap(kit: Kit, models: Pick<Models, "wreck" | "camp">, a
   const hits: THREE.Object3D[] = [];
   const lighthouses: { lh: ReturnType<typeof createLighthouse>; x: number }[] = [];
   const rings: { ring: THREE.Object3D; x: number }[] = [];
+  let leviathan: THREE.Group | null = null;
 
   // The islets' sand and foam lie just above the highest wave: inside the waves, the water crossed them on every frame.
   const islet = (g: THREE.Group) => {
@@ -109,6 +112,30 @@ export function createSeaMap(kit: Kit, models: Pick<Models, "wreck" | "camp">, a
         g.add(c);
         break;
       }
+      case "leviathan": {
+        // The prototype's sea serpent: seven humps and two yellow eyes, hidden while it is not at sea.
+        const skin = new THREE.MeshStandardMaterial({ color: "#1E6B5C", roughness: 0.5, metalness: 0.1, emissive: "#06362C" });
+        const body = new THREE.Group();
+        for (let k = 0; k < 7; k++) {
+          const hump = new THREE.Mesh(new THREE.SphereGeometry(0.9 - k * 0.08, 14, 10), skin);
+          hump.position.set(k * 1.1 - 3, 0, 0);
+          hump.userData.k = k;
+          body.add(hump);
+        }
+        const eyeM = new THREE.MeshBasicMaterial({ color: "#FFE27A" });
+        for (const z of [0.4, -0.4]) {
+          const eye = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), eyeM);
+          eye.position.set(-3.6, 0.5, z);
+          body.add(eye);
+        }
+        body.position.y = -0.4;
+        body.rotation.y = 0.7;
+        body.scale.setScalar(0.8);
+        g.add(body);
+        g.visible = false;
+        leviathan = g;
+        break;
+      }
     }
     g.traverse((m) => {
       m.castShadow = false;
@@ -133,6 +160,11 @@ export function createSeaMap(kit: Kit, models: Pick<Models, "wreck" | "camp">, a
         lh.animate(now * 0.8 + x);
       }
       for (const { ring, x } of rings) ring.scale.setScalar(1 + Math.sin(now * 2 + x) * 0.08);
+      // The humps rise and fall one after the other.
+      if (leviathan?.visible) for (const hump of leviathan.children[0]!.children) if (hump.userData.k !== undefined) hump.position.y = Math.sin(now * 2 + hump.userData.k * 0.8) * 0.25;
+    },
+    setLeviathan(up) {
+      if (leviathan) leviathan.visible = up;
     },
   };
 }

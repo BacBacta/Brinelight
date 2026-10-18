@@ -1,6 +1,7 @@
 import { BUILDERS, BUILDING_IDS, LIGHTHOUSE_MAX, type UpgradeJob } from "../rules/buildings.js";
 import { CAPTAINS, CAPTAIN_MAX_LEVEL, CAPTAIN_MAX_STARS, xpNeeded, type CaptainId } from "../rules/captains.js";
 import type { HealingJob } from "../rules/healing.js";
+import { HUNT_DURATION, type LeviathanState } from "../rules/leviathan.js";
 import type { MistState } from "../rules/mist.js";
 import { RAFT_BUILDINGS, RAFT_BUILDING_MAX_COPIES, RAFT_BUILDING_MAX_LEVEL, RAFT_MAX_HP, RAFT_SLOTS, raftBuildingCopies, type RaftBuildingId, type Rafts, type YardJob } from "../rules/rafts.js";
 import { TECHS, techLevel, type ResearchJob, type TechId, type Techs } from "../rules/research.js";
@@ -68,6 +69,17 @@ const isMist = (m: unknown): m is MistState =>
   isWhole(m.missed) &&
   isWhole(m.damaged);
 
+/** The Leviathan as the city knows it: a level from 1, the hunt it took part in (its start time), the damage dealt in it. */
+const isLeviathan = (l: unknown): l is LeviathanState =>
+  isObj(l) &&
+  Object.keys(l).sort().join() === "damage,hunt,level,over" &&
+  isWhole(l.level, 1) &&
+  isNum(l.hunt) &&
+  l.hunt >= 0 &&
+  isNum(l.damage) &&
+  l.damage >= 0 &&
+  typeof l.over === "boolean";
+
 const isJob = (j: unknown): j is UpgradeJob =>
   isObj(j) && typeof j.id === "string" && (BUILDING_IDS as string[]).includes(j.id) && isNum(j.left) && isNum(j.duration) && j.duration > 0;
 
@@ -90,7 +102,7 @@ export function cleanQueue(raw: readonly unknown[]): UpgradeJob[] {
 function isFleet(f: unknown): f is Fleet {
   if (!isObj(f) || typeof f.site !== "string") return false;
   const site = seaSite(f.site);
-  const kind = site?.kind === "camp" ? "attack" : site?.kind === "wreck" ? "collect" : null;
+  const kind = site?.kind === "camp" ? "attack" : site?.kind === "wreck" ? "collect" : site?.kind === "leviathan" ? "hunt" : null;
   const lead = f.lead;
   const leadOk =
     lead === null ||
@@ -122,7 +134,8 @@ function isFleet(f: unknown): f is Fleet {
  * This can only make the player lose a fleet, never gain.
  */
 export function cleanFleets(raw: readonly unknown[], harbor: number): Fleet[] {
-  const longest = (f: Fleet) => (f.phase === "stay" ? (f.kind === "attack" ? ATTACK_STAY : COLLECT_STAY) : f.travel);
+  const stay = { attack: ATTACK_STAY, collect: COLLECT_STAY, hunt: HUNT_DURATION };
+  const longest = (f: Fleet) => (f.phase === "stay" ? stay[f.kind] : f.travel);
   return raw
     .filter(isFleet)
     .slice(0, fleetsMax(harbor))
@@ -254,7 +267,18 @@ const isReport = (r: unknown): r is Report =>
   // Reports from before the captains' experience and shards have neither.
   (r.captainXp === undefined ||
     (isObj(r.captainXp) && typeof r.captainXp.id === "string" && has(CAPTAINS, r.captainXp.id) && isWhole(r.captainXp.xp) && isWhole(r.captainXp.levels))) &&
-  (r.shards === undefined || (isObj(r.shards) && typeof r.shards.id === "string" && has(CAPTAINS, r.shards.id) && isWhole(r.shards.count, 1)));
+  (r.shards === undefined || (isObj(r.shards) && typeof r.shards.id === "string" && has(CAPTAINS, r.shards.id) && isWhole(r.shards.count, 1))) &&
+  // Only a hunt of the Leviathan has one.
+  (r.hunt === undefined ||
+    (isObj(r.hunt) &&
+      Object.keys(r.hunt).sort().join() === "damage,health,share" &&
+      isNum(r.hunt.damage) &&
+      r.hunt.damage >= 0 &&
+      isNum(r.hunt.health) &&
+      r.hunt.health > 0 &&
+      isNum(r.hunt.share) &&
+      r.hunt.share >= 0 &&
+      r.hunt.share <= 1));
 
 /**
  * Reads a city sent or stored as JSON. Strict: a missing or invalid field gives null, and nothing is filled in,
@@ -292,7 +316,8 @@ export function parseState(raw: unknown): PlayerState | null {
       !isWhole(s.reportSeq, 0, MAX_REPORT_SEQ) ||
       !isNum(s.clock) ||
       s.clock < 0 ||
-      !isMist(s.mist)
+      !isMist(s.mist) ||
+      !isLeviathan(s.leviathan)
     ) {
       return null;
     }
@@ -337,6 +362,7 @@ export function parseState(raw: unknown): PlayerState | null {
       reportSeq: s.reportSeq,
       clock: s.clock,
       mist: { ...(s.mist as MistState) },
+      leviathan: { ...(s.leviathan as LeviathanState) },
     };
   } catch {
     return null;

@@ -1811,6 +1811,51 @@ describe("signed in", () => {
     await p.context.close();
   });
 
+  it("the Leviathan: its sheet at sea, the fleet sent to the server, and the hunt's report when it dives by the server's clock", async () => {
+    const p = await signedInPlayer();
+    // A city at 13:01 UTC, a hunt on, with 100 boarders (the e2e harness only).
+    const rise = 1_792_281_600 + 13 * HOUR;
+    const base = newPlayerState(rise + 60);
+    await h.putCity(p.playerId, { ...base, troops: { boarders: 100, harpooners: 0, crossbowmen: 0 } });
+    await show(p.page);
+    await expect.poll(async () => ((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.troops.boarders, NET).toBe(100);
+    await calm(p.page);
+    await p.page.locator('.nav button[data-v="sea"]').click();
+    await p.page.waitForTimeout(1500);
+    const label = p.page.locator(".labels.sea .sl.leviathan.up");
+    await expect.poll(() => label.innerText(), NET).toMatch(/^Leviathan · 1 h 5\d left$/);
+    const sheet = p.page.locator(".sheet:not([hidden])", { hasText: "Send my fleet" });
+    const box = (await label.boundingBox())!;
+    for (const dy of [30, 45, 60, 15, 8]) {
+      await p.page.mouse.click(box.x + box.width / 2, box.y + box.height + dy);
+      if (await sheet.isVisible()) break;
+    }
+    await expect.poll(() => sheet.locator(".kv span", { hasText: "Health" }).count(), NET).toBe(1);
+    expect(await sheet.innerText()).toContain("20 + 180 × your share of its health");
+    await p.page.screenshot({ path: "e2e/.shots/shot-leviathan.png" });
+    await sheet.locator('[data-act="sail"]').click();
+    await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).fleets, NET).toMatchObject([{ site: "leviathan", kind: "hunt" }]);
+    const sent = (await serverCity(p.token))!.state as unknown as PlayerState;
+    expect(sent.troops.boarders).toBe(0);
+
+    // 3 seconds before the hunt ends, the fleet on site: the server ends the hunt on its own clock.
+    const end = rise + 2 * HOUR;
+    await h.putCity(p.playerId, { ...sent, clock: end - 3, fleets: [{ ...sent.fleets[0]!, phase: "stay", left: 3 }], leviathan: { level: 1, hunt: rise, damage: 150, over: false } });
+    await show(p.page);
+    await p.page.waitForTimeout(4000);
+    await show(p.page);
+    const after = (await serverCity(p.token))!.state as unknown as PlayerState;
+    expect(after.leviathan).toMatchObject({ level: 1, hunt: rise, over: true });
+    expect(after.reports.at(-1)).toMatchObject({ site: "leviathan", win: false, loot: { pearls: 27 } });
+    expect(after.fleets).toMatchObject([{ site: "leviathan", phase: "back" }]);
+    const report = p.page.locator(".sheet:not([hidden])", { hasText: "It dived · Leviathan level 1" });
+    await expect.poll(() => report.count(), NET).toBe(1);
+    expect(await report.innerText()).toContain("your fleet brings every troop home");
+    await p.page.screenshot({ path: "e2e/.shots/shot-hunt-report.png" });
+    expect(p.problems).toEqual([]);
+    await p.context.close();
+  });
+
   it("a building on a raft: put from the raft's sheet, found again after a reload, standing by the server's clock, then upgraded", async () => {
     const p = await signedInPlayer();
     const base = newPlayerState();

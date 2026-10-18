@@ -1,4 +1,4 @@
-import { CAPTAINS, MIST_DURATION, isLit, mistAt, oilAutonomy, power, storeCap, survivorCap, type CaptainId, type Troops } from "@brinelight/shared";
+import { CAPTAINS, MIST_DURATION, huntAt, isLit, leviathanUp, mistAt, oilAutonomy, power, storeCap, survivorCap, type CaptainId, type Troops } from "@brinelight/shared";
 import type { PlayerState } from "../state/index.js";
 import type { SeaMood } from "../scene/look.js";
 
@@ -49,7 +49,7 @@ export function seaMood(state: PlayerState, preview = false): SeaMood {
 }
 
 /** A time from now, rounded up to the minute: "52 min", "3 h 05", "99+ h". */
-function inMinutes(seconds: number): string {
+export function inMinutes(seconds: number): string {
   const minutes = Math.max(1, Math.ceil(seconds / 60));
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
@@ -69,6 +69,14 @@ export function mistText(state: PlayerState, preview = false): string {
   const until = `Mist in ${inMinutes(w.start - state.clock)}`;
   if (!state.mist.stoke) return `${until} · stoking off`;
   return `${until} · ${autonomy >= MIST_DURATION ? "enough oil" : "not enough oil"}`;
+}
+
+/** The Leviathan's label on the sea map, from the rules: how long its hunt has left, or when it rises next. */
+export function leviathanText(state: PlayerState): string {
+  const w = huntAt(state.clock);
+  if (leviathanUp(state.clock, state.leviathan)) return `Leviathan · ${inMinutes(w.end - state.clock)} left`;
+  const next = w.on ? huntAt(w.end).start : w.start;
+  return `Leviathan in ${inMinutes(next - state.clock)}`;
 }
 
 /** How long a number of the top bar takes to roll to its new value, in ms. */

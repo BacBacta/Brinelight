@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { CITY_SHAPE, DAY, MIN_CITY_SHAPE, advance, emptyTroops, migrateCity, newPlayerState, parseState, readReport, startingMist, upgradeShape, type PlayerState } from "../src/index.js";
+import { CITY_SHAPE, DAY, MIN_CITY_SHAPE, advance, emptyTroops, migrateCity, newPlayerState, parseState, readReport, startingLeviathan, startingMist, upgradeShape, type PlayerState } from "../src/index.js";
 
 /** The city of week 4, made by the week 4 rules and stored as it is (see fixtures/README.md). */
 const week4 = (): Record<string, unknown> => JSON.parse(readFileSync(new URL("./fixtures/city-week4.json", import.meta.url), "utf8"));
@@ -9,8 +9,8 @@ const json = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 const SAVED = { clock: 1_792_310_400 };
 
 describe("the shapes", () => {
-  it("shape 6 is today's, shape 4 the oldest stored", () => {
-    expect(CITY_SHAPE).toBe(6);
+  it("shape 7 is today's, shape 4 the oldest stored", () => {
+    expect(CITY_SHAPE).toBe(7);
     expect(MIN_CITY_SHAPE).toBe(4);
   });
 
@@ -32,8 +32,10 @@ describe("from shape 4 to today's", () => {
     expect(city.clock).toBe(SAVED.clock);
     expect(city.mist).toEqual(startingMist());
     expect(city.mist.stoke).toBe(true);
+    // And the Leviathan at level 1, never hunted.
+    expect(city.leviathan).toEqual(startingLeviathan());
     // Everything the city had is there, unchanged; the fleets only gain their veterans.
-    const { training: _t, healing: _h, veterans: _v, shards: _s, clock: _c, mist: _m, fleets, ...rest } = city;
+    const { training: _t, healing: _h, veterans: _v, shards: _s, clock: _c, mist: _m, leviathan: _l, fleets, ...rest } = city;
     const { fleets: rawFleets, ...rawRest } = raw;
     expect(rest).toEqual(rawRest);
     expect(fleets).toEqual((rawFleets as object[]).map((f) => ({ ...f, veterans: emptyTroops() })));
@@ -78,11 +80,13 @@ describe("from shape 4 to today's", () => {
       shards: { sel: 3 },
       veterans: { boarders: 10, harpooners: 0, crossbowmen: 0 },
       mist: { stoke: false, dark: true, held: 4, missed: 2, damaged: 3 },
+      leviathan: { level: 3, hunt: 1_799_989_200, damage: 1200, over: true },
     };
     expect(migrateCity(json(today), CITY_SHAPE, SAVED)).toEqual(today);
     // A field already there is never replaced, even when the city says it is older.
     expect(migrateCity(json(today), 4, SAVED)).toEqual(today);
     expect(migrateCity(json(today), 5, SAVED)).toEqual(today);
+    expect(migrateCity(json(today), 6, SAVED)).toEqual(today);
   });
 
   it("from shape 5: only the clock and the Mist are added", () => {
@@ -93,6 +97,12 @@ describe("from shape 4 to today's", () => {
     expect(parseState(week5)).toBeNull();
   });
 
+  it("from shape 6: only the Leviathan is added, at level 1 and never hunted", () => {
+    const { leviathan: _l, ...shape6 } = json(newPlayerState(SAVED.clock));
+    expect(migrateCity(shape6, 6, SAVED)).toEqual(newPlayerState(SAVED.clock));
+    expect(parseState(shape6)).toBeNull();
+  });
+
   it("never adds a field to a fleet that has it", () => {
     const raw = week4() as { fleets: Record<string, unknown>[] };
     raw.fleets[0]!.veterans = { boarders: 2, harpooners: 0, crossbowmen: 0 };
@@ -101,14 +111,15 @@ describe("from shape 4 to today's", () => {
 });
 
 describe("cities that cannot be read", () => {
-  it("a shape older than 4, newer than 6, or not a whole number", () => {
-    for (const shape of [0, 3, 7, 99, 4.5, NaN]) expect(migrateCity(week4(), shape, SAVED), String(shape)).toBeNull();
+  it("a shape older than 4, newer than 7, or not a whole number", () => {
+    for (const shape of [0, 3, 8, 99, 4.5, NaN]) expect(migrateCity(week4(), shape, SAVED), String(shape)).toBeNull();
   });
 
   it("a city of shape 4 with a field parseState refuses, once the missing fields are added", () => {
     expect(migrateCity({ ...week4(), pearls: "lots" }, 4, SAVED)).toBeNull();
     expect(migrateCity({ ...week4(), fleets: "none" }, 4, SAVED)).toBeNull();
     expect(migrateCity({ ...week4(), mist: { stoke: "yes" } }, 4, SAVED)).toBeNull();
+    expect(migrateCity({ ...week4(), leviathan: { level: 0 } }, 4, SAVED)).toBeNull();
   });
 
   it("anything but an object", () => {

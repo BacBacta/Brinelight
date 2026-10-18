@@ -588,4 +588,27 @@ describe("a modified client cannot change the rules", () => {
     await expectRules(server, p);
     expect(Object.values(p.ref.now().rafts).map((r) => r.hp)).toEqual([RAFT_MAX_HP, RAFT_MAX_HP]);
   });
+
+  it("the Leviathan: a client sends only the site; the server's clock decides the hunt, the damage and the Pearls", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    // T0 is 12:00 UTC: the Leviathan rises at 13:00.
+    const p = await player(newPlayerState(T0.getTime() / 1000));
+    await expectRefused(server, p, action({ type: "sail", site: "leviathan" }), "The Leviathan is not at sea. Wait for it to rise.");
+    later(3600_000);
+    // No damage, share, Pearls, level or shards ride with the fleet.
+    const hunt = action({ type: "sail", site: "leviathan" });
+    for (const extra of [{ damage: 4000 }, { share: 1 }, { pearls: 200 }, { level: 9 }, { shards: 3 }]) await expectInvalid(server, p, { action: { ...hunt, ...extra } });
+    await expectApplied(server, p, action({ type: "sail", site: "leviathan" }));
+    const sent = p.ref.now();
+    // 15:00: the Leviathan dives; the Pearls follow the damage the rules give, and every troop comes home.
+    later(2 * 3600_000 + 3600_000);
+    await expectRules(server, p);
+    const after = p.ref.now();
+    const report = after.reports.at(-1)!;
+    expect(report).toMatchObject({ site: "leviathan", win: false, losses: emptyTroops() });
+    expect(after.pearls).toBe(sent.pearls + 30 + report.loot!.pearls);
+    expect(after.leviathan).toMatchObject({ level: 1, over: true });
+    expect(totalTroops(after.troops)).toBe(totalTroops(newPlayerState().troops));
+    await expectRefused(server, p, action({ type: "sail", site: "leviathan" }), "The Leviathan is not at sea. Wait for it to rise.");
+  });
 });

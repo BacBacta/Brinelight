@@ -27,21 +27,27 @@ const DAY = 24 * HOUR;
 /** A Mist: on now (`start` ≤ clock < `end`), or the next one. Times are on the city's clock, in seconds (UTC). */
 export type MistWindow = { on: boolean; start: number; end: number };
 
-/** The Mist at `clock`: the one going on, or else the next one. */
-export function mistAt(clock: number): MistWindow {
+/**
+ * A daily event at `clock`, starting at the same `hours` (UTC) every day and lasting `duration`: the one going on, or
+ * else the next one. The Mist's calendar, and the Leviathan's.
+ */
+export function dailyWindow(clock: number, hours: readonly number[], duration: number): MistWindow {
   const day = Math.floor(clock / DAY) * DAY;
   let next: MistWindow | null = null;
-  // Yesterday's last Mist may still be on after midnight; tomorrow's first may be the next one.
+  // Yesterday's last one may still be on after midnight; tomorrow's first may be the next one.
   for (const d of [day - DAY, day, day + DAY]) {
-    for (const h of MIST_HOURS_UTC) {
+    for (const h of hours) {
       const start = d + h * HOUR;
-      const end = start + MIST_DURATION;
+      const end = start + duration;
       if (start <= clock && clock < end) return { on: true, start, end };
       if (start > clock && (!next || start < next.start)) next = { on: false, start, end };
     }
   }
   return next!;
 }
+
+/** The Mist at `clock`: the one going on, or else the next one. */
+export const mistAt = (clock: number): MistWindow => dailyWindow(clock, MIST_HOURS_UTC, MIST_DURATION);
 
 /** Seconds from `clock` to the next time the Mist starts or lifts: always more than 0. */
 export function untilMistChange(clock: number): number {

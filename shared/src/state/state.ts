@@ -3,10 +3,12 @@ import { STARTING_BUILDINGS, advanceQueue, startUpgrade } from "../rules/buildin
 import { canSetLead, starWithShards, unlockWithShards, useLogbook, type CaptainId } from "../rules/captains.js";
 import { advanceStock, netRates, storeCap, type Weather } from "../rules/economy.js";
 import { advanceHealing, startHealing } from "../rules/healing.js";
+import { startingLeviathan } from "../rules/leviathan.js";
 import { MIST_HELD_PEARLS, isLit, mistAt, seaReach, startingMist } from "../rules/mist.js";
 import { advanceYard, applyMistDamage, startInstall, startRaft, startRaftUpgrade, startRepair, type RaftBuildingId } from "../rules/rafts.js";
 import { advanceResearch, startResearch, type TechId } from "../rules/research.js";
-import { advanceFleets, leadOf, sendFleet, startingSeaWorld, type CombatReport, type SeaState, type Sight } from "../rules/sea.js";
+import { advanceFleets, canSendFleet, leadOf, sendFleet, startingSeaWorld, type CombatReport, type SeaState, type Sight } from "../rules/sea.js";
+import type { Check } from "../rules/types.js";
 import { STARTING_CAPTAIN, STARTING_LEAD, STARTING_MORALE, STARTING_PEARLS, STARTING_STOCK, STARTING_SURVIVORS, STARTING_TROOPS } from "../rules/start.js";
 import { advanceTraining, startPromotion, startTraining } from "../rules/training.js";
 import { emptyTroops, type BuildingId, type TroopType } from "../rules/types.js";
@@ -46,6 +48,7 @@ export function newPlayerState(clock = 0): PlayerState {
     reportSeq: 0,
     clock,
     mist: startingMist(),
+    leviathan: startingLeviathan(),
   };
 }
 
@@ -91,6 +94,8 @@ const seaState = (s: PlayerState): SeaState => ({
   shards: s.shards,
   fleets: s.fleets,
   world: s.world,
+  clock: s.clock,
+  leviathan: s.leviathan,
 });
 
 /** Puts the sea back into the city. New reports get the next ids, in the order they arrive: no clock, no randomness. */
@@ -108,6 +113,7 @@ function withSea(s: PlayerState, sea: SeaState, reports: CombatReport[] = []): P
     shards: sea.shards,
     fleets: sea.fleets,
     world: sea.world,
+    leviathan: sea.leviathan,
     reports: added.length ? [...s.reports, ...added].slice(-MAX_REPORTS) : s.reports,
     reportSeq: seq,
   };
@@ -157,6 +163,9 @@ export type ActionResult = { ok: true; state: PlayerState } | { ok: false; reaso
 
 /** How far your fleets can sail now: the whole sea in calm weather, the Lighthouse's light in the Mist. */
 export const fleetSight = (state: PlayerState): Sight => ({ reach: seaReach(state.clock, state.buildings.lighthouse, state.mist), lit: isLit(state.clock, state.mist) });
+
+/** Can you send a fleet to this site now? The rule `sail` applies, for the client to show before you tap. */
+export const fleetCheck = (state: PlayerState, siteId: string): Check => canSendFleet(siteId, seaState(state), fleetSight(state));
 
 /** Sends a fleet with the shared rule, within the Lighthouse's light in the Mist; a refusal comes with its reason. */
 export function sail(state: PlayerState, siteId: string): ActionResult {
