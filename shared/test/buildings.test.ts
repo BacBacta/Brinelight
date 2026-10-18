@@ -13,9 +13,14 @@ describe("buildings", () => {
     expect(upgradeCost("refinery", 1)).toEqual({ wood: 140, fish: 60 });
   });
 
-  it("Lighthouse level 2 cost matches the prototype", () => {
-    // 180 × 1.62² = 472.4 → 470; 120 × 1.62² = 314.9 → 310
-    expect(upgradeCost("lighthouse", 2)).toEqual({ wood: 470, oil: 310 });
+  it("Lighthouse: ×1.4 a level in cost and ×1.35 in time (the prototype's ×1.62 and ×1.55 were rebalanced, docs/balance.md)", () => {
+    // 180 × 1.4² = 352.8 → 350; 120 × 1.4² = 235.2 → 240
+    expect(upgradeCost("lighthouse", 2)).toEqual({ wood: 350, oil: 240 });
+    // 180 × 1.4¹⁴ = 20,001.6 → 20,000
+    expect(upgradeCost("lighthouse", 14).wood).toBe(20000);
+    // 9 × 1.35² = 16.4 prototype seconds; 9 × 1.35¹⁴ = 601.6, about 2.5 real days
+    expect(upgradeTime("lighthouse", 2)).toBe(Math.round(9 * 1.35 ** 2 * TIME_SCALE));
+    expect(upgradeTime("lighthouse", 14) / 86400).toBeCloseTo(2.5, 2);
   });
 
   it("costs are rounded to the nearest ten", () => {

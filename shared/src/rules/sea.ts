@@ -1,5 +1,6 @@
 import { CAPTAINS, addXp, combatXp, skillFactor, type CaptainId, type Captains, type Shards } from "./captains.js";
 import { pirateCamp, pirateLoot, resolveCombat } from "./combat.js";
+import { storeCap } from "./economy.js";
 import { raftEffect, type Rafts } from "./rafts.js";
 import { techLevel, type Techs } from "./research.js";
 import { protoSeconds } from "./time.js";
@@ -320,10 +321,16 @@ function salvage(f: Fleet, s: SeaState): { fleet: Fleet; state: SeaState } {
   return { fleet: { ...f, cargo: { oil: got, rope: WRECK_ROPE } }, state: { ...s, world: { ...s.world, wrecks } } };
 }
 
-/** A fleet back home: its troops, its veterans and everything it carries come back, with no storage cap. */
+/**
+ * A fleet back home: its troops, its veterans and everything it carries come back. A camp's loot has no storage cap; a
+ * wreck's oil fills the storage and no more (its rope always comes in).
+ */
 function dock(f: Fleet, s: SeaState): SeaState {
   const stock = { ...s.stock };
-  for (const [k, v] of Object.entries(f.cargo) as [keyof Stock, number][]) stock[k] += v;
+  const cap = storeCap(s.buildings.lighthouse, s.techs);
+  for (const [k, v] of Object.entries(f.cargo) as [keyof Stock, number][]) {
+    stock[k] += f.kind === "collect" && k !== "rope" ? Math.min(v, Math.max(0, cap - stock[k])) : v;
+  }
   return { ...s, troops: add(s.troops, f.troops), veterans: add(s.veterans, f.veterans), stock, pearls: s.pearls + f.pearls };
 }
 

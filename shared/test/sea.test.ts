@@ -19,6 +19,7 @@ import {
   seaSite,
   sendFleet,
   startingSeaWorld,
+  storeCap,
   travelTime,
   type SeaState,
 } from "../src/index.js";
@@ -138,6 +139,10 @@ describe("attack: 25/25/25 against the level 1 camp, the whole trip", () => {
     expect(r.state.troops).toEqual({ boarders: 13, harpooners: 13, crossbowmen: 13 });
     expect(r.state.stock).toEqual({ ...s0.stock, oil: s0.stock.oil + 110, wood: s0.stock.wood + 110, rope: s0.stock.rope + 1 });
     expect(r.state.pearls).toBe(216);
+    // A camp's loot has no storage cap: it carries the stock past it.
+    const cap = storeCap(STARTING_BUILDINGS.lighthouse);
+    const full = { ...start(), stock: { ...STARTING_STOCK, oil: cap, wood: cap } };
+    expect(advanceFleets(send("camp-1", full), t + ATTACK_STAY + t).state.stock).toMatchObject({ oil: cap + 110, wood: cap + 110 });
   });
 
   it("the same trip in small steps gives the same result", () => {
@@ -195,6 +200,17 @@ describe("salvage", () => {
     expect(r.state.stock.rope).toBe(s0.stock.rope + 2);
     expect(r.state.world.wrecks["wreck-2"]).toBe(480 - 390);
     expect(r.state.troops).toEqual(s0.troops);
+  });
+
+  it("a wreck's oil fills the storage and no more; its rope always comes in", () => {
+    const cap = storeCap(STARTING_BUILDINGS.lighthouse);
+    const near = { ...start(), stock: { ...STARTING_STOCK, oil: cap - 100 } };
+    const r = advanceFleets(send("wreck-2", near), t + COLLECT_STAY + t);
+    expect(r.state.stock.oil).toBe(cap);
+    expect(r.state.stock.rope).toBe(STARTING_STOCK.rope + 2);
+    // Already past the storage (a camp's loot): the oil stays where it is.
+    const over = { ...start(), stock: { ...STARTING_STOCK, oil: cap + 500 } };
+    expect(advanceFleets(send("wreck-2", over), t + COLLECT_STAY + t).state.stock.oil).toBe(cap + 500);
   });
 
   it("an emptied wreck refills at once to its starting amount", () => {

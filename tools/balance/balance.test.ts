@@ -54,12 +54,12 @@ describe("the balance simulation", () => {
     expect(missing({ oil: 100, fish: 0, wood: 900, rope: 0 }, { wood: 1000, oil: 400 })).toBe("oil");
     expect(missing({ oil: 500, fish: 0, wood: 900, rope: 0 }, { wood: 1000, oil: 400 })).toBe("wood");
     expect(missing({ oil: 500, fish: 0, wood: 1000, rope: 0 }, { wood: 1000, oil: 400 })).toBeNull();
-    const at12: PlayerState = { ...newPlayerState(), buildings: { ...newPlayerState().buildings, lighthouse: 12 }, techs: { warehouses: 3 } };
-    expect(wallAt(at12)).toEqual({ resource: "wood", cost: upgradeCost("lighthouse", 12).wood, storage: 45675 });
-    expect(wallAt(newPlayerState())).toBeNull();
+    const at = (lighthouse: number, warehouses = 0): PlayerState => ({ ...newPlayerState(), buildings: { ...newPlayerState().buildings, lighthouse }, techs: { warehouses } });
+    // The storage holds the Lighthouse's next level at every level: no wall left (there was one from Lighthouse 11 before 18 October).
+    for (let level = 2; level < 30; level++) for (const wh of [0, 3]) expect(wallAt(at(level, wh)), `Lighthouse ${level}`).toBeNull();
     // While the Lighthouse waits, the rest keeps its next cost, up to what the storage holds; while it is built, nothing.
-    expect(reserve(at12)).toEqual({ wood: 45675, oil: upgradeCost("lighthouse", 12).oil });
-    expect(reserve({ ...at12, queue: [{ id: "lighthouse", left: 10, duration: 10 }] })).toEqual({});
+    expect(reserve(at(12, 3))).toEqual(upgradeCost("lighthouse", 12));
+    expect(reserve({ ...at(12, 3), queue: [{ id: "lighthouse", left: 10, duration: 10 }] })).toEqual({});
   });
 
   it("writes one CSV row per profile and day, a chart with one line per profile, and the tables between their markers", () => {
@@ -73,6 +73,7 @@ describe("the balance simulation", () => {
     expect(md.startsWith(MARK_START) && md.endsWith(MARK_END)).toBe(true);
     expect(md).toContain("### Day 30");
     expect(md).toContain("### Day 60");
+    expect(md).toContain("### Day 90");
   });
 
   it("the committed CSV, chart and tables are those the rules give today (npm run balance writes them again)", () => {

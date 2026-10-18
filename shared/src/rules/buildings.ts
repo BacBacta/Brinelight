@@ -18,7 +18,7 @@ type BuildingDef = {
 };
 
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
-  lighthouse: { name: "Lighthouse", description: "Pushes back the Mist and sets the maximum level of every other building.", base: { wood: 180, oil: 120 }, growth: 1.62, baseTime: 9, timeGrowth: 1.55 },
+  lighthouse: { name: "Lighthouse", description: "Pushes back the Mist and sets the maximum level of every other building.", base: { wood: 180, oil: 120 }, growth: 1.4, baseTime: 9, timeGrowth: 1.35 },
   refinery: { name: "Refinery", description: "Makes the oil that keeps the Lighthouse burning.", base: { wood: 90, fish: 40 }, growth: 1.6, baseTime: 6, timeGrowth: 1.5 },
   fishery: { name: "Fishery", description: "Feeds your survivors and crews.", base: { wood: 80, oil: 30 }, growth: 1.6, baseTime: 6, timeGrowth: 1.5 },
   lumberyard: { name: "Lumberyard", description: "Salvages and cuts driftwood.", base: { fish: 70, oil: 30 }, growth: 1.6, baseTime: 6, timeGrowth: 1.5 },
