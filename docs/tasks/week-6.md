@@ -71,6 +71,8 @@ Do the tasks in order, one per session. For each one: read CLAUDE.md, say what y
 - It prints a table per day: Lighthouse level, Power, resources, and what was built, researched and trained.
 - It changes no value: what it shows is discussed with the owner first. It gives the first numbers for the open questions on the early game and the Lighthouse beyond level 10.
 
+**Done (18 October).** `tools/balance/` plays a new city for 60 days with the rules of `shared/` alone, for three profiles (3, 6 and 10 sessions a day, the same choices), with no randomness; `npm run balance` writes `docs/balance/days.csv`, the Lighthouse chart and the tables of `docs/balance.md`, and a test checks they match the rules. Findings (`docs/balance.md`): Lighthouse 10 on day 21 to 31, Lighthouse 15 reached by no one in 60 days; wood blocks most sessions; from Lighthouse 12 the next level costs more wood than the storage holds, and the regular and dedicated players stay there to day 60. No value changed: the options measured wait for the owner's decision.
+
 ## Not this week
 
 The Mist's mechanism and raft repair, the Leviathan, objectives and Daily Tasks (week 7); renting the server, the load test, the first Solana proof (week 8); multiplayer (weeks 9 to 13); the daily recruitment (week 15).
