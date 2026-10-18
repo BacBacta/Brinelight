@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 380" width="800" height="380" font-family="system-ui, sans-serif" font-size="12" role="img" aria-labelledby="t">
+<title id="t">Lighthouse level by day, for the three profiles (balance simulation)</title>
+<rect width="800" height="380" fill="#fcfcfb"/>
+<text x="48" y="22" font-size="14" font-weight="600" fill="#0b0b0b">Lighthouse level by day</text>
+<line x1="48" x2="600" y1="336" y2="336" stroke="#d4d3cf" stroke-width="1"/>
+<text x="40" y="340" text-anchor="end" fill="#52514e">0</text>
+<line x1="48" x2="600" y1="316.26666666666665" y2="316.26666666666665" stroke="#ecebe8" stroke-width="1"/>
+<line x1="48" x2="600" y1="296.53333333333336" y2="296.53333333333336" stroke="#ecebe8" stroke-width="1"/>
+<line x1="48" x2="600" y1="276.8" y2="276.8" stroke="#ecebe8" stroke-width="1"/>
+<line x1="48" x2="600" y1="257.06666666666666" y2="257.06666666666666" stroke="#ecebe8" stroke-width="1"/>
+<line x1="48" x2="600" y1="237.33333333333334" y2="237.33333333333334" stroke="#d4d3cf" stroke-width="1"/>
+<text x="40" y="241.33333333333334" text-anchor="end" fill="#52514e">5</text>
+<line x1="48" x2="600" y1="217.6" y2="217.6" stroke="#ecebe8" stroke-width="1"/>
+<line x1="48" x2="600" y1="197.86666666666667" y2="197.86666666666667" stroke="#ecebe8" stroke-width="1"/>
+<line x1="48" x2="600" y1="178.13333333333333" y2="178.13333333333333" stroke="#ecebe8" stroke-width="1"/>
+<line x1="48" x2="600" y1="158.4" y2="158.4" stroke="#ecebe8" stroke-width="1"/>
+<line x1="48" x2="600" y1="138.66666666666669" y2="138.66666666666669" stroke="#d4d3cf" stroke-width="1"/>
+<text x="40" y="142.66666666666669" text-anchor="end" fill="#52514e">10</text>
+<line x1="48" x2="600" y1="118.93333333333334" y2="118.93333333333334" stroke="#ecebe8" stroke-width="1"/>
+<line x1="48" x2="600" y1="99.2" y2="99.2" stroke="#ecebe8" stroke-width="1"/>
+<line x1="48" x2="600" y1="79.46666666666667" y2="79.46666666666667" stroke="#ecebe8" stroke-width="1"/>
+<line x1="48" x2="600" y1="59.733333333333334" y2="59.733333333333334" stroke="#ecebe8" stroke-width="1"/>
+<line x1="48" x2="600" y1="40" y2="40" stroke="#d4d3cf" stroke-width="1"/>
+<text x="40" y="44" text-anchor="end" fill="#52514e">15</text>
+<line x1="48" x2="48" y1="40" y2="336" stroke="#ecebe8" stroke-width="1"/>
+<text x="48" y="354" text-anchor="middle" fill="#52514e">0</text>
+<line x1="140" x2="140" y1="40" y2="336" stroke="#ecebe8" stroke-width="1"/>
+<text x="140" y="354" text-anchor="middle" fill="#52514e">10</text>
+<line x1="232" x2="232" y1="40" y2="336" stroke="#ecebe8" stroke-width="1"/>
+<text x="232" y="354" text-anchor="middle" fill="#52514e">20</text>
+<line x1="324" x2="324" y1="40" y2="336" stroke="#ecebe8" stroke-width="1"/>
+<text x="324" y="354" text-anchor="middle" fill="#52514e">30</text>
+<line x1="416" x2="416" y1="40" y2="336" stroke="#ecebe8" stroke-width="1"/>
+<text x="416" y="354" text-anchor="middle" fill="#52514e">40</text>
+<line x1="508" x2="508" y1="40" y2="336" stroke="#ecebe8" stroke-width="1"/>
+<text x="508" y="354" text-anchor="middle" fill="#52514e">50</text>
+<line x1="600" x2="600" y1="40" y2="336" stroke="#ecebe8" stroke-width="1"/>
+<text x="600" y="354" text-anchor="middle" fill="#52514e">60</text>
+<text x="324" y="374" text-anchor="middle" fill="#52514e">Days since the city was founded</text>
+<polyline points="48,296.53333333333336 48.8,296.53333333333336 48.8,276.8 60.4,276.8 60.4,257.06666666666666 73.4,257.06666666666666 73.4,237.33333333333334 92.9,237.33333333333334 92.9,217.6 128.3,217.6 128.3,197.86666666666667 202.6,197.86666666666667 202.6,178.13333333333333 236.2,178.13333333333333 236.2,158.4 337.6,158.4 337.6,138.66666666666669 491.5,138.66666666666669 491.5,118.93333333333334 600,118.93333333333334" fill="none" stroke="#2a78d6" stroke-width="2" stroke-linejoin="round"><title>Casual (3 sessions)</title></polyline>
+<circle cx="600" cy="118.93333333333334" r="4" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="612" y="276" width="12" height="3" rx="1.5" fill="#2a78d6"/>
+<text x="630" y="280" fill="#52514e">Casual (3 sessions)</text>
+<polyline points="48,296.53333333333336 48.8,296.53333333333336 48.8,276.8 60.4,276.8 60.4,257.06666666666666 73.8,257.06666666666666 73.8,237.33333333333334 88.7,237.33333333333334 88.7,217.6 109.9,217.6 109.9,197.86666666666667 143.6,197.86666666666667 143.6,178.13333333333333 189.1,178.13333333333333 189.1,158.4 251.7,158.4 251.7,138.66666666666669 335.1,138.66666666666669 335.1,118.93333333333334 458.4,118.93333333333334 458.4,99.2 600,99.2" fill="none" stroke="#eb6834" stroke-width="2" stroke-linejoin="round"><title>Regular (6 sessions)</title></polyline>
+<circle cx="600" cy="99.2" r="4" fill="#eb6834" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="612" y="294" width="12" height="3" rx="1.5" fill="#eb6834"/>
+<text x="630" y="298" fill="#52514e">Regular (6 sessions)</text>
+<polyline points="48,296.53333333333336 48.8,296.53333333333336 48.8,276.8 59.4,276.8 59.4,257.06666666666666 73.1,257.06666666666666 73.1,237.33333333333334 88.1,237.33333333333334 88.1,217.6 110.8,217.6 110.8,197.86666666666667 139.1,197.86666666666667 139.1,178.13333333333333 178.7,178.13333333333333 178.7,158.4 243.4,158.4 243.4,138.66666666666669 323.6,138.66666666666669 323.6,118.93333333333334 441.9,118.93333333333334 441.9,99.2 600,99.2" fill="none" stroke="#1baf7a" stroke-width="2" stroke-linejoin="round"><title>Dedicated (10 sessions)</title></polyline>
+<circle cx="600" cy="99.2" r="4" fill="#1baf7a" stroke="#fcfcfb" stroke-width="2"/>
+<rect x="612" y="312" width="12" height="3" rx="1.5" fill="#1baf7a"/>
+<text x="630" y="316" fill="#52514e">Dedicated (10 sessions)</text>
+<text x="610" y="103.2" fill="#0b0b0b">Regular · level 12</text>
+<text x="610" y="117.2" fill="#0b0b0b">Dedicated · level 12</text>
+<text x="610" y="131.2" fill="#0b0b0b">Casual · level 11</text>
+</svg>
