@@ -1,4 +1,4 @@
-import { SEA_SITES, distance, lightReach, mistAt } from "@brinelight/shared";
+import { SEA_SITES, STOKE_MULTIPLIER, distance, lightReach, mistAt } from "@brinelight/shared";
 import type { PlayerState } from "../state/index.js";
 import { box, button, keyValues, kv, listRow } from "../ui/components.js";
 
@@ -13,7 +13,7 @@ const inLight = (reach: number) => PLACES.filter((s) => distance(s) <= reach).le
 export function stokeHtml(state: PlayerState): string {
   const on = state.mist.stoke;
   const level = state.buildings.lighthouse;
-  const note = on ? "In the Mist it burns 2.2 times the oil. Your city keeps working." : "In the Mist your city slows down, and your rafts get damaged.";
+  const note = on ? `In the Mist it burns ${STOKE_MULTIPLIER} times the oil. Your city keeps working.` : "In the Mist your city slows down, and your rafts get damaged.";
   const now = mistAt(state.clock).on ? `<p class="p" style="font-size:12.5px">${state.mist.dark ? "The Mist is here and your Lighthouse is dark until it lifts." : on ? "The Mist is here. Your Lighthouse is stoked." : ""}</p>` : "";
   return box(
     "In the Mist",

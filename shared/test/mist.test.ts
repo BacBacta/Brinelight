@@ -96,7 +96,7 @@ describe("what the Mist hides, and what pushes it back", () => {
 });
 
 describe("in the Mist", () => {
-  it("stoked: production stays full, the Lighthouse burns 2.2 times its oil; not stoked: production −30 %", () => {
+  it("stoked: production stays full, the Lighthouse burns 1.5 times its oil; not stoked: production −30 %", () => {
     const lit = advance(city(at(4)), MIST_DURATION);
     const dark = advance(city(at(4), false), MIST_DURATION);
     const s = city(at(4));
@@ -134,8 +134,8 @@ describe("in the Mist", () => {
 
   it("out of oil in the middle: the Lighthouse goes dark from that moment, and the Mist is not held", () => {
     const s0 = city(at(4));
-    // At Lighthouse 4 with one Refinery, a stoked Lighthouse burns more oil than it makes.
-    const s = { ...s0, buildings: { ...s0.buildings, lighthouse: 4 }, stock: { ...s0.stock, oil: 10 } };
+    // At Lighthouse 6 with one Refinery, a stoked Lighthouse burns more oil than it makes: 11.5 an hour, so 10 oil last 52 minutes.
+    const s = { ...s0, buildings: { ...s0.buildings, lighthouse: 6 }, stock: { ...s0.stock, oil: 10 } };
     const burn = -netRates(s, { mist: true, stoked: true }).oil;
     expect(burn).toBeGreaterThan(0);
     const empty = (10 / burn) * HOUR;

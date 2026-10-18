@@ -23,7 +23,7 @@ What it does:
 - **A clock in the city.** The city gets `clock`: its game time, in seconds since 1 January 1970 (UTC), that `advance` moves forward. The server sets it when the city is made, and the migration of the stored cities sets it from their last save. The client never sends it. With `DEV_SPEED`, the clock runs faster, like the rest of the game.
 - **A fixed calendar, the same for every city** (`shared/src/rules/mist.ts`): `mistAt(clock)` says whether the Mist is on, when it starts and when it ends. Every Mist is announced one hour before it starts. A fixed calendar lets the alliances of weeks 9 to 13 face the same Mist without changing the rule.
 - **Stoking is an order that stays, on by default.** The action `stoke { on }` ("Keep the Lighthouse stoked") can be given at any time; it applies during every Mist, offline too, as long as there is oil. During the Mist:
-  - stoked: the Lighthouse burns 2.2 times its oil (`STOKE_MULTIPLIER`, already in the rules), production stays normal;
+  - stoked: the Lighthouse burns 1.5 times its oil (`STOKE_MULTIPLIER`, 2.2 until the owner chose 1.5 on 18 October), production stays normal;
   - not stoked, or out of oil: production of oil, fish and wood is cut by 30 % (`MIST_PENALTY`, already in the rules).
 - **What it hides.** During the Mist, the sea beyond the Lighthouse's light is hidden: you cannot send a new fleet to a site farther from your city than `lightRadius(lighthouse, stoked)`. Fleets already at sea carry on. Refusal: "The Mist hides this place. Stoke the Lighthouse or wait for it to lift."
 - **What pushes it back.** The light's reach grows with the Lighthouse's level, and stoking adds to it.

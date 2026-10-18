@@ -17,7 +17,8 @@ const PROTO = {
 export const GREENHOUSE_FISH_PER_HOUR = protoRatePerHour(PROTO.greenhouse);
 /** The share of fish eaten a Smokehouse saves per level (prototype: 10%), down to half at most. */
 export const SMOKEHOUSE_SAVES = 0.1;
-export const STOKE_MULTIPLIER = 2.2;
+/** How many times its oil the Lighthouse burns while stoked in the Mist (week 7: 1.5, was 2.2). */
+export const STOKE_MULTIPLIER = 1.5;
 export const MIST_PENALTY = 0.7;
 export const HIGH_MORALE = 90;
 export const HIGH_MORALE_BONUS = 1.1;

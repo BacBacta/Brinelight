@@ -64,10 +64,10 @@ describe("top bar values from the shared rules", () => {
     // Clock 0 is midnight UTC: the next Mist is at 04:00.
     const s = newPlayerState();
     expect(mistText({ ...s, buildings: { ...s.buildings, refinery: 5 } })).toBe("Mist in 4 h 00 · enough oil");
-    // No Refinery: the stoked Lighthouse level 2 burns 11 oil per hour (oilAutonomy), so 110 oil last 10 h; 5 oil, 27 min.
+    // No Refinery: the stoked Lighthouse level 2 burns 7.5 oil per hour (oilAutonomy), so 75 oil last 10 h; 5 oil, 40 min.
     const noRefinery = { ...s, buildings: { ...s.buildings, refinery: 0 } };
-    expect(oilAutonomy(noRefinery, 110)).toBeCloseTo(10 * 3600);
-    expect(mistText({ ...noRefinery, stock: { ...s.stock, oil: 110 } })).toBe("Mist in 4 h 00 · enough oil");
+    expect(oilAutonomy(noRefinery, 75)).toBeCloseTo(10 * 3600);
+    expect(mistText({ ...noRefinery, stock: { ...s.stock, oil: 75 } })).toBe("Mist in 4 h 00 · enough oil");
     expect(mistText({ ...noRefinery, stock: { ...s.stock, oil: 5 } })).toBe("Mist in 4 h 00 · not enough oil");
     expect(mistText({ ...s, clock: 3 * 3600 + 8 * 60 + 30 })).toBe("Mist in 52 min · enough oil");
     expect(mistText({ ...s, mist: { ...s.mist, stoke: false } })).toBe("Mist in 4 h 00 · stoking off");
@@ -90,7 +90,7 @@ describe("top bar values from the shared rules", () => {
     expect(seaMood({ ...s, clock: 4 * 3600 })).toBe("mist");
     expect(seaMood({ ...s, clock: 6 * 3600 })).toBe("calm");
     // ?mist outside a Mist: how long your oil lasts stoked, as in week 6.
-    const noRefinery = { ...s, buildings: { ...s.buildings, refinery: 0 }, stock: { ...s.stock, oil: 110 } };
+    const noRefinery = { ...s, buildings: { ...s.buildings, refinery: 0 }, stock: { ...s.stock, oil: 75 } };
     expect(mistText(noRefinery, true)).toBe("Mist · oil for 10 h 00");
     expect(mistText({ ...s, buildings: { ...s.buildings, refinery: 5 } }, true)).toBe("Mist · your oil holds");
   });
