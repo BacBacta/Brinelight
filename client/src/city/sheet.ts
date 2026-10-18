@@ -1,7 +1,7 @@
 import { BUILDINGS, canUpgrade, maxLevel, upgradeCost, upgradeTime, type BuildingId, type TechId, type TroopType } from "@brinelight/shared";
 import type { PlayerState } from "../state/index.js";
-import { resourceIcon } from "../ui/icons.js";
-import { RESOURCE_NAMES, costEntries, formatAmount, formatDuration, formatTimeLeft } from "./format.js";
+import { actionButton, box, chip, costLine, createSheetView, progressBar, why } from "../ui/components.js";
+import { costEntries, formatDuration, formatTimeLeft } from "./format.js";
 import { bedsHtml, infirmaryHtml } from "./infirmary.js";
 import { researchHtml } from "./research.js";
 import { progress } from "./suggest.js";
@@ -13,23 +13,15 @@ import { trainingHtml } from "./training.js";
  * sheet its wounded and their healing; the Infirmary's sheet shows its beds at every level.
  */
 export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId): void; research(tech: TechId): void; train(troop: TroopType): void; promote(troop: TroopType): void; heal(): void; close(): void }) {
-  const el = document.createElement("section");
-  el.className = "sheet card";
-  el.hidden = true;
-  el.setAttribute("role", "dialog");
-  root.appendChild(el);
   let current: BuildingId | null = null;
-  let key = "";
-
-  el.addEventListener("click", (e) => {
-    const t = (e.target as HTMLElement).closest("button");
-    if (!t || !current) return;
-    if (t.dataset.act === "close") actions.close();
-    if (t.dataset.act === "upgrade") actions.upgrade(current);
-    if (t.dataset.act === "research" && t.dataset.tech) actions.research(t.dataset.tech as TechId);
-    if (t.dataset.act === "train" && t.dataset.troop) actions.train(t.dataset.troop as TroopType);
-    if (t.dataset.act === "promote" && t.dataset.troop) actions.promote(t.dataset.troop as TroopType);
-    if (t.dataset.act === "heal") actions.heal();
+  const sheet = createSheetView(root, "", (act, data) => {
+    if (!current) return;
+    if (act === "close") actions.close();
+    if (act === "upgrade") actions.upgrade(current);
+    if (act === "research" && data.tech) actions.research(data.tech as TechId);
+    if (act === "train" && data.troop) actions.train(data.troop as TroopType);
+    if (act === "promote" && data.troop) actions.promote(data.troop as TroopType);
+    if (act === "heal") actions.heal();
   });
 
   const render = (id: BuildingId, state: PlayerState, speed: number) => {
@@ -41,34 +33,28 @@ export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId
     const extra = level === 0 ? "" : id === "observatory" ? researchHtml(state, speed) : id === "barracks" ? trainingHtml(state, speed) : id === "infirmary" ? infirmaryHtml(state, speed) : "";
     const info = id === "infirmary" ? bedsHtml(state.buildings) : "";
     const k = [id, level, left, info, extra, job ? progress(job).toFixed(2) : "", check.ok ? "ok" : check.reason, costEntries(upgradeCost(id, level)).map(([r, v]) => state.stock[r] >= v).join()].join("|");
-    if (k === key) return;
-    key = k;
+    if (sheet.drawn(k)) return;
 
     let body: string;
     if (job) {
-      body = `<div class="pb"><i style="width:${(progress(job) * 100).toFixed(1)}%"></i></div>`;
+      body = progressBar(progress(job));
     } else if (next) {
-      const cost = costEntries(upgradeCost(id, level))
-        .map(([r, v]) => `<span class="${state.stock[r] < v ? "no" : ""}" title="${RESOURCE_NAMES[r]}">${resourceIcon(r)}${formatAmount(v)}</span>`)
-        .join("");
       body =
-        `<div class="box"><h4>${level === 0 ? "Build" : `Upgrade to level ${level + 1}`}</h4>` +
-        `<div class="cost">${cost}</div><p class="p" style="font-size:12.5px;margin-top:6px">Time: ${formatDuration(upgradeTime(id, level) / speed)}</p></div>` +
-        // Still tappable when refused: the tap shows the reason in a toast too.
-        `<button class="b gold xl" data-act="upgrade" aria-disabled="${!check.ok}">${level === 0 ? "Build" : "Upgrade"}</button>` +
-        (check.ok ? "" : `<p class="why">${check.reason}</p>`);
+        box(
+          level === 0 ? "Build" : `Upgrade to level ${level + 1}`,
+          costLine(state.stock, upgradeCost(id, level)) + `<p class="p" style="font-size:12.5px;margin-top:6px">Time: ${formatDuration(upgradeTime(id, level) / speed)}</p>`,
+        ) + actionButton(level === 0 ? "Build" : "Upgrade", check, "gold xl", "upgrade");
     } else {
-      body = check.ok ? "" : `<p class="why">${check.reason}</p>`;
+      body = check.ok ? "" : why(check.reason);
     }
-    el.setAttribute("aria-label", BUILDINGS[id].name);
-    el.innerHTML =
-      `<div class="sh-h"><h2>${BUILDINGS[id].name}</h2><button class="x" data-act="close" aria-label="Close">✕</button></div>` +
-      `<div class="sh-b"><p class="p">${BUILDINGS[id].description}</p>` +
-      `<div class="row"><span class="chip gold">Level ${level}${level === 0 ? " (not built)" : ""}</span>${job ? `<span class="chip ok">Building · ${left}</span>` : ""}</div>` +
-      info +
-      body +
-      extra +
-      `</div>`;
+    sheet.draw(
+      BUILDINGS[id].name,
+      `<p class="p">${BUILDINGS[id].description}</p>` +
+        `<div class="row">${chip(`Level ${level}${level === 0 ? " (not built)" : ""}`, "gold")}${job ? chip(`Building · ${left}`, "ok") : ""}</div>` +
+        info +
+        body +
+        extra,
+    );
   };
 
   return {
@@ -77,13 +63,12 @@ export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId
     },
     open(id: BuildingId, state: PlayerState, speed: number) {
       current = id;
-      key = "";
-      el.hidden = false;
+      sheet.show();
       render(id, state, speed);
     },
     close() {
       current = null;
-      el.hidden = true;
+      sheet.hide();
     },
     update(state: PlayerState, speed: number) {
       if (current) render(current, state, speed);

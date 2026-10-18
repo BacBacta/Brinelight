@@ -1,6 +1,7 @@
 /** The Profile sheet (tap the Power card). */
 import type { Wallet } from "@wallet-standard/base";
 import { NO_SIGN_IN, canSignIn, isPhone, phantomLink } from "./wallets.js";
+import { box, button, createSheetView, esc, listRow, why } from "../ui/components.js";
 
 export const PROFILE_TEXT = {
   local: "Playing without an account. Your city is saved on this device.",
@@ -10,6 +11,8 @@ export const PROFILE_TEXT = {
   saved: "Your city is saved on your account.",
   signOut: "Sign out",
   unavailable: "Accounts are not open yet. Your city is saved on this device.",
+  sounds: "Sounds",
+  soundsNote: "Wood and rope, quiet. Kept on this device.",
 } as const;
 
 /** "7Hc3wTfa…3tPq" → "7Hc3…3tPq". */
@@ -23,16 +26,13 @@ export type ProfileView = {
   busy: boolean;
 };
 
-const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-
 /** The inside of the Profile sheet, from what is known: pure, so it can be tested without a browser. */
 export function profileHtml(v: ProfileView, page: { href: string; origin: string; userAgent: string }): string {
   const T = PROFILE_TEXT;
   if (!v.available) return `<p class="p">${T.unavailable}</p>`;
   if (v.wallet) {
     return (
-      `<div class="box"><h4>Signed in as ${esc(shortAddress(v.wallet))}</h4><p class="p">${T.saved}</p></div>` +
-      `<button class="b red" data-act="sign-out">${T.signOut}</button>`
+      box(`Signed in as ${esc(shortAddress(v.wallet))}`, `<p class="p">${T.saved}</p>`) + button(T.signOut, "red", "sign-out")
     );
   }
   let body = `<p class="p">${T.local}</p>`;
@@ -41,56 +41,55 @@ export function profileHtml(v: ProfileView, page: { href: string; origin: string
     // One wallet: one button. Several: a title, then one button per wallet, with its name.
     if (able.length > 1) body += `<h4 class="sub-h">${T.signIn}</h4>`;
     body += able
-      .map((w) => `<button class="b gold xl wallet" data-act="sign-in" data-i="${v.wallets.indexOf(w)}" ${v.busy ? "disabled" : ""}><img src="${esc(w.icon)}" alt="">${able.length === 1 ? T.signIn : esc(w.name)}</button>`)
+      .map((w) =>
+        // Disabled only while a sign-in is under way: not a rule's refusal.
+        button(`<img src="${esc(w.icon)}" alt="">${able.length === 1 ? T.signIn : esc(w.name)}`, "gold xl wallet", "sign-in", ` data-i="${v.wallets.indexOf(w)}"`, undefined, ` ${v.busy ? "disabled" : ""}`),
+      )
       .join("");
   } else if (v.wallets.length) {
-    body += `<p class="why">${NO_SIGN_IN}</p>`;
+    body += why(NO_SIGN_IN);
   } else if (isPhone(page.userAgent)) {
     body += `<a class="b gold xl" href="${esc(phantomLink(page.href, page.origin))}">${T.openInPhantom}</a>`;
   } else {
-    body += `<p class="why">${T.noWallet}</p>`;
+    body += why(T.noWallet);
   }
   return body;
 }
 
+/** The sounds' switch, under every Profile: you can turn them off with or without an account. */
+export const soundsHtml = (on: boolean): string =>
+  `<div class="list">${listRow(PROFILE_TEXT.sounds, `<small>${PROFILE_TEXT.soundsNote}</small>`, button(on ? "On" : "Off", "sm", "sound", "", undefined, ` aria-pressed="${on}"`), "", ' data-sounds=""')}</div>`;
+
 export function createProfile(
   root: HTMLElement,
-  actions: { view(): ProfileView; signIn(wallet: Wallet): void; signOut(): void },
+  actions: { view(): ProfileView; signIn(wallet: Wallet): void; signOut(): void; sound(): boolean; toggleSound(): void },
 ) {
-  const el = document.createElement("section");
-  el.className = "sheet card profile";
-  el.hidden = true;
-  el.setAttribute("role", "dialog");
-  el.setAttribute("aria-label", "Profile");
-  root.appendChild(el);
-
-  const render = () => {
-    el.innerHTML =
-      `<div class="sh-h"><h2>Profile</h2><button class="x" data-act="close" aria-label="Close">✕</button></div>` +
-      `<div class="sh-b">${profileHtml(actions.view(), { href: location.href, origin: location.origin, userAgent: navigator.userAgent })}</div>`;
-  };
-  el.addEventListener("click", (e) => {
-    const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button");
-    if (!b) return;
-    if (b.dataset.act === "close") el.hidden = true;
-    if (b.dataset.act === "sign-out") actions.signOut();
-    if (b.dataset.act === "sign-in") {
-      const w = actions.view().wallets[Number(b.dataset.i)];
+  const sheet = createSheetView(root, "profile", (act, data) => {
+    if (act === "close") sheet.hide();
+    if (act === "sign-out") actions.signOut();
+    if (act === "sound") {
+      actions.toggleSound();
+      render();
+    }
+    if (act === "sign-in") {
+      const w = actions.view().wallets[Number(data.i)];
       if (w) actions.signIn(w);
     }
   });
 
+  const render = () => {
+    sheet.draw("Profile", profileHtml(actions.view(), { href: location.href, origin: location.origin, userAgent: navigator.userAgent }) + soundsHtml(actions.sound()));
+  };
+
   return {
     open() {
       render();
-      el.hidden = false;
+      sheet.show();
     },
-    close() {
-      el.hidden = true;
-    },
+    close: sheet.hide,
     /** Shows the latest state if the sheet is open. */
     refresh() {
-      if (!el.hidden) render();
+      if (sheet.shown) render();
     },
   };
 }

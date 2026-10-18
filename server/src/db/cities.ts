@@ -1,31 +1,39 @@
-import { catchUp, newPlayerState, parseState, type PlayerState } from "@brinelight/shared";
+import { CITY_SHAPE, catchUp, migrateCity, newPlayerState, parseState, type PlayerState } from "@brinelight/shared";
 import { eq } from "drizzle-orm";
 import type { Db } from "./index.js";
 import { cities } from "./schema.js";
 
-/** Where the database functions report problems; the server passes its logger. Never given a city, only ids. */
-export type DbLog = { error(fields: Record<string, unknown>, message: string): void };
+/** Where the database functions report problems; the server passes its logger. Never given a city, only ids and shapes. */
+export type DbLog = { error(fields: Record<string, unknown>, message: string): void; info?(fields: Record<string, unknown>, message: string): void };
 
 export const UNREADABLE = "Your saved city could not be read";
 
-export type StoredCity = { state: PlayerState; version: number; savedAt: Date };
+/** A stored city as the rules read it: in the current shape, whatever `shape` it is stored in. */
+export type StoredCity = { state: PlayerState; version: number; savedAt: Date; shape: number };
 
 export type LoadedCity =
   | { status: "ok"; city: StoredCity }
   | { status: "missing" }
-  /** The stored city exists but parseState refuses it: it is left as it is, never replaced by a new city. */
+  /**
+   * The stored city exists but cannot be read, even brought up to the current shape (migrateCity), or its shape is
+   * newer than this server knows: it is left as it is, never replaced by a new city.
+   */
   | { status: "unreadable"; reason: string };
 
-/** Reads a player's city with parseState. An unreadable city is logged with the player id (not the city) and left intact. */
+/**
+ * Reads a player's city, brought up to the current shape with migrateCity. Nothing is written: a city in an older
+ * shape is written in the current one at its next change. An unreadable city is logged with the player id and its
+ * shape (never the city) and left intact.
+ */
 export async function loadCity(db: Db, playerId: string, log?: DbLog): Promise<LoadedCity> {
   const [row] = await db.select().from(cities).where(eq(cities.playerId, playerId));
   if (!row) return { status: "missing" };
-  const state = parseState(row.state);
+  const state = migrateCity(row.state, row.shape);
   if (!state) {
-    log?.error({ playerId, version: row.version }, "Stored city refused by parseState");
+    log?.error({ playerId, version: row.version, shape: row.shape }, "Stored city refused by migrateCity");
     return { status: "unreadable", reason: UNREADABLE };
   }
-  return { status: "ok", city: { state, version: row.version, savedAt: row.savedAt } };
+  return { status: "ok", city: { state, version: row.version, savedAt: row.savedAt, shape: row.shape } };
 }
 
 /**
@@ -34,7 +42,7 @@ export async function loadCity(db: Db, playerId: string, log?: DbLog): Promise<L
  * (GET /city, or an action).
  */
 export async function ensureCity(db: Db, playerId: string, now: Date): Promise<void> {
-  await db.insert(cities).values({ playerId, state: newPlayerState(), version: 1, savedAt: now }).onConflictDoNothing();
+  await db.insert(cities).values({ playerId, state: newPlayerState(), version: 1, shape: CITY_SHAPE, savedAt: now }).onConflictDoNothing();
 }
 
 /**

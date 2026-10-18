@@ -378,7 +378,7 @@ describe("logs", () => {
     await db.insert(schema.cities).values({ playerId: broken.id, state: { broken: true, buildings: {} }, version: 1, savedAt: clock });
     await send(server, broken.token, { action: upgradeOf("refinery") });
     expect(lines.length).toBeGreaterThan(5);
-    expect(lines.join("")).toContain("Stored city refused by parseState");
+    expect(lines.join("")).toContain("Stored city refused by migrateCity");
     const all = lines.join("");
     for (const word of ['"buildings"', '"stock"', '"queue"', '"state"', '"broken"']) expect(all, word).not.toContain(word);
     expect(await appliedCount(id)).toBe(1);

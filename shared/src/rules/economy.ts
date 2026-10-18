@@ -2,12 +2,13 @@ import type { Buildings, Resource, Stock } from "./types.js";
 import { techLevel, type Techs } from "./research.js";
 import { raftEffect, type Rafts } from "./rafts.js";
 import { protoRatePerHour } from "./time.js";
+import { upgradeCost } from "./buildings.js";
 
 /** Prototype rates, per prototype second and per level. */
 const PROTO = {
   refinery: 1.1,
   fishery: 1.4,
-  lumberyard: 1.4,
+  lumberyard: 4.2,
   lighthouseBurn: 0.25,
   survivorEats: 0.06,
   greenhouse: 0.45,
@@ -21,8 +22,13 @@ export const MIST_PENALTY = 0.7;
 export const HIGH_MORALE = 90;
 export const HIGH_MORALE_BONUS = 1.1;
 
+/** What the storage holds beyond the next Lighthouse level's wood: never a cost the storage cannot hold. */
+export const STORE_MARGIN = 1.25;
+
+/** The storage of each resource: 2,500 a Lighthouse level, and at least 1.25 times the next level's wood; Warehouses add to it. */
 export function storeCap(lighthouse: number, techs: Techs = {}): number {
-  return Math.round((2500 * lighthouse + 1500) * (1 + 0.15 * techLevel(techs, "warehouses")));
+  const base = Math.max(2500 * lighthouse + 1500, STORE_MARGIN * (upgradeCost("lighthouse", lighthouse).wood ?? 0));
+  return Math.round(base * (1 + 0.15 * techLevel(techs, "warehouses")));
 }
 
 export const survivorCap = (shelters: number): number => 6 + shelters * 4;

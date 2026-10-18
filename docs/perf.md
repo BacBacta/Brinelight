@@ -13,10 +13,11 @@ Goal of week 2 (task 6): **30 FPS or more on the low-end Android test phone**, i
 - The minimum ignores the 5 seconds after the 3D models load, and starts over after a change of view or a return to the tab.
 - `?quality=0`, `?quality=1` or `?quality=2` forces a quality step, to compare steps on the same phone. The automatic tuning is then off.
   - `0`: full quality.
-  - `1`: pixel ratio 1.
-  - `2`: pixel ratio 1 and no shadows.
+  - `1`: pixel ratio 1, and a 1024 px shadow map instead of 2048.
+  - `2`: pixel ratio 1, no shadows, and the water without its sky reflection, small ripples and moving foam, on a coarser grid (week 6, task 4).
 - Without `?quality`, the game starts at step 0 and lowers the step by itself when it stays under 30 FPS for 3 seconds, as the prototype did.
-- Both can be combined: `?fps&quality=1`.
+- `?mist` shows the Mist's look (its mood only, no rule): the banner says "Mist", and the counter adds "Mist" after the view.
+- They can be combined: `?fps&quality=1`, `?fps&mist&quality=2`.
 
 ## Protocol (5 steps)
 
@@ -113,7 +114,7 @@ Measures in the container (Chromium, 412 × 915, quality 2, cache off). Each tim
 - The new models save 9 to 11 draw calls, with about as many triangles.
 - They cost 1.3 MB more to download, about 1.2 to 1.6 s at 10 Mbit/s, and some decoding time. The kit (`phare.glb`, 2.9 MB) still loads for the island, the scaffolding, the flags, the rafts and the sea.
 - To check on the phone with `?fps`.
-- A smaller kit, holding only the models still used, is planned for week 6, so that `phare.glb` no longer loads in full.
+- A smaller kit, holding only the models still used, so that `phare.glb` no longer loads in full: not planned yet (it is not among week 6's tasks).
 
 ## The island, the sea's models and the icons (week 5)
 
@@ -132,9 +133,9 @@ Before quantizing, the island is flattened:
 | Wreck | 3 552 kB | 157 kB | 2 452 | yes |
 | Pirate camp | 3 639 kB | 167 kB | 2 930 | yes |
 | Boat | 3 012 kB | 119 kB | 1 965 | yes |
-| Kelp Greenhouse | 3 631 kB | 156 kB | 2 309 | not yet (week 5, task 4) |
-| Smokehouse | 3 071 kB | 145 kB | 2 332 | not yet (week 5, task 4) |
-| Watchtower | 3 491 kB | 151 kB | 2 498 | not yet (week 5, task 4) |
+| Kelp Greenhouse | 3 631 kB | 156 kB | 2 309 | since week 5, task 4 |
+| Smokehouse | 3 071 kB | 145 kB | 2 332 | since week 5, task 4 |
+| Watchtower | 3 491 kB | 151 kB | 2 498 | since week 5, task 4 |
 | **Total** | | **1 214 kB** | | |
 
 The 24 icons (`assets/icons/make-icons.py`, from the sheet) weigh 256 kB in all, at 48 and 96 px.
@@ -204,3 +205,70 @@ To take up when measuring on the entry-level phone (week 5 measures, above). Ite
 three.js now has its own file (`manualChunks` in `client/vite.config.ts`): **568 kB** minified, **146 kB** gzipped. The game's own code is 50 kB (20 kB gzipped). Because three.js changes rarely, browsers keep it in cache across game updates.
 
 Vite still warns that one file is over 500 kB. That file is three.js alone, which the game needs from the first second, so loading it later would not help. The warning limit is left as it is: it applies to every file, and raising it would also hide a real growth of the game's own code.
+
+## Shared interface components (week 6, task 2)
+
+The game's own JavaScript and CSS (`client/dist/assets/index-*.js` and `index-*.css` after `npm run build`, gzip at level 9; three.js and the fonts do not change):
+
+| | JS | CSS | Total |
+| --- | --- | --- | --- |
+| Before (`527d7d1`) | 93 315 B, 33 334 B gzipped | 28 535 B, 9 001 B gzipped | 121 850 B, 42 335 B gzipped |
+| After | 89 906 B, 33 407 B gzipped | 28 769 B, 9 060 B gzipped | 118 675 B, 42 467 B gzipped |
+| Change | −3 409 B, +73 B gzipped | +234 B, +59 B gzipped | **−3 175 B, +132 B gzipped** |
+
+The goal was no growth at all; gzipped, it is missed by 132 B (0.31 %), which the owner accepted on 17 October. **The rule for a tidying-up of the code (no new feature) is now: the raw size does not grow, and the gzipped size does not grow by more than 0.5 %.** The CSS's 59 B are the invisible 44 px tap areas (the sheets' close button has its own, placed from the sheet, so that its ✕ is drawn as before). The JS's 73 B are the components themselves: the same HTML written again in every sheet compressed very well, and a function that writes it costs a little more than the copies it replaces. Tried and left out because they were heavier: the interface's own shades as CSS variables (+150 B gzipped), full class names in the buttons' calls, a component for paragraphs, the top bar and the queue on components.
+
+The 44 look references in `e2e/look/` (42 captures, and the second reference of `captains-top` at both sizes) weigh 1 956 368 B in git.
+
+## Feel: celebrations, sounds, motions, building tiers (week 6, task 3)
+
+Measured in the container (Chromium, software rendering, 412 × 915, `?quality=2&fps`), 12 s after the city shows, on a city with every building at the same level. "Before" is the code just before the tiers (`95fb056`), with the same cities. The container only shows the order of the costs: the phone rows of this file decide whether the goal of 30 FPS is met.
+
+| City | Before: FPS, draw calls, triangles | After: FPS, draw calls, triangles |
+| --- | --- | --- |
+| Tier 1: every building at level 1, Lighthouse 4 | 8, 38, 64.1 k | 9, 38, 64.1 k |
+| Tier 2: level 5, Lighthouse 9 | 10, 38, 64.5 k | 9, 39, 64.9 k |
+| Tier 3: level 10, Lighthouse 12 | 9, 38, 64.5 k | 9, 40, 68.1 k |
+| During the Lighthouse's full-screen celebration (Lighthouse 9 → 10) | – | 9 at quality step 2 (5 with the beam still turning) |
+
+- The flags, crates and barrels of every plot are one merged mesh, and the lanterns one InstancedMesh: one draw call more from the second tier, two from the third, whatever the number of buildings.
+- The full-screen celebration's turning beam cost almost half of the frames in the container (5 FPS instead of 9): at the lowest quality step (2), the beam is not shown, and the celebration costs nothing measurable. The automatic tuning lowers the step on a phone that stays under 30 FPS for 3 seconds.
+- To check on the entry-level phone (and the S22) with `?fps`, with the protocol at the top of this file: the city at the three tiers, and a Lighthouse celebration.
+
+The game's own JavaScript and CSS (as in the section above): from 118 675 B (42 467 B gzipped) after task 2 to 131 113 B (46 793 B gzipped), +10 % gzipped: the celebrations, the ten sounds made in code, the motions and the tiers. This is new work, not a tidying-up: the 0.5 % rule does not apply.
+
+The island's shore steadied (week 6, after task 3): the prototype's 18 foam hexagons of ring 3 are removed, so 16 draw calls fewer on the start city (34 to 18, at 412 × 915), and 20, 21 and 22 instead of 38, 39 and 40 for the three tiers above (container, `npm run e2e`). `island.glb` grows by 5 424 B (228 200 B): 194 faces of the meadow turned face up, on vertices of their own.
+
+Recorded sounds (week 6, after task 3): 11 MP3 in `client/public/sounds/`, 350 kB in all (the interface sounds 3 to 12 kB each, the rewards 11 to 27 kB, the sea loop 224 kB). None is in the first screen: they load after the first tap, in the background. The game's own JavaScript grows by about 1.5 kB gzipped (the loader and the sea).
+
+## Light, water and the Mist's mood (week 6, task 4)
+
+Measured in the container (Chromium, software rendering, 412 × 915, `?fps&quality=0` or `2`), 10 s after the city or the sea shows, on a new city. "Before" is `c912d7f`, "after" the end of the task, the same day on the same machine. The container only shows the order of the costs: the phone rows of this file decide whether the goal of 30 FPS is met.
+
+| View | Step | Before: FPS, draw calls, triangles | After, calm: FPS, draw calls, triangles | After, `?mist` |
+| --- | --- | --- | --- | --- |
+| City | 0 | 4, 18, 64.8 k | 3, 14, 43.9 k | 4, 19, 44.1 k |
+| City | 2 | 6, 18, 64.8 k | 7, 14, 30.1 k | 6, 19, 30.3 k |
+| Sea | 0 | 10 to 12, 135 to 139, 66.2 k | 7, 109, 44.5 k | 7, 137, 45.4 k |
+| Sea | 2 | 10 to 12, 133, 66.0 k | 11, 109, 30.7 k | 12, 133, 31.4 k |
+
+The three tiers of the e2e (step 2, after): 16, 17 and 18 draw calls, 29.3 k, 30.0 k and 33.3 k triangles (20, 21, 22 and 64.0 k, 64.8 k, 68.0 k before).
+
+- **Triangles:** the water's grid goes from 140 to 96 segments a side at steps 0 and 1 (39.2 k → 18.4 k triangles), and 48 at step 2 (4.6 k); its small ripples are drawn per pixel instead.
+- **Draw calls:** in calm weather the Lighthouses' beams are hidden: 4 calls fewer in the city (two cones, each drawn on both sides), 28 at sea (7 Lighthouses). In the Mist they sweep again, and the veil on the horizon adds 1 in the city.
+- **The water's shader** (sky reflection, ripples, foam) costs fragments. At sea, step 0 falls from about 11 to 7 FPS in the container, where the whole screen is water drawn by the processor; at step 2, without the reflection and the ripples, it is back where it was. A phone's graphics chip does this work; only its rows count.
+- **Foam:** no draw call and no extra render pass. Its grid (256 × 256, 64 kB) is built on the CPU when the city shows and again only when the rafts change.
+- **Weight:** the game's own JavaScript goes from 101 856 B (37 799 B gzipped) to 111 429 B (41 510 B gzipped), +3 711 B gzipped: the light, the water's shader, the shore's grid, the Mist's mood. The CSS does not change. This is new work, not a tidying-up: the 0.5 % rule does not apply.
+
+**The 30 FPS goal on an entry-level phone is still to be checked**: there is none to measure on yet.
+
+### To measure on the S22 (owner)
+
+With the protocol at the top of this file, on the pull request's Cloudflare preview, plugged in and at full brightness; wait 10 s after each change before reading:
+
+1. `?fps`: the city 30 s without touching, then Sea 20 s. Note the step `auto` reached.
+2. `?fps&quality=0`, then `?fps&quality=2`: the city, then the sea.
+3. `?fps&mist&quality=0`, then `?fps&mist&quality=2`: the city, then the sea.
+4. In the city at step 0, turn the camera toward the horizon: the Mist's veil (with `&mist`) and the shore's foam should hold still while the camera stays still.
+
+Note each FPS and min, with the draw calls and triangles the counter shows, in the results table above.

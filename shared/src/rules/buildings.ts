@@ -9,16 +9,18 @@ export const BUILDERS = 2;
 type BuildingDef = {
   name: string;
   description: string;
-  /** Base cost, multiplied by growth^level. */
+  /** Base cost, multiplied by growth^level (and see `after`). */
   base: Cost;
   growth: number;
   /** Base duration in prototype seconds, multiplied by timeGrowth^level. */
   baseTime: number;
   timeGrowth: number;
+  /** From this level on, gentler growths: each level costs `growth` and takes `timeGrowth` times the one before. */
+  after?: { level: number; growth: number; timeGrowth: number };
 };
 
 export const BUILDINGS: Record<BuildingId, BuildingDef> = {
-  lighthouse: { name: "Lighthouse", description: "Pushes back the Mist and sets the maximum level of every other building.", base: { wood: 180, oil: 120 }, growth: 1.62, baseTime: 9, timeGrowth: 1.55 },
+  lighthouse: { name: "Lighthouse", description: "Pushes back the Mist and sets the maximum level of every other building.", base: { wood: 180, oil: 120 }, growth: 1.4, baseTime: 9, timeGrowth: 1.35, after: { level: 15, growth: 1.3, timeGrowth: 1.2 } },
   refinery: { name: "Refinery", description: "Makes the oil that keeps the Lighthouse burning.", base: { wood: 90, fish: 40 }, growth: 1.6, baseTime: 6, timeGrowth: 1.5 },
   fishery: { name: "Fishery", description: "Feeds your survivors and crews.", base: { wood: 80, oil: 30 }, growth: 1.6, baseTime: 6, timeGrowth: 1.5 },
   lumberyard: { name: "Lumberyard", description: "Salvages and cuts driftwood.", base: { fish: 70, oil: 30 }, growth: 1.6, baseTime: 6, timeGrowth: 1.5 },
@@ -35,18 +37,24 @@ export const STARTING_BUILDINGS: Buildings = {
   lighthouse: 2, refinery: 1, fishery: 1, lumberyard: 1, shelters: 1, barracks: 0, harbor: 0, observatory: 0, infirmary: 0,
 };
 
+/** growth^level up to `after.level`, then `after.growth` a level past it (the Lighthouse past level 15). */
+const grown = (growth: number, level: number, after?: { level: number; growth: number }) =>
+  after && level > after.level ? growth ** after.level * after.growth ** (level - after.level) : growth ** level;
+
 /** Cost to go from level `level` to level `level + 1`, rounded to the nearest ten. */
 export function upgradeCost(id: BuildingId, level: number): Cost {
   const d = BUILDINGS[id];
+  const f = grown(d.growth, level, d.after);
   const raw: Cost = {};
-  for (const [k, v] of Object.entries(d.base) as [keyof Cost, number][]) raw[k] = v * d.growth ** level;
+  for (const [k, v] of Object.entries(d.base) as [keyof Cost, number][]) raw[k] = v * f;
   return roundCost(raw);
 }
 
 /** Real duration (seconds) to go from level `level` to level `level + 1`. */
 export function upgradeTime(id: BuildingId, level: number): number {
   const d = BUILDINGS[id];
-  return Math.round(protoSeconds(d.baseTime * d.timeGrowth ** level));
+  const after = d.after && { level: d.after.level, growth: d.after.timeGrowth };
+  return Math.round(protoSeconds(d.baseTime * grown(d.timeGrowth, level, after)));
 }
 
 /** Highest reachable level: the Lighthouse caps every other building. */

@@ -20,6 +20,7 @@ jobs:
 
   postgres:
     # Actions at the same moment on a real PostgreSQL: PGlite runs one transaction at a time and cannot show a locking bug.
+    # And the stored cities' migration on a real PostgreSQL: a database left by the week 4 server, opened by today's.
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -42,7 +43,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx vitest run server/test/concurrency.test.ts
+      # One file after the other: they empty the same database, and the migration test rebuilds it as week 4 left it.
+      - run: npx vitest run --no-file-parallelism server/test/concurrency.test.ts server/test/migration.test.ts
         env:
           TEST_DATABASE_URL: postgres://postgres@localhost:5432/brinelight_test
 
@@ -65,6 +67,8 @@ jobs:
           name: e2e-screenshots
           path: e2e/.shots/
           if-no-files-found: ignore
+          # e2e/.shots is a hidden folder: upload-artifact@v4 leaves those out unless asked.
+          include-hidden-files: true
 
   deploy:
     # The online setup (deploy/): scripts checked, then the whole stack started as on the server, with a local certificate.

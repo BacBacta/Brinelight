@@ -37,8 +37,10 @@ export const authNonces = pgTable(
 );
 
 /**
- * A player's city: one JSON document (read and written with parseState) and a version number,
- * +1 on each save, so that two devices saving at once cannot overwrite each other.
+ * A player's city: one JSON document (read with migrateCity, written with parseState) and a version number,
+ * +1 on each save, so that two devices saving at once cannot overwrite each other. `shape` is the shape of the
+ * document (CITY_SHAPE when written today): a city stored in an older shape is brought up to date when it is read,
+ * and written in the current shape at its next change. Rows stored before the column existed are shape 4.
  */
 export const cities = pgTable("cities", {
   playerId: uuid("player_id")
@@ -46,6 +48,7 @@ export const cities = pgTable("cities", {
     .references(() => players.id, { onDelete: "cascade" }),
   state: jsonb("state").notNull(),
   version: integer("version").notNull(),
+  shape: integer("shape").notNull().default(4),
   savedAt: timestamp("saved_at", { withTimezone: true }).notNull(),
 });
 

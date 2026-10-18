@@ -102,4 +102,4 @@ The rules exist in `shared` (`canResearch`, `canAddRaft`…) but nothing in the 
 
 ## Not this week
 
-Training troops (no rule in `shared` yet: to add from the prototype, week 5), the Mist and the Leviathan on the server (week 7), multiplayer (weeks 8 to 12), renting the server (week 7 at the latest).
+Training troops (no rule in `shared` yet: to add from the prototype, week 5), the Mist and the Leviathan on the server (week 7), multiplayer (weeks 9 to 13), renting the server (week 8 at the latest).

@@ -38,7 +38,7 @@ export function createSea(
 
   scene.onFrame((now, view) => {
     if (view !== "sea") return;
-    map.animate(now);
+    map.animate(now, scene.beams);
     marks.place(game.state().fleets, now);
     labels.place();
   });

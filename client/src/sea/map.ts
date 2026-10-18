@@ -1,17 +1,20 @@
 import * as THREE from "three";
 import { SEA_SITES, type SeaSite } from "@brinelight/shared";
-import { createLighthouse, hexGeometry, kitModel, normalizeBuilding, type Kit, type Models } from "../scene/index.js";
+import { WAVE_HEIGHT, createLighthouse, hexGeometry, kitModel, normalizeBuilding, type Kit, type Models } from "../scene/index.js";
 
 export type SeaMap = {
   /** Invisible shapes used to know which site was tapped. */
   hits: THREE.Object3D[];
-  animate(now: number): void;
+  /** `beams`: how much the Lighthouses' beams show (hidden in calm weather, sweeping in the Mist). */
+  animate(now: number, beams: number): void;
 };
 
 /** The room the wreck and the pirate camp take on the map, and how deep they sit: they float, the hull half sunk. */
 export const WRECK_FIT = { width: 2.2, height: 1.9 };
 export const CAMP_FIT = { width: 2.6, height: 2 };
 const WRECK_DEPTH = -0.55;
+/** Just above the highest wave of the water (at rest at -0.42, waves of ±WAVE_HEIGHT). */
+export const ABOVE_WAVES = -0.42 + WAVE_HEIGHT + 0.06;
 const CAMP_DEPTH = -0.62;
 
 /**
@@ -28,13 +31,14 @@ export function createSeaMap(kit: Kit, models: Pick<Models, "wreck" | "camp">, a
   const lighthouses: { lh: ReturnType<typeof createLighthouse>; x: number }[] = [];
   const rings: { ring: THREE.Object3D; x: number }[] = [];
 
+  // The islets' sand and foam lie just above the highest wave: inside the waves, the water crossed them on every frame.
   const islet = (g: THREE.Group) => {
     g.add(kitModel(kit, "hex_grass"));
     const sand = new THREE.Mesh(hexGeometry(1.25), sandM);
-    sand.position.y = -0.38;
+    sand.position.y = ABOVE_WAVES;
     g.add(sand);
     const foam = new THREE.Mesh(hexGeometry(1.45), foamM);
-    foam.position.y = -0.36;
+    foam.position.y = ABOVE_WAVES + 0.01;
     g.add(foam);
   };
   const place = (o: THREE.Object3D, scale: number, x = 0, y = 0, z = 0) => {
@@ -73,7 +77,7 @@ export function createSeaMap(kit: Kit, models: Pick<Models, "wreck" | "camp">, a
         break;
       case "wreck": {
         const sand = new THREE.Mesh(hexGeometry(0.9), sandM);
-        sand.position.y = -0.36;
+        sand.position.y = ABOVE_WAVES;
         g.add(sand);
         const w = place(wreckModel.clone(true), 1, 0, WRECK_DEPTH);
         w.rotation.set(0.12, (i * 1.7) % 6, 0.08);
@@ -83,7 +87,7 @@ export function createSeaMap(kit: Kit, models: Pick<Models, "wreck" | "camp">, a
       case "fish": {
         // Fixed spots for the water lilies (the prototype scattered them at random).
         [[-0.6, 0.3], [0.5, -0.4], [0.1, 0.7], [-0.3, -0.6], [0.7, 0.4]].forEach(([x, z], k) =>
-          g.add(place(kitModel(kit, k % 2 ? "waterlily_B" : "waterlily_A"), 1, x!, -0.38, z!)),
+          g.add(place(kitModel(kit, k % 2 ? "waterlily_B" : "waterlily_A"), 1, x!, ABOVE_WAVES, z!)),
         );
         const ringGeo = new THREE.RingGeometry(1.1, 1.3, 6, 1);
         ringGeo.rotateX(-Math.PI / 2);
@@ -123,8 +127,11 @@ export function createSeaMap(kit: Kit, models: Pick<Models, "wreck" | "camp">, a
 
   return {
     hits,
-    animate(now) {
-      for (const { lh, x } of lighthouses) lh.animate(now * 0.8 + x);
+    animate(now, beams) {
+      for (const { lh, x } of lighthouses) {
+        lh.setBeams(beams);
+        lh.animate(now * 0.8 + x);
+      }
       for (const { ring, x } of rings) ring.scale.setScalar(1 + Math.sin(now * 2 + x) * 0.08);
     },
   };

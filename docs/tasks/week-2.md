@@ -47,4 +47,4 @@ Do the tasks in order, one per session. For each one: read CLAUDE.md, say what y
 
 ## Not this week
 
-Server, sign-in, Solana, multiplayer, rafts, research, captains (they come in weeks 3 to 6, on the server side first).
+Server, sign-in, Solana, multiplayer, rafts, research, captains (they come from week 3 on, on the server side first).

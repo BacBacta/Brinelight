@@ -10,7 +10,8 @@ Each model gets:
 - its geometry quantized (KHR_mesh_quantization): positions on 16 bits, normals on 8 bits, texture coordinates on
   16 bits, then identical vertices welded and 16-bit indices. The decoding scale and offset go in the node's matrix.
 The island is flattened first (FLATTEN): the bumps of its meadow are brought down to the meadow, with their normals
-pointing up, and the meadow is moved to y = 0, where the buildings stand. three.js reads both extensions. The originals stay out of the client build.
+pointing up, the faces this turns upside down are turned face up just under it, and the meadow is moved to y = 0, where
+the buildings stand. three.js reads both extensions. The originals stay out of the client build.
 Needs Pillow only.
 """
 import io
@@ -43,8 +44,10 @@ PINES = {
     ]
 }
 # The island's meadow, and the height up to which its bumps (grass tufts, the edge of the meadow) are flattened onto
-# it, in the original's units. The meadow is flat at -0.07; above 0.08 stand its windswept pines (up to 0.30).
-FLATTEN = {"island": {"ground": -0.07, "top": 0.08}}
+# it, in the original's units. The meadow is flat at -0.07; above 0.08 stand its windswept pines (up to 0.30). The faces
+# that flattening turns upside down are turned face up, `sink` under the meadow (about 1 cm in the city): far more than
+# the depth buffer can tell apart, far less than the eye can see.
+FLATTEN = {"island": {"ground": -0.07, "top": 0.08, "sink": 0.002}}
 
 FLOAT, BYTE, SHORT, USHORT, UINT = 5126, 5120, 5122, 5123, 5125
 COUNTS = {"SCALAR": 1, "VEC2": 2, "VEC3": 3}
@@ -125,7 +128,7 @@ def convert(cid, src_dir, out_dir):
         renumber = {old: new for new, old in enumerate(used)}
         indices = [renumber[indices[t + k]] for t in kept for k in range(3)]
         positions, normals, uvs, keep_shape = ([v[i] for i in used] for v in (positions, normals, uvs, keep_shape))
-    flattened = 0
+    flattened = turned = 0
     if cid in FLATTEN:
         ground, top = FLATTEN[cid]["ground"], FLATTEN[cid]["top"]
         for i, p in enumerate(positions):
@@ -133,6 +136,26 @@ def convert(cid, src_dir, out_dir):
                 positions[i] = (p[0], ground, p[2])
                 normals[i] = (0.0, 1.0, 0.0)
                 flattened += 1
+        # Where a bump hung over the meadow (a tuft, the lip of its edge), flattening lays its underside on the meadow,
+        # upside down and exactly in its plane: the two faces fight for each pixel (z-fighting), and the upside-down one
+        # shows dark through the double-sided material. Each face so folded is turned face up, on vertices of its own
+        # laid `sink` under the meadow: where the meadow covers it, the meadow shows; where it does not, it fills the gap.
+        sink = ground - FLATTEN[cid]["sink"]
+        for t in range(0, len(indices), 3):
+            a, b, c = (positions[i] for i in indices[t : t + 3])
+            if any(abs(q[1] - ground) > 0.002 for q in (a, b, c)):
+                continue
+            if (b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2]) >= 0:
+                continue
+            turned_face = []
+            for i in reversed(indices[t : t + 3]):
+                turned_face.append(len(positions))
+                positions.append((positions[i][0], sink, positions[i][2]))
+                normals.append((0.0, 1.0, 0.0))
+                uvs.append(uvs[i])
+                keep_shape.append(False)
+            indices[t : t + 3] = turned_face
+            turned += 1
         positions = [(p[0], p[1] - ground, p[2]) for p in positions]
 
     # Positions: one uniform scale around the center of the box, so the model keeps its proportions.
@@ -225,7 +248,7 @@ def convert(cid, src_dir, out_dir):
     # The largest position error, in model units, against the original.
     error = max(abs(center[k] + q[k] / 32767 * s - p[k]) for p, q in zip(positions, qpos) for k in range(3))
     before = (src_dir / f"{cid}.glb").stat().st_size / 1024
-    return {"removed": removed, "moved": moved, "id": cid, "before kB": before, "kB": len(glb) / 1024, "triangles": len(tris) // 3, "vertices": count, "was": len(positions), "error": error, "flattened": flattened}
+    return {"removed": removed, "moved": moved, "id": cid, "before kB": before, "kB": len(glb) / 1024, "triangles": len(tris) // 3, "vertices": count, "was": len(positions), "error": error, "flattened": flattened, "turned": turned}
 
 
 for ids, src_dir, out_dir in [(BUILDINGS, here / "buildings" / "src", public / "buildings"), (OTHERS, here / "models" / "src", public / "models")]:
@@ -234,6 +257,6 @@ for ids, src_dir, out_dir in [(BUILDINGS, here / "buildings" / "src", public / "
     for cid in ids:
         r = convert(cid, src_dir, out_dir)
         total += r["kB"]
-        flat = "".join(f"  {r[k]} vertices {k}" for k in ("removed", "moved", "flattened") if r[k])
+        flat = "".join(f"  {r[k]} vertices {k}" for k in ("removed", "moved", "flattened") if r[k]) + (f"  {r['turned']} faces turned" if r["turned"] else "")
         print(f"{r['id']:<12} {r['before kB']:6.0f} kB -> {r['kB']:4.0f} kB  {r['triangles']} triangles  {r['vertices']} vertices (was {r['was']})  largest position error {r['error']:.6f}{flat}")
     print(f"{'total':<12} {total:23.0f} kB  ({out_dir.relative_to(here.parent)})")
