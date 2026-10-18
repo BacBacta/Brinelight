@@ -1,7 +1,9 @@
 import { BUILDERS, BUILDING_IDS, LIGHTHOUSE_MAX, type UpgradeJob } from "../rules/buildings.js";
 import { CAPTAINS, CAPTAIN_MAX_LEVEL, CAPTAIN_MAX_STARS, xpNeeded, type CaptainId } from "../rules/captains.js";
+import { CHESTS, DAILY_TASKS, dailyPoints, dayOf, type DailyState } from "../rules/daily.js";
 import type { HealingJob } from "../rules/healing.js";
 import { HUNT_DURATION, type LeviathanState } from "../rules/leviathan.js";
+import { OBJECTIVES, type Progress } from "../rules/objectives.js";
 import type { MistState } from "../rules/mist.js";
 import { RAFT_BUILDINGS, RAFT_BUILDING_MAX_COPIES, RAFT_BUILDING_MAX_LEVEL, RAFT_MAX_HP, RAFT_SLOTS, raftBuildingCopies, type RaftBuildingId, type Rafts, type YardJob } from "../rules/rafts.js";
 import { TECHS, techLevel, type ResearchJob, type TechId, type Techs } from "../rules/research.js";
@@ -79,6 +81,23 @@ const isLeviathan = (l: unknown): l is LeviathanState =>
   isNum(l.damage) &&
   l.damage >= 0 &&
   typeof l.over === "boolean";
+
+/** What the city has done since it was founded: whole counts. */
+const isProgress = (p: unknown): p is Progress =>
+  isObj(p) && Object.keys(p).sort().join() === "camps,gathers,trained" && isWhole(p.camps) && isWhole(p.gathers) && isWhole(p.trained);
+
+/**
+ * A day of daily tasks: a day no later than the city's clock, a whole count for each task, and the chests opened that
+ * day, each once and none beyond the day's points.
+ */
+function isDaily(d: unknown, clock: number): d is DailyState {
+  if (!isObj(d) || Object.keys(d).sort().join() !== "chests,counts,day" || !isWhole(d.day, 0, dayOf(clock))) return false;
+  const counts = d.counts;
+  if (!isObj(counts) || Object.keys(counts).sort().join() !== DAILY_TASKS.map((t) => t.id).sort().join() || !Object.values(counts).every((v) => isWhole(v))) return false;
+  const chests = d.chests;
+  if (!Array.isArray(chests) || new Set(chests).size !== chests.length || !chests.every((c) => (CHESTS as readonly unknown[]).includes(c))) return false;
+  return chests.every((c: number) => c <= dailyPoints(d as DailyState));
+}
 
 const isJob = (j: unknown): j is UpgradeJob =>
   isObj(j) && typeof j.id === "string" && (BUILDING_IDS as string[]).includes(j.id) && isNum(j.left) && isNum(j.duration) && j.duration > 0;
@@ -317,7 +336,10 @@ export function parseState(raw: unknown): PlayerState | null {
       !isNum(s.clock) ||
       s.clock < 0 ||
       !isMist(s.mist) ||
-      !isLeviathan(s.leviathan)
+      !isLeviathan(s.leviathan) ||
+      !isWhole(s.objective, 0, OBJECTIVES.length) ||
+      !isProgress(s.progress) ||
+      !isDaily(s.daily, s.clock)
     ) {
       return null;
     }
@@ -363,6 +385,9 @@ export function parseState(raw: unknown): PlayerState | null {
       clock: s.clock,
       mist: { ...(s.mist as MistState) },
       leviathan: { ...(s.leviathan as LeviathanState) },
+      objective: s.objective,
+      progress: { ...(s.progress as Progress) },
+      daily: { day: (s.daily as DailyState).day, counts: { ...(s.daily as DailyState).counts }, chests: [...(s.daily as DailyState).chests] },
     };
   } catch {
     return null;

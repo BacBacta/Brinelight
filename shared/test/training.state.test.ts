@@ -18,6 +18,7 @@ import {
   trainCost,
   trainTime,
   type PlayerState,
+  countDone,
 } from "../src/index.js";
 
 const json = <T>(v: T): T => JSON.parse(JSON.stringify(v));
@@ -121,7 +122,9 @@ describe("training at the Barracks", () => {
 
   it("an action: applyAction gives the same city as the rule; parseAction reads the troop type only", () => {
     const s = withBarracks();
-    expect(applyAction(s, { id: ID, type: "train", troop: "boarders" })).toEqual(train(s, "boarders"));
+    // What it starts also counts for today's tasks and the objectives.
+    const r = train(s, "boarders");
+    expect(applyAction(s, { id: ID, type: "train", troop: "boarders" })).toEqual(r.ok ? { ...r, state: countDone(r.state, "trains") } : r);
     expect(parseAction({ id: ID, type: "train", troop: "crossbowmen" })).toEqual({ id: ID, type: "train", troop: "crossbowmen" });
     for (const troop of ["archers", "toString", "constructor", "__proto__", "", 3, null]) expect(parseAction({ id: ID, type: "train", troop }), String(troop)).toBeNull();
     expect(parseAction({ id: ID, type: "train" })).toBeNull();

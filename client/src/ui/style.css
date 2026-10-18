@@ -189,3 +189,23 @@ h4.with-icon .icon{width:22px;height:22px}
 .pill .fill i,.bl .pb i,.mor .bar i{transition:width .3s linear}
 .sheet{transition:translate .16s ease-in,opacity .16s ease-in,display .16s allow-discrete}
 .sheet[hidden]{display:none;translate:0 40px;opacity:0;pointer-events:none}
+/* Objectives and daily tasks (week 7, task 4): the current objective above the bottom menu, the Tasks button under the
+   top bar on the right, the chests of the Daily Tasks sheet (the prototype's .quest, .rail, .chest). */
+.quest{position:fixed;left:8px;bottom:calc(82px + env(safe-area-inset-bottom,0px));z-index:5;display:flex;gap:8px;align-items:center;padding:7px 7px 7px 9px;border-radius:14px;max-width:min(420px,calc(100% - 16px))}
+.quest[hidden]{display:none}
+.quest .qn{font-family:var(--f-d);font-size:12px;background:rgba(255,255,255,.12);border-radius:8px;padding:2px 6px;align-self:flex-start}
+.quest .qt{flex:1;min-width:0}.quest .qt b{display:block;font-size:13px;line-height:1.25;margin-bottom:4px}
+.quest .cost span{font-size:11.5px}.quest .b.sm{flex:none}
+.quest.done{border-color:var(--gold);box-shadow:0 0 0 3px rgba(255,200,58,.35),0 6px 0 rgba(0,0,0,.25)}
+.rail{position:fixed;right:8px;top:calc(104px + env(safe-area-inset-top,0px));z-index:5;display:grid;gap:6px}
+.rail button{position:relative;display:grid;justify-items:center;gap:1px;padding:5px 8px;border-radius:12px;font:900 12px var(--f-b);color:#fff}
+.rail button small{font-size:10.5px;color:var(--soft)}
+.rail .dot{position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--red);border:2px solid #fff}
+.rail .dot[hidden]{display:none}
+body.at-sea .rail,body.at-sea .quest{display:none}
+.chest{display:flex;gap:4px;margin-top:8px}
+.ch{flex:1;border:0;border-radius:12px;background:rgba(255,255,255,.07);padding:6px 0;display:grid;justify-items:center;color:var(--muted);font-weight:900;min-height:44px}
+.ch span{font-size:19px;line-height:1}.ch small{font-size:10.5px}
+.ch.can{background:linear-gradient(180deg,#FFD866,#F0A51A);color:#4A2C00}.ch.got{color:#8BF09B}
+.tk{background:rgba(255,200,58,.15);color:#FFD866;font-family:var(--f-d);font-size:16px}.tk.ok{background:rgba(63,191,90,.2);color:#8BF09B}
+.daily .it .tt{flex:1;min-width:0}

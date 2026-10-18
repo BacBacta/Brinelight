@@ -235,7 +235,8 @@ describe("migrateSave: old local saves", () => {
   });
 
   it("gives a save from before the Mist its clock, at the time of the save, and the order to stoke on", () => {
-    const { clock: _c, mist: _m, ...old } = JSON.parse(JSON.stringify(newPlayerState()));
+    // A save from before the Mist has none of the fields of week 7.
+    const { clock: _c, mist: _m, leviathan: _l, objective: _o, progress: _p, daily: _d, ...old } = JSON.parse(JSON.stringify(newPlayerState()));
     expect(migrateSave(old, 1_800_000_000)).toEqual(newPlayerState(1_800_000_000));
   });
 

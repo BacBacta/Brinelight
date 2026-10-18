@@ -26,6 +26,7 @@ import { createFpsCounter } from "./ui/fps.js";
 import { fpsWanted } from "./ui/fpsMeter.js";
 import { createCaptainsSheet } from "./ui/captains.js";
 import { createCelebrations } from "./ui/celebrate.js";
+import { createDailySheet, createQuest, createTasksButton } from "./ui/daily.js";
 import { createUi } from "./ui/index.js";
 import { mistPreview, seaMood } from "./ui/values.js";
 import { createSound, type SoundId } from "./ui/sound.js";
@@ -101,6 +102,9 @@ if (new URLSearchParams(location.search).has("rules")) {
     city?.update(state);
     sea?.update(state);
     captains.update(state);
+    daily.update(state);
+    quest.update(state);
+    tasks.update(state);
     ui.update(state);
   };
 
@@ -110,6 +114,7 @@ if (new URLSearchParams(location.search).has("rules")) {
     city?.closeSheet();
     sea?.closeSheet();
     captains.close();
+    daily.close();
   };
   // The sea's mood, for the banner and the 3D view: the Mist when the rules say it is on; ?mist shows its look.
   const preview = mistPreview(location.search);
@@ -121,6 +126,7 @@ if (new URLSearchParams(location.search).has("rules")) {
       city?.closeSheet();
       sea?.closeSheet();
       captains.close();
+      daily.close();
       profile.open();
     },
     // The Captains button opens its sheet over the view you are in.
@@ -128,6 +134,7 @@ if (new URLSearchParams(location.search).has("rules")) {
       city?.closeSheet();
       sea?.closeSheet();
       profile.close();
+      daily.close();
       captains.open(state);
     },
     preview,
@@ -183,8 +190,21 @@ if (new URLSearchParams(location.search).has("rules")) {
     unlock: (captain) => act({ type: "unlockCaptain", captain }),
     addStar: (captain) => act({ type: "addStar", captain }),
   });
-  // A tap in the 3D view is for the city or the sea: the Captains sheet makes way.
-  canvas.addEventListener("pointerup", () => captains.close());
+  // The current objective above the bottom menu, and the daily tasks from the Tasks button: the rules count, you claim.
+  const daily = createDailySheet(app, { openChest: (chest) => act({ type: "claimChest", chest }) });
+  const quest = createQuest(app, () => act({ type: "claimObjective" }));
+  const tasks = createTasksButton(app, () => {
+    city?.closeSheet();
+    sea?.closeSheet();
+    captains.close();
+    profile.close();
+    daily.open(state);
+  });
+  // A tap in the 3D view is for the city or the sea: the Captains and Daily Tasks sheets make way.
+  canvas.addEventListener("pointerup", () => {
+    captains.close();
+    daily.close();
+  });
 
   /** Signed in or out: the other city takes the screen. The city of this device goes on from its own save. */
   function switchCity(): void {

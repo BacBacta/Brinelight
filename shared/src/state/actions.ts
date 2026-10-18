@@ -5,12 +5,13 @@
 import { BUILDING_IDS } from "../rules/buildings.js";
 import { CAPTAINS, type CaptainId } from "../rules/captains.js";
 import { BEATS } from "../rules/combat.js";
+import { CHESTS, type Chest } from "../rules/daily.js";
 import { RAFT_BUILDINGS, RAFT_SLOTS, type RaftBuildingId } from "../rules/rafts.js";
 import { TECHS, type TechId } from "../rules/research.js";
 import { seaSite } from "../rules/sea.js";
 import type { BuildingId, TroopType } from "../rules/types.js";
 import { REPORT_ID } from "./parse.js";
-import { addStar, dockRaft, heal, installOnRaft, logbook, promote, readReport, research, sail, repairRafts, setLead, stoke, train, unlockCaptain, upgrade, upgradeRaft, type ActionResult } from "./state.js";
+import { addStar, claimObjective, countDone, dockRaft, heal, installOnRaft, logbook, openChest, promote, readReport, research, sail, repairRafts, setLead, stoke, train, unlockCaptain, upgrade, upgradeRaft, type ActionResult } from "./state.js";
 import type { PlayerState } from "./types.js";
 
 /** Every action carries an id made by the client (a UUID), so the server never applies it twice. */
@@ -30,7 +31,9 @@ export type GameAction =
   | { id: string; type: "unlockCaptain"; captain: CaptainId }
   | { id: string; type: "addStar"; captain: CaptainId }
   | { id: string; type: "stoke"; on: boolean }
-  | { id: string; type: "repairRafts" };
+  | { id: string; type: "repairRafts" }
+  | { id: string; type: "claimObjective" }
+  | { id: string; type: "claimChest"; chest: Chest };
 
 export type GameActionType = GameAction["type"];
 
@@ -55,6 +58,8 @@ const FIELDS: Record<GameActionType, readonly string[]> = {
   addStar: ["captain"],
   stoke: ["on"],
   repairRafts: [],
+  claimObjective: [],
+  claimChest: ["chest"],
 };
 
 const SLOTS = new Set(RAFT_SLOTS.map((s) => s.key));
@@ -66,9 +71,17 @@ const shortText = (v: unknown, max = MAX_TEXT): v is string => typeof v === "str
 
 /**
  * Applies an action with the shared rules. The city it receives is never changed: a new city comes back,
- * or the rule's refusal with its reason, word for word.
+ * or the rule's refusal with its reason, word for word. What it starts counts for today's tasks and the objectives.
  */
 export function applyAction(state: PlayerState, action: GameAction): ActionResult {
+  const r = apply(state, action);
+  if (!r.ok) return r;
+  const task =
+    action.type === "upgrade" ? "upgrades" : action.type === "research" ? "research" : action.type === "train" ? "trains" : action.type === "sail" && seaSite(action.site)?.kind === "wreck" ? "gathers" : null;
+  return task ? { ...r, state: countDone(r.state, task) } : r;
+}
+
+function apply(state: PlayerState, action: GameAction): ActionResult {
   switch (action.type) {
     case "upgrade":
       return upgrade(state, action.building);
@@ -102,6 +115,10 @@ export function applyAction(state: PlayerState, action: GameAction): ActionResul
       return stoke(state, action.on);
     case "repairRafts":
       return repairRafts(state);
+    case "claimObjective":
+      return claimObjective(state);
+    case "claimChest":
+      return openChest(state, action.chest);
   }
 }
 
@@ -174,6 +191,12 @@ export function parseAction(raw: unknown): GameAction | null {
       case "repairRafts":
         // No field: never a raft, a sturdiness or a cost.
         return { id, type: t };
+      case "claimObjective":
+        // No field: always the current objective; the rules check its condition and give its reward.
+        return { id, type: t };
+      case "claimChest":
+        // The chest only, by its points: never a reward or a number of points.
+        return typeof o.chest === "number" && (CHESTS as readonly number[]).includes(o.chest) ? { id, type: t, chest: o.chest as Chest } : null;
     }
   } catch {
     return null;

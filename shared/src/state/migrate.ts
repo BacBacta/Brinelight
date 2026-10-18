@@ -2,7 +2,9 @@
  * Cities stored in an older shape are brought up to the current one, step by step, instead of being refused.
  * Pure: no system clock (the time of the last save is given), no randomness. Used by the server for the stored cities, and by the client for old local saves.
  */
+import { startingDaily } from "../rules/daily.js";
 import { startingLeviathan } from "../rules/leviathan.js";
+import { startingProgress } from "../rules/objectives.js";
 import { startingMist } from "../rules/mist.js";
 import { emptyTroops } from "../rules/types.js";
 import { parseState } from "./parse.js";
@@ -11,8 +13,9 @@ import type { PlayerState } from "./types.js";
 /**
  * The current shape of a city. Shape 4: the city of week 4. Shape 5: week 5 (training, healing, veterans, shards).
  * Shape 6: week 7, the Mist (the city's clock, the order to stoke). Shape 7: week 7, the Leviathan (its level, the hunt).
+ * Shape 8: week 7, the objectives and the daily tasks.
  */
-export const CITY_SHAPE = 7;
+export const CITY_SHAPE = 8;
 /** The oldest shape a stored city can have: nothing was stored before week 4. */
 export const MIN_CITY_SHAPE = 4;
 
@@ -49,6 +52,14 @@ const STEPS: Record<number, (s: Raw, ctx: MigrationContext) => Raw> = {
   },
   // Week 7: the Leviathan at level 1, never hunted.
   6: (s) => ("leviathan" in s ? s : { ...s, leviathan: startingLeviathan() }),
+  // Week 7: the first objective, nothing counted yet, today's daily tasks on the city's clock (its last save before 7).
+  7: (s, ctx) => {
+    const out = { ...s };
+    if (!("objective" in out)) out.objective = 0;
+    if (!("progress" in out)) out.progress = startingProgress();
+    if (!("daily" in out)) out.daily = startingDaily(typeof out.clock === "number" ? out.clock : ctx.clock);
+    return out;
+  },
 };
 
 /** Adds the fields of every step from `shape` to the current shape. Does not check the city: parseState does. */

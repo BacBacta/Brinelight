@@ -1,5 +1,7 @@
 import type { CaptainId, Shards } from "../rules/captains.js";
+import type { DailyState } from "../rules/daily.js";
 import type { LeviathanState } from "../rules/leviathan.js";
+import type { Progress } from "../rules/objectives.js";
 import type { MistState } from "../rules/mist.js";
 import type { Rafts, YardJob } from "../rules/rafts.js";
 import type { ResearchJob, Techs } from "../rules/research.js";
@@ -54,6 +56,12 @@ export type PlayerState = {
   mist: MistState;
   /** The Leviathan's level for your city, and the hunt your fleets took part in. */
   leviathan: LeviathanState;
+  /** The current objective: its index in OBJECTIVES (OBJECTIVES.length once every one is claimed). */
+  objective: number;
+  /** What the city has done since it was founded: fleets sent to gather, trainings started, camps beaten. */
+  progress: Progress;
+  /** Today's daily tasks (00:00 UTC on the city's clock) and the chests opened. */
+  daily: DailyState;
 };
 
 /** A combat report, with a stable id ("r1", "r2"…) given in the order reports arrive, never reused. */

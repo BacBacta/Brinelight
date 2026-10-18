@@ -76,7 +76,8 @@ describe("POST /city/actions", () => {
     expect(await stored(id)).toBeUndefined();
     const res = await send(server, token, { action: upgradeOf("refinery") });
     expect(res.statusCode).toBe(200);
-    const expected = upgrade(newPlayerState(T0.getTime() / 1000), "refinery");
+    // The rules' action: the upgrade, counted for today's tasks.
+    const expected = applyAction(newPlayerState(T0.getTime() / 1000), upgradeOf("refinery"));
     if (!expected.ok) throw new Error(expected.reason);
     expect(res.json()).toEqual({ state: json(expected.state), version: 2, asOf: T0.toISOString(), speed: 1 });
     expect((await stored(id))!.version).toBe(2);

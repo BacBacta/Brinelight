@@ -2,12 +2,14 @@
 import { STARTING_BUILDINGS, advanceQueue, startUpgrade } from "../rules/buildings.js";
 import { canSetLead, starWithShards, unlockWithShards, useLogbook, type CaptainId } from "../rules/captains.js";
 import { advanceStock, netRates, storeCap, type Weather } from "../rules/economy.js";
+import { CHESTS, canOpenChest, chestReward, countDaily, dailyOn, dayOf, startingDaily, untilMidnight, type Chest, type DailyTaskId } from "../rules/daily.js";
 import { advanceHealing, startHealing } from "../rules/healing.js";
 import { startingLeviathan } from "../rules/leviathan.js";
+import { OBJECTIVES, startingProgress, type Reward } from "../rules/objectives.js";
 import { MIST_HELD_PEARLS, isLit, mistAt, seaReach, startingMist } from "../rules/mist.js";
 import { advanceYard, applyMistDamage, startInstall, startRaft, startRaftUpgrade, startRepair, type RaftBuildingId } from "../rules/rafts.js";
 import { advanceResearch, startResearch, type TechId } from "../rules/research.js";
-import { advanceFleets, canSendFleet, leadOf, sendFleet, startingSeaWorld, type CombatReport, type SeaState, type Sight } from "../rules/sea.js";
+import { advanceFleets, canSendFleet, leadOf, seaSite, sendFleet, startingSeaWorld, type CombatReport, type SeaState, type Sight } from "../rules/sea.js";
 import type { Check } from "../rules/types.js";
 import { STARTING_CAPTAIN, STARTING_LEAD, STARTING_MORALE, STARTING_PEARLS, STARTING_STOCK, STARTING_SURVIVORS, STARTING_TROOPS } from "../rules/start.js";
 import { advanceTraining, startPromotion, startTraining } from "../rules/training.js";
@@ -49,6 +51,9 @@ export function newPlayerState(clock = 0): PlayerState {
     clock,
     mist: startingMist(),
     leviathan: startingLeviathan(),
+    objective: 0,
+    progress: startingProgress(),
+    daily: startingDaily(clock),
   };
 }
 
@@ -73,7 +78,7 @@ function untilOutOfOil(s: PlayerState): number {
  * MIST_RAFT_DAMAGE, never below RAFT_MIN_HP. The Lighthouse is ready for the next one.
  */
 function mistLifts(s: PlayerState): PlayerState {
-  if (!s.mist.dark) return { ...s, pearls: s.pearls + MIST_HELD_PEARLS, mist: { ...s.mist, held: s.mist.held + 1 } };
+  if (!s.mist.dark) return { ...s, pearls: s.pearls + MIST_HELD_PEARLS, mist: { ...s.mist, held: s.mist.held + 1 }, daily: countDaily(s.daily, s.clock, "mists") };
   const rafts = applyMistDamage(s.rafts, false);
   const damaged = Object.keys(rafts).filter((k) => rafts[k]!.hp < s.rafts[k]!.hp).length;
   return { ...s, rafts, mist: { ...s.mist, dark: false, missed: s.mist.missed + 1, damaged } };
@@ -135,7 +140,9 @@ export function advance(state: PlayerState, seconds: number): PlayerState {
     const w = mistAt(s.clock);
     // The next time the Mist starts or lifts: a whole second, which the clock lands on exactly.
     const change = w.on ? w.end : w.start;
-    const ends = [...s.queue.map((j) => j.left), ...(s.research ? [s.research.left] : []), ...(s.yard ? [s.yard.left] : []), ...(s.training ? [s.training.left] : []), ...(s.healing ? [s.healing.left] : []), ...s.fleets.map((f) => f.left), change - s.clock, outOfOil];
+    // 00:00 UTC: the daily tasks start again; a day's counts never straddle two days.
+    const midnight = s.clock + untilMidnight(s.clock);
+    const ends = [...s.queue.map((j) => j.left), ...(s.research ? [s.research.left] : []), ...(s.yard ? [s.yard.left] : []), ...(s.training ? [s.training.left] : []), ...(s.healing ? [s.healing.left] : []), ...s.fleets.map((f) => f.left), change - s.clock, midnight - s.clock, outOfOil];
     const next = Math.min(rest, ...ends.map((left) => Math.max(0, left)));
     const wasOn = w.on;
     s = produce(s, next);
@@ -148,7 +155,11 @@ export function advance(state: PlayerState, seconds: number): PlayerState {
     s = { ...s, buildings: q.buildings, queue: q.queue, techs: r.techs, research: r.research, rafts: y.rafts, yard: y.yard, troops: hl.troops, veterans: t.veterans, training: t.training, healing: hl.healing };
     const f = advanceFleets(seaState(s), next);
     s = withSea(s, f.state, f.reports);
-    s = { ...s, clock: next === change - s.clock ? change : s.clock + next };
+    // The camps beaten in this step count for today and for the objectives.
+    const beaten = f.reports.filter((r) => r.win && seaSite(r.site)?.kind === "camp").length;
+    if (beaten) s = { ...s, progress: { ...s.progress, camps: s.progress.camps + beaten }, daily: countDaily(s.daily, s.clock, "camps", beaten) };
+    s = { ...s, clock: next === change - s.clock ? change : next === midnight - s.clock ? midnight : s.clock + next };
+    if (s.daily.day !== dayOf(s.clock)) s = { ...s, daily: dailyOn(s.daily, s.clock) };
     if (next === outOfOil) s = { ...s, mist: { ...s.mist, dark: true } };
     const on = mistAt(s.clock).on;
     // A Mist starts: the Lighthouse is stoked only with the order on and oil to burn.
@@ -221,6 +232,37 @@ export function setLead(state: PlayerState, id: CaptainId): ActionResult {
 }
 
 /** A Logbook for your lead captain with the shared rule; a refusal comes with its reason. */
+/** Adds a reward to the city: resources to the stock (no storage cap, as a camp's loot), Pearls to the Pearls. */
+function give(state: PlayerState, reward: Reward): PlayerState {
+  const stock = { ...state.stock };
+  for (const k of ["oil", "fish", "wood", "rope"] as const) stock[k] += reward[k] ?? 0;
+  return { ...state, stock, pearls: state.pearls + (reward.pearls ?? 0) };
+}
+
+/** Claims the current objective's reward, once its condition is met: the rules read the city, never the client. */
+export function claimObjective(state: PlayerState): ActionResult {
+  const o = OBJECTIVES[state.objective];
+  if (!o) return { ok: false, reason: "You have finished every objective" };
+  if (!o.done(state)) return { ok: false, reason: "Finish your current objective first" };
+  return { ok: true, state: { ...give(state, o.reward), objective: state.objective + 1 } };
+}
+
+/** Opens one of today's chests with today's points, once a day. */
+export function openChest(state: PlayerState, chest: Chest): ActionResult {
+  if (!(CHESTS as readonly number[]).includes(chest)) return { ok: false, reason: "There is no such chest" };
+  const check = canOpenChest(state.daily, state.clock, chest);
+  if (!check.ok) return check;
+  const today = dailyOn(state.daily, state.clock);
+  return { ok: true, state: { ...give(state, chestReward(chest, state.buildings.lighthouse)), daily: { ...today, chests: [...today.chests, chest] } } };
+}
+
+/** Counts a task of the day at the city's clock, and what the objectives count since the city was founded. */
+export function countDone(state: PlayerState, task: DailyTaskId): PlayerState {
+  const progress =
+    task === "gathers" ? { ...state.progress, gathers: state.progress.gathers + 1 } : task === "trains" ? { ...state.progress, trained: state.progress.trained + 1 } : state.progress;
+  return { ...state, progress, daily: countDaily(state.daily, state.clock, task) };
+}
+
 export function logbook(state: PlayerState): ActionResult {
   const r = useLogbook({ lead: state.lead, captains: state.captains, pearls: state.pearls });
   return r.ok ? { ok: true, state: { ...state, captains: r.captains, pearls: r.pearls } } : r;

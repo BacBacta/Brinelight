@@ -611,4 +611,32 @@ describe("a modified client cannot change the rules", () => {
     expect(totalTroops(after.troops)).toBe(totalTroops(newPlayerState().troops));
     await expectRefused(server, p, action({ type: "sail", site: "leviathan" }), "The Leviathan is not at sea. Wait for it to rise.");
   });
+
+  it("objectives and chests: an unmet objective, a reward or points sent, a chest twice, yesterday's chest", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    // T0 is 12:00 UTC.
+    const base = newPlayerState(T0.getTime() / 1000);
+    const p = await player({ ...base, buildings: { ...base.buildings, barracks: 1 }, stock: { oil: 50_000, fish: 50_000, wood: 50_000, rope: 10 } });
+    await expectRefused(server, p, action({ type: "claimObjective" }), "Finish your current objective first");
+    for (const extra of [{ objective: 1 }, { reward: { pearls: 300 } }]) await expectInvalid(server, p, { action: { ...action({ type: "claimObjective" }), ...extra } });
+    await expectRefused(server, p, action({ type: "claimChest", chest: 20 }), "Not enough points yet");
+    for (const extra of [{ points: 100 }, { pearls: 200 }]) await expectInvalid(server, p, { action: { ...action({ type: "claimChest", chest: 20 }), ...extra } });
+    await expectInvalid(server, p, { action: { ...action({ type: "claimChest", chest: 20 }), chest: 30 } });
+    // The Refinery to level 2, by the server's clock: the first objective can be claimed, once.
+    await expectApplied(server, p, action({ type: "upgrade", building: "refinery" }));
+    later(2 * 3600_000);
+    await expectApplied(server, p, action({ type: "claimObjective" }));
+    expect(p.ref.now().objective).toBe(1);
+    await expectApplied(server, p, action({ type: "claimObjective" }));
+    await expectRefused(server, p, action({ type: "claimObjective" }), "Finish your current objective first");
+    // Three upgrades started today (the Refinery, the Fishery, the Lumberyard): 30 points, the first chest, once.
+    await expectApplied(server, p, action({ type: "upgrade", building: "fishery" }));
+    await expectApplied(server, p, action({ type: "upgrade", building: "lumberyard" }));
+    await expectApplied(server, p, action({ type: "claimChest", chest: 20 }));
+    await expectRefused(server, p, action({ type: "claimChest", chest: 20 }), "You already opened this chest today");
+    // After midnight UTC, yesterday's points are gone: the chest waits for today's.
+    later(10 * 3600_000);
+    await expectRefused(server, p, action({ type: "claimChest", chest: 20 }), "Not enough points yet");
+    expect(p.ref.now().daily.chests).toEqual([]);
+  });
 });

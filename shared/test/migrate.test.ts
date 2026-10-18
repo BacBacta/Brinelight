@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { CITY_SHAPE, DAY, MIN_CITY_SHAPE, advance, emptyTroops, migrateCity, newPlayerState, parseState, readReport, startingLeviathan, startingMist, upgradeShape, type PlayerState } from "../src/index.js";
+import { CITY_SHAPE, DAY, MIN_CITY_SHAPE, advance, emptyTroops, migrateCity, newPlayerState, parseState, readReport, startingDaily, startingLeviathan, startingMist, upgradeShape, type PlayerState } from "../src/index.js";
 
 /** The city of week 4, made by the week 4 rules and stored as it is (see fixtures/README.md). */
 const week4 = (): Record<string, unknown> => JSON.parse(readFileSync(new URL("./fixtures/city-week4.json", import.meta.url), "utf8"));
@@ -9,8 +9,8 @@ const json = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 const SAVED = { clock: 1_792_310_400 };
 
 describe("the shapes", () => {
-  it("shape 7 is today's, shape 4 the oldest stored", () => {
-    expect(CITY_SHAPE).toBe(7);
+  it("shape 8 is today's, shape 4 the oldest stored", () => {
+    expect(CITY_SHAPE).toBe(8);
     expect(MIN_CITY_SHAPE).toBe(4);
   });
 
@@ -34,8 +34,12 @@ describe("from shape 4 to today's", () => {
     expect(city.mist.stoke).toBe(true);
     // And the Leviathan at level 1, never hunted.
     expect(city.leviathan).toEqual(startingLeviathan());
+    // And the first objective, nothing counted, the daily tasks of the day of its last save.
+    expect(city.objective).toBe(0);
+    expect(city.progress).toEqual({ gathers: 0, trained: 0, camps: 0 });
+    expect(city.daily).toEqual(startingDaily(SAVED.clock));
     // Everything the city had is there, unchanged; the fleets only gain their veterans.
-    const { training: _t, healing: _h, veterans: _v, shards: _s, clock: _c, mist: _m, leviathan: _l, fleets, ...rest } = city;
+    const { training: _t, healing: _h, veterans: _v, shards: _s, clock: _c, mist: _m, leviathan: _l, objective: _o, progress: _p, daily: _d, fleets, ...rest } = city;
     const { fleets: rawFleets, ...rawRest } = raw;
     expect(rest).toEqual(rawRest);
     expect(fleets).toEqual((rawFleets as object[]).map((f) => ({ ...f, veterans: emptyTroops() })));
@@ -89,8 +93,8 @@ describe("from shape 4 to today's", () => {
     expect(migrateCity(json(today), 6, SAVED)).toEqual(today);
   });
 
-  it("from shape 5: only the clock and the Mist are added", () => {
-    const { clock: _c, mist: _m, ...week5 } = json(newPlayerState());
+  it("from shape 5: the clock and the Mist, then the fields of shapes 7 and 8", () => {
+    const { clock: _c, mist: _m, leviathan: _l, objective: _o, progress: _p, daily: _d, ...week5 } = json(newPlayerState());
     const city = migrateCity(week5, 5, SAVED)!;
     expect(city).toEqual({ ...newPlayerState(SAVED.clock) });
     // Today's parseState refuses a city without its clock or its Mist.
@@ -98,7 +102,7 @@ describe("from shape 4 to today's", () => {
   });
 
   it("from shape 6: only the Leviathan is added, at level 1 and never hunted", () => {
-    const { leviathan: _l, ...shape6 } = json(newPlayerState(SAVED.clock));
+    const { leviathan: _l, objective: _o, progress: _p, daily: _d, ...shape6 } = json(newPlayerState(SAVED.clock));
     expect(migrateCity(shape6, 6, SAVED)).toEqual(newPlayerState(SAVED.clock));
     expect(parseState(shape6)).toBeNull();
   });
@@ -111,8 +115,8 @@ describe("from shape 4 to today's", () => {
 });
 
 describe("cities that cannot be read", () => {
-  it("a shape older than 4, newer than 7, or not a whole number", () => {
-    for (const shape of [0, 3, 8, 99, 4.5, NaN]) expect(migrateCity(week4(), shape, SAVED), String(shape)).toBeNull();
+  it("a shape older than 4, newer than 8, or not a whole number", () => {
+    for (const shape of [0, 3, 9, 99, 4.5, NaN]) expect(migrateCity(week4(), shape, SAVED), String(shape)).toBeNull();
   });
 
   it("a city of shape 4 with a field parseState refuses, once the missing fields are added", () => {

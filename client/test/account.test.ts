@@ -583,7 +583,7 @@ describe("the account's copy on this device", () => {
     const later = fakeClock();
     later.moveWall(clock.wall() - later.wall() + 2 * HOUR * 1000);
     const back = queueSetup(server.routes, { store: t.store, clock: later });
-    const r = upgrade(advance(json(server.city().state), 2 * HOUR), "refinery");
+    const r = applyAction(advance(json(server.city().state), 2 * HOUR), { id: uuid(1), type: "upgrade", building: "refinery" });
     expect(back.q.city()).toEqual(r.ok && r.state);
     await back.q.start();
     expect(sent(back.api).map((a) => a.id)).toEqual([uuid(1)]);

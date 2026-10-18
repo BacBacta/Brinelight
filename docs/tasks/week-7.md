@@ -259,6 +259,13 @@ Decided by the owner (18 October):
 3. **The reset:** 00:00 UTC (provisional, as the Mist's hours).
 4. **Points are counted alone;** only the chests are claimed.
 
+**Done (18 October).**
+- **Rules:** `shared/src/rules/objectives.ts` (the 18 objectives, each read from the city) and `shared/src/rules/daily.ts` (the six tasks, the five chests, the day on the city's clock). `applyAction` counts what an action starts (an upgrade, a fleet to a wreck, a training, a research); `advance` counts the camps beaten and the Mists held, and cuts time at 00:00 UTC so a day's counts never straddle two days. Actions `claimObjective` (no field) and `claimChest { chest }`. Refusals: "Finish your current objective first", "You have finished every objective", "Not enough points yet", "You already opened this chest today".
+- **Rewards** go into the stock with no storage cap, as a camp's loot, and the Pearls to the Pearls.
+- **The city** (shape 8): `objective`, `progress { gathers, trained, camps }` (since the city was founded, for objectives 6, 8 and 9), `daily { day, counts, chests }`.
+- **Client:** the current objective in a card above the bottom menu, where the prototype has it (not under the top bar: the top bar's and the queue's captures stay as they are); a Tasks button on the right under the top bar, with today's points and a dot when a chest can be opened; the Daily Tasks sheet. Both are hidden at sea.
+- **Tests:** `shared/test/objectives.test.ts` (each condition, in order, once, the rewards, the counts, the chests, the reset at midnight across an `advance`), migration 7 → 8, a server cheat case, client tests, an e2e scenario, and the look captures `quest-412`, `quest-360`, `daily-412`, `daily-360` (taken from the CI).
+
 ## Task 5 · The balance, with the new rules
 
 What it does:

@@ -1003,16 +1003,23 @@ describe("the look", () => {
     return page;
   }
 
-  /** Captures `what`, the 3D view hidden, and compares it with its reference (or writes it, with LOOK=update). */
-  async function look(page: Page, what: Locator, name: string, hide = ""): Promise<void> {
-    await page.evaluate((hide) => {
-      const s = document.createElement("style");
-      s.id = "look-hide";
-      // Captured standing still (as with reduced motion): the celebrations' motions and the bars' 300 ms transitions run
-      // on the real clock. `hide`: what else is hidden for this capture.
-      s.textContent = `#cv,.labels{visibility:hidden!important}.celebration *{animation:none!important}*{transition:none!important}${hide}`;
-      document.head.appendChild(s);
-    }, hide);
+  /**
+   * Captures `what`, the 3D view hidden, and compares it with its reference (or writes it, with LOOK=update). The
+   * current objective and the Tasks button (week 7) are hidden too, so that the sheets' captures do not depend on them;
+   * `floating` keeps them, for their own captures.
+   */
+  async function look(page: Page, what: Locator, name: string, hide = "", floating = false): Promise<void> {
+    await page.evaluate(
+      ({ hide, floating }) => {
+        const s = document.createElement("style");
+        s.id = "look-hide";
+        // Captured standing still (as with reduced motion): the celebrations' motions and the bars' 300 ms transitions run
+        // on the real clock. `hide`: what else is hidden for this capture.
+        s.textContent = `#cv,.labels${floating ? "" : ",.quest,.rail"}{visibility:hidden!important}.celebration *{animation:none!important}*{transition:none!important}${hide}`;
+        document.head.appendChild(s);
+      },
+      { hide, floating },
+    );
     const png = await what.screenshot({ animations: "disabled", caret: "hide" });
     await page.evaluate(() => document.getElementById("look-hide")?.remove());
     mkdirSync(OUT, { recursive: true });
@@ -1108,6 +1115,8 @@ describe("the look", () => {
           [clear[1]!.slot]: { hp: 100, building: "greenhouse", level: 2 },
           [clear[2]!.slot]: { hp: 100, building: null, level: 0 },
         },
+        // A day half done: 70 points, the first chest opened (the Daily Tasks sheet's capture).
+        daily: { day: 0, counts: { upgrades: 3, gathers: 1, camps: 2, trains: 0, mists: 1, research: 0 }, chests: [20] },
       };
       town = ok(upgrade(town, "lumberyard"));
       town = ok(research(town, "nets"));
@@ -1152,6 +1161,11 @@ describe("the look", () => {
       await close(page);
       await page.locator(".hud .lvl").click();
       await look(page, page.locator(".sheet.profile"), `profile-${w}`);
+      await close(page);
+      // The current objective, done (the Refinery is at level 3): its Claim button; then the Daily Tasks sheet.
+      await look(page, page.locator(".quest"), `quest-${w}`, "", true);
+      await page.locator('.rail [data-v="tasks"]').click();
+      await look(page, page.locator(".sheet.daily"), `daily-${w}`);
       await page.context().close();
 
       // A poor city after a victory: the report opens by itself; a refused upgrade; a free slot; the sea's sheets.
@@ -1852,6 +1866,43 @@ describe("signed in", () => {
     await expect.poll(() => report.count(), NET).toBe(1);
     expect(await report.innerText()).toContain("your fleet brings every troop home");
     await p.page.screenshot({ path: "e2e/.shots/shot-hunt-report.png" });
+    expect(p.problems).toEqual([]);
+    await p.context.close();
+  });
+
+  it("objectives and daily tasks: the first objective claimed from its card, a chest opened from the Tasks sheet, by the server", async () => {
+    const p = await signedInPlayer();
+    // The Refinery at level 2 and three upgrades started today (the e2e harness only): the first objective is done, 30 points.
+    const base = newPlayerState();
+    await h.putCity(p.playerId, {
+      ...base,
+      buildings: { ...base.buildings, refinery: 2 },
+      daily: { ...base.daily, counts: { ...base.daily.counts, upgrades: 3 } },
+    });
+    await show(p.page);
+    await expect.poll(async () => ((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.buildings.refinery, NET).toBe(2);
+    await calm(p.page);
+    const quest = p.page.locator(".quest");
+    await expect.poll(() => quest.innerText(), NET).toContain("Upgrade the Refinery to level 2");
+    await p.page.screenshot({ path: "e2e/.shots/shot-quest.png" });
+    await quest.locator('[data-act="claimObjective"]').click();
+    await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).objective, NET).toBe(1);
+    expect(((await serverCity(p.token))!.state as unknown as PlayerState).stock.wood).toBeGreaterThanOrEqual(base.stock.wood + 150);
+    await expect.poll(() => quest.innerText(), NET).toContain("Build the Barracks");
+
+    const tasks = p.page.locator('.rail [data-v="tasks"]');
+    await expect.poll(() => tasks.innerText(), NET).toContain("30/100");
+    await tasks.click();
+    const sheet = p.page.locator(".sheet.daily:not([hidden])");
+    await sheet.waitFor();
+    await p.page.screenshot({ path: "e2e/.shots/shot-daily.png" });
+    await sheet.locator('[data-act="chest"][data-chest="20"]').click();
+    await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).daily.chests, NET).toEqual([20]);
+    await expect.poll(() => sheet.locator(".ch.got").count(), NET).toBe(1);
+    // A second tap (the chest stays tappable, aria-disabled): refused by the rules, with their reason.
+    await sheet.locator('[data-act="chest"][data-chest="20"]').click({ force: true });
+    await expect.poll(() => p.page.locator(".toast", { hasText: "You already opened this chest today" }).count(), NET).toBe(1);
+    expect(((await serverCity(p.token))!.state as unknown as PlayerState).daily.chests).toEqual([20]);
     expect(p.problems).toEqual([]);
     await p.context.close();
   });
