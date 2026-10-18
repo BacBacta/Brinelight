@@ -539,4 +539,29 @@ describe("a modified client cannot change the rules", () => {
     expect(totalTroops(p.ref.now().troops)).toBe(totalTroops(back.troops) + saved);
     expect(p.ref.now().healing).toBeNull();
   });
+
+  it("the Mist: a client sends only the order to stoke; the server's clock decides when the Mist comes and lifts", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    // T0 is 12:00 UTC: a Mist is on until 14:00.
+    const slot = RAFT_SLOTS[0]!.key;
+    const p = await player({ ...newPlayerState(T0.getTime() / 1000), rafts: { [slot]: { hp: RAFT_MAX_HP, building: null, level: 0 } } });
+    expect(p.ref.now().mist.stoke).toBe(true);
+    await expectRefused(server, p, action({ type: "sail", site: "wreck-1" }), "The Mist hides this place. Wait for it to lift.");
+    // No clock, Pearls, oil or sturdiness rides with the order, and the order is a boolean.
+    const order = action({ type: "stoke", on: true });
+    for (const extra of [{ clock: 0 }, { pearls: 1e6 }, { oil: 500 }, { hp: RAFT_MAX_HP }, { on: "yes" }]) await expectInvalid(server, p, { action: { ...order, ...extra } });
+    // Taken back during the Mist: the Lighthouse goes dark, and the Mist lifts at 14:00 not held.
+    await expectApplied(server, p, action({ type: "stoke", on: false }));
+    later(2 * 3600_000);
+    await expectRules(server, p);
+    expect(p.ref.now().mist).toMatchObject({ held: 0, missed: 1 });
+    expect(p.ref.now().rafts[slot]!.hp).toBe(RAFT_MAX_HP - 35);
+    // Given again: the Mist of 20:00 is held, +30 Pearls.
+    const pearls = p.ref.now().pearls;
+    await expectApplied(server, p, action({ type: "stoke", on: true }));
+    later(8 * 3600_000);
+    await expectRules(server, p);
+    expect(p.ref.now().mist).toMatchObject({ held: 1, missed: 1 });
+    expect(p.ref.now().pearls).toBe(pearls + 30);
+  });
 });

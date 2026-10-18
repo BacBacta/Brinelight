@@ -52,11 +52,11 @@ describe("GET /city", () => {
     const { token, id } = await player();
     const res = await getCity(server, token);
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ state: json(newPlayerState()), version: 1, savedAt: T0.toISOString(), asOf: T0.toISOString(), speed: 1 });
+    expect(res.json()).toEqual({ state: json(newPlayerState(T0.getTime() / 1000)), version: 1, savedAt: T0.toISOString(), asOf: T0.toISOString(), speed: 1 });
     expect(await db.select().from(schema.cities).where(eq(schema.cities.playerId, id))).toHaveLength(1);
     setClock(HOUR);
     const again = (await getCity(server, token)).json();
-    expect(again).toEqual({ state: json(catchUp(newPlayerState(), 3600)), version: 1, savedAt: T0.toISOString(), asOf: clock.toISOString(), speed: 1 });
+    expect(again).toEqual({ state: json(catchUp(newPlayerState(T0.getTime() / 1000), 3600)), version: 1, savedAt: T0.toISOString(), asOf: clock.toISOString(), speed: 1 });
   });
 
   it("time away is computed by the server", async () => {
@@ -116,7 +116,7 @@ describe("GET /city", () => {
     const up = upgrade(newPlayerState(), "refinery");
     if (!up.ok) throw new Error(up.reason);
     await storeCity(a.id, up.state, 7);
-    expect((await getCity(server, b.token)).json()).toMatchObject({ state: json(newPlayerState()), version: 1 });
+    expect((await getCity(server, b.token)).json()).toMatchObject({ state: json(newPlayerState(T0.getTime() / 1000)), version: 1 });
   });
 
   it("the client can no longer send its city: PUT /city is gone", async () => {

@@ -27,7 +27,7 @@ import { fpsWanted } from "./ui/fpsMeter.js";
 import { createCaptainsSheet } from "./ui/captains.js";
 import { createCelebrations } from "./ui/celebrate.js";
 import { createUi } from "./ui/index.js";
-import { seaMood } from "./ui/values.js";
+import { mistPreview, seaMood } from "./ui/values.js";
 import { createSound, type SoundId } from "./ui/sound.js";
 import { DEVICE, DEV_SPEED, SAVE_EVERY_MS, accountOwner, awayEvents, browserStore, elapse, eventsBetween, openSave, readSeen, saveGame, writeSeen, type PlayerState } from "./state/index.js";
 import "./style.css";
@@ -39,7 +39,7 @@ const WORKS = new Set<ActionInput["type"]>(["upgrade", "research", "train", "pro
 
 /** What the screen shows: changes here open a report, refresh a sheet, and save the city of this device. */
 const signature = (s: PlayerState): string =>
-  `${s.queue.map((j) => j.id).join()}|${s.research?.id ?? ""}|${JSON.stringify(s.techs)}|${s.yard ? `${s.yard.kind}${s.yard.slot}` : ""}|${JSON.stringify(s.rafts)}|${s.training ? `${s.training.kind}${s.training.troop}` : ""}|${s.healing ? "h" : ""}|${JSON.stringify(s.troops)}|${JSON.stringify(s.veterans)}|${s.lead}|${JSON.stringify(s.captains)}|${JSON.stringify(s.shards)}|${s.reports.map((r) => `${r.id}${r.read ? "+" : "-"}`).join()}|${s.fleets.map((f) => f.phase).join()}`;
+  `${s.queue.map((j) => j.id).join()}|${s.research?.id ?? ""}|${JSON.stringify(s.techs)}|${s.yard ? `${s.yard.kind}${s.yard.slot}` : ""}|${JSON.stringify(s.rafts)}|${s.training ? `${s.training.kind}${s.training.troop}` : ""}|${s.healing ? "h" : ""}|${JSON.stringify(s.troops)}|${JSON.stringify(s.veterans)}|${s.lead}|${JSON.stringify(s.captains)}|${JSON.stringify(s.shards)}|${s.reports.map((r) => `${r.id}${r.read ? "+" : "-"}`).join()}|${s.fleets.map((f) => f.phase).join()}|${s.mist.stoke}${s.mist.dark}${s.mist.held}.${s.mist.missed}`;
 
 if (new URLSearchParams(location.search).has("rules")) {
   showRules(app);
@@ -111,8 +111,9 @@ if (new URLSearchParams(location.search).has("rules")) {
     sea?.closeSheet();
     captains.close();
   };
-  // The sea's mood, for the banner and the 3D view: calm until the Mist's calendar (week 7); ?mist shows its look.
-  const mood = seaMood(location.search);
+  // The sea's mood, for the banner and the 3D view: the Mist when the rules say it is on; ?mist shows its look.
+  const preview = mistPreview(location.search);
+  let mood = seaMood(state, preview);
   const ui = createUi(
     app,
     showView,
@@ -129,7 +130,7 @@ if (new URLSearchParams(location.search).has("rules")) {
       profile.close();
       captains.open(state);
     },
-    mood,
+    preview,
   );
   ui.update(state);
   if (opened?.rejected) ui.toast("Your saved city could not be read. A copy was kept.", "bad", "!");
@@ -214,7 +215,7 @@ if (new URLSearchParams(location.search).has("rules")) {
     onLoaded: (kit, buildings, models) => {
       status.remove();
       fps?.modelsLoaded();
-      city = createCity(kit, buildings, models, scene, canvas, app, { state: () => state, upgrade: (building) => act({ type: "upgrade", building }), research: (tech) => act({ type: "research", tech }), train: (troop) => act({ type: "train", troop }), promote: (troop) => act({ type: "promote", troop }), heal: () => act({ type: "heal" }), dockRaft: (slot) => act({ type: "dockRaft", slot }), installOnRaft: (slot, building) => act({ type: "installOnRaft", slot, building }), upgradeRaft: (slot) => act({ type: "upgradeRaft", slot }), toCity: () => ui.showView("city"), speed });
+      city = createCity(kit, buildings, models, scene, canvas, app, { state: () => state, upgrade: (building) => act({ type: "upgrade", building }), research: (tech) => act({ type: "research", tech }), train: (troop) => act({ type: "train", troop }), promote: (troop) => act({ type: "promote", troop }), heal: () => act({ type: "heal" }), stoke: (on) => act({ type: "stoke", on }), dockRaft: (slot) => act({ type: "dockRaft", slot }), installOnRaft: (slot, building) => act({ type: "installOnRaft", slot, building }), upgradeRaft: (slot) => act({ type: "upgradeRaft", slot }), toCity: () => ui.showView("city"), speed });
       sea = createSea(kit, models, scene, canvas, app, {
         state: () => state,
         sail: (site) => {
@@ -253,6 +254,9 @@ if (new URLSearchParams(location.search).has("rules")) {
     state = onAccount && account ? account.city()! : elapse(state, Math.max(0, now - last) / 1000, DEV_SPEED);
     last = now;
     showLighthouse();
+    // The Mist comes and lifts on the city's clock: the 3D view fades into its look and out of it.
+    const m = seaMood(state, preview);
+    if (m !== mood) scene.setMood((mood = m));
     // The interface follows the state 4 times a second, and at once when an upgrade, a fleet step or a combat happens.
     const sig = signature(state);
     const changed = sig !== shown;

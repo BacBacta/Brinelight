@@ -18,8 +18,10 @@ export const RAFT_MAX_HP = 100;
 export const RAFT_BUILDING_MAX_COPIES = 2;
 /** Condition below which a raft runs at half capacity. */
 export const RAFT_DAMAGED_BELOW = 60;
-/** Condition lost when the Mist strikes and the Lighthouse was not stoked. */
+/** Condition lost when a Mist ends that the Lighthouse did not hold. */
 export const MIST_RAFT_DAMAGE = 35;
+/** The Mist never takes a raft below this: a raft is never stopped, below RAFT_DAMAGED_BELOW it runs at half. */
+export const RAFT_MIN_HP = 25;
 
 /** Rafts allowed by Lighthouse level. Prototype table up to level 10, capped after that. */
 const RAFT_CAP_TABLE = [0, 0, 0, 0, 6, 10, 14, 17, 25, 33, 39];
@@ -79,11 +81,11 @@ export function raftEffect(rafts: Rafts, id: RaftBuildingId): number {
   return Object.values(rafts).reduce((sum, r) => sum + (r.building === id ? r.level * efficiency(r) : 0), 0);
 }
 
-/** Mist wear: each raft loses MIST_RAFT_DAMAGE if the Lighthouse was not stoked. */
+/** Mist wear: each raft loses MIST_RAFT_DAMAGE if the Lighthouse did not hold the Mist, never below RAFT_MIN_HP. */
 export function applyMistDamage(rafts: Rafts, held: boolean): Rafts {
   if (held) return rafts;
   const out: Rafts = {};
-  for (const [k, r] of Object.entries(rafts)) out[k] = { ...r, hp: Math.max(0, r.hp - MIST_RAFT_DAMAGE) };
+  for (const [k, r] of Object.entries(rafts)) out[k] = { ...r, hp: Math.min(r.hp, Math.max(RAFT_MIN_HP, r.hp - MIST_RAFT_DAMAGE)) };
   return out;
 }
 

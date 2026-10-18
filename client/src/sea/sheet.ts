@@ -4,6 +4,7 @@ import {
   CAPTAIN_MAX_STARS,
   FRAGMENTS_PER_STAR,
   canSendFleet,
+  fleetSight,
   holdCapacity,
   leadOf,
   odds,
@@ -99,7 +100,8 @@ export function createSeaSheet(root: HTMLElement, actions: { sail(site: string):
     const s = seaSite(id)!;
     const lead = leadOf(state.lead, state.captains);
     const trip = formatTimeLeft(travelTime(s, state.techs, lead) / speed);
-    const check = canSendFleet(id, state);
+    // In the Mist, only within the Lighthouse's light: the refusal says why.
+    const check = canSendFleet(id, state, fleetSight(state));
     const mine = state.fleets.filter((f) => f.site === id);
     const busy = mine.length ? `<div class="row">${chip(`Your fleet is ${mine[0]!.phase === "out" ? "on the way" : mine[0]!.phase === "stay" ? "there" : "coming back"}`, "ok")}</div>` : "";
     if (s.kind === "camp") {

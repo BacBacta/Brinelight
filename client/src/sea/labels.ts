@@ -1,4 +1,4 @@
-import { SEA_SITES, odds, pirateCamp } from "@brinelight/shared";
+import { SEA_SITES, distance, fleetSight, odds, pirateCamp } from "@brinelight/shared";
 import type { SceneHandle } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 import { attackInput } from "./odds.js";
@@ -13,7 +13,7 @@ export function siteLabel(id: string, state: PlayerState): string {
   return s.name;
 }
 
-/** Labels over the sea sites; pirate camps are colored by your odds. */
+/** Labels over the sea sites; pirate camps are colored by your odds; in the Mist, the camps and wrecks beyond your light fade. */
 export function createSeaLabels(root: HTMLElement, scene: SceneHandle) {
   const layer = document.createElement("div");
   layer.className = "labels sea";
@@ -28,7 +28,9 @@ export function createSeaLabels(root: HTMLElement, scene: SceneHandle) {
   });
   return {
     update(state: PlayerState) {
+      const { reach } = fleetSight(state);
       for (const { s, el } of els) {
+        el.classList.toggle("hid", (s.kind === "camp" || s.kind === "wreck") && distance(s) > reach);
         const text = siteLabel(s.id, state);
         if (el.textContent !== text) el.textContent = text;
         if (s.kind === "camp") el.dataset.d = odds(attackInput(state, pirateCamp(state.world.camps[s.id] ?? s.level ?? 1)));

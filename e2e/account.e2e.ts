@@ -730,9 +730,11 @@ describe("celebrations", () => {
 });
 
 describe("the Mist's mood", () => {
-  it("?mist: the banner says Mist, and the 3D view shows its look (the veil, the beams); without it, calm, as before", async () => {
-    const look = async (query: string) => {
+  it("the Mist's mood: calm before a Mist, the Mist's look when the rules say it is on, and with ?mist to see it", async () => {
+    /** A city saved now, its own clock at `clock` (UTC seconds): the banner and the 3D view read the rules on it. */
+    const look = async (query: string, clock: number) => {
       const p = await newPlayer(false);
+      await p.context.addInitScript(({ key, file }) => localStorage.setItem(key, file), { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: Date.now(), state: newPlayerState(clock) }) });
       const page = await p.context.newPage();
       await page.goto(`${GAME}/?quality=2&fps${query}`);
       await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
@@ -741,20 +743,27 @@ describe("the Mist's mood", () => {
       await page.waitForTimeout(1500);
       const banner = await page.locator('.sub [data-k="mist"]').innerText();
       const fps = await page.locator(".fps").innerText();
-      await page.screenshot({ path: `e2e/.shots/shot-mood${query ? "-mist" : "-calm"}.png` });
+      await page.screenshot({ path: `e2e/.shots/shot-mood-${query ? "preview" : clock % (24 * HOUR) >= 4 * HOUR ? "mist" : "calm"}.png` });
       await p.context.close();
       return { banner, fps, calls: Number(/(\d+) calls/.exec(fps)![1]) };
     };
-    const calm = await look("");
-    const mist = await look("&mist");
-    expect(calm.banner).toMatch(/^Calm sea · /);
+    // 18 October 2026: 01:00 UTC is calm (the next Mist at 04:00), 04:30 is in the Mist.
+    const day = 1_792_281_600;
+    const calm = await look("", day + HOUR);
+    const mist = await look("", day + 4.5 * HOUR);
+    const preview = await look("&mist", day + HOUR);
+    // Loading takes a few minutes here: the countdown has gone on meanwhile.
+    expect(calm.banner).toMatch(/^Mist in [23] h \d\d · enough oil$/);
     expect(calm.fps).not.toMatch(/Mist/);
-    expect(mist.banner).toMatch(/^Mist · /);
+    expect(mist.banner).toMatch(/^Mist · (1 h \d\d|\d+ min) left · Lighthouse stoked$/);
     expect(mist.fps).toMatch(/City · Mist/);
+    expect(preview.banner).toMatch(/^Mist · /);
+    expect(preview.fps).toMatch(/City · Mist/);
     // The veil on the horizon (+1), and the Lighthouse's two beams, hidden in calm and sweeping in the Mist (+4: each
     // cone is drawn on both sides).
-    console.log(`The Mist's mood: calm ${calm.calls} calls, Mist ${mist.calls} calls`);
+    console.log(`The Mist's mood: calm ${calm.calls} calls, Mist ${mist.calls} calls, ?mist ${preview.calls} calls`);
     expect(mist.calls).toBe(calm.calls + 5);
+    expect(preview.calls).toBe(mist.calls);
   });
 });
 
@@ -1526,6 +1535,44 @@ describe("signed in", () => {
     expect(done.research).toBeNull();
     await show(p.page);
     await expect.poll(() => p.page.locator('[data-tech-row="refining"] .dots').textContent(), NET).toBe("●○○");
+    await p.context.close();
+  });
+
+  it("the Mist: the banner counts down, the order to stoke goes from the Lighthouse's sheet to the server, and the Mist lifts by the server's clock", async () => {
+    const p = await signedInPlayer();
+    // A city 10 seconds before the Mist of 04:00 UTC, on its own clock, with one raft (the e2e harness only).
+    const before = 1_792_281_600 + 4 * HOUR - 10;
+    const base = newPlayerState(before);
+    const slot = RAFT_SLOTS[0]!.key;
+    await h.putCity(p.playerId, { ...base, buildings: { ...base.buildings, lighthouse: 4 }, rafts: { [slot]: { hp: 100, building: null, level: 0 } } });
+    await show(p.page);
+    const banner = p.page.locator('.sub [data-k="mist"]');
+    await expect.poll(() => banner.innerText(), NET).toBe("Mist in 1 min · enough oil");
+    await expect.poll(() => banner.innerText(), { timeout: 20_000, interval: 250 }).toBe("Mist · 2 h 00 left · Lighthouse stoked");
+    await calm(p.page);
+    await openSheet(p.page, "Lighthouse");
+    const order = p.page.locator('[data-act="stoke"]');
+    await expect.poll(() => order.innerText(), NET).toBe("On");
+    await order.click();
+    await expect.poll(async () => ((await serverCity(p.token)) as { state: PlayerState } | null)?.state.mist, NET).toMatchObject({ stoke: false, dark: true });
+    await expect.poll(() => banner.innerText(), NET).toMatch(/^Mist · 2 h 00 left · Lighthouse dark$|^Mist · 1 h 59 left · Lighthouse dark$/);
+    await p.page.screenshot({ path: "e2e/.shots/shot-mist-dark.png" });
+    // Found again after a reload.
+    await p.page.reload();
+    await p.page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
+    await openSheet(p.page, "Lighthouse");
+    await expect.poll(() => p.page.locator('[data-act="stoke"]').innerText(), NET).toBe("Off");
+
+    // The same city 3 seconds before the Mist lifts: the server ends it on its own clock, not held, and the raft is damaged.
+    const now = (await serverCity(p.token))!.state as unknown as PlayerState;
+    await h.putCity(p.playerId, { ...now, clock: 1_792_281_600 + 6 * HOUR - 3 });
+    await show(p.page);
+    await p.page.waitForTimeout(4000);
+    await show(p.page);
+    const after = (await serverCity(p.token))!.state as unknown as PlayerState;
+    expect(after.mist).toMatchObject({ held: 0, missed: 1, dark: false, damaged: 1 });
+    expect(after.rafts[slot]!.hp).toBe(65);
+    await expect.poll(() => p.page.locator(".celebration", { hasText: "Your Lighthouse went dark in the Mist · 1 raft damaged" }).count(), NET).toBe(1);
     await p.context.close();
   });
 

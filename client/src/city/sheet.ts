@@ -1,4 +1,5 @@
 import { BUILDINGS, canUpgrade, maxLevel, upgradeCost, upgradeTime, type BuildingId, type TechId, type TroopType } from "@brinelight/shared";
+import { stokeHtml } from "./lighthouse.js";
 import type { PlayerState } from "../state/index.js";
 import { actionButton, box, chip, costLine, createSheetView, progressBar, why } from "../ui/components.js";
 import { costEntries, formatDuration, formatTimeLeft } from "./format.js";
@@ -10,9 +11,10 @@ import { trainingHtml } from "./training.js";
 /**
  * The sheet of a building: level, upgrade cost and duration, and why you cannot upgrade when the button is off.
  * Once built, the Observatory's sheet also lists the research, the Barracks' sheet the training and the veterans, and the Infirmary's
- * sheet its wounded and their healing; the Infirmary's sheet shows its beds at every level.
+ * sheet its wounded and their healing; the Infirmary's sheet shows its beds at every level. The Lighthouse's sheet has the
+ * order to stoke it in the Mist.
  */
-export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId): void; research(tech: TechId): void; train(troop: TroopType): void; promote(troop: TroopType): void; heal(): void; close(): void }) {
+export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId): void; research(tech: TechId): void; train(troop: TroopType): void; promote(troop: TroopType): void; heal(): void; stoke(on: boolean): void; close(): void }) {
   let current: BuildingId | null = null;
   const sheet = createSheetView(root, "", (act, data) => {
     if (!current) return;
@@ -22,6 +24,7 @@ export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId
     if (act === "train" && data.troop) actions.train(data.troop as TroopType);
     if (act === "promote" && data.troop) actions.promote(data.troop as TroopType);
     if (act === "heal") actions.heal();
+    if (act === "stoke") actions.stoke(data.on !== "true");
   });
 
   const render = (id: BuildingId, state: PlayerState, speed: number) => {
@@ -30,7 +33,7 @@ export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId
     const check = canUpgrade(id, { buildings: state.buildings, stock: state.stock, queue: state.queue.map((j) => j.id) });
     const next = level < maxLevel(id, state.buildings);
     const left = job ? formatTimeLeft(job.left / speed) : "";
-    const extra = level === 0 ? "" : id === "observatory" ? researchHtml(state, speed) : id === "barracks" ? trainingHtml(state, speed) : id === "infirmary" ? infirmaryHtml(state, speed) : "";
+    const extra = id === "lighthouse" ? stokeHtml(state) : level === 0 ? "" : id === "observatory" ? researchHtml(state, speed) : id === "barracks" ? trainingHtml(state, speed) : id === "infirmary" ? infirmaryHtml(state, speed) : "";
     const info = id === "infirmary" ? bedsHtml(state.buildings) : "";
     const k = [id, level, left, info, extra, job ? progress(job).toFixed(2) : "", check.ok ? "ok" : check.reason, costEntries(upgradeCost(id, level)).map(([r, v]) => state.stock[r] >= v).join()].join("|");
     if (sheet.drawn(k)) return;

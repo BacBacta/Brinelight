@@ -76,7 +76,7 @@ describe("POST /city/actions", () => {
     expect(await stored(id)).toBeUndefined();
     const res = await send(server, token, { action: upgradeOf("refinery") });
     expect(res.statusCode).toBe(200);
-    const expected = upgrade(newPlayerState(), "refinery");
+    const expected = upgrade(newPlayerState(T0.getTime() / 1000), "refinery");
     if (!expected.ok) throw new Error(expected.reason);
     expect(res.json()).toEqual({ state: json(expected.state), version: 2, asOf: T0.toISOString(), speed: 1 });
     expect((await stored(id))!.version).toBe(2);
@@ -178,7 +178,7 @@ describe("POST /city/actions", () => {
       const res = await send(server, token, body);
       expect(res.statusCode, JSON.stringify(body)).toBe(400);
       expect(res.json()).toMatchObject({ ...ACTION_REFUSED.invalid, version: 1, speed: 1 });
-      expect(res.json().state).toEqual(json(newPlayerState()));
+      expect(res.json().state).toEqual(json(newPlayerState(T0.getTime() / 1000)));
     }
     for (const [payload, type] of [
       ["{", "application/json"],

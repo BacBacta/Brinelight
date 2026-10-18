@@ -1,6 +1,7 @@
 import { BUILDERS, BUILDING_IDS, LIGHTHOUSE_MAX, type UpgradeJob } from "../rules/buildings.js";
 import { CAPTAINS, CAPTAIN_MAX_LEVEL, CAPTAIN_MAX_STARS, xpNeeded, type CaptainId } from "../rules/captains.js";
 import type { HealingJob } from "../rules/healing.js";
+import type { MistState } from "../rules/mist.js";
 import { RAFT_BUILDINGS, RAFT_BUILDING_MAX_COPIES, RAFT_BUILDING_MAX_LEVEL, RAFT_MAX_HP, RAFT_SLOTS, raftBuildingCopies, type RaftBuildingId, type Rafts, type YardJob } from "../rules/rafts.js";
 import { TECHS, techLevel, type ResearchJob, type TechId, type Techs } from "../rules/research.js";
 import { ATTACK_STAY, COLLECT_STAY, SEA_SITES, fleetsMax, hospitalCapacity, seaSite, type Fleet, type SeaWorld } from "../rules/sea.js";
@@ -56,6 +57,16 @@ const isRafts = (r: unknown) =>
       v.hp <= RAFT_MAX_HP &&
       (v.building === null ? v.level === 0 : typeof v.building === "string" && has(RAFT_BUILDINGS, v.building) && isWhole(v.level, 1, RAFT_BUILDING_MAX_LEVEL)),
   );
+
+/** The Mist as the city knows it: the order to stoke, the Lighthouse dark or not, and whole counts of Mists. */
+const isMist = (m: unknown): m is MistState =>
+  isObj(m) &&
+  Object.keys(m).sort().join() === "damaged,dark,held,missed,stoke" &&
+  typeof m.stoke === "boolean" &&
+  typeof m.dark === "boolean" &&
+  isWhole(m.held) &&
+  isWhole(m.missed) &&
+  isWhole(m.damaged);
 
 const isJob = (j: unknown): j is UpgradeJob =>
   isObj(j) && typeof j.id === "string" && (BUILDING_IDS as string[]).includes(j.id) && isNum(j.left) && isNum(j.duration) && j.duration > 0;
@@ -271,7 +282,10 @@ export function parseState(raw: unknown): PlayerState | null {
       !Array.isArray(s.reports) ||
       s.reports.length > MAX_REPORTS ||
       !s.reports.every(isReport) ||
-      !isWhole(s.reportSeq, 0, MAX_REPORT_SEQ)
+      !isWhole(s.reportSeq, 0, MAX_REPORT_SEQ) ||
+      !isNum(s.clock) ||
+      s.clock < 0 ||
+      !isMist(s.mist)
     ) {
       return null;
     }
@@ -314,6 +328,8 @@ export function parseState(raw: unknown): PlayerState | null {
       wounded: { ...s.wounded },
       reports: s.reports.map((r) => ({ ...r })),
       reportSeq: s.reportSeq,
+      clock: s.clock,
+      mist: { ...(s.mist as MistState) },
     };
   } catch {
     return null;

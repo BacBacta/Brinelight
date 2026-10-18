@@ -103,6 +103,7 @@ body.at-sea .build-badge:not([hidden]){display:inline-flex}
 .sl.home{background:var(--gold);color:#4A2C00;border-color:#fff}
 .sl.camp{border-color:#FF7A5A}.sl.wreck{border-color:#C7B48A}.sl.fish{border-color:#5CC3FF}.sl.isle{border-color:#7BD889}
 .sl.camp[data-d=easy]{border-color:#6BE07A}.sl.camp[data-d=close]{border-color:#FFD866}.sl.camp[data-d=hard]{border-color:#FF5A3A;background:rgba(110,20,10,.8)}
+.sl.hid{opacity:.35;border-style:dashed}
 .kv{display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:13.5px}.kv span:nth-child(odd){color:var(--soft)}.kv span:nth-child(even){font-weight:900;text-align:right}
 .tx{display:grid;gap:4px;background:rgba(0,0,0,.3);border-radius:12px;padding:10px;font-size:12.5px}.tx div{display:flex;justify-content:space-between;gap:8px}
 table.rep{width:100%;border-collapse:collapse;font-size:12.5px}table.rep th,table.rep td{padding:4px 6px;text-align:right;border-bottom:1px solid rgba(255,255,255,.08);font-variant-numeric:tabular-nums}table.rep th{font-size:11px;color:var(--muted)}table.rep th:first-child,table.rep td:first-child{text-align:left;color:var(--soft)}table.rep .l{color:#FF9A86;font-size:11px}table.rep .adv{color:#9FE6A9;font-size:11px}table.rep .vet{display:inline-flex;align-items:center;gap:2px;vertical-align:middle}table.rep .vet .icon{width:14px;height:14px}

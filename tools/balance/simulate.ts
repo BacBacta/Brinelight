@@ -177,8 +177,9 @@ export function wallAt(s: PlayerState): { resource: Resource; cost: number; stor
 
 /** Plays a new city for `days` days with a profile's sessions. */
 export function simulate(profile: Profile, days: number): Run {
-  let s = newPlayerState();
-  let t = FOUNDED; // seconds since day 1, 0:00
+  // Day 1 is 1 January 1970 on the city's clock: the Mist comes at 04:00, 12:00 and 20:00 UTC, as every day.
+  let s = newPlayerState(FOUNDED);
+  let t = FOUNDED; // seconds since day 1, 0:00, and the city's clock
   let ids = 0;
   let turn = 0;
   const lighthouse: Record<number, number> = { [s.buildings.lighthouse]: 0 };

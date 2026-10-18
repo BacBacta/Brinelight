@@ -4,7 +4,7 @@
  * The city of this device (played without an account) and the account's city never mix: each has its own save.
  * The client reacts to a refusal by its `code`, never by the text of `error`.
  */
-import { BUILDING_IDS, STARTING_PEARLS, newPlayerState, type ActionResult, type PlayerState } from "@brinelight/shared";
+import { BUILDING_IDS, MIST_HELD_PEARLS, STARTING_PEARLS, newPlayerState, type ActionResult, type PlayerState } from "@brinelight/shared";
 import type { Wallet } from "@wallet-standard/base";
 import { createCityQueue, newActionId, type ActionInput, type CityQueue, type Timers } from "./actions.js";
 import type { Api, ApiResult } from "./api.js";
@@ -49,7 +49,8 @@ export function isUntouched(s: PlayerState): boolean {
     s.queue.length === 0 &&
     s.fleets.length === 0 &&
     s.reports.length === 0 &&
-    s.pearls === STARTING_PEARLS &&
+    // Pearls from Mists held on their own do not count as playing.
+    s.pearls - s.mist.held * MIST_HELD_PEARLS === STARTING_PEARLS &&
     JSON.stringify(s.troops) === JSON.stringify(n.troops)
   );
 }

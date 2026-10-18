@@ -1,11 +1,12 @@
-/** The player's city and what changes it: pure, with no clock, no randomness and no DOM. */
+/** The player's city and what changes it: pure, with no system clock, no randomness and no DOM (the city keeps its own clock). */
 import { STARTING_BUILDINGS, advanceQueue, startUpgrade } from "../rules/buildings.js";
 import { canSetLead, starWithShards, unlockWithShards, useLogbook, type CaptainId } from "../rules/captains.js";
-import { advanceStock, netRates, storeCap } from "../rules/economy.js";
+import { advanceStock, netRates, storeCap, type Weather } from "../rules/economy.js";
 import { advanceHealing, startHealing } from "../rules/healing.js";
-import { advanceYard, startInstall, startRaft, startRaftUpgrade, type RaftBuildingId } from "../rules/rafts.js";
+import { MIST_HELD_PEARLS, isLit, mistAt, seaReach, startingMist } from "../rules/mist.js";
+import { advanceYard, applyMistDamage, startInstall, startRaft, startRaftUpgrade, type RaftBuildingId } from "../rules/rafts.js";
 import { advanceResearch, startResearch, type TechId } from "../rules/research.js";
-import { advanceFleets, leadOf, sendFleet, startingSeaWorld, type CombatReport, type SeaState } from "../rules/sea.js";
+import { advanceFleets, leadOf, sendFleet, startingSeaWorld, type CombatReport, type SeaState, type Sight } from "../rules/sea.js";
 import { STARTING_CAPTAIN, STARTING_LEAD, STARTING_MORALE, STARTING_PEARLS, STARTING_STOCK, STARTING_SURVIVORS, STARTING_TROOPS } from "../rules/start.js";
 import { advanceTraining, startPromotion, startTraining } from "../rules/training.js";
 import { emptyTroops, type BuildingId, type TroopType } from "../rules/types.js";
@@ -14,8 +15,11 @@ import type { PlayerState } from "./types.js";
 /** Reports kept in the city; older ones are dropped. */
 export const MAX_REPORTS = 20;
 
-/** A new city, built only from the starting values of the shared rules. */
-export function newPlayerState(): PlayerState {
+/**
+ * A new city, built only from the starting values of the shared rules, at `clock` (seconds since 1 January 1970, UTC:
+ * the server gives its time; 0 by default, for tests).
+ */
+export function newPlayerState(clock = 0): PlayerState {
   const { id, ...captain } = STARTING_CAPTAIN;
   return {
     buildings: { ...STARTING_BUILDINGS },
@@ -40,13 +44,36 @@ export function newPlayerState(): PlayerState {
     wounded: emptyTroops(),
     reports: [],
     reportSeq: 0,
+    clock,
+    mist: startingMist(),
   };
 }
 
-/** Production at constant levels, with the shared rules (calm weather). */
+/** The weather now: the Mist on or not, and the Lighthouse stoked or not. */
+const weatherOf = (s: PlayerState): Weather => ({ mist: mistAt(s.clock).on, stoked: isLit(s.clock, s.mist) });
+
+/** Production at constant levels, with the shared rules, in the weather of the moment. */
 function produce(state: PlayerState, seconds: number): PlayerState {
   const cap = storeCap(state.buildings.lighthouse, state.techs);
-  return { ...state, stock: advanceStock(state.stock, netRates(state), seconds, cap) };
+  return { ...state, stock: advanceStock(state.stock, netRates(state, weatherOf(state)), seconds, cap) };
+}
+
+/** Seconds until a stoked Lighthouse burns its last oil; Infinity when it is not stoked or the oil does not go down. */
+function untilOutOfOil(s: PlayerState): number {
+  if (!isLit(s.clock, s.mist)) return Infinity;
+  const rate = netRates(s, weatherOf(s)).oil;
+  return rate < 0 ? (s.stock.oil / -rate) * 3600 : Infinity;
+}
+
+/**
+ * The Mist lifts: held (the Lighthouse never went dark), +MIST_HELD_PEARLS; not held, every raft loses
+ * MIST_RAFT_DAMAGE, never below RAFT_MIN_HP. The Lighthouse is ready for the next one.
+ */
+function mistLifts(s: PlayerState): PlayerState {
+  if (!s.mist.dark) return { ...s, pearls: s.pearls + MIST_HELD_PEARLS, mist: { ...s.mist, held: s.mist.held + 1 } };
+  const rafts = applyMistDamage(s.rafts, false);
+  const damaged = Object.keys(rafts).filter((k) => rafts[k]!.hp < s.rafts[k]!.hp).length;
+  return { ...s, rafts, mist: { ...s.mist, dark: false, missed: s.mist.missed + 1, damaged } };
 }
 
 /** The part of the city the sea rules read and change. */
@@ -88,14 +115,23 @@ function withSea(s: PlayerState, sea: SeaState, reports: CombatReport[] = []): P
 
 /**
  * Advances the city by `seconds` of game time. Time is cut at each finished upgrade, at the end of the research,
- * at the end of the shipyard's work, at the end of a training or a healing, and at each step of a fleet, so production, storage and fleets follow the new state from the exact moment it changes.
+ * at the end of the shipyard's work, at the end of a training or a healing, at each step of a fleet, when a Mist
+ * starts or lifts and when a stoked Lighthouse runs out of oil, so production, storage and fleets follow the new
+ * state from the exact moment it changes.
  */
 export function advance(state: PlayerState, seconds: number): PlayerState {
   let s = state;
   let rest = seconds;
   while (rest > 0) {
-    const ends = [...s.queue.map((j) => j.left), ...(s.research ? [s.research.left] : []), ...(s.yard ? [s.yard.left] : []), ...(s.training ? [s.training.left] : []), ...(s.healing ? [s.healing.left] : []), ...s.fleets.map((f) => f.left)];
+    // A stoked Lighthouse with no oil left goes dark until the Mist lifts.
+    if (isLit(s.clock, s.mist) && s.stock.oil <= 0) s = { ...s, mist: { ...s.mist, dark: true } };
+    const outOfOil = untilOutOfOil(s);
+    const w = mistAt(s.clock);
+    // The next time the Mist starts or lifts: a whole second, which the clock lands on exactly.
+    const change = w.on ? w.end : w.start;
+    const ends = [...s.queue.map((j) => j.left), ...(s.research ? [s.research.left] : []), ...(s.yard ? [s.yard.left] : []), ...(s.training ? [s.training.left] : []), ...(s.healing ? [s.healing.left] : []), ...s.fleets.map((f) => f.left), change - s.clock, outOfOil];
     const next = Math.min(rest, ...ends.map((left) => Math.max(0, left)));
+    const wasOn = w.on;
     s = produce(s, next);
     const q = advanceQueue(s.buildings, s.queue, next);
     const r = advanceResearch(s.techs, s.research, next);
@@ -106,6 +142,12 @@ export function advance(state: PlayerState, seconds: number): PlayerState {
     s = { ...s, buildings: q.buildings, queue: q.queue, techs: r.techs, research: r.research, rafts: y.rafts, yard: y.yard, troops: hl.troops, veterans: t.veterans, training: t.training, healing: hl.healing };
     const f = advanceFleets(seaState(s), next);
     s = withSea(s, f.state, f.reports);
+    s = { ...s, clock: next === change - s.clock ? change : s.clock + next };
+    if (next === outOfOil) s = { ...s, mist: { ...s.mist, dark: true } };
+    const on = mistAt(s.clock).on;
+    // A Mist starts: the Lighthouse is stoked only with the order on and oil to burn.
+    if (!wasOn && on) s = { ...s, mist: { ...s.mist, dark: !s.mist.stoke || s.stock.oil <= 0 } };
+    if (wasOn && !on) s = mistLifts(s);
     rest -= next;
   }
   return s;
@@ -113,10 +155,23 @@ export function advance(state: PlayerState, seconds: number): PlayerState {
 
 export type ActionResult = { ok: true; state: PlayerState } | { ok: false; reason: string };
 
-/** Sends a fleet with the shared rule; a refusal comes with its reason. */
+/** How far your fleets can sail now: the whole sea in calm weather, the Lighthouse's light in the Mist. */
+export const fleetSight = (state: PlayerState): Sight => ({ reach: seaReach(state.clock, state.buildings.lighthouse, state.mist), lit: isLit(state.clock, state.mist) });
+
+/** Sends a fleet with the shared rule, within the Lighthouse's light in the Mist; a refusal comes with its reason. */
 export function sail(state: PlayerState, siteId: string): ActionResult {
-  const r = sendFleet(siteId, seaState(state));
+  const r = sendFleet(siteId, seaState(state), fleetSight(state));
   return r.ok ? { ok: true, state: withSea(state, r.state) } : r;
+}
+
+/**
+ * Gives or takes back the order to stoke the Lighthouse in the Mist. Taken back during a Mist, the Lighthouse goes
+ * dark until it lifts, and that Mist is not held; given again, it waits for the next one.
+ */
+export function stoke(state: PlayerState, on: boolean): ActionResult {
+  if (state.mist.stoke === on) return { ok: true, state };
+  const dark = state.mist.dark || (!on && mistAt(state.clock).on);
+  return { ok: true, state: { ...state, mist: { ...state.mist, stoke: on, dark } } };
 }
 
 /**

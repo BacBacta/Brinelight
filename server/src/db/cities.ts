@@ -1,4 +1,4 @@
-import { CITY_SHAPE, catchUp, migrateCity, newPlayerState, parseState, type PlayerState } from "@brinelight/shared";
+import { CITY_SHAPE, catchUp, migrateCity, newPlayerState, parseState, type MigrationContext, type PlayerState } from "@brinelight/shared";
 import { eq } from "drizzle-orm";
 import type { Db } from "./index.js";
 import { cities } from "./schema.js";
@@ -28,7 +28,7 @@ export type LoadedCity =
 export async function loadCity(db: Db, playerId: string, log?: DbLog): Promise<LoadedCity> {
   const [row] = await db.select().from(cities).where(eq(cities.playerId, playerId));
   if (!row) return { status: "missing" };
-  const state = migrateCity(row.state, row.shape);
+  const state = migrateCity(row.state, row.shape, savedClock(row.savedAt));
   if (!state) {
     log?.error({ playerId, version: row.version, shape: row.shape }, "Stored city refused by migrateCity");
     return { status: "unreadable", reason: UNREADABLE };
@@ -38,12 +38,15 @@ export async function loadCity(db: Db, playerId: string, log?: DbLog): Promise<L
 
 /**
  * Creates the player's city if it is missing: a new city made by the server from the shared starting values,
- * at version 1. Does nothing when the city exists. The only place a city is created for a player who has none
+ * with its clock at `now`, at version 1. Does nothing when the city exists. The only place a city is created for a player who has none
  * (GET /city, or an action).
  */
 export async function ensureCity(db: Db, playerId: string, now: Date): Promise<void> {
-  await db.insert(cities).values({ playerId, state: newPlayerState(), version: 1, shape: CITY_SHAPE, savedAt: now }).onConflictDoNothing();
+  await db.insert(cities).values({ playerId, state: newPlayerState(now.getTime() / 1000), version: 1, shape: CITY_SHAPE, savedAt: now }).onConflictDoNothing();
 }
+
+/** What migrateCity needs of a stored row: its last save, as the city's clock for a city from before the Mist. */
+export const savedClock = (savedAt: Date): MigrationContext => ({ clock: savedAt.getTime() / 1000 });
 
 /**
  * The game time a city advances by between `savedAt` and `now`: real seconds times the development speed.

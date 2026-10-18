@@ -1,4 +1,5 @@
 import type { CaptainId, Shards } from "../rules/captains.js";
+import type { MistState } from "../rules/mist.js";
 import type { Rafts, YardJob } from "../rules/rafts.js";
 import type { ResearchJob, Techs } from "../rules/research.js";
 import type { HealingJob } from "../rules/healing.js";
@@ -46,6 +47,10 @@ export type PlayerState = {
   reports: Report[];
   /** How many reports this city has ever had: the next one is numbered reportSeq + 1. */
   reportSeq: number;
+  /** The city's game time, in seconds since 1 January 1970 (UTC): set by the server, moved on by `advance` only. */
+  clock: number;
+  /** The order to stoke the Lighthouse, whether it went dark in the Mist going on, and the Mists held and not held. */
+  mist: MistState;
 };
 
 /** A combat report, with a stable id ("r1", "r2"…) given in the order reports arrive, never reused. */

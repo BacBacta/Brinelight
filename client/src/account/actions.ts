@@ -108,6 +108,8 @@ export function createCityQueue(deps: QueueDeps) {
   /** When the server's city was received: on the forward-only clock, and on this device's clock (for the copy). */
   let receivedMono = deps.mono();
   let receivedWall = deps.wall();
+  /** When this queue started: the clock of the new city shown before the server's first answer. */
+  const born = deps.wall();
   let pending: Pending[] = [];
   /** A request on its way (an action or GET /city): only one at a time. */
   let busy = false;
@@ -151,7 +153,7 @@ export function createCityQueue(deps: QueueDeps) {
 
   function city(): PlayerState {
     // Before the server's first answer, with no copy on this device: a new city, which does not move until then.
-    const base = server ? advance(server.state, (Math.max(0, deps.mono() - receivedMono) / 1000) * server.speed) : newPlayerState();
+    const base = server ? advance(server.state, (Math.max(0, deps.mono() - receivedMono) / 1000) * server.speed) : newPlayerState(born / 1000);
     // An action the rules refuse on the latest city stays in the queue, not on screen: the server will decide.
     return pending.reduce((s, p) => {
       const r = applyAction(s, p.action);

@@ -539,10 +539,11 @@ describe("the account's actions", () => {
     const server = fakeServer();
     const answer = held<ApiResult<unknown>>();
     const t = queueSetup({ ...server.routes, "GET /city": () => answer.promise });
+    const born = t.clock.wall();
     void t.q.start();
     expect(t.q.hasCity).toBe(false);
     await t.clock.pass(HOUR * 1000);
-    expect(t.q.city()).toEqual(newPlayerState());
+    expect(t.q.city()).toEqual(newPlayerState(born / 1000));
     answer.release(ok(server.city()));
     await flush();
     expect(t.q.hasCity).toBe(true);

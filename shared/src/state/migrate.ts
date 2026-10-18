@@ -1,13 +1,17 @@
 /**
  * Cities stored in an older shape are brought up to the current one, step by step, instead of being refused.
- * Pure: no clock, no randomness. Used by the server for the stored cities, and by the client for old local saves.
+ * Pure: no system clock (the time of the last save is given), no randomness. Used by the server for the stored cities, and by the client for old local saves.
  */
+import { startingMist } from "../rules/mist.js";
 import { emptyTroops } from "../rules/types.js";
 import { parseState } from "./parse.js";
 import type { PlayerState } from "./types.js";
 
-/** The current shape of a city. Shape 4: the city of week 4. Shape 5: week 5 (training, healing, veterans, shards). */
-export const CITY_SHAPE = 5;
+/**
+ * The current shape of a city. Shape 4: the city of week 4. Shape 5: week 5 (training, healing, veterans, shards).
+ * Shape 6: week 7, the Mist (the city's clock, the order to stoke).
+ */
+export const CITY_SHAPE = 6;
 /** The oldest shape a stored city can have: nothing was stored before week 4. */
 export const MIN_CITY_SHAPE = 4;
 
@@ -18,7 +22,10 @@ const isObj = (v: unknown): v is Raw => typeof v === "object" && v !== null && !
  * What each step adds to a city of shape `n` to make it shape `n + 1`. A step only adds a field that is missing:
  * it never changes a value, so running it again changes nothing.
  */
-const STEPS: Record<number, (s: Raw) => Raw> = {
+/** What a step may need beyond the city: `clock`, the time the city was last saved (seconds since 1970, UTC). */
+export type MigrationContext = { clock: number };
+
+const STEPS: Record<number, (s: Raw, ctx: MigrationContext) => Raw> = {
   // Week 5: no training or healing in progress, no veteran in the city or at sea, no shard.
   4: (s) => {
     const out = { ...s };
@@ -32,21 +39,29 @@ const STEPS: Record<number, (s: Raw) => Raw> = {
     }
     return out;
   },
+  // Week 7: the city's clock starts at its last save; the order to stoke the Lighthouse is on, as for a new city.
+  5: (s, ctx) => {
+    const out = { ...s };
+    if (!("clock" in out)) out.clock = ctx.clock;
+    if (!("mist" in out)) out.mist = startingMist();
+    return out;
+  },
 };
 
 /** Adds the fields of every step from `shape` to the current shape. Does not check the city: parseState does. */
-export function upgradeShape(raw: Raw, shape: number): Raw {
+export function upgradeShape(raw: Raw, shape: number, ctx: MigrationContext): Raw {
   let s = raw;
-  for (let n = shape; n < CITY_SHAPE; n++) s = STEPS[n]?.(s) ?? s;
+  for (let n = shape; n < CITY_SHAPE; n++) s = STEPS[n]?.(s, ctx) ?? s;
   return s;
 }
 
 /**
  * A stored city of shape `shape`, brought up to CITY_SHAPE and read with parseState. Null when it cannot be read:
  * a shape older than MIN_CITY_SHAPE or newer than this code knows (never brought down), or a city parseState
- * refuses once its missing fields are added. Never throws.
+ * refuses once its missing fields are added. `ctx.clock` is the time of its last save, for the cities before the
+ * Mist. Never throws.
  */
-export function migrateCity(raw: unknown, shape: number): PlayerState | null {
+export function migrateCity(raw: unknown, shape: number, ctx: MigrationContext): PlayerState | null {
   if (!Number.isInteger(shape) || shape < MIN_CITY_SHAPE || shape > CITY_SHAPE || !isObj(raw)) return null;
-  return parseState(upgradeShape(raw, shape));
+  return parseState(upgradeShape(raw, shape, ctx));
 }

@@ -36,6 +36,12 @@ export function eventText(e: GameEvent): string {
       return `${e.count} wounded healed`;
     case "captain":
       return `${CAPTAINS[e.captain].name} reached level ${e.level}`;
+    case "mistHeld":
+      return `${e.count === 1 ? "You held the Mist" : `You held ${e.count} Mists`} · +${e.pearls} Pearls`;
+    case "mistMissed": {
+      const when = e.count === 1 ? "in the Mist" : `in ${e.count} Mists`;
+      return e.rafts > 0 ? `Your Lighthouse went dark ${when} · ${e.rafts} ${e.rafts === 1 ? "raft" : "rafts"} damaged` : `Your Lighthouse went dark ${when}`;
+    }
   }
 }
 
@@ -43,7 +49,8 @@ export function eventText(e: GameEvent): string {
 export function celebrationOf(e: GameEvent): Celebration {
   if (e.kind === "building" && e.building === "lighthouse") return { kind: "lighthouse", title: eventText(e), lines: ["Your light reaches farther."], sound: "lighthouse" };
   if (e.kind === "captain") return { kind: "captain", title: eventText(e), lines: [], sound: "captain", portrait: captainPortrait(e.captain, 512) };
-  return { kind: "float", title: eventText(e), lines: [], sound: e.kind === "troops" || e.kind === "veterans" ? "troops" : "done" };
+  const sound = e.kind === "troops" || e.kind === "veterans" ? "troops" : e.kind === "mistMissed" ? "refused" : "done";
+  return { kind: "float", title: eventText(e), lines: [], sound };
 }
 
 /**

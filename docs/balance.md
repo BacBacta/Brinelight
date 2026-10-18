@@ -24,7 +24,7 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 
 **The reserve:** while the Lighthouse waits, every other spending leaves untouched the cost of its next level, up to what the storage holds (no one can save more); while the Lighthouse is being built, or once it is at level 30, nothing is kept. A first try without this reserve for the other buildings gave a player who never researched nor trained in 60 days: they spent all the wood on buildings first.
 
-**Not modeled:** the Mist (always calm, the Lighthouse never stoked), the Leviathan, objectives and daily tasks (week 7), other players, the daily recruitment, Fish Shoals and Wooded Isles (fleets cannot go there yet).
+**The Mist** (week 7, task 1) is played: three a day on the city's clock, the order to stoke left on, as for a new city. **Not modeled:** the Leviathan, objectives and daily tasks (week 7, tasks 3 and 4), other players, the daily recruitment, Fish Shoals and Wooded Isles (fleets cannot go there yet).
 
 ## Results
 
@@ -36,41 +36,41 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 
 | Profile | Lighthouse 5 | Lighthouse 10 | Lighthouse 15 | Lighthouse 20 | Lighthouse 25 | Lighthouse 30 | Refinery 2 | Barracks 1 | First camp beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | day 1.1 | day 7.6 | day 26.0 | day 63.0 | day 152.4 | day 371.4 | day 4.0 | day 0.0 | day 1.3 |
-| Regular (6 sessions) | day 1.1 | day 5.8 | day 19.7 | day 52.6 | day 122.7 | day 321.4 | day 2.4 | day 0.0 | day 2.0 |
-| Dedicated (10 sessions) | day 1.1 | day 5.7 | day 17.5 | day 45.2 | day 119.4 | day 325.8 | day 1.5 | day 0.0 | day 1.1 |
+| Casual (3 sessions) | day 1.1 | day 12.6 | day 30.7 | day 67.6 | day 148.0 | day 388.4 | day 4.6 | day 0.0 | day 2.0 |
+| Regular (6 sessions) | day 1.1 | day 5.8 | day 19.7 | day 54.0 | day 134.9 | day 332.4 | day 2.4 | day 0.0 | day 2.0 |
+| Dedicated (10 sessions) | day 1.1 | day 5.7 | day 17.5 | day 46.5 | day 121.0 | day 330.4 | day 1.5 | day 0.0 | day 1.1 |
 
 ### Day 30
 
 | Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 15 | 65,739 | 28,242 | 35,101 | 7,101 | 56,550 | 495 | 6 (mira, 8, 22★) | 28 | 7 | 40 |
-| Regular (6 sessions) | 16 | 89,035 | 65,975 | 30,713 | 28,309 | 65,975 | 301 | 6 (mira, 14, 30★) | 28 | 7 | 66 |
-| Dedicated (10 sessions) | 17 | 99,716 | 90,328 | 10,849 | 46,656 | 85,768 | 562 | 6 (mira, 20, 30★) | 28 | 7 | 112 |
+| Casual (3 sessions) | 14 | 52,454 | 8,526 | 21,557 | 2,488 | 52,925 | 459 | 6 (mira, 6, 12★) | 26 | 6 | 29 |
+| Regular (6 sessions) | 16 | 89,212 | 66,615 | 30,781 | 28,309 | 65,975 | 288 | 6 (mira, 15, 30★) | 28 | 7 | 66 |
+| Dedicated (10 sessions) | 17 | 99,633 | 87,748 | 15,535 | 34,187 | 85,768 | 481 | 6 (mira, 20, 30★) | 28 | 7 | 97 |
 
 ### Day 90
 
 | Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 21 | 139,205 | 193,462 | 190,608 | 87,961 | 244,978 | 452 | 6 (mira, 19, 30★) | 28 | 7 | 88 |
-| Regular (6 sessions) | 23 | 158,254 | 166,846 | 30,587 | 12,841 | 414,011 | 511 | 6 (mira, 20, 30★) | 28 | 7 | 127 |
-| Dedicated (10 sessions) | 23 | 162,058 | 414,011 | 65,207 | 112,462 | 414,011 | 700 | 6 (mira, 20, 30★) | 28 | 7 | 202 |
+| Casual (3 sessions) | 21 | 137,412 | 101,642 | 144,356 | 97,306 | 244,978 | 365 | 6 (mira, 20, 30★) | 28 | 7 | 84 |
+| Regular (6 sessions) | 22 | 152,029 | 318,474 | 150,607 | 104,316 | 318,474 | 525 | 6 (mira, 20, 30★) | 28 | 7 | 122 |
+| Dedicated (10 sessions) | 23 | 158,541 | 380,229 | 62,521 | 82,317 | 414,011 | 831 | 6 (mira, 20, 30★) | 28 | 7 | 211 |
 
 ### Day 365
 
 | Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 29 | 237,190 | 345,729 | 998,325 | 538,947 | 1,998,372 | 649 | 6 (mira, 20, 30★) | 28 | 7 | 182 |
-| Regular (6 sessions) | 30 | 252,918 | 2,603,773 | 455,839 | 949,127 | 2,597,893 | 954 | 6 (mira, 20, 30★) | 28 | 7 | 259 |
-| Dedicated (10 sessions) | 30 | 255,126 | 2,603,013 | 373,141 | 1,145,705 | 2,597,893 | 1,270 | 6 (mira, 20, 30★) | 28 | 7 | 355 |
+| Casual (3 sessions) | 29 | 235,520 | 209,235 | 1,130,085 | 316,242 | 1,998,372 | 683 | 6 (mira, 20, 30★) | 28 | 7 | 177 |
+| Regular (6 sessions) | 30 | 252,261 | 2,566,316 | 458,152 | 808,144 | 2,597,893 | 789 | 6 (mira, 20, 30★) | 28 | 7 | 256 |
+| Dedicated (10 sessions) | 30 | 254,579 | 2,600,293 | 393,789 | 1,116,593 | 2,597,893 | 1,176 | 6 (mira, 20, 30★) | 28 | 7 | 357 |
 
 ### Waiting and blocks
 
 | Profile | Builder hours free a day (days 1–30) | (days 31–90) | (days 91–365) | Sessions with a builder free and nothing to start | Sessions with nothing at all | Blocked by (sessions) | Hours full: oil, fish, wood |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 36.2 | 15.7 | 12.7 | 341 of 1095 (31 %) | 0 | oil 101, wood 240 | 0, 0, 0 |
-| Regular (6 sessions) | 25.0 | 8.0 | 7.4 | 413 of 2190 (19 %) | 0 | wood 413 | 1331, 0, 0 |
-| Dedicated (10 sessions) | 18.4 | 6.8 | 9.3 | 741 of 3650 (20 %) | 1 | fish 1, wood 740 | 4201, 0, 0 |
+| Casual (3 sessions) | 38.6 | 15.8 | 15.8 | 407 of 1095 (37 %) | 0 | oil 171, wood 236 | 0, 0, 0 |
+| Regular (6 sessions) | 25.0 | 11.5 | 7.5 | 481 of 2190 (22 %) | 0 | wood 481 | 1266, 0, 0 |
+| Dedicated (10 sessions) | 18.6 | 6.7 | 9.4 | 796 of 3650 (22 %) | 1 | fish 1, wood 795 | 4207, 0, 0 |
 
 ### The storage wall
 
@@ -95,6 +95,8 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 <!-- balance:generated:end -->
 
 ## What it shows
+
+> Written before the Mist (week 7, task 1). The tables above include it; this text is brought up to date in week 7, task 5. The Mist alone moves the casual player's Lighthouse 10 from day 7.6 to 12.6 and 15 from 26.0 to 30.7 (oil runs short); the regular and dedicated players move by 0 to 10 %.
 
 ### 1. The pace: in line with the genre up to Lighthouse 15, Lighthouse 30 in about a year
 

@@ -35,6 +35,7 @@ export function createCity(
     train(troop: TroopType): void;
     promote(troop: TroopType): void;
     heal(): void;
+    stoke(on: boolean): void;
     dockRaft(slot: string): void;
     installOnRaft(slot: string, building: RaftBuildingId): void;
     upgradeRaft(slot: string): void;
@@ -57,6 +58,7 @@ export function createCity(
     train: (troop) => game.train(troop),
     promote: (troop) => game.promote(troop),
     heal: () => game.heal(),
+    stoke: (on) => game.stoke(on),
     close: () => {
       sheet.close();
       buildings.select(null);

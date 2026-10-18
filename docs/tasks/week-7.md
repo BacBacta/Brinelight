@@ -69,6 +69,13 @@ Decided by the owner (18 October):
 5. **A Mist not held:** each raft loses 35 sturdiness, **never below 25**. A raft is never stopped: below 60 it runs at half efficiency, as today. An absent player does not find a city at a standstill.
 6. **Morale and survivors:** not this week.
 
+**Done (18 October).**
+- **Rule:** `shared/src/rules/mist.ts`; the clock and the Mist in the city (shape 6, migrated from the last save); the action `stoke`; the far sea hidden in the Mist.
+- **Celebrations:** "You held the Mist · +30 Pearls" and "Your Lighthouse went dark in the Mist · N rafts damaged".
+- **Client:** the banner counts down ("Mist in 52 min · enough oil", "Mist · 1 h 10 left · Lighthouse stoked"); the 3D view fades into the Mist when the rules say so; the Lighthouse's sheet has the order to stoke and the camps and wrecks its light reaches; at sea, the places beyond the light fade.
+- **Tests:** shared (`mist.test.ts` and the others), the server's cheat case, an e2e scenario (the countdown, the order sent and found again, the Mist lifting by the server's clock).
+- **Balance:** the simulation plays the Mist. Task 5 looks at its effect: the casual player's Lighthouse 10 moves from day 7.6 to 12.6, short of oil.
+
 ## Task 2 · Repairing the rafts
 
 What it does:

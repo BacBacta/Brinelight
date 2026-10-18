@@ -81,7 +81,7 @@ describe("cities", () => {
   it("ensureCity makes a new city at version 1 for a player who has none, and never touches an existing one", async () => {
     const p = await findOrCreatePlayer(db, WALLET, T0);
     await ensureCity(db, p.id, T0);
-    expect(await loadCity(db, p.id)).toEqual({ status: "ok", city: { state: newPlayerState(), version: 1, savedAt: T0, shape: CITY_SHAPE } });
+    expect(await loadCity(db, p.id)).toEqual({ status: "ok", city: { state: newPlayerState(T0.getTime() / 1000), version: 1, savedAt: T0, shape: CITY_SHAPE } });
     const played = advance(newPlayerState(), 600);
     await db.update(schema.cities).set({ state: played, version: 5, savedAt: later(MIN) });
     await ensureCity(db, p.id, later(DAY));

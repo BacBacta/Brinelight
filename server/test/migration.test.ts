@@ -81,7 +81,7 @@ describe(`a city stored by the week 4 server (${TEST_URL ? "PostgreSQL" : "PGlit
     const res = await server.inject({ method: "GET", url: "/city", headers: { authorization: `Bearer ${p.token}` } });
     expect(res.statusCode).toBe(200);
     const body = res.json() as { state: PlayerState; version: number };
-    expect(body.state).toEqual(json(catchUp(migrateCity(WEEK4, 4)!, 0)));
+    expect(body.state).toEqual(json(catchUp(migrateCity(WEEK4, 4, { clock: T0.getTime() / 1000 })!, 0)));
     expect(body.version).toBe(7);
     expect(body.state.fleets).toHaveLength(1);
     expect(body.state.fleets[0]).toMatchObject({ site: "camp-2", phase: "out", veterans: emptyTroops() });

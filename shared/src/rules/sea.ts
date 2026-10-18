@@ -216,10 +216,18 @@ export type CombatReport = {
   shards?: { id: CaptainId; count: number };
 };
 
-/** Can you send a fleet there now? A refusal comes with its reason. */
-export function canSendFleet(siteId: string, s: Pick<SeaState, "buildings" | "troops" | "veterans" | "fleets">): Check {
+/** How far your fleets can sail now (map units from your city), and whether the Lighthouse is stoked. */
+export type Sight = { reach: number; lit: boolean };
+/** Calm weather: the whole sea. */
+export const CLEAR_SIGHT: Sight = { reach: Infinity, lit: false };
+
+/** Can you send a fleet there now? In the Mist, only within the Lighthouse's light. A refusal comes with its reason. */
+export function canSendFleet(siteId: string, s: Pick<SeaState, "buildings" | "troops" | "veterans" | "fleets">, sight: Sight = CLEAR_SIGHT): Check {
   const site = seaSite(siteId);
   if (!site || (site.kind !== "camp" && site.kind !== "wreck")) return refuse("You cannot send a fleet there yet");
+  if (distance(site) > sight.reach) {
+    return refuse(sight.lit ? "The Mist hides this place. Wait for it to lift." : "The Mist hides this place. Stoke the Lighthouse or wait for it to lift.");
+  }
   if (s.fleets.length >= fleetsMax(s.buildings.harbor)) {
     return refuse(s.buildings.harbor < 1 ? "Build the Harbor to send more fleets" : "All your fleets are at sea");
   }
@@ -231,8 +239,8 @@ export function canSendFleet(siteId: string, s: Pick<SeaState, "buildings" | "tr
 export type SendFleet = { ok: true; state: SeaState } | { ok: false; reason: string };
 
 /** Sends a fleet: to a camp with all your troops and veterans, who leave the city; to a wreck to salvage it. */
-export function sendFleet(siteId: string, s: SeaState): SendFleet {
-  const check = canSendFleet(siteId, s);
+export function sendFleet(siteId: string, s: SeaState, sight: Sight = CLEAR_SIGHT): SendFleet {
+  const check = canSendFleet(siteId, s, sight);
   if (!check.ok) return check;
   const site = seaSite(siteId)!;
   const kind: FleetKind = site.kind === "camp" ? "attack" : "collect";

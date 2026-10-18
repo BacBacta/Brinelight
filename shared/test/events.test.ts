@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DAY,
+  HOUR,
   RAFT_SLOTS,
   advance,
   dockRaft,
@@ -11,6 +12,7 @@ import {
   newPlayerState,
   promote,
   research,
+  stoke,
   train,
   unlockCaptain,
   upgrade,
@@ -38,48 +40,50 @@ const rich = (): PlayerState => {
 /** The city once every work in progress is done. */
 const later = (s: PlayerState): PlayerState => advance(s, DAY);
 const slot = RAFT_SLOTS.find((x) => x.ring === 3)!.key;
+/** The events of the works only: a day also brings three Mists, tested on their own. */
+const works = (a: PlayerState, b: PlayerState) => eventsBetween(a, b).filter((e) => e.kind !== "mistHeld" && e.kind !== "mistMissed");
 
 describe("what happened between two cities", () => {
   it("nothing between a city and itself, or while works only go on", () => {
     const s = ok(upgrade(rich(), "refinery"));
-    expect(eventsBetween(s, s)).toEqual([]);
-    expect(eventsBetween(s, advance(s, 1))).toEqual([]);
+    expect(works(s, s)).toEqual([]);
+    expect(works(s, advance(s, 1))).toEqual([]);
   });
 
   it("a building that ends its upgrade, with its new level", () => {
     const s = ok(upgrade(rich(), "refinery"));
-    expect(eventsBetween(s, later(s))).toEqual([{ kind: "building", building: "refinery", level: 4 }]);
+    expect(works(s, later(s))).toEqual([{ kind: "building", building: "refinery", level: 4 }]);
   });
 
   it("a research that ends", () => {
     const s = ok(research(rich(), "saws"));
-    expect(eventsBetween(s, later(s))).toEqual([{ kind: "research", tech: "saws", level: 1 }]);
+    expect(works(s, later(s))).toEqual([{ kind: "research", tech: "saws", level: 1 }]);
   });
 
   it("a raft moored, a building put on it, then that building one level up", () => {
     const docked = ok(dockRaft(rich(), slot));
     const moored = later(docked);
-    expect(eventsBetween(docked, moored)).toEqual([{ kind: "raft", slot }]);
+    expect(works(docked, moored)).toEqual([{ kind: "raft", slot }]);
     const installing = ok(installOnRaft(moored, slot, "greenhouse"));
     const installed = later(installing);
-    expect(eventsBetween(installing, installed)).toEqual([{ kind: "raftBuilding", slot, building: "greenhouse", level: 1 }]);
+    expect(works(installing, installed)).toEqual([{ kind: "raftBuilding", slot, building: "greenhouse", level: 1 }]);
     const upgrading = ok(upgradeRaft(installed, slot));
-    expect(eventsBetween(upgrading, later(upgrading))).toEqual([{ kind: "raftBuilding", slot, building: "greenhouse", level: 2 }]);
+    expect(works(upgrading, later(upgrading))).toEqual([{ kind: "raftBuilding", slot, building: "greenhouse", level: 2 }]);
   });
 
   it("soldiers trained, veterans promoted, wounded healed", () => {
     const training = ok(train(rich(), "harpooners"));
-    expect(eventsBetween(training, later(training))).toEqual([{ kind: "troops", troop: "harpooners", count: 60 }]);
+    expect(works(training, later(training))).toEqual([{ kind: "troops", troop: "harpooners", count: 60 }]);
     const promoting = ok(promote(rich(), "boarders"));
-    expect(eventsBetween(promoting, later(promoting))).toEqual([{ kind: "veterans", troop: "boarders", count: 10 }]);
+    expect(works(promoting, later(promoting))).toEqual([{ kind: "veterans", troop: "boarders", count: 10 }]);
     const healing = ok(heal(rich()));
-    expect(eventsBetween(healing, later(healing))).toEqual([{ kind: "healed", count: 8 }]);
+    expect(works(healing, later(healing))).toEqual([{ kind: "healed", count: 8 }]);
   });
 
   it("a new batch started right after the last one ended still counts the one that ended", () => {
     const first = ok(train(rich(), "boarders"));
     const second = ok(train(later(first), "crossbowmen"));
-    expect(eventsBetween(first, second)).toEqual([{ kind: "troops", troop: "boarders", count: 60 }]);
+    expect(works(first, second)).toEqual([{ kind: "troops", troop: "boarders", count: 60 }]);
   });
 
   it("a captain who rises a level; a captain just recruited is not a level up", () => {
@@ -88,9 +92,9 @@ describe("what happened between two cities", () => {
     const before = { ...s, pearls: 5000, captains: { ...s.captains, [lead]: { level: 1, xp: 79, stars: 1 } } };
     const after = ok(logbook(before));
     expect(after.captains[lead]!.level).toBeGreaterThan(1);
-    expect(eventsBetween(before, after)).toEqual([{ kind: "captain", captain: lead, level: after.captains[lead]!.level }]);
+    expect(works(before, after)).toEqual([{ kind: "captain", captain: lead, level: after.captains[lead]!.level }]);
     const recruit = ok(unlockCaptain({ ...s, shards: { sel: 10 } }, "sel"));
-    expect(eventsBetween({ ...s, shards: { sel: 10 } }, recruit)).toEqual([]);
+    expect(works({ ...s, shards: { sel: 10 } }, recruit)).toEqual([]);
   });
 
   it("a long time away: every work that ended, in a fixed order, and a building risen two levels counts once", () => {
@@ -99,7 +103,15 @@ describe("what happened between two cities", () => {
     s = ok(train(s, "boarders"));
     const away = later(s);
     const again = later(ok(upgrade(away, "fishery")));
-    expect(eventsBetween(s, away).map((e) => e.kind)).toEqual(["building", "research", "troops"]);
-    expect(eventsBetween(s, again).filter((e) => e.kind === "building")).toEqual([{ kind: "building", building: "fishery", level: 5 }]);
+    expect(works(s, away).map((e) => e.kind)).toEqual(["building", "research", "troops"]);
+    expect(works(s, again).filter((e) => e.kind === "building")).toEqual([{ kind: "building", building: "fishery", level: 5 }]);
+  });
+
+  it("the Mists that lifted: one event for those held, with their Pearls, one for those not held, with the rafts damaged", () => {
+    const s = { ...rich(), rafts: { [slot]: { hp: 100, building: null, level: 0 } } };
+    expect(eventsBetween(s, advance(s, DAY))).toContainEqual({ kind: "mistHeld", count: 3, pearls: 90 });
+    const off = ok(stoke(s, false));
+    expect(eventsBetween(off, advance(off, 7 * HOUR))).toEqual([{ kind: "mistMissed", count: 1, rafts: 1 }]);
+    expect(eventsBetween(s, advance(s, HOUR))).toEqual([]);
   });
 });

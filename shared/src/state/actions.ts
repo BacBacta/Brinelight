@@ -10,7 +10,7 @@ import { TECHS, type TechId } from "../rules/research.js";
 import { seaSite } from "../rules/sea.js";
 import type { BuildingId, TroopType } from "../rules/types.js";
 import { REPORT_ID } from "./parse.js";
-import { addStar, dockRaft, heal, installOnRaft, logbook, promote, readReport, research, sail, setLead, train, unlockCaptain, upgrade, upgradeRaft, type ActionResult } from "./state.js";
+import { addStar, dockRaft, heal, installOnRaft, logbook, promote, readReport, research, sail, setLead, stoke, train, unlockCaptain, upgrade, upgradeRaft, type ActionResult } from "./state.js";
 import type { PlayerState } from "./types.js";
 
 /** Every action carries an id made by the client (a UUID), so the server never applies it twice. */
@@ -28,7 +28,8 @@ export type GameAction =
   | { id: string; type: "setLead"; captain: CaptainId }
   | { id: string; type: "logbook" }
   | { id: string; type: "unlockCaptain"; captain: CaptainId }
-  | { id: string; type: "addStar"; captain: CaptainId };
+  | { id: string; type: "addStar"; captain: CaptainId }
+  | { id: string; type: "stoke"; on: boolean };
 
 export type GameActionType = GameAction["type"];
 
@@ -51,6 +52,7 @@ const FIELDS: Record<GameActionType, readonly string[]> = {
   logbook: [],
   unlockCaptain: ["captain"],
   addStar: ["captain"],
+  stoke: ["on"],
 };
 
 const SLOTS = new Set(RAFT_SLOTS.map((s) => s.key));
@@ -94,12 +96,14 @@ export function applyAction(state: PlayerState, action: GameAction): ActionResul
       return unlockCaptain(state, action.captain);
     case "addStar":
       return addStar(state, action.captain);
+    case "stoke":
+      return stoke(state, action.on);
   }
 }
 
 /**
  * Reads an action sent by a client. Strict: an object with exactly the fields of its type, a UUID id,
- * a known building, site, report id, research, slot, troop type, raft building or captain. Anything else gives null. Never throws.
+ * a known building, site, report id, research, slot, troop type, raft building or captain, a boolean to stoke. Anything else gives null. Never throws.
  */
 export function parseAction(raw: unknown): GameAction | null {
   try {
@@ -160,6 +164,9 @@ export function parseAction(raw: unknown): GameAction | null {
         const captain = o.captain;
         return shortText(captain) && Object.prototype.hasOwnProperty.call(CAPTAINS, captain) ? { id, type: t, captain: captain as CaptainId } : null;
       }
+      case "stoke":
+        // The order only: never an amount of oil or a time.
+        return typeof o.on === "boolean" ? { id, type: t, on: o.on } : null;
     }
   } catch {
     return null;
