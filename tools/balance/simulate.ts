@@ -48,6 +48,7 @@ import {
   techLevel,
   totalTroops,
   upgradeCost,
+  upgradePearls,
   type BuildingId,
   type CaptainId,
   type Cost,
@@ -110,7 +111,7 @@ const WRECKS = SEA_SITES.filter((s) => s.kind === "wreck").sort((a, b) => distan
 const CAMPS = SEA_SITES.filter((s) => s.kind === "camp");
 
 /** Why a builder stayed free at the end of a session. */
-export type Block = { reason: "resources"; resource: Resource } | { reason: "capped" };
+export type Block = { reason: "resources"; resource: Resource } | { reason: "pearls" } | { reason: "capped" };
 
 export type DayRow = {
   profile: ProfileId;
@@ -154,8 +155,8 @@ export type Run = {
   lighthouse: Record<number, number>;
   /** Other first times, in hours after the city was founded. */
   firsts: { refinery2: number | null; barracks1: number | null; campBeaten: number | null };
-  /** Per resource, how many sessions it blocked a builder; and the blocks by the Lighthouse's cap. */
-  blocks: Record<Resource | "capped", number>;
+  /** Per resource, how many sessions it blocked a builder; the blocks by the Pearls of the Lighthouse's last levels; and by the Lighthouse's cap. */
+  blocks: Record<Resource | "pearls" | "capped", number>;
   /** Hours each resource spent full (production lost). */
   fullHours: Record<Resource, number>;
   walls: Wall[];
@@ -229,7 +230,7 @@ export function simulate(profile: Profile, days: number): Run {
   let turn = 0;
   const lighthouse: Record<number, number> = { [s.buildings.lighthouse]: 0 };
   const firsts: Run["firsts"] = { refinery2: null, barracks1: null, campBeaten: null };
-  const blocks: Run["blocks"] = { oil: 0, fish: 0, wood: 0, rope: 0, capped: 0 };
+  const blocks: Run["blocks"] = { oil: 0, fish: 0, wood: 0, rope: 0, pearls: 0, capped: 0 };
   const fullHours: Run["fullHours"] = { oil: 0, fish: 0, wood: 0, rope: 0 };
   const walls: Wall[] = [];
   const rows: DayRow[] = [];
@@ -293,7 +294,8 @@ export function simulate(profile: Profile, days: number): Run {
       const first = candidates[0];
       if (!first) return { reason: "capped" };
       const lack = missing(s.stock, upgradeCost(first, s.buildings[first]));
-      return lack ? { reason: "resources", resource: lack } : { reason: "capped" };
+      if (lack) return { reason: "resources", resource: lack };
+      return s.pearls < upgradePearls(first, s.buildings[first]) ? { reason: "pearls" } : { reason: "capped" };
     }
   };
 
@@ -364,8 +366,10 @@ export function simulate(profile: Profile, days: number): Run {
 
   const shipyard = () => {
     if (s.yard) return false;
-    // Rafts below 60 are repaired first: their buildings run at half, and cannot be upgraded.
-    if (!profile.skip?.repairs && Object.values(s.rafts).some((r) => r.hp < 60)) return act({ type: "repairRafts" }, "repair the rafts");
+    // Rafts below 60 are repaired first: their buildings run at half, and cannot be upgraded. As every other spending,
+    // a repair leaves the Lighthouse's reserve untouched (it did not before 18 October: the player who never stokes
+    // spent the Lighthouse's oil on repairs every day).
+    if (!profile.skip?.repairs && Object.values(s.rafts).some((r) => r.hp < 60)) return act({ type: "repairRafts" }, "repair the rafts", true);
     const slots = RAFT_SLOTS.map((x) => x.key);
     const empty = slots.find((k) => s.rafts[k] && !s.rafts[k]!.building);
     if (empty) {
@@ -408,7 +412,7 @@ export function simulate(profile: Profile, days: number): Run {
     if (ids === before) today.empty++;
     if (block) {
       today.blocked++;
-      const key = block.reason === "capped" ? "capped" : block.resource;
+      const key = block.reason === "resources" ? block.resource : block.reason;
       blocks[key]++;
       today.by.set(key, (today.by.get(key) ?? 0) + 1);
     }

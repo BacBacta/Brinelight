@@ -612,6 +612,18 @@ describe("a modified client cannot change the rules", () => {
     await expectRefused(server, p, action({ type: "sail", site: "leviathan" }), "The Leviathan is not at sea. Wait for it to rise.");
   });
 
+  it("the Lighthouse's last levels: without their Pearls, refused with how many it needs; a number of Pearls sent is never read", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState(T0.getTime() / 1000);
+    const rich = { oil: 50_000_000, fish: 50_000_000, wood: 50_000_000, rope: 1000 };
+    const p = await player({ ...base, buildings: { ...base.buildings, lighthouse: 27 }, stock: rich, pearls: 6999 });
+    await expectRefused(server, p, action({ type: "upgrade", building: "lighthouse" }), "You need 7,000 Pearls for this level.");
+    await expectInvalid(server, p, { action: { ...action({ type: "upgrade", building: "lighthouse" }), pearls: 0 } });
+    const q = await player({ ...base, buildings: { ...base.buildings, lighthouse: 27 }, stock: rich, pearls: 7000 });
+    await expectApplied(server, q, action({ type: "upgrade", building: "lighthouse" }));
+    expect(q.ref.now().pearls).toBe(0);
+  });
+
   it("an emptied wreck: no fleet while it waits, and the server's clock decides when it fills again", async () => {
     const server = await buildApp({ db, now: () => clock });
     // T0 is 12:00 UTC, in a Mist: 14:00, it has lifted. The nearest wreck holds 100 oil, less than a hold.

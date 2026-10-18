@@ -154,7 +154,7 @@ export function toMarkdown(runs: readonly Run[], more: readonly Run[] = []): str
     const sessions = r.days.reduce((s, d) => s + d.sessions, 0);
     const blocked = r.days.reduce((s, d) => s + d.blockedSessions, 0);
     const empty = r.days.reduce((s, d) => s + d.emptySessions, 0);
-    const by = [...RES, "capped" as const].filter((k) => r.blocks[k] > 0).map((k) => `${k} ${r.blocks[k]}`).join(", ") || "none";
+    const by = [...RES, "pearls" as const, "capped" as const].filter((k) => r.blocks[k] > 0).map((k) => `${k} ${r.blocks[k]}`).join(", ") || "none";
     out.push(`| ${r.profile.name} | ${idle(0, 30)} | ${idle(30, 90)} | ${idle(90, 365)} | ${blocked} of ${sessions} (${Math.round((100 * blocked) / Math.max(1, sessions))} %) | ${empty} | ${by} | ${Math.round(r.fullHours.oil)}, ${Math.round(r.fullHours.fish)}, ${Math.round(r.fullHours.wood)} |`);
   }
   out.push("", "### Oil, the Mist, the Leviathan and the claims (whole run)", "");

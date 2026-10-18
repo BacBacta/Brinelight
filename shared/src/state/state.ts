@@ -209,7 +209,7 @@ export type UpgradeResult = ActionResult;
 /** Starts an upgrade with the shared rule; a refusal comes with its reason. */
 export function upgrade(state: PlayerState, id: BuildingId): UpgradeResult {
   const r = startUpgrade(id, state);
-  return r.ok ? { ok: true, state: { ...state, stock: r.stock, queue: r.queue } } : r;
+  return r.ok ? { ok: true, state: { ...state, stock: r.stock, pearls: r.pearls, queue: r.queue } } : r;
 }
 
 /** Starts the next level of a research at the Observatory with the shared rule; a refusal comes with its reason. */

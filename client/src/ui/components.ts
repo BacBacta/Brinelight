@@ -42,12 +42,13 @@ export function box(title: string, body: string, cls?: string, titleCls?: string
   return `<div class="box${cls ? ` ${cls}` : ""}"><h4${titleCls ? ` class="${titleCls}"` : ""}>${title}</h4>${body}</div>`;
 }
 
-/** A cost with its icons; a resource you lack is marked. */
-export function costLine(stock: Readonly<Record<string, number>>, cost: Cost): string {
+/** A cost with its icons, and the Pearls it asks if any (`pearls`: what it needs, what you have); what you lack is marked. */
+export function costLine(stock: Readonly<Record<string, number>>, cost: Cost, pearls?: { need: number; have: number }): string {
   const parts = costEntries(cost)
     .map(([r, v]) => `<span class="${stock[r]! < v ? "no" : ""}" title="${RESOURCE_NAMES[r]}">${resourceIcon(r)}${formatAmount(v)}</span>`)
     .join("");
-  return `<div class="cost">${parts}</div>`;
+  const pearl = pearls && pearls.need > 0 ? `<span class="${pearls.have < pearls.need ? "no" : ""}" title="Pearls">${resourceIcon("pearl")}${formatAmount(pearls.need)}</span>` : "";
+  return `<div class="cost">${parts}${pearl}</div>`;
 }
 
 /** A cost in words: "200 wood · 80 oil". */

@@ -57,6 +57,18 @@ export function upgradeTime(id: BuildingId, level: number): number {
   return Math.round(protoSeconds(d.baseTime * grown(d.timeGrowth, level, after)));
 }
 
+/**
+ * Pearls the Lighthouse's last levels ask on top of their cost, by the level they reach (owner's decision, 18 October):
+ * 5,000 for level 26, then 1,000 more a level, 35,000 in all. Never anything for sale: Pearls are earned by playing.
+ */
+export const LIGHTHOUSE_PEARLS: Readonly<Record<number, number>> = { 26: 5000, 27: 6000, 28: 7000, 29: 8000, 30: 9000 };
+
+/** Pearls to go from level `level` to level `level + 1`: only the Lighthouse's last levels ask some. */
+export const upgradePearls = (id: BuildingId, level: number): number => (id === "lighthouse" ? (LIGHTHOUSE_PEARLS[level + 1] ?? 0) : 0);
+
+/** "7,000": a whole number with its thousands, for the refusals. */
+const thousands = (n: number): string => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
 /** Highest reachable level: the Lighthouse caps every other building. */
 export function maxLevel(id: BuildingId, buildings: Buildings): number {
   return id === "lighthouse" ? LIGHTHOUSE_MAX : buildings.lighthouse;
@@ -65,6 +77,8 @@ export function maxLevel(id: BuildingId, buildings: Buildings): number {
 export type UpgradeContext = {
   buildings: Buildings;
   stock: Stock;
+  /** Your Pearls: the Lighthouse's last levels ask some (upgradePearls). */
+  pearls: number;
   /** Buildings already being upgraded. */
   queue: BuildingId[];
 };
@@ -78,6 +92,8 @@ export function canUpgrade(id: BuildingId, ctx: UpgradeContext): Check {
   if (ctx.queue.includes(id)) return refuse("This building is already being upgraded");
   if (ctx.queue.length >= BUILDERS) return refuse(`Your ${BUILDERS} builders are busy`);
   if (!canPay(ctx.stock, upgradeCost(id, level))) return refuse("Not enough resources");
+  const pearls = upgradePearls(id, level);
+  if (ctx.pearls < pearls) return refuse(`You need ${thousands(pearls)} Pearls for this level.`);
   return OK;
 }
 
@@ -85,16 +101,16 @@ export function canUpgrade(id: BuildingId, ctx: UpgradeContext): Check {
 export type UpgradeJob = { id: BuildingId; left: number; duration: number };
 
 export type StartUpgrade =
-  | { ok: true; stock: Stock; queue: UpgradeJob[] }
+  | { ok: true; stock: Stock; pearls: number; queue: UpgradeJob[] }
   | { ok: false; reason: string };
 
-/** Starts an upgrade: checks canUpgrade, pays the cost and adds the job at the end of the queue. */
-export function startUpgrade(id: BuildingId, ctx: { buildings: Buildings; stock: Stock; queue: UpgradeJob[] }): StartUpgrade {
-  const check = canUpgrade(id, { buildings: ctx.buildings, stock: ctx.stock, queue: ctx.queue.map((j) => j.id) });
+/** Starts an upgrade: checks canUpgrade, pays the cost (and the Pearls) and adds the job at the end of the queue. */
+export function startUpgrade(id: BuildingId, ctx: { buildings: Buildings; stock: Stock; pearls: number; queue: UpgradeJob[] }): StartUpgrade {
+  const check = canUpgrade(id, { buildings: ctx.buildings, stock: ctx.stock, pearls: ctx.pearls, queue: ctx.queue.map((j) => j.id) });
   if (!check.ok) return check;
   const level = ctx.buildings[id];
   const duration = upgradeTime(id, level);
-  return { ok: true, stock: payCost(ctx.stock, upgradeCost(id, level)), queue: [...ctx.queue, { id, left: duration, duration }] };
+  return { ok: true, stock: payCost(ctx.stock, upgradeCost(id, level)), pearls: ctx.pearls - upgradePearls(id, level), queue: [...ctx.queue, { id, left: duration, duration }] };
 }
 
 /**

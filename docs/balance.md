@@ -20,7 +20,7 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 4. **Infirmary:** heals the wounded.
 5. **Sea:** the Leviathan first, while it is at sea and a fleet stays free for the wrecks, with all the troops; otherwise the lowest pirate camp with all the troops if the odds are "easy"; every other fleet salvages the nearest wreck it can sail to, one fleet a wreck (an emptied wreck waits 2 hours before it fills again).
 6. **Captains:** unlock and add stars as soon as there are shards; the rarest, then highest level, leads; a Logbook while 100 Pearls are left after it.
-7. **Rafts:** the rafts repaired as soon as one is below 60; else a building on an empty raft (Greenhouse, Smokehouse, Watchtower, two of each), else the lowest raft building upgraded, else a new raft.
+7. **Rafts:** the rafts repaired as soon as one is below 60, keeping the reserve below; else a building on an empty raft (Greenhouse, Smokehouse, Watchtower, two of each), else the lowest raft building upgraded, else a new raft.
 8. **Claims:** every objective done, and every chest the day's points open.
 
 **The reserve:** while the Lighthouse waits, every other spending leaves untouched the cost of its next level, up to what the storage holds (no one can save more); while the Lighthouse is being built, or once it is at level 30, nothing is kept. A first try without this reserve for the other buildings gave a player who never researched nor trained in 60 days: they spent all the wood on buildings first.
@@ -80,24 +80,24 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 | Casual (3 sessions) | 0 | 65,561 | 0 (0 oil) | 1093 | 1 | 362 | 0 | 18 | 755 |
 | Regular (6 sessions) | 125 | 68,441 | 0 (0 oil) | 1094 | 0 | 726 | 0 | 18 | 791 |
 | Dedicated (10 sessions) | 314 | 69,005 | 0 (0 oil) | 1094 | 0 | 704 | 0 | 18 | 826 |
-| Never stokes (6 sessions) | 0 | 0 | 335 (3,534,110 oil) | 0 | 1094 | 726 | 0 | 10 | 410 |
+| Never stokes (6 sessions) | 0 | 0 | 131 (2,996,170 oil) | 0 | 1094 | 726 | 0 | 10 | 418 |
 | Away 3 days (6 sessions, none on days 20 to 22) | 26 | 68,675 | 0 (0 oil) | 1094 | 0 | 720 | 1 | 18 | 791 |
 
 ### Pearls a day, by source (average over the whole run)
 
 | Profile | Mist | Leviathan | Camps | Objectives | Chests | Earned | Spent on Logbooks | Pearls at the end |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 89.8 | 51.5 | 59.2 | 2.1 | 4.4 | 207.0 | 37.7 | 62,007 |
-| Regular (6 sessions) | 89.9 | 130.1 | 113.2 | 2.1 | 15.1 | 350.3 | 36.7 | 114,673 |
-| Dedicated (10 sessions) | 89.9 | 81.3 | 197.6 | 2.1 | 24.1 | 395.0 | 33.3 | 132,225 |
-| Never stokes (6 sessions) | 0.0 | 70.2 | 10.9 | 0.7 | 4.4 | 86.2 | 27.5 | 21,608 |
-| Away 3 days (6 sessions, none on days 20 to 22) | 89.9 | 118.3 | 111.6 | 2.1 | 16.7 | 338.6 | 37.0 | 110,302 |
+| Casual (3 sessions) | 89.8 | 51.5 | 59.2 | 2.1 | 4.4 | 207.0 | 37.7 | 27,007 |
+| Regular (6 sessions) | 89.9 | 130.1 | 113.2 | 2.1 | 15.1 | 350.3 | 36.7 | 79,673 |
+| Dedicated (10 sessions) | 89.9 | 81.3 | 197.6 | 2.1 | 24.1 | 395.0 | 33.3 | 97,225 |
+| Never stokes (6 sessions) | 0.0 | 109.8 | 75.7 | 0.7 | 4.4 | 190.6 | 26.2 | 34,225 |
+| Away 3 days (6 sessions, none on days 20 to 22) | 89.9 | 118.3 | 111.6 | 2.1 | 16.7 | 338.6 | 37.0 | 75,302 |
 
 ### Two more players: milestones
 
 | Profile | Lighthouse 5 | Lighthouse 10 | Lighthouse 15 | Lighthouse 20 | Lighthouse 25 | Lighthouse 30 |
 | --- | --- | --- | --- | --- | --- | --- |
-| Never stokes (6 sessions) | day 1.1 | day 6.0 | day 23.7 | not reached | not reached | not reached |
+| Never stokes (6 sessions) | day 1.1 | day 6.0 | day 21.6 | day 60.1 | day 169.0 | not reached |
 | Away 3 days (6 sessions, none on days 20 to 22) | day 1.1 | day 5.6 | day 18.1 | day 47.3 | day 116.9 | day 314.6 |
 
 ### What a player away finds on return (before the first session)
@@ -130,25 +130,36 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 
 ## What it shows
 
-> Written before week 7. The tables above play its rules since week 7, task 5, with the owner's decisions of 18 October (the wrecks' 2 h wait and richer wrecks past Lighthouse 24, chests without resources, a fleet kept free from the hunt): every milestone of the three profiles is within 10 % of week 6, and `npm test` keeps it so. This text is written again once the owner has read the new tables. The Mist alone moves the casual player's Lighthouse 10 from day 7.6 to 12.6 and 15 from 26.0 to 30.7 (oil runs short); the regular and dedicated players move by 0 to 10 %. With stoking at 1.5 times the oil instead of 2.2 (the owner's decision of 18 October), the casual player's Lighthouse 10 is back on day 7.8 and 15 on day 27.5.
+Written on 18 October, with all of week 7 played and the owner's decisions of that day. A test keeps every milestone of the three profiles within 10 % of week 6 (`tools/balance/balance.test.ts`).
 
-### 1. The pace: in line with the genre up to Lighthouse 15, Lighthouse 30 in about a year
+### 1. The pace: as in week 6, Lighthouse 30 in about a year
 
-- **Lighthouse 10** comes on day 5.7 (dedicated), 5.8 (regular) and 7.6 (casual); **Lighthouse 15** on day 17.5, 19.7 and 26.0. In Whiteout Survival, an active player reaches the equivalent of level 15 in one to two weeks: the dedicated player is a few days behind it, the casual one about two weeks.
-- After 15, each level costs 1.3 times and takes 1.2 times the one before: **Lighthouse 20** on day 45.2 to 63.0, **25** on day 119.4 to 152.4, **30** on day 321.4 (regular), 325.8 (dedicated) and 371.4 (casual, level 29 on day 365).
+- **Lighthouse 10** comes on day 5.6 (regular), 5.7 (dedicated) and 7.6 (casual); **Lighthouse 15** on day 18.1, 17.1 and 26.5; **Lighthouse 20** on day 48.6, 43.0 and 62.0; **Lighthouse 25** on day 119.5, 115.0 and 147.0; **Lighthouse 30** on day 318.0, 324.8 and 369.6 (the casual player is at level 29 on day 365). The farthest from week 6 is the regular player's Lighthouse 15, 8.2 % sooner.
 - The longest build is the last one, 29 to 30: 43.4 days. Build time leads after 15: the regular and the dedicated player reach each level within a few days of each other.
 
 ### 2. No storage wall
 
-- The storage always holds 1.25 times the wood of the Lighthouse's next level: 39,000 at Lighthouse 15, 129,963 at 20, 1,791,650 at 30 (2,597,893 with Sealed Warehouses 3, the most the game holds). No one meets a wall in a year, and the Lighthouse never needs a camp's loot.
-- The other buildings keep their ×1.6 a level: even at Lighthouse 30 with Sealed Warehouses 3, upgrading them costs more than the storage from level 21 (Barracks, Harbor, Observatory) to 23 (Fishery, Lumberyard). The players of the simulation are at level 14 to 18 after a year (open question in `docs/decisions.md`).
+- The storage always holds 1.25 times the wood of the Lighthouse's next level: 39,000 at Lighthouse 15, 129,963 at 20, 1,791,650 at 30 (2,597,893 with Sealed Warehouses 3, the most the game holds). No one meets a wall in a year.
+- The other buildings keep their ×1.6 a level: even at Lighthouse 30 with Sealed Warehouses 3, upgrading them costs more than the storage from level 21 (Barracks, Harbor, Observatory) to 23 (Fishery, Lumberyard) (open question in `docs/decisions.md`).
 
-### 3. What blocks
+### 3. What blocks: wood; oil only for the casual player, and less than in week 6
 
-- **Wood, in about one session in five:** a builder is left free with nothing to start in 19 % (regular, all for wood) and 20 % (dedicated: wood 740 times, fish once) of the sessions in a year. The casual player is blocked in 31 % of them: wood 240 times, and oil 101 times, nearly all in the second half of the year, when the Lighthouse's last levels ask more oil than three sessions a day bring from the wrecks.
-- Oil is plentiful for the others: it stays full 1,331 hours (regular) and 4,201 hours (dedicated) in a year, 651 and 1,103 in the first 90 days. A wreck no longer brings oil past the storage. Giving it a use is an open question for week 7.
+- **Wood:** a builder is left free with nothing to start in 18 % (regular, all for wood), 20 % (dedicated, all for wood) and 31 % (casual) of the sessions in a year.
+- **Oil:** it blocks the casual player in 29 sessions in a year (101 in week 6), the regular and the dedicated player never (as in week 6). The wrecks' 2 h wait and the hunt take most of what overflowed: the oil is full 125 hours (regular) and 314 hours (dedicated) in the first 90 days, against 651 and 1,103 in week 6. Richer wrecks past Lighthouse 24 keep the last levels from running short.
+- **Pearls** never block them: after the 35,000 of Lighthouse 26 to 30, they hold 27,007 (casual), 79,673 (regular) and 97,225 (dedicated) on day 365.
 
-### 4. Early game
+### 4. Week 7 in the year
+
+- **The Mist:** held 1,093 to 1,094 times a year, the order to stoke left on; stoking burns 65,000 to 69,000 oil a year.
+- **The Leviathan:** joined 362 times (casual, at 13:00) to 726 (regular), each time with a fleet left for the wrecks; killed once at most, since level 1's 4,000 health is more than one city deals alone. It gives 52 (casual) to 130 (regular) Pearls a day.
+- **Claims:** the 18 objectives, and 755 to 826 chests a year. **Pearls** come in at 207 (casual) to 395 (dedicated) a day; the Mist's 90 a day is the steadiest source.
+
+### 5. The two more players
+
+- **Never stokes:** every Mist missed, its rafts are damaged three times a day. Repaired as soon as one is below 60, at 2 × the Lighthouse's level in oil per missing point, 131 repairs cost 3.0 million oil and block it in 892 sessions: Lighthouse 20 on day 60.1, 25 on day 169.0, 30 not reached in a year. Never repairing, it reaches Lighthouse 30 on day 362.5. What a repair should cost is an open decision (`docs/decisions.md`).
+- **Away 3 days** (no session on days 20 to 22): back on day 23, its rafts are sound (the order to stoke works without it) and its oil at 45,538 of 65,975. It stays within 3 % of the regular player at every milestone.
+
+### 6. Early game
 
 - Lighthouse 5 comes on day 1.1 for everyone; Refinery 2 on day 1.5 (dedicated) to 4.0 (casual); the first camp beaten on day 1.1 to 2.0.
 
