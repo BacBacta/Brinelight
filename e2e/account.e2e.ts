@@ -1846,6 +1846,9 @@ describe("signed in", () => {
     }
     await expect.poll(() => sheet.locator(".kv span", { hasText: "Health" }).count(), NET).toBe(1);
     expect(await sheet.innerText()).toContain("10 + 90 × your share of its health");
+    // No Harbor: one fleet, so the one you would send is your last free one, and the sheet says so: the hunt's 1 h 59
+    // left, and the 24 minutes back home.
+    expect(await sheet.locator(".last-fleet").innerText()).toMatch(/^This is your last free fleet: your wrecks will wait 2 h 2\d\.$/);
     await p.page.screenshot({ path: "e2e/.shots/shot-leviathan.png" });
     await sheet.locator('[data-act="sail"]').click();
     await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).fleets, NET).toMatchObject([{ site: "leviathan", kind: "hunt" }]);

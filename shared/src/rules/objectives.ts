@@ -8,8 +8,11 @@ import type { Rafts } from "./rafts.js";
 import type { ResearchJob, Techs } from "./research.js";
 import type { Buildings } from "./types.js";
 
-/** What a reward gives: resources and Pearls. Never anything for sale. */
-export type Reward = Partial<Record<"oil" | "fish" | "wood" | "rope" | "pearls", number>>;
+/**
+ * What a reward gives: resources and Pearls, and for your lead captain, experience (`xp`) and its own shards
+ * (`shards`). Never anything for sale, never a speedup.
+ */
+export type Reward = Partial<Record<"oil" | "fish" | "wood" | "rope" | "pearls" | "xp" | "shards", number>>;
 
 /** What your city has done since it was founded, for the objectives that are not read from its buildings. */
 export type Progress = { gathers: number; trained: number; camps: number };

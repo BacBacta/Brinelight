@@ -20,6 +20,7 @@ import {
   parseAction,
   parseState,
   startingDaily,
+  xpNeeded,
   type PlayerState,
 } from "../src/index.js";
 
@@ -144,19 +145,44 @@ describe("the daily tasks", () => {
     expect(dailyPoints(s.daily)).toBe(20);
   });
 
-  it("chests: once a day each, with enough points; the first two grow with the Lighthouse", () => {
+  it("chests: once a day each, with enough points; no resource for the Lighthouse", () => {
     const s = { ...city(), daily: { ...startingDaily(at(9)), counts: { upgrades: 3, gathers: 3, camps: 0, trains: 1, mists: 1, research: 0 } } };
     expect(dailyPoints(s.daily)).toBe(80);
     const opened = ok(openChest(s, 20));
-    expect(opened.stock).toEqual({ ...s.stock, wood: s.stock.wood + 120, fish: s.stock.fish + 120 });
+    expect(opened.stock).toEqual({ ...s.stock, rope: s.stock.rope + 1 });
     expect(opened.daily.chests).toEqual([20]);
     expect(openChest(opened, 20)).toEqual({ ok: false, reason: "You already opened this chest today" });
     expect(openChest(opened, 100)).toEqual({ ok: false, reason: "Not enough points yet" });
-    expect(ok(openChest(opened, 80)).stock).toMatchObject({ oil: s.stock.oil + 400, rope: s.stock.rope + 2 });
-    expect(chestReward(20, 10)).toEqual({ wood: 600, fish: 600 });
-    expect(chestReward(40, 10)).toEqual({ oil: 800 });
-    expect(chestReward(60, 10)).toEqual({ pearls: 100 });
-    expect(chestReward(100, 30)).toEqual({ pearls: 200 });
+    expect(ok(openChest(opened, 80)).stock).toEqual({ ...s.stock, rope: s.stock.rope + 3 });
+    expect(ok(openChest(opened, 60)).pearls).toBe(s.pearls + 100);
+    expect(chestReward(20)).toEqual({ rope: 1 });
+    expect(chestReward(40)).toEqual({ xp: 40 });
+    expect(chestReward(60)).toEqual({ pearls: 100 });
+    expect(chestReward(80)).toEqual({ rope: 2 });
+    expect(chestReward(100)).toEqual({ pearls: 200, shards: 1 });
+    // No chest gives oil, fish or wood.
+    for (const c of CHESTS) for (const k of ["oil", "fish", "wood"] as const) expect(chestReward(c)[k], `${c} ${k}`).toBeUndefined();
+  });
+
+  it("chests 40 and 100: experience and a shard for your lead captain, none with no lead", () => {
+    const full = { upgrades: 3, gathers: 3, camps: 2, trains: 1, mists: 1, research: 1 };
+    const s = { ...city(), daily: { ...startingDaily(at(9)), counts: full } };
+    expect(s.lead).toBe("tom");
+    const xp = ok(openChest(s, 40));
+    expect(xp.captains.tom).toEqual({ ...s.captains.tom!, xp: s.captains.tom!.xp + 40 });
+    expect(xp.stock).toEqual(s.stock);
+    const shard = ok(openChest(s, 100));
+    expect(shard.shards).toEqual({ ...s.shards, tom: (s.shards.tom ?? 0) + 1 });
+    expect(shard.pearls).toBe(s.pearls + 200);
+    // Enough experience takes it a level up, as a Logbook does.
+    const near = { ...s, captains: { ...s.captains, tom: { ...s.captains.tom!, xp: xpNeeded(s.captains.tom!.level) - 10 } } };
+    expect(ok(openChest(near, 40)).captains.tom).toMatchObject({ level: s.captains.tom!.level + 1, xp: 30 });
+    // No lead captain: the chest opens, its experience and its shard go to no one.
+    const alone = { ...s, lead: null };
+    const none = ok(openChest(alone, 100));
+    expect(none.shards).toEqual(alone.shards);
+    expect(none.daily.chests).toEqual([100]);
+    expect(ok(openChest(alone, 40)).captains).toEqual(alone.captains);
   });
 
   it("everything resets at 00:00 UTC, an advance across midnight included", () => {

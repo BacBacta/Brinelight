@@ -5,7 +5,8 @@
  * numbers. It changes no value: it shows what the rules give.
  *
  * The players play the Mist (the order to stoke on, unless they never stoke), repair their rafts below 60, join every
- * Leviathan hunt they are there for, and claim every objective and chest at their sessions. What it leaves out: other
+ * Leviathan hunt they are there for when a fleet stays free for the wrecks, and claim every objective and chest at
+ * their sessions. What it leaves out: other
  * players, the daily recruitment.
  */
 import {
@@ -28,6 +29,7 @@ import {
   TECHS,
   advance,
   applyAction,
+  fleetCheck,
   fleetsMax,
   huntAt,
   isLit,
@@ -70,8 +72,6 @@ export type Profile = {
   away?: { from: number; to: number };
   /** What the player leaves out, to measure what each new rule changes (all played when absent). */
   skip?: { hunts?: boolean; objectives?: boolean; chests?: boolean; repairs?: boolean };
-  /** Joins a hunt only with a fleet left over for the wrecks (when the Harbor allows two fleets or more). */
-  spareFleet?: boolean;
 };
 
 const at = (hours: number, minutes = 0) => hours * HOUR + minutes * 60;
@@ -319,8 +319,9 @@ export function simulate(profile: Profile, days: number): Run {
   const sea = () => {
     let any = false;
     const lead = s.lead ? s.captains[s.lead] : undefined;
-    // The Leviathan first, when it is at sea: all the troops sail to it, and no camp is attacked meanwhile.
-    const spare = !profile.spareFleet || fleetsMax(s.buildings.harbor) - s.fleets.length >= 2;
+    // The Leviathan first, when it is at sea and a fleet stays free for the wrecks (owner's decision, 18 October): all
+    // the troops sail to it, and no camp is attacked meanwhile.
+    const spare = fleetsMax(s.buildings.harbor) - s.fleets.length >= 2;
     if (!profile.skip?.hunts && spare && leviathanUp(s.clock, s.leviathan)) any = act({ type: "sail", site: LEVIATHAN_SITE }, "hunt the Leviathan") || any;
     const army = totalTroops(s.troops) + totalTroops(s.veterans);
     if (army >= MIN_ATTACK_TROOPS) {
@@ -337,8 +338,13 @@ export function simulate(profile: Profile, days: number): Run {
       });
       if (chance === "easy") any = act({ type: "sail", site: camp.id }, `attack ${camp.id} (level ${level})`) || any;
     }
-    // Every other fleet salvages the nearest wreck (oil and rope).
-    while (act({ type: "sail", site: WRECKS[0]!.id }, `salvage ${WRECKS[0]!.id}`)) any = true;
+    // Every other fleet salvages the nearest wreck it can sail to (oil and rope), one fleet a wreck: an emptied wreck
+    // waits before it fills again.
+    for (;;) {
+      const w = WRECKS.find((x) => !s.fleets.some((f) => f.site === x.id) && fleetCheck(s, x.id).ok);
+      if (!w || !act({ type: "sail", site: w.id }, `salvage ${w.id}`)) break;
+      any = true;
+    }
     return any;
   };
 

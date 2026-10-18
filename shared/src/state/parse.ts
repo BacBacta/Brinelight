@@ -7,7 +7,7 @@ import { OBJECTIVES, type Progress } from "../rules/objectives.js";
 import type { MistState } from "../rules/mist.js";
 import { RAFT_BUILDINGS, RAFT_BUILDING_MAX_COPIES, RAFT_BUILDING_MAX_LEVEL, RAFT_MAX_HP, RAFT_SLOTS, raftBuildingCopies, type RaftBuildingId, type Rafts, type YardJob } from "../rules/rafts.js";
 import { TECHS, techLevel, type ResearchJob, type TechId, type Techs } from "../rules/research.js";
-import { ATTACK_STAY, COLLECT_STAY, SEA_SITES, fleetsMax, hospitalCapacity, seaSite, type Fleet, type SeaWorld } from "../rules/sea.js";
+import { ATTACK_STAY, COLLECT_STAY, SEA_SITES, WRECK_REFILL, fleetsMax, hospitalCapacity, seaSite, type Fleet, type SeaWorld } from "../rules/sea.js";
 import { PROMOTE_BARRACKS, PROMOTE_COUNT, TRAIN_PER_LEVEL, type TrainingJob } from "../rules/training.js";
 import type { Troops } from "../rules/types.js";
 import { MAX_REPORTS } from "./state.js";
@@ -238,10 +238,14 @@ function parseHealing(raw: unknown, infirmary: number): HealingJob | null | unde
   return { wounded: { ...wounded }, left: Math.min(Math.max(0, left), duration), duration };
 }
 
-/** Camp levels and wrecks: every camp and every wreck of the map, each with a valid value. */
+/**
+ * Camp levels and wrecks: every camp and every wreck of the map, each with a valid value. An empty wreck has its wait
+ * before it fills again, from more than 0 to WRECK_REFILL; no other wreck has one.
+ */
 function parseWorld(raw: unknown): SeaWorld | null {
-  if (!isObj(raw) || !isObj(raw.camps) || !isObj(raw.wrecks)) return null;
-  const world: SeaWorld = { camps: {}, wrecks: {} };
+  if (!isObj(raw) || !isObj(raw.camps) || !isObj(raw.wrecks) || !isObj(raw.refill)) return null;
+  const world: SeaWorld = { camps: {}, wrecks: {}, refill: {} };
+  const refills = raw.refill;
   for (const s of SEA_SITES) {
     if (s.kind === "camp") {
       const v = raw.camps[s.id];
@@ -250,10 +254,16 @@ function parseWorld(raw: unknown): SeaWorld | null {
     }
     if (s.kind === "wreck") {
       const v = raw.wrecks[s.id];
-      if (!isNum(v) || v <= 0 || v > (s.amount ?? 0)) return null;
+      if (!isNum(v) || v < 0 || v > (s.amount ?? 0)) return null;
       world.wrecks[s.id] = v;
+      if (v === 0) {
+        const wait = refills[s.id];
+        if (!isNum(wait) || wait <= 0 || wait > WRECK_REFILL) return null;
+        world.refill[s.id] = wait;
+      }
     }
   }
+  if (Object.keys(refills).some((id) => !(id in world.refill))) return null;
   return world;
 }
 

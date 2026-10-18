@@ -4,11 +4,16 @@ import type { PlayerState } from "../state/index.js";
 import { createSheetView } from "./components.js";
 import { resourceIcon } from "./icons.js";
 
-/** A reward, as the costs are shown: an icon and an amount per resource, Pearls last. */
+/**
+ * A reward, as the costs are shown: an icon and an amount per resource, Pearls last; then what your lead captain
+ * gets, in words.
+ */
 export function rewardHtml(reward: Reward): string {
   const parts = (["oil", "fish", "wood", "rope", "pearls"] as const)
     .filter((k) => reward[k])
     .map((k) => `<span>${resourceIcon(k === "pearls" ? "pearl" : k)}${formatAmount(reward[k]!)}</span>`);
+  if (reward.xp) parts.push(`<span>+${reward.xp} XP for your lead captain</span>`);
+  if (reward.shards) parts.push(`<span>+${reward.shards} ${reward.shards === 1 ? "shard" : "shards"} of your lead captain</span>`);
   return `<div class="cost">${parts.join("")}</div>`;
 }
 
@@ -56,7 +61,7 @@ export function dailyHtml(state: PlayerState): string {
     `<div class="box"><div class="row" style="justify-content:space-between"><h4 style="margin:0">Today's points</h4><span class="chip gold">${points} / 100</span></div>` +
     `<div class="chest">${chests}</div>` +
     `<div class="pb" style="margin-top:6px"><i style="width:${Math.min(100, points)}%"></i></div>` +
-    (next ? `<div class="row" style="margin-top:6px;gap:6px;font-size:12px;font-weight:800"><span>Chest ${next}:</span>${rewardHtml(chestReward(next, state.buildings.lighthouse))}</div>` : "") +
+    (next ? `<div class="row" style="margin-top:6px;gap:6px;font-size:12px;font-weight:800"><span>Chest ${next}:</span>${rewardHtml(chestReward(next))}</div>` : "") +
     `</div>` +
     `<div class="list">${tasks}</div>`
   );

@@ -25,22 +25,21 @@ export const CHESTS = [20, 40, 60, 80, 100] as const;
 export type Chest = (typeof CHESTS)[number];
 
 /**
- * What a chest gives. The first two grow with the Lighthouse: 300 wood and 300 fish, then 400 oil, × its level / 5;
- * then 100 Pearls, 400 oil and 2 rope, 200 Pearls.
+ * What a chest gives: no resource for the Lighthouse, so that the daily tasks never speed it up (owner's decision,
+ * 18 October). 1 rope; 40 XP for your lead captain; 100 Pearls; 2 rope; 200 Pearls and 1 shard of your lead captain.
  */
-export function chestReward(chest: Chest, lighthouse: number): Reward {
-  const grown = (n: number) => Math.round((n * lighthouse) / 5);
+export function chestReward(chest: Chest): Reward {
   switch (chest) {
     case 20:
-      return { wood: grown(300), fish: grown(300) };
+      return { rope: 1 };
     case 40:
-      return { oil: grown(400) };
+      return { xp: 40 };
     case 60:
       return { pearls: 100 };
     case 80:
-      return { oil: 400, rope: 2 };
+      return { rope: 2 };
     case 100:
-      return { pearls: 200 };
+      return { pearls: 200, shards: 1 };
   }
 }
 

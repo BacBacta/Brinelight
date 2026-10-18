@@ -24,6 +24,11 @@ describe("the current objective", () => {
     expect(html.indexOf("oil")).toBeLessThan(html.indexOf("cord"));
     expect(html.indexOf("cord")).toBeLessThan(html.indexOf("pearl"));
     expect(html).toContain(">300</span>");
+    // What your lead captain gets, in words, after the resources.
+    const lead = rewardHtml({ pearls: 200, shards: 1 });
+    expect(lead).toContain("<span>+1 shard of your lead captain</span>");
+    expect(lead.indexOf("pearl")).toBeLessThan(lead.indexOf("shard"));
+    expect(rewardHtml({ xp: 40 })).toBe('<div class="cost"><span>+40 XP for your lead captain</span></div>');
   });
 });
 
@@ -45,8 +50,9 @@ describe("the daily tasks", () => {
     expect(html).toContain('aria-label="Open chest 60"');
     expect(html).toContain("Start 3 upgrades</b><small>3 / 3 · 30 points");
     expect(html).toContain("Gather at sea 3 times</b><small>1 / 3 · 20 points");
-    // The next chest's reward, grown with the Lighthouse (level 2): 120 wood and 120 fish.
-    expect(html).toContain("Chest 20:");
+    // The next chest's reward: 1 rope; once it is opened, 40 XP for your lead captain.
+    expect(html).toContain("Chest 20:</span>");
+    expect(dailyHtml(busy([20]))).toContain("Chest 40:</span><div class=\"cost\"><span>+40 XP for your lead captain</span>");
   });
 
   it("a chest opened shows a check; the Tasks button shows the points and a dot while a chest waits", () => {

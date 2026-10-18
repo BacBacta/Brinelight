@@ -8,6 +8,7 @@ import {
   HUNT_SHARE_PEARLS,
   HUNT_XP,
   fleetCheck,
+  fleetsMax,
   holdCapacity,
   huntAt,
   huntShare,
@@ -106,6 +107,22 @@ export function shardsForText(state: Pick<PlayerState, "captains" | "shards">, i
   return `Shards for ${CAPTAINS[id].name} · ${state.shards[id] ?? 0}/${FRAGMENTS_PER_STAR}`;
 }
 
+/**
+ * The warning on the Leviathan's sheet when the fleet you would send is your last free one: no fleet is left for the
+ * wrecks until it is home, `away` real seconds from now. Empty otherwise.
+ */
+export function lastFleetText(state: Pick<PlayerState, "fleets" | "buildings">, away: number): string {
+  if (fleetsMax(state.buildings.harbor) - state.fleets.length !== 1) return "";
+  return `This is your last free fleet: your wrecks will wait ${inMinutes(away)}.`;
+}
+
+/** What is left in a wreck; an emptied one, when it fills again (real seconds sped up by `speed`, as the trip). */
+export function wreckOilText(state: Pick<PlayerState, "world">, id: string, speed: number): string {
+  const oil = state.world.wrecks[id] ?? 0;
+  const refill = state.world.refill[id];
+  return oil > 0 || refill === undefined ? formatAmount(oil) : `Empty · fills again in ${formatTimeLeft(refill / speed)}`;
+}
+
 /** The sheet of a camp, a wreck or the Leviathan, and the reports. */
 export function createSeaSheet(root: HTMLElement, actions: { sail(site: string): void; closeReport(reportId: string): void }) {
   let site: string | null = null;
@@ -163,6 +180,7 @@ export function createSeaSheet(root: HTMLElement, actions: { sail(site: string):
       const next = w.on ? huntAt(w.end).start : w.start;
       const mineNow = up && l.hunt === w.start;
       const leader = lead ? CAPTAINS[lead.id].name : null;
+      const last = lastFleetText(state, w.end - state.clock + travelTime(s, state.techs, lead));
       return (
         `<p class="p">A sea monster rises by the Great Lighthouse twice a day. Send all your troops: the harder you hit, the more Pearls you get. It never sinks a fleet.</p>` +
         busy +
@@ -181,6 +199,7 @@ export function createSeaSheet(root: HTMLElement, actions: { sail(site: string):
           ? `<div><span>${leader}</span><span>+${HUNT_XP} XP; ${HUNT_SHARDS} shards if you kill it</span></div>`
           : `<div><span>Captain</span><span>Choose a lead captain: ${HUNT_XP} XP, and ${HUNT_SHARDS} shards if you kill it</span></div>`) +
         `</div>` +
+        (check.ok && last ? `<p class="p last-fleet">${last}</p>` : "") +
         actionButton("Send my fleet", check, "red xl", "sail")
       );
     }
@@ -188,7 +207,11 @@ export function createSeaSheet(root: HTMLElement, actions: { sail(site: string):
     return (
       `<p class="p">A wreck to loot. Other fleets may come to fight over it.</p>` +
       busy +
-      keyValues(kv("Oil", formatAmount(state.world.wrecks[id] ?? s.amount ?? 0)) + kv("Your hold", `${formatAmount(hold)}${lead ? (HOLD_NOTE[lead.id] ?? "") : ""}`) + kv("Trip", `${trip} one way`)) +
+      keyValues(
+        kv("Oil", wreckOilText(state, id, speed)) +
+          kv("Your hold", `${formatAmount(hold)}${lead ? (HOLD_NOTE[lead.id] ?? "") : ""}`) +
+          kv("Trip", `${trip} one way`),
+      ) +
       actionButton("Send a fleet", check, "gold xl", "sail")
     );
   };

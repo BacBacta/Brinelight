@@ -55,6 +55,23 @@ describe("the balance simulation", () => {
     expect(away.returned?.day).toBe(23);
   });
 
+  it("keeps every Lighthouse milestone within 10 % of week 6 with all of week 7 played (owner's decision, 18 October)", () => {
+    // The days each profile reached Lighthouse 5, 10, 15, 20, 25 and 30 with the rules of week 6 (commit c307f9f).
+    const WEEK_6: Record<string, Record<number, number>> = {
+      casual: { 5: 1.1, 10: 7.6, 15: 26.0, 20: 63.0, 25: 152.4, 30: 371.4 },
+      regular: { 5: 1.1, 10: 5.8, 15: 19.7, 20: 52.6, 25: 122.7, 30: 321.4 },
+      dedicated: { 5: 1.1, 10: 5.7, 15: 17.5, 20: 45.2, 25: 119.4, 30: 325.8 },
+    };
+    // The casual player reaches Lighthouse 30 after a year: its run goes on a little longer.
+    const long = [...runs.filter((r) => r.profile.id !== "casual"), simulate(casual, 380)];
+    for (const r of long) {
+      for (const [level, week6] of Object.entries(WEEK_6[r.profile.id]!)) {
+        const day = r.lighthouse[Number(level)]! / 24;
+        expect(Math.abs(day - week6) / week6, `${r.profile.id}, Lighthouse ${level}: day ${day.toFixed(1)}, week 6 ${week6}`).toBeLessThanOrEqual(0.1);
+      }
+    }
+  });
+
   it("the Lighthouse's milestones match the days: a level counts from the hour its work ends", () => {
     for (const r of runs) {
       const levels = Object.entries(r.lighthouse).map(([k, h]) => [Number(k), h] as const).sort((a, b) => a[0] - b[0]);

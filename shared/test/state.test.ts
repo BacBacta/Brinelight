@@ -367,6 +367,20 @@ describe("parseState: strict reading of a city", () => {
     expect(parseState(json({ ...s, world: { ...s.world, wrecks: { ...s.world.wrecks, "wreck-1": 99_999 } } }))).toBeNull();
   });
 
+  it("reads an empty wreck with its wait, and refuses an empty wreck without one, a wait too long, or a wait for a wreck that is not empty", () => {
+    const s = newPlayerState();
+    const empty = { ...s.world.wrecks, "wreck-1": 0 };
+    const ok = { ...s, world: { ...s.world, wrecks: empty, refill: { "wreck-1": 1200 } } };
+    expect(parseState(json(ok))).toEqual(ok);
+    expect(parseState(json({ ...s, world: { ...s.world, wrecks: empty } }))).toBeNull();
+    expect(parseState(json({ ...s, world: { ...s.world, wrecks: empty, refill: { "wreck-1": 2 * HOUR + 1 } } }))).toBeNull();
+    expect(parseState(json({ ...s, world: { ...s.world, wrecks: empty, refill: { "wreck-1": 0 } } }))).toBeNull();
+    expect(parseState(json({ ...s, world: { ...s.world, refill: { "wreck-1": 1200 } } }))).toBeNull();
+    expect(parseState(json({ ...s, world: { ...s.world, refill: { "camp-1": 1200 } } }))).toBeNull();
+    const { refill: _r, ...noRefill } = s.world;
+    expect(parseState(json({ ...s, world: noRefill }))).toBeNull();
+  });
+
   it("refuses a report without a good id, ids used twice, or a counter below an id", () => {
     const s = catchUp(playing(), 8 * HOUR);
     const r = s.reports[0]!;

@@ -1,6 +1,6 @@
 /** The player's city and what changes it: pure, with no system clock, no randomness and no DOM (the city keeps its own clock). */
 import { STARTING_BUILDINGS, advanceQueue, startUpgrade } from "../rules/buildings.js";
-import { canSetLead, starWithShards, unlockWithShards, useLogbook, type CaptainId } from "../rules/captains.js";
+import { addXp, canSetLead, starWithShards, unlockWithShards, useLogbook, type CaptainId } from "../rules/captains.js";
 import { advanceStock, netRates, storeCap, type Weather } from "../rules/economy.js";
 import { CHESTS, canOpenChest, chestReward, countDaily, dailyOn, dayOf, startingDaily, untilMidnight, type Chest, type DailyTaskId } from "../rules/daily.js";
 import { advanceHealing, startHealing } from "../rules/healing.js";
@@ -232,11 +232,23 @@ export function setLead(state: PlayerState, id: CaptainId): ActionResult {
 }
 
 /** A Logbook for your lead captain with the shared rule; a refusal comes with its reason. */
-/** Adds a reward to the city: resources to the stock (no storage cap, as a camp's loot), Pearls to the Pearls. */
+/**
+ * Adds a reward to the city: resources to the stock (no storage cap, as a camp's loot), Pearls to the Pearls, and to
+ * your lead captain its experience (with its level-ups, up to its max level) and its shards. With no lead captain,
+ * the experience and the shards go to no one.
+ */
 function give(state: PlayerState, reward: Reward): PlayerState {
   const stock = { ...state.stock };
   for (const k of ["oil", "fish", "wood", "rope"] as const) stock[k] += reward[k] ?? 0;
-  return { ...state, stock, pearls: state.pearls + (reward.pearls ?? 0) };
+  let { captains, shards } = state;
+  const id = state.lead;
+  const lead = id ? captains[id] : undefined;
+  if (id && lead && reward.xp) {
+    const r = addXp(lead, reward.xp);
+    captains = { ...captains, [id]: { ...lead, level: r.level, xp: r.xp } };
+  }
+  if (id && lead && reward.shards) shards = { ...shards, [id]: (shards[id] ?? 0) + reward.shards };
+  return { ...state, stock, pearls: state.pearls + (reward.pearls ?? 0), captains, shards };
 }
 
 /** Claims the current objective's reward, once its condition is met: the rules read the city, never the client. */
@@ -253,7 +265,7 @@ export function openChest(state: PlayerState, chest: Chest): ActionResult {
   const check = canOpenChest(state.daily, state.clock, chest);
   if (!check.ok) return check;
   const today = dailyOn(state.daily, state.clock);
-  return { ok: true, state: { ...give(state, chestReward(chest, state.buildings.lighthouse)), daily: { ...today, chests: [...today.chests, chest] } } };
+  return { ok: true, state: { ...give(state, chestReward(chest)), daily: { ...today, chests: [...today.chests, chest] } } };
 }
 
 /** Counts a task of the day at the city's clock, and what the objectives count since the city was founded. */

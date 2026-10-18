@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { HOUR, LEVIATHAN_SITE, advance, newPlayerState, sail, type PlayerState } from "@brinelight/shared";
-import { huntReportHtml, reportHtml } from "../src/sea/sheet.js";
+import { COLLECT_STAY, HOUR, LEVIATHAN_SITE, WRECK_REFILL, advance, newPlayerState, sail, seaSite, travelTime, type PlayerState } from "@brinelight/shared";
+import { huntReportHtml, lastFleetText, reportHtml, wreckOilText } from "../src/sea/sheet.js";
 import { leviathanText } from "../src/ui/values.js";
 
 /** 18 October 2026, 00:00 UTC: the hunts of that day start at 13:00 and 19:00. */
@@ -49,5 +49,34 @@ describe("the hunt's report", () => {
     expect(html).toContain("It comes back one level stronger.");
     // A camp's report stays a combat report.
     expect(reportHtml(r)).toContain("Victory");
+  });
+});
+
+describe("your last free fleet", () => {
+  it("the Leviathan's sheet warns when the fleet you would send is your last free one, with how long the wrecks wait", () => {
+    // Harbor 0: one fleet, so it is the last one.
+    const s = newPlayerState(at(13));
+    expect(s.buildings.harbor).toBe(0);
+    expect(lastFleetText(s, 2 * HOUR)).toBe("This is your last free fleet: your wrecks will wait 2 h 00.");
+    expect(lastFleetText(s, 2 * HOUR + 10 * 60)).toBe("This is your last free fleet: your wrecks will wait 2 h 10.");
+    // Harbor 1: two fleets. With none at sea, one is left for the wrecks; with one at sea, the other is the last.
+    const two = { ...s, buildings: { ...s.buildings, harbor: 1 } };
+    expect(lastFleetText(two, 2 * HOUR)).toBe("");
+    // A fleet sent to a wreck at 09:00, out of the Mist (at 13:00 the Mist hides the wrecks).
+    const out = { ...two, fleets: ok(sail({ ...two, clock: at(9) }, "wreck-1")).fleets };
+    expect(lastFleetText(out, 2 * HOUR)).toContain("This is your last free fleet");
+  });
+});
+
+describe("an emptied wreck", () => {
+  it("its sheet says when it fills again", () => {
+    const s = newPlayerState(at(9));
+    expect(wreckOilText(s, "wreck-1", 1)).toBe("240");
+    const t = travelTime(seaSite("wreck-1")!, s.techs, { id: "tom", rarity: "officer", level: 1 });
+    const emptied = advance(ok(sail(s, "wreck-1")), t + COLLECT_STAY);
+    expect(emptied.world.wrecks["wreck-1"]).toBe(0);
+    expect(wreckOilText(emptied, "wreck-1", 1)).toBe("Empty · fills again in 2 h 00");
+    expect(wreckOilText(advance(emptied, 30 * 60), "wreck-1", 1)).toBe("Empty · fills again in 1 h 30");
+    expect(wreckOilText(advance(emptied, WRECK_REFILL), "wreck-1", 1)).toBe("240");
   });
 });

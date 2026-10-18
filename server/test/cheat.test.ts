@@ -612,6 +612,26 @@ describe("a modified client cannot change the rules", () => {
     await expectRefused(server, p, action({ type: "sail", site: "leviathan" }), "The Leviathan is not at sea. Wait for it to rise.");
   });
 
+  it("an emptied wreck: no fleet while it waits, and the server's clock decides when it fills again", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    // T0 is 12:00 UTC, in a Mist: 14:00, it has lifted. The nearest wreck holds 100 oil, less than a hold.
+    const base = newPlayerState(T0.getTime() / 1000);
+    const p = await player({ ...base, world: { ...base.world, wrecks: { ...base.world.wrecks, "wreck-8": 100 } } });
+    later(2 * 3600_000);
+    await expectApplied(server, p, action({ type: "sail", site: "wreck-8" }));
+    // 1 h 20 later, the fleet has emptied it and sails home.
+    later(80 * 60_000);
+    await expectRules(server, p);
+    expect(p.ref.now().world).toMatchObject({ wrecks: { "wreck-8": 0 } });
+    await expectRefused(server, p, action({ type: "sail", site: "wreck-8" }), "This wreck is empty. Wait for it to fill again.");
+    // 2 hours later, it has filled again with its 420 oil.
+    later(2 * 3600_000);
+    await expectRules(server, p);
+    expect(p.ref.now().world.wrecks["wreck-8"]).toBe(420);
+    expect(p.ref.now().world.refill).toEqual({});
+    await expectApplied(server, p, action({ type: "sail", site: "wreck-8" }));
+  });
+
   it("objectives and chests: an unmet objective, a reward or points sent, a chest twice, yesterday's chest", async () => {
     const server = await buildApp({ db, now: () => clock });
     // T0 is 12:00 UTC.
