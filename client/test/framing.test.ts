@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
-import { CITY_ANGLE, CITY_FOV, PIER_SLOTS, SIDE_MARGIN, cityFraming, cityPoints, openSlots, type View } from "../src/scene/framing.js";
+import { CITY_ANGLE, CITY_FOV, CLOSE_MIN, PIER_SLOTS, SIDE_MARGIN, cityFraming, cityPoints, closeFraming, openSlots, type View } from "../src/scene/framing.js";
 import { hexX, hexZ } from "../src/scene/island.js";
 
 // The band between the panels, as measured on these screens (the top bar and the Mist above, the tab bar below).
@@ -66,3 +66,30 @@ describe("the city's normal view", () => {
     }
   });
 });
+
+describe("the close view of a building (week 8)", () => {
+  for (const view of PHONES) {
+    const band = { ...view, bottom: view.height * 0.45 };
+    for (const b of [
+      { name: "the Refinery at level 1", x: hexX(1, -1), z: hexZ(-1), height: 1.32, reach: 0.85 },
+      { name: "the Lighthouse at level 30", x: 0, z: 0, height: 4.3, reach: 0.88 },
+    ]) {
+      it(`${b.name} at ${view.width} px: its foot and its top between the top panels and the sheet, never nearer than the pinch zoom`, () => {
+        const f = closeFraming(band, b);
+        expect(f.distance).toBeGreaterThanOrEqual(CLOSE_MIN);
+        const points = [new THREE.Vector3(b.x, b.height, b.z)];
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
+          points.push(new THREE.Vector3(b.x + Math.cos(a) * b.reach, 0, b.z + Math.sin(a) * b.reach));
+        }
+        for (const p of onScreen(band, points, f)) {
+          expect(p.y).toBeGreaterThanOrEqual(band.top - 0.5);
+          expect(p.y).toBeLessThanOrEqual(band.bottom + 0.5);
+          expect(p.x).toBeGreaterThanOrEqual(SIDE_MARGIN - 0.5);
+          expect(p.x).toBeLessThanOrEqual(view.width - SIDE_MARGIN + 0.5);
+        }
+      });
+    }
+  }
+});
+

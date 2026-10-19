@@ -2,12 +2,14 @@ import type { BuildingId, RaftBuildingId, TechId, TroopType } from "@brinelight/
 import { lighthouseScale, type BuildingModels, type Kit, type Models, type RaftBuildingModels, type SceneHandle } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 import { coastAt } from "../scene/coast.js";
-import { createCityBuildings } from "./buildings.js";
+import { createCityBuildings, plotPosition } from "./buildings.js";
 import { createLabels } from "./labels.js";
 import { createQueue } from "./queue.js";
 import { createRaftSheet } from "./raftSheet.js";
 import { RAFT_FILL, createCityRafts, raftSlots, slotPosition } from "./rafts.js";
 import { createSheet } from "./sheet.js";
+import { blenderLook } from "../scene/cityLook.js";
+import { isStaged, lanternHeight, levelShape, loadStage, showLevel, stageName } from "./staged.js";
 
 export type City = {
   /** Shows the state: models, labels, queue and open sheet. */
@@ -17,6 +19,17 @@ export type City = {
   /** The buildings on rafts, once loaded after the city shows. */
   useRaftBuildings(models: RaftBuildingModels): void;
 };
+
+/** The panels a city label never goes under: the top bar and its rows, the rail, the quest card, the open sheet, the tab bar. */
+const PANELS = ".hud > *, .sub > *, .rail, .quest, .sheet, .nav, .queue";
+function panelRects() {
+  const out: { left: number; right: number; top: number; bottom: number }[] = [];
+  for (const el of document.querySelectorAll(PANELS)) {
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) out.push({ left: r.left, right: r.right, top: r.top, bottom: r.bottom });
+  }
+  return out;
+}
 
 /** Height of a building's label above its model's top. */
 const LABEL_GAP = 0.25;
@@ -50,9 +63,26 @@ export function createCity(
   const rafts = createCityRafts(kit, others.raft, (o) => scene.add(o), coastAt);
   // Labels float just above each model at its full size (a smaller tier leaves them where they were, so they keep their
   // places among the others); the Lighthouse's grows with its level.
+  const staged = (id: BuildingId) => blenderLook() && isStaged(id);
   const labels = createLabels(root, scene, (id, levels) =>
-    id === "lighthouse" ? (models.lighthouse.height + LABEL_GAP) * lighthouseScale(levels.lighthouse) : models[id].height + LABEL_GAP,
+    staged(id)
+      ? levelShape(id, Math.max(1, levels[id])).height + LABEL_GAP
+      : id === "lighthouse"
+        ? (models.lighthouse.height + LABEL_GAP) * lighthouseScale(levels.lighthouse)
+        : models[id].height + LABEL_GAP,
+    { badges: blenderLook(), panels: () => panelRects() },
   );
+  // The Lighthouse made in Blender: its stage's model, shown at its level.
+  let lighthouseShown = -1;
+  const showLighthouse = (level: number) => {
+    if (!staged("lighthouse") || level === lighthouseShown) return;
+    lighthouseShown = level;
+    void loadStage(stageName("lighthouse", level)).then((model) => {
+      if (lighthouseShown !== level) return;
+      showLevel(model, "lighthouse", level);
+      scene.useLighthouseStage(model, lanternHeight(level), levelShape("lighthouse", level).height);
+    });
+  };
   const queue = createQueue(root, () => game.toCity());
   const sheet = createSheet(root, {
     upgrade: (id) => game.upgrade(id),
@@ -64,6 +94,7 @@ export function createCity(
     close: () => {
       sheet.close();
       buildings.select(null);
+      if (blenderLook()) scene.unfocus();
     },
   });
   const raftSheet = createRaftSheet(root, {
@@ -99,8 +130,15 @@ export function createCity(
     if (id) {
       sheet.open(id, game.state(), game.speed());
       buildings.select(id);
-    } else if (slot) {
-      raftSheet.open(slot, game.state(), game.speed());
+      if (blenderLook()) {
+        const { x, z } = plotPosition(id);
+        const level = Math.max(1, game.state().buildings[id]);
+        const shape = staged(id) ? levelShape(id, level) : { height: id === "lighthouse" ? 3 : models[id].height, reach: 0.9 };
+        scene.focus(x, z, shape.height, shape.reach);
+      }
+    } else {
+      if (blenderLook()) scene.unfocus();
+      if (slot) raftSheet.open(slot, game.state(), game.speed());
     }
   });
 
@@ -112,8 +150,10 @@ export function createCity(
       sheet.close();
       raftSheet.close();
       buildings.select(null);
+      if (blenderLook()) scene.unfocus();
     },
     update(state) {
+      showLighthouse(state.buildings.lighthouse);
       buildings.refresh(state);
       rafts.refresh(state);
       // The foam goes around the rafts afloat and the shipyard at work.

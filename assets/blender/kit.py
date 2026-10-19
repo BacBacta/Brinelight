@@ -8,6 +8,7 @@ Units are the game's: 1 = half a plot's width; y is up in the game (z in Blender
 the game (−y in Blender).
 """
 import math
+from pathlib import Path
 
 import bpy  # noqa: I001 (bmesh needs bpy loaded first)
 import bmesh
@@ -27,7 +28,14 @@ PALETTE = {
     "stone": "#B9B2A6",
     "stone_dark": "#8E877C",
     "meadow": "#7FA36B",
+    "meadow_dark": "#5E8A4F",
     "dark": "#2A2018",
+    "white": "#F6F1E6",
+    "lighthouse_red": "#C8361E",
+    "rock": "#7D766C",
+    "rock_dark": "#4E4A45",
+    "sand": "#D9C9A3",
+    "seabed": "#3F6F6B",
 }
 
 
@@ -42,7 +50,7 @@ _materials = {}
 
 # The style pass (owner, 19 October): each part's color varies a little, wood and stone get a grain, the edges catch
 # the light, the tops are lighter and the feet darker. Off, the parts are flat colors (the first trial's look).
-_style = {"on": False}
+_style = {"on": False, "foot": (0.0, 0.3)}
 # What each palette color is made of, for its grain and how much its edges catch the light.
 FINISH = {
     "wood": ("wood", 0.7),
@@ -52,13 +60,23 @@ FINISH = {
     "brass": ("metal", 1.0),
     "copper": ("metal", 0.9),
     "gold": ("metal", 0.6),
+    "meadow": ("grass", 0.15),
+    "meadow_dark": ("grass", 0.15),
+    "rock": ("rock", 0.6),
+    "rock_dark": ("rock", 0.5),
+    "sand": ("grass", 0.0),
+    "seabed": ("stone", 0.0),
 }
 
 
-def reset(style=False):
-    """An empty scene; `style` turns the style pass on for the parts made after it."""
+def reset(style=False, foot=(0.0, 0.3)):
+    """
+    An empty scene; `style` turns the style pass on for the parts made after it. `foot`: the heights (game units) over
+    which the foot darkens, or None (the island, whose meadow is at 0).
+    """
     _materials.clear()
     _style["on"] = style
+    _style["foot"] = foot
     bpy.ops.wm.read_factory_settings(use_empty=True)
     for block in (bpy.data.meshes, bpy.data.materials, bpy.data.images):
         for item in list(block):
@@ -115,9 +133,31 @@ def _paint(m, name):
     # A darker foot, where the sea and the dirt reach.
     at = n("ShaderNodeSeparateXYZ")
     link(geo.outputs["Position"], at.inputs[0])
-    f = times(f, ranged(at.outputs["Z"], 0.0, 0.3, 0.8, 1.0))
+    if _style["foot"]:
+        f = times(f, ranged(at.outputs["Z"], _style["foot"][0], _style["foot"][1], 0.8, 1.0))
+    if kind == "grass":
+        # Patches of lighter and darker grass, and a fine grain in them.
+        big = n("ShaderNodeTexNoise")
+        big.inputs["Scale"].default_value = 0.9
+        big.inputs["Detail"].default_value = 3
+        link(coords, big.inputs["Vector"])
+        f = times(f, ranged(big.outputs["Fac"], 0.35, 0.65, 0.88, 1.1))
+        fine = n("ShaderNodeTexNoise")
+        fine.inputs["Scale"].default_value = 18
+        link(coords, fine.inputs["Vector"])
+        f = times(f, ranged(fine.outputs["Fac"], 0.3, 0.7, 1.0, 1.15))
+    if kind == "rock":
+        # Strata: horizontal bands, broken by noise, and mottles.
+        wave = n("ShaderNodeTexWave")
+        wave.wave_type = "BANDS"
+        wave.bands_direction = "Z"
+        wave.inputs["Scale"].default_value = 5
+        wave.inputs["Distortion"].default_value = 6
+        wave.inputs["Detail"].default_value = 3
+        link(coords, wave.inputs["Vector"])
+        f = times(f, ranged(wave.outputs["Fac"], 0.2, 0.8, 0.84, 1.08))
     # The grain: long streaks in wood, mottles in stone.
-    if kind in ("wood", "stone"):
+    if kind in ("wood", "stone", "rock"):
         noise = n("ShaderNodeTexNoise")
         noise.inputs["Detail"].default_value = 4
         if kind == "wood":
@@ -129,7 +169,7 @@ def _paint(m, name):
             f = times(f, ranged(noise.outputs["Fac"], 0.3, 0.7, 0.78, 1.12))
         else:
             link(coords, noise.inputs["Vector"])
-            noise.inputs["Scale"].default_value = 14
+            noise.inputs["Scale"].default_value = 14 if kind == "stone" else 7
             f = times(f, ranged(noise.outputs["Fac"], 0.35, 0.65, 0.85, 1.08))
     base = n("ShaderNodeRGB")
     base.outputs[0].default_value = srgb(PALETTE[name])
@@ -235,6 +275,13 @@ def ring(radius, thickness, height, at, color, sides=20):
     return _place(_finish(obj, color, 0, 1), at)
 
 
+def band(radius, height, at, color, sides=12):
+    """A hoop around something round: an open band just outside it (its inside is never seen)."""
+    bpy.ops.mesh.primitive_cylinder_add(vertices=sides, radius=radius, depth=height, end_fill_type="NOTHING")
+    obj = bpy.context.active_object
+    return _place(_finish(obj, color, 0, 1), at)
+
+
 def prism_roof(width, depth, height, at, color, turn=0.0):
     """A gabled roof: a triangular prism, its ridge along the width."""
     mesh = bpy.data.meshes.new("roof")
@@ -261,12 +308,12 @@ def hexagon(apothem, height, at, color, bevel=0.02, segments=2):
     return _place(_finish(obj, color, bevel, segments), at)
 
 
-def barrel(at, color="wood", band="navy", radius=0.11, height=0.26, tilt=(0.0, 0.0)):
+def barrel(at, color="wood", hoop="navy", radius=0.11, height=0.26, tilt=(0.0, 0.0)):
     """A barrel with two hoops."""
-    parts = [cylinder(radius, height, at, color, sides=10, bevel=0.02, tilt=tilt)]
+    parts = [cylinder(radius, height, at, color, sides=10, bevel=0, tilt=tilt)]
     x, y, z = at
     for dy in (-height * 0.28, height * 0.28):
-        parts.append(ring(radius, 0.012, 0.03, (x, y + dy, z), band, sides=10))
+        parts.append(globals()["band"](radius + 0.008, 0.03, (x, y + dy, z), hoop, sides=10))
     return parts
 
 
@@ -289,14 +336,133 @@ def lantern(at, size=0.1):
     ]
 
 
+def rod(a, b, radius, color, sides=8):
+    """A bar from point `a` to point `b` (game coordinates): a pipe, a beam, a rope."""
+    from mathutils import Vector
+
+    pa, pb = Vector((a[0], -a[2], a[1])), Vector((b[0], -b[2], b[1]))
+    d = pb - pa
+    bpy.ops.mesh.primitive_cylinder_add(vertices=sides, radius=radius, depth=d.length, location=(pa + pb) / 2)
+    obj = bpy.context.active_object
+    obj.rotation_mode = "QUATERNION"
+    obj.rotation_quaternion = d.to_track_quat("Z", "Y")
+    bpy.ops.object.transform_apply(rotation=True)
+    return _finish(obj, color, 0, 1)
+
+
+def crate(at, size=0.2, color="plank", turn=0.0):
+    """A crate standing on `at` (its bottom's center), with darker edges."""
+    x, y, z = at
+    return [
+        box((size, size, size), (x, y + size / 2, z), color, bevel=size * 0.08, turn=turn),
+        box((size * 1.02, size * 0.12, size * 1.02), (x, y + size * 0.5, z), "wood", bevel=0.004, turn=turn),
+    ]
+
+
+def sack(at, size=0.16, color="cream"):
+    """A sack slumped on the ground."""
+    x, y, z = at
+    return [cylinder(size * 0.5, size * 0.8, (x, y + size * 0.4, z), color, sides=6, bevel=0, top=size * 0.36)]
+
+
+def ladder(foot, top, color="wood", width=0.18):
+    """A ladder from `foot` to `top` (game coordinates), its rungs every 0.09."""
+    import math as m
+
+    fx, fy, fz = foot
+    tx, ty, tz = top
+    parts = [rod((fx - width / 2, fy, fz), (tx - width / 2, ty, tz), 0.012, color, 6), rod((fx + width / 2, fy, fz), (tx + width / 2, ty, tz), 0.012, color, 6)]
+    length = m.dist(foot, top)
+    for i in range(1, int(length / 0.09)):
+        t = i * 0.09 / length
+        p = (fx + (tx - fx) * t, fy + (ty - fy) * t, fz + (tz - fz) * t)
+        parts.append(rod((p[0] - width / 2, p[1], p[2]), (p[0] + width / 2, p[1], p[2]), 0.009, color, 5))
+    return parts
+
+
+def wheel(at, radius=0.09, color="gold", facing="z"):
+    """A valve wheel on a wall, facing the camera (+z) or the right (+x)."""
+    x, y, z = at
+    tilt = (math.radians(90), 0) if facing == "z" else (0, math.radians(90))
+    parts = [ring(radius, 0.012, 0.025, (x, y, z), color, sides=8)]
+    parts[0].rotation_euler = (tilt[0], tilt[1], 0)
+    bpy.ops.object.select_all(action="DESELECT")
+    parts.append(rod((x - radius, y, z), (x + radius, y, z), 0.01, color, 4) if facing == "z" else rod((x, y, z - radius), (x, y, z + radius), 0.01, color, 4))
+    parts.append(rod((x, y - radius, z), (x, y + radius, z), 0.01, color, 4))
+    return parts
+
+
+def gauge(at, radius=0.07, facing="z"):
+    """A round pressure gauge on a wall: a cream dial on a brass back, a dark needle."""
+    x, y, z = at
+    tilt = (math.radians(90), 0) if facing == "z" else (0, math.radians(90))
+    dz, dx = (0.012, 0) if facing == "z" else (0, 0.012)
+    back = cylinder(radius * 1.18, 0.016, (x, y, z), "brass", sides=8, bevel=0, tilt=tilt)
+    dial = cylinder(radius, 0.01, (x + dx, y, z + dz), "cream", sides=8, bevel=0, tilt=tilt)
+    if facing == "z":
+        needle = box((radius * 0.9, 0.012, 0.006), (x + radius * 0.25, y + radius * 0.2, z + dz * 1.6), "dark", bevel=0, turn=0)
+        needle.rotation_euler = (0, math.radians(-30), 0)
+    else:
+        needle = box((0.006, radius * 0.9, 0.012), (x + dx * 1.6, y + radius * 0.2, z), "dark", bevel=0)
+    return [back, dial, needle]
+
+
+def lamp_post(at, height=0.5, color="navy"):
+    """A post with a lantern on top."""
+    x, y, z = at
+    return [cylinder(0.02, height, (x, y + height / 2, z), color, sides=6, bevel=0), *lantern((x, y + height + 0.05, z), size=0.08)]
+
+
+def rope_coil(at, radius=0.08, color="plank"):
+    """A coil of rope lying on the ground."""
+    x, y, z = at
+    return [ring(radius, 0.024, 0.045, (x, y + 0.022, z), color, sides=8)]
+
+
+def drum(at, color="navy", radius=0.09, height=0.22):
+    """A metal drum: a cylinder with two brass bands."""
+    x, y, z = at
+    return [cylinder(radius, height, (x, y + height / 2, z), color, sides=8, bevel=0), band(radius + 0.006, 0.025, (x, y + height * 0.62, z), "brass", sides=8)]
+
+
+def rail_ring(radius, at, color="navy", posts=8, height=0.12):
+    """A round railing (a gallery, a catwalk): a ring on posts."""
+    x, y, z = at
+    parts = [ring(radius, 0.01, 0.02, (x, y + height, z), color, sides=12)]
+    for i in range(posts):
+        a = 2 * math.pi * i / posts
+        parts.append(rod((x + math.cos(a) * radius, y, z + math.sin(a) * radius), (x + math.cos(a) * radius, y + height, z + math.sin(a) * radius), 0.01, color, 3))
+    return parts
+
+
+def tag(parts, level):
+    """
+    The level at which these parts appear (the details of a building): stored on their vertices as `_level`, which
+    serve.py reads to order the triangles so the game draws a level with one range of the mesh. Untagged parts are 0.
+    """
+    flat = parts if isinstance(parts, list) else [parts]
+    for p in flat:
+        if isinstance(p, list):
+            tag(p, level)
+            continue
+        attr = p.data.attributes.get("_level") or p.data.attributes.new("_level", "FLOAT", "POINT")
+        for d in attr.data:
+            d.value = level
+    return parts
+
+
 def join(parts, name):
     """All the parts as one object, their modifiers applied."""
     flat = []
-    for p in parts:
-        if isinstance(p, list):
-            flat.extend(p)
-        else:
-            flat.append(p)
+
+    def gather(ps):
+        for p in ps:
+            if isinstance(p, list):
+                gather(p)
+            else:
+                flat.append(p)
+
+    gather(parts)
     bpy.ops.object.select_all(action="DESELECT")
     for p in flat:
         p.select_set(True)
@@ -319,7 +485,7 @@ def triangles(obj):
     return len(obj.data.loop_triangles)
 
 
-def bake_and_export(obj, path, size=1024, ao_strength=0.5, samples=48):
+def bake_and_export(obj, path, size=1024, ao_strength=0.5, samples=48, meta=None):
     """
     Bakes the model's colors and its ambient occlusion into one texture (`size` px), puts it on one material, and
     exports the model as a .glb with a JPEG texture.
@@ -380,13 +546,20 @@ def bake_and_export(obj, path, size=1024, ao_strength=0.5, samples=48):
     mat.node_tree.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
     obj.data.materials.clear()
     obj.data.materials.append(mat)
+    for poly in obj.data.polygons:
+        poly.material_index = 0
     bpy.ops.export_scene.gltf(
         filepath=str(path),
         export_format="GLB",
         use_selection=True,
         export_image_format="JPEG",
         export_image_quality=90,
+        export_attributes=True,
         export_yup=True,
         export_apply=True,
     )
+    if meta is not None:
+        import json
+
+        Path(path).with_suffix(".json").write_text(json.dumps(meta))
     return triangles(obj)

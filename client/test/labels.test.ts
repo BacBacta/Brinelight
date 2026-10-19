@@ -115,4 +115,37 @@ describe("city labels layout", () => {
   it("no labels, no layout", () => {
     expect(layoutLabels([])).toEqual({});
   });
+
+  describe("week 8: level badges by default, never under a panel", () => {
+    const panel = { left: 0, right: 400, top: 0, bottom: 80 };
+
+    it("a label shows in full only when it may (touched, at work, suggested, just upgraded); the others are badges", () => {
+      const r = layoutLabels([box("a", 100, 200, 0.5), box("b", 300, 200, 0.6)], null, { full: new Set(["b"]) });
+      expect(r.a).toEqual({ dy: 0, compact: true, hidden: false });
+      expect(r.b).toEqual({ dy: 0, compact: false, hidden: false });
+    });
+
+    it("a label under a panel is moved up past it if it can, else hidden; one above the panel's bottom edge is hidden", () => {
+      // Its bottom at 90: its badge (20 high) would reach up to 70, under the panel, and cannot move down.
+      const r = layoutLabels([box("a", 100, 90, 0.5)], null, { full: new Set(), panels: [panel] });
+      expect(r.a!.hidden).toBe(true);
+      const clear = layoutLabels([box("a", 100, 120, 0.5)], null, { full: new Set(), panels: [panel] });
+      expect(clear.a).toEqual({ dy: 0, compact: true, hidden: false });
+    });
+
+    it("the label of the building touched keeps its full size, unless that would put it under a panel", () => {
+      const r = layoutLabels([box("a", 100, 200, 0.5)], "a", { full: new Set(), panels: [panel] });
+      expect(r.a).toEqual({ dy: 0, compact: false, hidden: false });
+      const under = layoutLabels([box("a", 100, 95, 0.5)], "a", { full: new Set(), panels: [panel] });
+      expect(under.a!.compact || under.a!.hidden).toBe(true);
+    });
+
+    it("a label at the bottom moves up above a panel by one label at most", () => {
+      const quest = { left: 0, right: 400, top: 700, bottom: 800 };
+      // Its bottom at 710, inside the quest card: it moves up so its bottom is GAP above the card's top.
+      const r = layoutLabels([box("a", 100, 710, 0.5)], null, { full: new Set(), panels: [quest] });
+      expect(r.a).toEqual({ dy: 700 - GAP - 710, compact: true, hidden: false });
+    });
+  });
 });
+

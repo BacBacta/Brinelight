@@ -1,0 +1,516 @@
+{
+ "island": {
+  "kB": 170.8,
+  "triangles": 2656,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 7968,
+    "height": 0.006,
+    "reach": 6.283
+   }
+  ]
+ },
+ "lighthouse-1": {
+  "kB": 78.1,
+  "triangles": 1198,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2910,
+    "height": 2.56,
+    "reach": 0.81
+   },
+   {
+    "level": 2,
+    "indices": 3174,
+    "height": 2.56,
+    "reach": 0.81
+   },
+   {
+    "level": 3,
+    "indices": 3366,
+    "height": 2.56,
+    "reach": 0.81
+   },
+   {
+    "level": 4,
+    "indices": 3594,
+    "height": 2.56,
+    "reach": 0.81
+   }
+  ],
+  "lantern": 2.02
+ },
+ "lighthouse-10": {
+  "kB": 120.1,
+  "triangles": 2070,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 5694,
+    "height": 3.21,
+    "reach": 0.877
+   },
+   {
+    "level": 11,
+    "indices": 5814,
+    "height": 3.21,
+    "reach": 0.877
+   },
+   {
+    "level": 12,
+    "indices": 5946,
+    "height": 3.21,
+    "reach": 0.877
+   },
+   {
+    "level": 13,
+    "indices": 6150,
+    "height": 3.21,
+    "reach": 0.877
+   },
+   {
+    "level": 14,
+    "indices": 6210,
+    "height": 3.21,
+    "reach": 0.877
+   }
+  ],
+  "lantern": 2.67
+ },
+ "lighthouse-15": {
+  "kB": 133.6,
+  "triangles": 2366,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 6774,
+    "height": 3.46,
+    "reach": 0.877
+   },
+   {
+    "level": 16,
+    "indices": 6906,
+    "height": 3.46,
+    "reach": 0.877
+   },
+   {
+    "level": 17,
+    "indices": 6966,
+    "height": 3.46,
+    "reach": 0.877
+   },
+   {
+    "level": 18,
+    "indices": 7044,
+    "height": 3.46,
+    "reach": 0.877
+   },
+   {
+    "level": 19,
+    "indices": 7098,
+    "height": 3.56,
+    "reach": 0.877
+   }
+  ],
+  "lantern": 2.92
+ },
+ "lighthouse-20": {
+  "kB": 155.3,
+  "triangles": 2716,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 7254,
+    "height": 3.81,
+    "reach": 0.877
+   },
+   {
+    "level": 21,
+    "indices": 7518,
+    "height": 3.81,
+    "reach": 0.877
+   },
+   {
+    "level": 22,
+    "indices": 7782,
+    "height": 3.81,
+    "reach": 0.877
+   },
+   {
+    "level": 23,
+    "indices": 7956,
+    "height": 3.81,
+    "reach": 0.877
+   },
+   {
+    "level": 24,
+    "indices": 8148,
+    "height": 3.81,
+    "reach": 0.877
+   }
+  ],
+  "lantern": 3.17
+ },
+ "lighthouse-25": {
+  "kB": 165.8,
+  "triangles": 2948,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 8148,
+    "height": 4.06,
+    "reach": 0.877
+   },
+   {
+    "level": 26,
+    "indices": 8412,
+    "height": 4.06,
+    "reach": 0.877
+   },
+   {
+    "level": 27,
+    "indices": 8496,
+    "height": 4.06,
+    "reach": 0.877
+   },
+   {
+    "level": 28,
+    "indices": 8760,
+    "height": 4.06,
+    "reach": 0.877
+   },
+   {
+    "level": 29,
+    "indices": 8844,
+    "height": 4.06,
+    "reach": 0.877
+   }
+  ],
+  "lantern": 3.45
+ },
+ "lighthouse-30": {
+  "kB": 172.1,
+  "triangles": 3092,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 9276,
+    "height": 4.3,
+    "reach": 0.877
+   }
+  ],
+  "lantern": 3.65
+ },
+ "lighthouse-5": {
+  "kB": 106.5,
+  "triangles": 1818,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 4506,
+    "height": 2.91,
+    "reach": 0.81
+   },
+   {
+    "level": 6,
+    "indices": 4830,
+    "height": 2.91,
+    "reach": 0.81
+   },
+   {
+    "level": 7,
+    "indices": 5022,
+    "height": 2.91,
+    "reach": 0.81
+   },
+   {
+    "level": 8,
+    "indices": 5154,
+    "height": 2.91,
+    "reach": 0.81
+   },
+   {
+    "level": 9,
+    "indices": 5454,
+    "height": 2.91,
+    "reach": 0.81
+   }
+  ],
+  "lantern": 2.37
+ },
+ "refinery-1": {
+  "kB": 73.3,
+  "triangles": 1054,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2454,
+    "height": 1.32,
+    "reach": 0.847
+   },
+   {
+    "level": 2,
+    "indices": 2718,
+    "height": 1.32,
+    "reach": 0.847
+   },
+   {
+    "level": 3,
+    "indices": 3030,
+    "height": 1.32,
+    "reach": 0.847
+   },
+   {
+    "level": 4,
+    "indices": 3162,
+    "height": 1.32,
+    "reach": 0.847
+   }
+  ]
+ },
+ "refinery-10": {
+  "kB": 94.6,
+  "triangles": 1566,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 4194,
+    "height": 1.75,
+    "reach": 0.918
+   },
+   {
+    "level": 11,
+    "indices": 4314,
+    "height": 1.75,
+    "reach": 0.918
+   },
+   {
+    "level": 12,
+    "indices": 4518,
+    "height": 1.75,
+    "reach": 0.918
+   },
+   {
+    "level": 13,
+    "indices": 4614,
+    "height": 1.75,
+    "reach": 0.918
+   },
+   {
+    "level": 14,
+    "indices": 4698,
+    "height": 1.785,
+    "reach": 0.918
+   }
+  ]
+ },
+ "refinery-15": {
+  "kB": 117.5,
+  "triangles": 2048,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 5286,
+    "height": 1.965,
+    "reach": 0.918
+   },
+   {
+    "level": 16,
+    "indices": 5586,
+    "height": 1.965,
+    "reach": 0.918
+   },
+   {
+    "level": 17,
+    "indices": 5718,
+    "height": 1.965,
+    "reach": 0.918
+   },
+   {
+    "level": 18,
+    "indices": 5982,
+    "height": 1.965,
+    "reach": 0.918
+   },
+   {
+    "level": 19,
+    "indices": 6144,
+    "height": 1.965,
+    "reach": 0.918
+   }
+  ]
+ },
+ "refinery-20": {
+  "kB": 139.1,
+  "triangles": 2424,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 6438,
+    "height": 2.165,
+    "reach": 0.918
+   },
+   {
+    "level": 21,
+    "indices": 6516,
+    "height": 2.165,
+    "reach": 0.918
+   },
+   {
+    "level": 22,
+    "indices": 6948,
+    "height": 2.165,
+    "reach": 0.918
+   },
+   {
+    "level": 23,
+    "indices": 7032,
+    "height": 2.165,
+    "reach": 0.918
+   },
+   {
+    "level": 24,
+    "indices": 7272,
+    "height": 2.165,
+    "reach": 0.918
+   }
+  ]
+ },
+ "refinery-25": {
+  "kB": 161.4,
+  "triangles": 2914,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 7986,
+    "height": 2.345,
+    "reach": 0.918
+   },
+   {
+    "level": 26,
+    "indices": 8046,
+    "height": 2.345,
+    "reach": 0.918
+   },
+   {
+    "level": 27,
+    "indices": 8334,
+    "height": 2.345,
+    "reach": 0.918
+   },
+   {
+    "level": 28,
+    "indices": 8562,
+    "height": 2.345,
+    "reach": 0.918
+   },
+   {
+    "level": 29,
+    "indices": 8742,
+    "height": 2.345,
+    "reach": 0.918
+   }
+  ]
+ },
+ "refinery-30": {
+  "kB": 174.8,
+  "triangles": 3222,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 9666,
+    "height": 2.455,
+    "reach": 0.918
+   }
+  ]
+ },
+ "refinery-5": {
+  "kB": 94.4,
+  "triangles": 1478,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 3612,
+    "height": 1.48,
+    "reach": 0.847
+   },
+   {
+    "level": 6,
+    "indices": 3936,
+    "height": 1.48,
+    "reach": 0.847
+   },
+   {
+    "level": 7,
+    "indices": 4128,
+    "height": 1.48,
+    "reach": 0.847
+   },
+   {
+    "level": 8,
+    "indices": 4290,
+    "height": 1.48,
+    "reach": 0.847
+   },
+   {
+    "level": 9,
+    "indices": 4434,
+    "height": 1.48,
+    "reach": 0.847
+   }
+  ]
+ },
+ "site-arm": {
+  "kB": 10.8,
+  "triangles": 96,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 288,
+    "height": 1.59,
+    "reach": 0.773
+   }
+  ],
+  "reach": 0.55,
+  "mast": 1.54,
+  "crateY": 1.12
+ },
+ "site-crate": {
+  "kB": 13.6,
+  "triangles": 88,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 264,
+    "height": 1.2,
+    "reach": 0.847
+   }
+  ]
+ },
+ "site-frame": {
+  "kB": 59.3,
+  "triangles": 776,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2328,
+    "height": 1.013,
+    "reach": 0.978
+   }
+  ]
+ },
+ "site-mast": {
+  "kB": 9.6,
+  "triangles": 116,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 348,
+    "height": 1.57,
+    "reach": 0.104
+   }
+  ]
+ }
+}

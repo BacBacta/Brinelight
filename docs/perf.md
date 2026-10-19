@@ -309,3 +309,35 @@ When, at the busy hour, the processor stays over 70 %, or the p99 of the actions
 | CX23 | 100 | | | | | | | |
 | CX23 | 250 | | | | | | | |
 | CX23 | 500 | | | | | | | |
+
+## The city remade in Blender (week 8): meeting 1, the island, the Lighthouse and the Refinery
+
+Measured with the city at 412 × 915 (container, quality 2, the e2e's counter), `?blender`, three rafts. The other seven buildings still have their old models and details.
+
+| City | Draw calls | Triangles |
+| --- | --- | --- |
+| Level 15, old look (today) | 22 | 37.9 k |
+| Level 15, the island, the Lighthouse and the Refinery remade | 20 | 38.7 k |
+| Level 1 (Lighthouse 2) | 16 | 32.7 k |
+| Level 5 | 19 | 34.1 k |
+| Level 10 | 20 | 38.0 k |
+| Level 30 | 20 | 41.0 k |
+| Level 12, the Refinery at work (its building site) | 24 | 39.5 k |
+| Level 20, 15 rafts, 360 px | 20 | 56.1 k |
+
+- **One draw call per building, whatever its level:** a stage's model holds its levels' details with its triangles ordered by level, and the game draws a range of it.
+- **A building site:** four draw calls (scaffolding, mast, arm, crate) while it works, against two for all sites before. There are at most two at once (two builders).
+
+**The files** (served: 512 px WebP, 1,024 for the island, quantized):
+
+| Model | Triangles | File |
+| --- | --- | --- |
+| The island (made to the grid) | 2,656 | 171 kB (the old one: 2,517 and 222 kB) |
+| The Lighthouse, seven stages | 1,198 to 3,092 | 78 to 172 kB |
+| The Refinery, seven stages | 1,054 to 3,222 | 73 to 175 kB |
+| The building site, four pieces | 1,076 in all | 93 kB in all |
+
+- **What is downloaded:** only the stage each building shows, and the next one while an upgrade toward it runs.
+- **At level 30:** 171 + 172 + 175 kB for the island, the Lighthouse and the Refinery, about 0.5 MB.
+
+**Next:** an entry-level phone must still be measured before players are invited.

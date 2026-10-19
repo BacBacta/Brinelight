@@ -118,6 +118,24 @@ Generated from this page (GPT Image and Meshy, through Higgsfield):
 - on 2026-10-16: the icon sheet (24 icons, flat two-tone: a palette color with a night-blue outline), in `assets/icons/sheet.png`;
 - on 2026-10-17: the island, a green meadow on dark rock with moss, dune grass, a sandy corner and a windswept pine, in `assets/concepts/island.png` and `assets/models/src/island.glb`. The model had two pines inside the plots; `assets/make-models.py` moves the smaller one to the rim, at the pier's gap (the only place clear of every plot and raft slot), and drops the other. It follows "No neon lawn". It replaces a first, sandy island, which looked too barren for an inhabited place.
 
+## Made in Blender (week 8)
+
+From 19 October the city is remade with Blender 5.2.2 run from Python (`assets/blender/`), with no window: a kit of parts in this page's palette (`kit.py`), joined into one mesh per model, its colors and soft shadows baked into one texture. With the style pass:
+- each piece gets a shade of its own;
+- wood and stone get a grain;
+- edges catch the light;
+- tops are lighter and feet darker;
+- two shadows lean to blue.
+
+- **The island**: the 19 plots' hexagons edge to edge, widened by 0.1 past the plots, so its coast follows the grid. The rafts of ring 3 float in its notches. Its cliff never comes out past the meadow above the water.
+- **A building**: seven models (tiers at 1, 10, 20 and 30; transformations at 5, 15 and 25), and a detail at every other level, at the front, on the walls the camera sees, or on a roof.
+  - Its tiers' materials: wood, a stone plinth at 10, brass at 20, verdigris roofs at 30.
+  - Its flag in its tier's color: cream, navy, verdigris, gold. Brick red stays the pirates'.
+  - It always stays under the top of the Lighthouse and inside its plot (tested at every level).
+- **The building site**: a scaffolding stretched to the building, and a crane whose arm swings and whose crate goes up and down.
+
+`assets/blender/build.py` makes them; `assets/blender/serve.py` serves them like `make-models.py` does.
+
 `assets/make-models.py` and `assets/icons/make-icons.py` make the files the game serves.
 
 Every asset must follow this page, or it does not go in.

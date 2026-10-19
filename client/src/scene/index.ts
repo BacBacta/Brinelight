@@ -4,7 +4,8 @@ import { loadBuildings, tierOf, type BuildingModels } from "./buildings.js";
 import { ISLAND_ANISOTROPY, filterTexture, fitIsland, loadModels, loadRaftBuildings, type Models, type RaftBuildingModels } from "./models.js";
 import { createCamera, createControls, frameCity } from "./camera.js";
 import { shapeCoast } from "./coast.js";
-import { cityFraming } from "./framing.js";
+import { blenderLook, cityModelUrl, gridIsland } from "./cityLook.js";
+import { CITY_ANGLE, cityFraming, closeFraming } from "./framing.js";
 import { createIsland, type Kit } from "./island.js";
 import { createLighthouse, lighthouseScale } from "./lighthouse.js";
 import { applyQualityStep, createQualityMonitor, type QualityStep } from "./quality.js";
@@ -38,6 +39,14 @@ export type ScreenPoint = { x: number; y: number; depth: number; visible: boolea
 export type SceneHandle = {
   /** Resizes the Lighthouse for this level, and puts the camera back on the normal view. */
   setLighthouseLevel(level: number): void;
+  /** The Lighthouse's model made in Blender for its level's stage, at its own size, its lantern at `lantern`. */
+  useLighthouseStage(object: THREE.Object3D, lantern: number, top: number): void;
+  /**
+   * The close view (week 8): the camera glides toward a building at (x, z), `height` high, so it fills about half of
+   * the screen above its sheet; `unfocus` glides back to the normal view. With reduced motion, it jumps.
+   */
+  focus(x: number, z: number, height: number, reach: number): void;
+  unfocus(): void;
   /** Shows the city or the sea; only the shown view moves with your fingers. */
   setView(view: View): void;
   readonly view: View;
@@ -111,11 +120,33 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   /** The camera's distance the city's fog was set for (the prototype's farthest view), and how far it is pushed back now. */
   const FOG_SET_AT = 39.6;
   let fogScale = 1;
+  // The close view's glide, and the normal view to come back to.
+  let normal = { distance: 30, target: new THREE.Vector3() };
+  let focused = false;
+  let glide: { from: [THREE.Vector3, THREE.Vector3]; to: [THREE.Vector3, THREE.Vector3]; start: number } | null = null;
+  const GLIDE = 0.6;
+  const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const glideTo = (position: THREE.Vector3, target: THREE.Vector3) => {
+    if (reduced()) {
+      camera.position.copy(position);
+      controls.target.copy(target);
+      controls.update();
+      glide = null;
+      return;
+    }
+    glide = { from: [camera.position.clone(), controls.target.clone()], to: [position, target], start: performance.now() };
+  };
   const layout = () => {
     renderer.setSize(innerWidth, innerHeight, false);
     const band = options.band?.() ?? { top: 0, bottom: innerHeight };
-    const framing = cityFraming({ width: innerWidth, height: innerHeight, ...band }, moored);
-    frameCity(camera, controls, innerWidth / innerHeight, framing);
+    // The Lighthouse made in Blender is taller: its top stays on screen too.
+    const tops = lighthouseStaged ? [{ x: 0, y: lighthouseTop, z: 0 }] : [];
+    const framing = cityFraming({ width: innerWidth, height: innerHeight, ...band }, moored, tops);
+    normal = framing;
+    if (focused) {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+    } else frameCity(camera, controls, innerWidth / innerHeight, framing);
     // The fog keeps its look at any distance: it was set for the prototype's farthest view.
     fogScale = Math.max(1, framing.distance / FOG_SET_AT);
     showMood(moodAt);
@@ -147,14 +178,23 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   // One loader: the kit (scaffolding, the sea's other sites), the nine buildings and the other models, in parallel;
   // the city shows once all are there. The buildings on rafts follow.
   const loader = new GLTFLoader();
-  Promise.all([loader.loadAsync(KIT_URL), loadBuildings(loader), loadModels(loader)]).then(
-    ([gltf, buildings, models]) => {
+  const blender = blenderLook();
+  Promise.all([loader.loadAsync(KIT_URL), loadBuildings(loader), loadModels(loader), blender ? loader.loadAsync(cityModelUrl("island")) : null]).then(
+    ([gltf, buildings, models, gridModel]) => {
       if (disposed) return;
       const kit: Kit = {};
       gltf.scenes.forEach((sc) => (kit[sc.name] = sc));
-      filterTexture(models.island, Math.min(ISLAND_ANISOTROPY, renderer.capabilities.getMaxAnisotropy()));
-      const island = fitIsland(models.island);
-      shapeCoast(island);
+      const anisotropy = Math.min(ISLAND_ANISOTROPY, renderer.capabilities.getMaxAnisotropy());
+      let island: THREE.Object3D;
+      if (gridModel) {
+        // The island made to the grid: its coast is already where the rafts need it.
+        filterTexture(gridModel.scene, anisotropy);
+        island = gridIsland(gridModel.scene);
+      } else {
+        filterTexture(models.island, anisotropy);
+        island = fitIsland(models.island);
+        shapeCoast(island);
+      }
       scene.add(createIsland(island));
       shore = createShore(island);
       water.setShore(shore.distances(moored));
@@ -173,7 +213,12 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   );
 
   /** Its level's size, as wide as its plot allows (it then only grows taller), and its tier's lantern. */
+  let lighthouseStaged = false;
+  let lighthouseTop = 0;
   function sizeLighthouse(): void {
+    lighthouse.setTier(tierOf(level));
+    // A stage's model has its own size.
+    if (lighthouseStaged) return void lighthouse.group.scale.setScalar(1);
     const s = lighthouseScale(level);
     const w = Math.min(s, lighthouse.widthCap);
     lighthouse.group.scale.set(w, s, w);
@@ -211,6 +256,13 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     } else {
       sea.water.setTime(now);
     }
+    if (glide && view === "city") {
+      const t = Math.min(1, (performance.now() - glide.start) / (GLIDE * 1000));
+      const e = t * t * (3 - 2 * t);
+      camera.position.lerpVectors(glide.from[0], glide.to[0], e);
+      controls.target.lerpVectors(glide.from[1], glide.to[1], e);
+      if (t >= 1) glide = null;
+    }
     v.controls.update();
     for (const cb of frameCallbacks) cb(now, view);
     renderer.render(v.scene, v.camera);
@@ -221,6 +273,26 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       level = l;
       sizeLighthouse();
       layout();
+    },
+    useLighthouseStage(object, lantern, top) {
+      const moved = !lighthouseStaged || top !== lighthouseTop;
+      lighthouseStaged = true;
+      lighthouseTop = top;
+      lighthouse.useStaged(object, lantern);
+      sizeLighthouse();
+      if (moved) layout();
+    },
+    focus(x, z, height, reach) {
+      focused = true;
+      // Between the top panels and the sheet, which takes the bottom of the screen up to 45 % of its height.
+      const band = options.band?.() ?? { top: 0, bottom: innerHeight };
+      const close = closeFraming({ width: innerWidth, height: innerHeight, top: band.top, bottom: innerHeight * 0.45 }, { x, z, height, reach });
+      glideTo(close.target.clone().addScaledVector(CITY_ANGLE, close.distance), close.target);
+    },
+    unfocus() {
+      if (!focused) return;
+      focused = false;
+      glideTo(normal.target.clone().addScaledVector(CITY_ANGLE, normal.distance), normal.target.clone());
     },
     setView(v) {
       view = v;

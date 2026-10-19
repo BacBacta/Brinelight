@@ -11,6 +11,8 @@ export type Lighthouse = {
   animate(seconds: number): void;
   /** In the city: the painted model takes the place of the tower built in code; the beams and the light stay, at its lantern. */
   useModel(model: BuildingModel): void;
+  /** The model of its stage (made in Blender), at its own size: the beams and the light go to `lantern`, its height. */
+  useStaged(object: THREE.Object3D, lantern: number): void;
   /**
    * The widest it may grow and stay within its plot (PLOT_ROOM): past it, it only grows taller. Infinity before its
    * model is there.
@@ -81,6 +83,7 @@ export function createLighthouse(opts: { gold?: boolean; light?: boolean } = {})
   }
 
   let beams = 0;
+  let staged: THREE.Object3D | null = null;
   pivot.visible = false;
   let widthCap = Infinity;
   return {
@@ -99,6 +102,15 @@ export function createLighthouse(opts: { gold?: boolean; light?: boolean } = {})
     setBeams(amount) {
       beams = amount;
       pivot.visible = amount > 0.001;
+    },
+    useStaged(object, lantern) {
+      for (const m of tower) m.visible = false;
+      if (staged && staged !== object) g.remove(staged);
+      staged = object;
+      g.add(object);
+      lamp.position.y = lantern;
+      pivot.position.y = lantern;
+      if (light) light.position.y = lantern;
     },
     useModel(model) {
       for (const m of tower) m.visible = m === lamp;

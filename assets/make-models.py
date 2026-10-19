@@ -80,6 +80,65 @@ def clamp(v, lo, hi):
     return max(lo, min(hi, v))
 
 
+def quantized_glb(cid, order, tris, center, half, webp, material, samplers):
+    """The served file: one mesh of quantized vertices (`order`: position, normal and texture coordinates on 16, 8 and
+    16 bits), its 16-bit indices, and its WebP texture."""
+    chunks, views = bytearray(), []
+
+    def add(data, target=None, stride=None):
+        while len(chunks) % 4:
+            chunks.append(0)
+        v = {"buffer": 0, "byteOffset": len(chunks), "byteLength": len(data)}
+        if target:
+            v["target"] = target
+        if stride:
+            v["byteStride"] = stride
+        chunks.extend(data)
+        views.append(v)
+        return len(views) - 1
+
+    vi = add(struct.pack(f"<{len(tris)}H", *tris), 34963)
+    vp = add(b"".join(struct.pack("<hhhxx", *p) for p, _, _ in order), 34962, 8)
+    vn = add(b"".join(struct.pack("<bbbx", *n) for _, n, _ in order), 34962, 4)
+    vt = add(b"".join(struct.pack("<HH", *t) for _, _, t in order), 34962, 4)
+    vw = add(webp)
+
+    count = len(order)
+    pmin = [min(p[k] for p, _, _ in order) for k in range(3)]
+    pmax = [max(p[k] for p, _, _ in order) for k in range(3)]
+    # A normalized 16-bit position reads as q / 32767, between -1 and 1: the node scales it back by `half`.
+    s = half
+    result = {
+        "asset": {"version": "2.0", "generator": "Brinelight make-models.py"},
+        "extensionsUsed": ["KHR_mesh_quantization", "EXT_texture_webp"],
+        "extensionsRequired": ["KHR_mesh_quantization", "EXT_texture_webp"],
+        "scene": 0,
+        "scenes": [{"nodes": [0]}],
+        # Decodes the 16-bit positions: scale, then the center of the original box.
+        "nodes": [{"name": cid, "mesh": 0, "matrix": [s, 0, 0, 0, 0, s, 0, 0, 0, 0, s, 0, *center, 1]}],
+        "meshes": [{"name": cid, "primitives": [{"attributes": {"POSITION": 1, "NORMAL": 2, "TEXCOORD_0": 3}, "indices": 0, "mode": 4, "material": 0}]}],
+        "materials": [material],
+        "textures": [{"sampler": 0, "extensions": {"EXT_texture_webp": {"source": 0}}}],
+        "samplers": samplers,
+        "images": [{"bufferView": vw, "mimeType": "image/webp"}],
+        "accessors": [
+            {"bufferView": vi, "componentType": USHORT, "count": len(tris), "type": "SCALAR"},
+            {"bufferView": vp, "componentType": SHORT, "normalized": True, "count": count, "type": "VEC3", "min": pmin, "max": pmax},
+            {"bufferView": vn, "componentType": BYTE, "normalized": True, "count": count, "type": "VEC3"},
+            {"bufferView": vt, "componentType": USHORT, "normalized": True, "count": count, "type": "VEC2"},
+        ],
+        "bufferViews": views,
+        "buffers": [{"byteLength": len(chunks)}],
+    }
+    while len(chunks) % 4:
+        chunks.append(0)
+    text = json.dumps(result, separators=(",", ":")).encode()
+    text += b" " * (-len(text) % 4)
+    glb = struct.pack("<III", 0x46546C67, 2, 12 + 8 + len(text) + 8 + len(chunks))
+    glb += struct.pack("<II", len(text), 0x4E4F534A) + text + struct.pack("<II", len(chunks), 0x004E4942) + bytes(chunks)
+    return glb
+
+
 def convert(cid, src_dir, out_dir):
     doc, binary = read_glb(src_dir / f"{cid}.glb")
     assert len(doc["meshes"]) == 1 and len(doc["meshes"][0]["primitives"]) == 1 and len(doc["images"]) == 1, f"{cid}: one mesh, one texture expected"
@@ -189,74 +248,23 @@ def convert(cid, src_dir, out_dir):
     size = TEXTURE.get(cid, 512)
     Image.open(io.BytesIO(src)).convert("RGB").resize((size, size), Image.LANCZOS).save(webp, "WEBP", quality=QUALITY, method=6)
 
-    chunks, views = bytearray(), []
-
-    def add(data, target=None, stride=None):
-        while len(chunks) % 4:
-            chunks.append(0)
-        v = {"buffer": 0, "byteOffset": len(chunks), "byteLength": len(data)}
-        if target:
-            v["target"] = target
-        if stride:
-            v["byteStride"] = stride
-        chunks.extend(data)
-        views.append(v)
-        return len(views) - 1
-
-    vi = add(struct.pack(f"<{len(tris)}H", *tris), 34963)
-    vp = add(b"".join(struct.pack("<hhhxx", *p) for p, _, _ in order), 34962, 8)
-    vn = add(b"".join(struct.pack("<bbbx", *n) for _, n, _ in order), 34962, 4)
-    vt = add(b"".join(struct.pack("<HH", *t) for _, _, t in order), 34962, 4)
-    vw = add(webp.getvalue())
-
-    count = len(order)
-    pmin = [min(p[k] for p, _, _ in order) for k in range(3)]
-    pmax = [max(p[k] for p, _, _ in order) for k in range(3)]
-    # A normalized 16-bit position reads as q / 32767, between -1 and 1: the node scales it back by `half`.
-    s = half
-    result = {
-        "asset": {"version": "2.0", "generator": "Brinelight make-models.py"},
-        "extensionsUsed": ["KHR_mesh_quantization", "EXT_texture_webp"],
-        "extensionsRequired": ["KHR_mesh_quantization", "EXT_texture_webp"],
-        "scene": 0,
-        "scenes": [{"nodes": [0]}],
-        # Decodes the 16-bit positions: scale, then the center of the original box.
-        "nodes": [{"name": cid, "mesh": 0, "matrix": [s, 0, 0, 0, 0, s, 0, 0, 0, 0, s, 0, *center, 1]}],
-        "meshes": [{"name": cid, "primitives": [{"attributes": {"POSITION": 1, "NORMAL": 2, "TEXCOORD_0": 3}, "indices": 0, "mode": 4, "material": 0}]}],
-        "materials": [doc["materials"][0]],
-        "textures": [{"sampler": 0, "extensions": {"EXT_texture_webp": {"source": 0}}}],
-        "samplers": doc["samplers"],
-        "images": [{"bufferView": vw, "mimeType": "image/webp"}],
-        "accessors": [
-            {"bufferView": vi, "componentType": USHORT, "count": len(tris), "type": "SCALAR"},
-            {"bufferView": vp, "componentType": SHORT, "normalized": True, "count": count, "type": "VEC3", "min": pmin, "max": pmax},
-            {"bufferView": vn, "componentType": BYTE, "normalized": True, "count": count, "type": "VEC3"},
-            {"bufferView": vt, "componentType": USHORT, "normalized": True, "count": count, "type": "VEC2"},
-        ],
-        "bufferViews": views,
-        "buffers": [{"byteLength": len(chunks)}],
-    }
-    while len(chunks) % 4:
-        chunks.append(0)
-    text = json.dumps(result, separators=(",", ":")).encode()
-    text += b" " * (-len(text) % 4)
-    glb = struct.pack("<III", 0x46546C67, 2, 12 + 8 + len(text) + 8 + len(chunks))
-    glb += struct.pack("<II", len(text), 0x4E4F534A) + text + struct.pack("<II", len(chunks), 0x004E4942) + bytes(chunks)
+    glb = quantized_glb(cid, order, tris, center, half, webp.getvalue(), doc["materials"][0], doc["samplers"])
     path = out_dir / f"{cid}.glb"
     path.write_bytes(glb)
 
     # The largest position error, in model units, against the original.
-    error = max(abs(center[k] + q[k] / 32767 * s - p[k]) for p, q in zip(positions, qpos) for k in range(3))
+    error = max(abs(center[k] + q[k] / 32767 * half - p[k]) for p, q in zip(positions, qpos) for k in range(3))
     before = (src_dir / f"{cid}.glb").stat().st_size / 1024
-    return {"removed": removed, "moved": moved, "id": cid, "before kB": before, "kB": len(glb) / 1024, "triangles": len(tris) // 3, "vertices": count, "was": len(positions), "error": error, "flattened": flattened, "turned": turned}
+    return {"removed": removed, "moved": moved, "id": cid, "before kB": before, "kB": len(glb) / 1024, "triangles": len(tris) // 3, "vertices": len(order), "was": len(positions), "error": error, "flattened": flattened, "turned": turned}
 
 
-for ids, src_dir, out_dir in [(BUILDINGS, here / "buildings" / "src", public / "buildings"), (OTHERS, here / "models" / "src", public / "models")]:
-    out_dir.mkdir(parents=True, exist_ok=True)
-    total = 0
-    for cid in ids:
-        r = convert(cid, src_dir, out_dir)
-        total += r["kB"]
-        flat = "".join(f"  {r[k]} vertices {k}" for k in ("removed", "moved", "flattened") if r[k]) + (f"  {r['turned']} faces turned" if r["turned"] else "")
-        print(f"{r['id']:<12} {r['before kB']:6.0f} kB -> {r['kB']:4.0f} kB  {r['triangles']} triangles  {r['vertices']} vertices (was {r['was']})  largest position error {r['error']:.6f}{flat}")
-    print(f"{'total':<12} {total:23.0f} kB  ({out_dir.relative_to(here.parent)})")
+if __name__ == "__main__":
+    for ids, src_dir, out_dir in [(BUILDINGS, here / "buildings" / "src", public / "buildings"), (OTHERS, here / "models" / "src", public / "models")]:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        total = 0
+        for cid in ids:
+            r = convert(cid, src_dir, out_dir)
+            total += r["kB"]
+            flat = "".join(f"  {r[k]} vertices {k}" for k in ("removed", "moved", "flattened") if r[k]) + (f"  {r['turned']} faces turned" if r["turned"] else "")
+            print(f"{r['id']:<12} {r['before kB']:6.0f} kB -> {r['kB']:4.0f} kB  {r['triangles']} triangles  {r['vertices']} vertices (was {r['was']})  largest position error {r['error']:.6f}{flat}")
+        print(f"{'total':<12} {total:23.0f} kB  ({out_dir.relative_to(here.parent)})")

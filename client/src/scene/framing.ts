@@ -33,9 +33,12 @@ export const PIER_SLOTS: readonly (readonly [number, number])[] = [
 /** What shows past the coast: the island's rocky sides going down into the water, and the foam around them. */
 export const FOAM = 0.8;
 
-/** The points that must stay on screen: the island's shore with its foam, the pier's slots, and the hexagon of each raft at `rafts`. */
-export function cityPoints(rafts: readonly { x: number; z: number }[]): THREE.Vector3[] {
-  const points: THREE.Vector3[] = [];
+/**
+ * The points that must stay on screen: the island's shore with its foam, the pier's slots, the hexagon of each raft at
+ * `rafts`, and the `tops` of the tallest buildings (the Lighthouse's).
+ */
+export function cityPoints(rafts: readonly { x: number; z: number }[], tops: readonly { x: number; y: number; z: number }[] = []): THREE.Vector3[] {
+  const points: THREE.Vector3[] = tops.map((t) => new THREE.Vector3(t.x, t.y, t.z));
   for (let i = 0; i < 36; i++) {
     const a = (i / 36) * Math.PI * 2;
     const r = coastAt(a) + FOAM;
@@ -50,10 +53,10 @@ export function cityPoints(rafts: readonly { x: number; z: number }[]): THREE.Ve
   return points;
 }
 
-/** Where the points land on screen, in pixels, with the camera at `distance` from `target` (on the ground, at x = 0). */
-function bounds(view: View, points: readonly THREE.Vector3[], distance: number, targetZ: number) {
+/** Where the points land on screen, in pixels, with the camera at `distance` from `target` (on the ground, at x = `targetX`). */
+function bounds(view: View, points: readonly THREE.Vector3[], distance: number, targetZ: number, targetX = 0) {
   const camera = new THREE.PerspectiveCamera(CITY_FOV, view.width / view.height, 0.1, 400);
-  const target = new THREE.Vector3(0, 0, targetZ);
+  const target = new THREE.Vector3(targetX, 0, targetZ);
   camera.position.copy(target).addScaledVector(CITY_ANGLE, distance);
   camera.lookAt(target);
   camera.updateMatrixWorld();
@@ -75,14 +78,14 @@ function bounds(view: View, points: readonly THREE.Vector3[], distance: number, 
 }
 
 /** The point the camera looks at, on the z axis, that puts the points in the middle of the band, at this distance. */
-function centered(view: View, points: readonly THREE.Vector3[], distance: number): number {
+function centered(view: View, points: readonly THREE.Vector3[], distance: number, x = 0, from = 0): number {
   const middle = (view.top + view.bottom) / 2;
   const off = (z: number) => {
-    const b = bounds(view, points, distance, z);
+    const b = bounds(view, points, distance, z, x);
     return (b.top + b.bottom) / 2 - middle;
   };
   // The secant method: the points move on screen almost in proportion to the target.
-  let [z0, z1] = [0, -1];
+  let [z0, z1] = [from, from - 1];
   let [f0, f1] = [off(z0), off(z1)];
   for (let i = 0; i < 8 && Math.abs(f1) > 0.25 && f1 !== f0; i++) {
     const z2 = z1 - (f1 * (z1 - z0)) / (f1 - f0);
@@ -95,8 +98,8 @@ function centered(view: View, points: readonly THREE.Vector3[], distance: number
 /**
  * The city's normal view on this screen: the shortest distance at which the island, the pier and the rafts fit in the band (to a hundredth), and the point it looks at, which centers them in it.
  */
-export function cityFraming(view: View, rafts: readonly { x: number; z: number }[]): { distance: number; target: THREE.Vector3 } {
-  const points = cityPoints(rafts);
+export function cityFraming(view: View, rafts: readonly { x: number; z: number }[], tops: readonly { x: number; y: number; z: number }[] = []): { distance: number; target: THREE.Vector3 } {
+  const points = cityPoints(rafts, tops);
   const fits = (distance: number) => {
     const z = centered(view, points, distance);
     const b = bounds(view, points, distance, z);
@@ -110,3 +113,35 @@ export function cityFraming(view: View, rafts: readonly { x: number; z: number }
   }
   return { distance: far, target: new THREE.Vector3(0, 0, centered(view, points, far)) };
 }
+
+/** The pinch zoom's closest distance: the close view never goes nearer. */
+export const CLOSE_MIN = 9;
+
+/**
+ * The close view of a building (week 8): the camera at the normal view's angle, as close as the building allows while
+ * its foot (its reach on its plot) and its top stay in the band (between the top panels and the sheet's top), never
+ * nearer than CLOSE_MIN; the building centered in the band.
+ */
+export function closeFraming(view: View, b: { x: number; z: number; height: number; reach: number }): { distance: number; target: THREE.Vector3 } {
+  const points: THREE.Vector3[] = [new THREE.Vector3(b.x, b.height, b.z)];
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
+    points.push(new THREE.Vector3(b.x + Math.cos(a) * b.reach, 0, b.z + Math.sin(a) * b.reach));
+    points.push(new THREE.Vector3(b.x + Math.cos(a) * b.reach * 0.7, b.height * 0.8, b.z + Math.sin(a) * b.reach * 0.7));
+  }
+  const fits = (distance: number) => {
+    const z = centered(view, points, distance, b.x, b.z);
+    const r = bounds(view, points, distance, z, b.x);
+    return r.left >= SIDE_MARGIN && r.right <= view.width - SIDE_MARGIN && r.top >= view.top && r.bottom <= view.bottom;
+  };
+  let [near, far] = [CLOSE_MIN, 60];
+  if (!fits(near)) {
+    while (far - near > 0.01) {
+      const mid = (near + far) / 2;
+      if (fits(mid)) far = mid;
+      else near = mid;
+    }
+  } else far = near;
+  return { distance: far, target: new THREE.Vector3(b.x, 0, centered(view, points, far, b.x, b.z)) };
+}
+
