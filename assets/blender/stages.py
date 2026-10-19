@@ -36,6 +36,16 @@ def flag_color(stage):
     return FLAG[max(t for t in FLAG if t <= stage)]
 
 
+def build_one(name, make, out, fast=False):
+    """One model of its own (a part the game turns or moves), made by `make()`: its own name, no levels."""
+    out = Path(out)
+    kit.reset(style=True)
+    obj = kit.join(list(make()), name)
+    path = out / f"{name}.glb"
+    tris = kit.bake_and_export(obj, path, size=128 if fast else 512, samples=4 if fast else 48)
+    print(f"{name:<16} {tris:5d} triangles  {path.stat().st_size / 1024:6.0f} kB", flush=True)
+
+
 def build(name, base, details, out, fast=False, only=None, meta=None):
     """
     Makes `name`-<stage>.glb for each stage: `base(stage)` returns the parts of the stage; `details` maps each level

@@ -88,9 +88,15 @@ def mesh_object(name, faces, color):
     return obj
 
 
-def paths(width, color, curbs=None):
-    """The paths along the plots' shared edges, joined at the crossings; with curbs (a color), stones on their sides."""
+def paths(width, color, curbs=None, reach=None):
+    """
+    The paths along the plots' shared edges, joined at the crossings; with curbs (a color), stones on their sides. With
+    `reach`, only those whose middle lies within it of the island's center: the first eras' paths stay near the
+    Lighthouse, the later ones cover the island.
+    """
     points, inner, _ = network()
+    if reach is not None:
+        inner = [(a, b) for a, b in inner if math.hypot((points[a][0] + points[b][0]) / 2, (points[a][1] + points[b][1]) / 2) <= reach]
     degree = {}
     for a, b in inner:
         degree[a] = degree.get(a, 0) + 1
@@ -219,16 +225,16 @@ def quays():
 
 def era(first):
     if first == 1:
-        return [*paths(0.09, "earth"), *stakes()]
+        return [*paths(0.12, "earth", reach=1.8), *stakes()]
     if first == 5:
-        return [*paths(0.1, "earth", curbs="stone"), *fences()]
+        return [*paths(0.12, "earth", curbs="stone", reach=3.0), *fences()]
     if first == 10:
-        return [*paths(0.11, "cobble", curbs="stone_dark"), *fences()]
+        return [*paths(0.13, "cobble", curbs="stone_dark"), *fences()]
     if first == 15:
-        return [*paths(0.11, "paving"), *bollards()]
+        return [*paths(0.13, "paving", curbs="stone"), *bollards()]
     if first == 20:
-        return [*paths(0.11, "paving"), *bollards(), *lamps("navy", 0.42)]
-    return [*paths(0.12, "paving"), *quays(), *lamps("white", 0.46)]
+        return [*paths(0.13, "paving", curbs="stone"), *bollards(), *lamps("navy", 0.42)]
+    return [*paths(0.13, "paving", curbs="concrete"), *quays(), *lamps("white", 0.46)]
 
 
 def lamps(color, height):

@@ -279,10 +279,11 @@ def modern(s):
     crown = s >= 30
     p.extend(gallery(top, r1 + 0.14, "concrete", "gold" if crown else "steel"))
     p.extend(lantern_room(top, lr, lh, "white", "gold" if crown else "white", posts=8, sides=12))
-    # The radar on its mast beside the lantern, an antenna with its warm light.
-    p.append(cylinder(0.025, 0.5, (0.22, top + 0.25, -0.12), "steel", sides=6, bevel=0))
-    p.append(box((0.56, 0.07, 0.08), (0.22, top + 0.53, -0.12), "white", bevel=0.012, turn=0.5))
-    p.append(box((0.08, 0.06, 0.08), (0.22, top + 0.48, -0.12), "steel", bevel=0.01))
+    # The radar's mast beside the lantern (its turning bar is its own model, RADAR, turned by the game), an antenna
+    # with its warm light.
+    rx, rz = RADAR_AT
+    p.append(cylinder(0.025, 0.5, (rx, top + 0.25, rz), "steel", sides=6, bevel=0))
+    p.append(box((0.08, 0.06, 0.08), (rx, top + 0.48, rz), "steel", bevel=0.01))
     p.append(cylinder(0.014, 0.5, (-0.16, top + 0.25, -0.14), "steel", sides=5, bevel=0))
     p.append(sphere(0.035, (-0.16, top + 0.52, -0.14), "gold", subdivisions=1))
     # Solar panels at the back of the plinth, one held down with a rope.
@@ -310,7 +311,23 @@ def base(s):
 
 def meta(s):
     _, _, th, _, lh = tower(s)
-    return {"lantern": round(BASE + th + (0.05 if era_of(s) == "salvage" else 0.06) + lh / 2, 3)}
+    out = {"lantern": round(BASE + th + (0.05 if era_of(s) == "salvage" else 0.06) + lh / 2, 3)}
+    if era_of(s) == "modern":
+        out["radar"] = [RADAR_AT[0], round(BASE + th + 0.53, 3), RADAR_AT[1]]
+    return out
+
+
+# Where the Modern era's radar turns (game x, z): its bar is a model of its own, centered on its axis.
+RADAR_AT = (0.22, -0.12)
+
+
+def radar():
+    """The radar's bar, centered on the axis it turns around: white, a steel hub, a gold tip at one end."""
+    return [box((0.56, 0.07, 0.08), (0, 0, 0), "white", bevel=0.012), box((0.06, 0.08, 0.1), (0, 0, 0), "steel", bevel=0.01), box((0.04, 0.04, 0.09), (0.27, 0, 0), "gold", bevel=0.005)]
+
+
+# Models of their own, turned or moved by the game.
+EXTRAS = {"lighthouse-radar": radar}
 
 
 def on_base(angle, r=0.6):

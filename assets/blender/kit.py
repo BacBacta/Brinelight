@@ -45,9 +45,9 @@ PALETTE = {
     "solar": "#163A63",
     "steam": "#F4F1EA",
     # The island's ground through the eras (week 8): earth paths, cobbles, paving.
-    "earth": "#A8865C",
-    "cobble": "#A9A397",
-    "paving": "#BDB6A8",
+    "earth": "#9A7448",
+    "cobble": "#8F8A80",
+    "paving": "#E4DCCB",
 }
 
 

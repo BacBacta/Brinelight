@@ -37,6 +37,8 @@ def main(args):
             continue
         module = __import__(name)
         stages.build(name, module.base, module.DETAILS, OUT, fast=fast, only=only, meta=getattr(module, "meta", None))
+        for extra, make in getattr(module, "EXTRAS", {}).items():
+            stages.build_one(extra, make, OUT, fast=fast)
 
 
 if __name__ == "__main__":
