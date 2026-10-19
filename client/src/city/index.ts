@@ -1,3 +1,4 @@
+import type * as THREE from "three";
 import { BUILDING_IDS, type BuildingId, type RaftBuildingId, type TechId, type TroopType } from "@brinelight/shared";
 import { lighthouseScale, type BuildingModels, type Kit, type Models, type RaftBuildingModels, type SceneHandle } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
@@ -9,7 +10,7 @@ import { createRaftSheet } from "./raftSheet.js";
 import { RAFT_FILL, createCityRafts, raftSlots, slotPosition } from "./rafts.js";
 import { createSheet } from "./sheet.js";
 import { blenderLook } from "../scene/cityLook.js";
-import { isStaged, lanternHeight, levelShape, loadStage, showLevel, stageName } from "./staged.js";
+import { groundName, hasGround, isStaged, lanternHeight, levelShape, loadStage, showLevel, stageName } from "./staged.js";
 
 export type City = {
   /** Shows the state: models, labels, queue and open sheet. */
@@ -72,9 +73,24 @@ export function createCity(
         : models[id].height + LABEL_GAP,
     { badges: blenderLook(), panels: () => panelRects() },
   );
+  // The island's ground follows the Lighthouse's era (with the look made in Blender).
+  let ground: { name: string; object: THREE.Object3D | null } = { name: "", object: null };
+  const showGround = (lighthouse: number) => {
+    if (!blenderLook() || !hasGround()) return;
+    const name = groundName(lighthouse);
+    if (name === ground.name) return;
+    ground = { name, object: ground.object };
+    void loadStage(name).then((model) => {
+      if (ground.name !== name) return;
+      ground.object?.removeFromParent();
+      ground.object = model;
+      scene.add(model);
+    });
+  };
   // The Lighthouse made in Blender: its stage's model, shown at its level.
   let lighthouseShown = -1;
   const showLighthouse = (level: number) => {
+    showGround(level);
     if (!staged("lighthouse") || level === lighthouseShown) return;
     lighthouseShown = level;
     void loadStage(stageName("lighthouse", level)).then((model) => {

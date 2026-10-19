@@ -1,4 +1,76 @@
 {
+ "ground-1": {
+  "kB": 76.1,
+  "triangles": 588,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1764,
+    "height": 0.324,
+    "reach": 5.078
+   }
+  ]
+ },
+ "ground-10": {
+  "kB": 198.4,
+  "triangles": 2480,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 7440,
+    "height": 0.16,
+    "reach": 5.068
+   }
+  ]
+ },
+ "ground-15": {
+  "kB": 98.1,
+  "triangles": 992,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2976,
+    "height": 0.09,
+    "reach": 5.08
+   }
+  ]
+ },
+ "ground-20": {
+  "kB": 189.0,
+  "triangles": 2432,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 7296,
+    "height": 0.5,
+    "reach": 5.08
+   }
+  ]
+ },
+ "ground-25": {
+  "kB": 163.4,
+  "triangles": 1788,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 5364,
+    "height": 0.54,
+    "reach": 5.1
+   }
+  ]
+ },
+ "ground-5": {
+  "kB": 190.9,
+  "triangles": 2436,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 7308,
+    "height": 0.16,
+    "reach": 5.068
+   }
+  ]
+ },
  "island": {
   "kB": 170.8,
   "triangles": 2656,
@@ -12,233 +84,233 @@
   ]
  },
  "lighthouse-1": {
-  "kB": 78.1,
-  "triangles": 1198,
+  "kB": 97.5,
+  "triangles": 1418,
   "levels": [
    {
     "level": 0,
-    "indices": 2910,
-    "height": 2.56,
+    "indices": 3570,
+    "height": 2.46,
     "reach": 0.81
    },
    {
     "level": 2,
-    "indices": 3174,
-    "height": 2.56,
+    "indices": 3834,
+    "height": 2.46,
     "reach": 0.81
    },
    {
     "level": 3,
-    "indices": 3366,
-    "height": 2.56,
+    "indices": 4026,
+    "height": 2.46,
     "reach": 0.81
    },
    {
     "level": 4,
-    "indices": 3594,
-    "height": 2.56,
+    "indices": 4254,
+    "height": 2.46,
     "reach": 0.81
    }
   ],
-  "lantern": 2.02
+  "lantern": 2.12
  },
  "lighthouse-10": {
-  "kB": 120.1,
-  "triangles": 2070,
+  "kB": 111.9,
+  "triangles": 1870,
   "levels": [
    {
     "level": 0,
-    "indices": 5694,
-    "height": 3.21,
+    "indices": 4890,
+    "height": 3.37,
     "reach": 0.877
    },
    {
     "level": 11,
-    "indices": 5814,
-    "height": 3.21,
+    "indices": 5010,
+    "height": 3.37,
     "reach": 0.877
    },
    {
     "level": 12,
-    "indices": 5946,
-    "height": 3.21,
+    "indices": 5142,
+    "height": 3.37,
     "reach": 0.877
    },
    {
     "level": 13,
-    "indices": 6150,
-    "height": 3.21,
+    "indices": 5346,
+    "height": 3.37,
     "reach": 0.877
    },
    {
     "level": 14,
-    "indices": 6210,
-    "height": 3.21,
+    "indices": 5610,
+    "height": 3.37,
     "reach": 0.877
    }
   ],
-  "lantern": 2.67
+  "lantern": 2.81
  },
  "lighthouse-15": {
-  "kB": 133.6,
-  "triangles": 2366,
+  "kB": 127.3,
+  "triangles": 2022,
   "levels": [
    {
     "level": 0,
-    "indices": 6774,
-    "height": 3.46,
+    "indices": 5604,
+    "height": 3.59,
     "reach": 0.877
    },
    {
     "level": 16,
-    "indices": 6906,
-    "height": 3.46,
+    "indices": 5664,
+    "height": 3.59,
     "reach": 0.877
    },
    {
     "level": 17,
-    "indices": 6966,
-    "height": 3.46,
+    "indices": 5796,
+    "height": 3.59,
     "reach": 0.877
    },
    {
     "level": 18,
-    "indices": 7044,
-    "height": 3.46,
+    "indices": 5988,
+    "height": 3.59,
     "reach": 0.877
    },
    {
     "level": 19,
-    "indices": 7098,
-    "height": 3.56,
+    "indices": 6066,
+    "height": 3.59,
     "reach": 0.877
    }
   ],
-  "lantern": 2.92
+  "lantern": 3.02
  },
  "lighthouse-20": {
-  "kB": 155.3,
-  "triangles": 2716,
+  "kB": 113.0,
+  "triangles": 1872,
   "levels": [
    {
     "level": 0,
-    "indices": 7254,
-    "height": 3.81,
+    "indices": 4656,
+    "height": 3.85,
     "reach": 0.877
    },
    {
     "level": 21,
-    "indices": 7518,
-    "height": 3.81,
+    "indices": 4980,
+    "height": 3.85,
     "reach": 0.877
    },
    {
     "level": 22,
-    "indices": 7782,
-    "height": 3.81,
+    "indices": 5172,
+    "height": 3.85,
     "reach": 0.877
    },
    {
     "level": 23,
-    "indices": 7956,
-    "height": 3.81,
+    "indices": 5448,
+    "height": 3.85,
     "reach": 0.877
    },
    {
     "level": 24,
-    "indices": 8148,
-    "height": 3.81,
+    "indices": 5616,
+    "height": 3.85,
     "reach": 0.877
    }
   ],
-  "lantern": 3.17
+  "lantern": 3.36
  },
  "lighthouse-25": {
-  "kB": 165.8,
-  "triangles": 2948,
+  "kB": 104.6,
+  "triangles": 1634,
   "levels": [
    {
     "level": 0,
-    "indices": 8148,
-    "height": 4.06,
+    "indices": 4122,
+    "height": 4.22,
     "reach": 0.877
    },
    {
     "level": 26,
-    "indices": 8412,
-    "height": 4.06,
+    "indices": 4434,
+    "height": 4.22,
     "reach": 0.877
    },
    {
     "level": 27,
-    "indices": 8496,
-    "height": 4.06,
+    "indices": 4638,
+    "height": 4.22,
     "reach": 0.877
    },
    {
     "level": 28,
-    "indices": 8760,
-    "height": 4.06,
+    "indices": 4806,
+    "height": 4.22,
     "reach": 0.877
    },
    {
     "level": 29,
-    "indices": 8844,
-    "height": 4.06,
+    "indices": 4902,
+    "height": 4.22,
     "reach": 0.877
    }
   ],
-  "lantern": 3.45
+  "lantern": 3.73
  },
  "lighthouse-30": {
-  "kB": 172.1,
-  "triangles": 3092,
+  "kB": 112.7,
+  "triangles": 1774,
   "levels": [
    {
     "level": 0,
-    "indices": 9276,
-    "height": 4.3,
+    "indices": 5322,
+    "height": 4.35,
     "reach": 0.877
    }
   ],
-  "lantern": 3.65
+  "lantern": 3.73
  },
  "lighthouse-5": {
-  "kB": 106.5,
-  "triangles": 1818,
+  "kB": 92.5,
+  "triangles": 1378,
   "levels": [
    {
     "level": 0,
-    "indices": 4506,
-    "height": 2.91,
-    "reach": 0.81
+    "indices": 3078,
+    "height": 2.95,
+    "reach": 0.697
    },
    {
     "level": 6,
-    "indices": 4830,
-    "height": 2.91,
-    "reach": 0.81
+    "indices": 3402,
+    "height": 2.95,
+    "reach": 0.697
    },
    {
     "level": 7,
-    "indices": 5022,
-    "height": 2.91,
-    "reach": 0.81
+    "indices": 3630,
+    "height": 2.95,
+    "reach": 0.697
    },
    {
     "level": 8,
-    "indices": 5154,
-    "height": 2.91,
-    "reach": 0.81
+    "indices": 3834,
+    "height": 2.95,
+    "reach": 0.697
    },
    {
     "level": 9,
-    "indices": 5454,
-    "height": 2.91,
-    "reach": 0.81
+    "indices": 4134,
+    "height": 2.95,
+    "reach": 0.77
    }
   ],
-  "lantern": 2.37
+  "lantern": 2.46
  },
  "refinery-1": {
   "kB": 85.6,

@@ -28,6 +28,15 @@ export function levelShape(id: BuildingId, level: number): { indices: number; he
   return steps.at(-1) ?? model.levels[0]!;
 }
 
+/**
+ * The island's ground in the Lighthouse's era (assets/blender/ground.py): what lies between the plots and along the
+ * coast, from earth paths to concrete quays. The Modern era's at 30 too.
+ */
+export const groundName = (lighthouse: number): string => `ground-${Math.min(25, stageOf(lighthouse))}`;
+
+/** The island's ground is made for each era: shown with the look made in Blender. */
+export const hasGround = (): boolean => STAGES.every((s) => s === 30 || CITY_MANIFEST[`ground-${s}`]);
+
 /** The tallest a building stands at any level: its height before its model is there. */
 export const tallestHeight = (id: BuildingId): number => Math.max(...STAGES.flatMap((s) => CITY_MANIFEST[`${id}-${s}`]!.levels.map((l) => l.height)));
 
@@ -35,11 +44,13 @@ export const tallestHeight = (id: BuildingId): number => Math.max(...STAGES.flat
 export const SITE_PARTS = ["site-frame", "site-mast", "site-arm", "site-crate"] as const;
 
 /**
- * The models a city shows at once: the current stage of each building remade, and the building sites' parts when a
- * site shows (a building at work, or not built yet). Nothing of the eras to come.
+ * The models a city shows at once: the current stage of each building remade, the island's ground in the Lighthouse's
+ * era, and the building sites' parts when a site shows (a building at work, or not built yet). Nothing of the eras to
+ * come.
  */
 export function shownModels(state: { buildings: Record<BuildingId, number>; queue: readonly { id: string }[] }): string[] {
   const out = BUILDING_IDS.filter((id) => isStaged(id) && state.buildings[id] > 0).map((id) => stageName(id, state.buildings[id]));
+  if (hasGround()) out.push(groundName(state.buildings.lighthouse));
   const sites = state.queue.some((j) => (BUILDING_IDS as readonly string[]).includes(j.id)) || BUILDING_IDS.some((id) => state.buildings[id] === 0);
   return sites ? [...out, ...SITE_PARTS] : out;
 }

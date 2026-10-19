@@ -333,12 +333,13 @@ Measured with the city at 412 × 915 (container, quality 2, the e2e's counter), 
 | Model | Triangles | File |
 | --- | --- | --- |
 | The island (made to the grid) | 2,656 | 171 kB (the old one: 2,517 and 222 kB) |
-| The Lighthouse, seven stages | 1,198 to 3,092 | 78 to 172 kB |
+| The Lighthouse, six eras (seven models) | 1,378 to 2,022 | 93 to 127 kB |
+| The island's ground, one an era (six models) | 588 to 2,480 | 76 to 198 kB |
 | The Refinery, six eras (seven models) | 896 to 1,556 | 69 to 109 kB |
 | The building site, four pieces | 1,076 in all | 93 kB in all |
 
 - **What is downloaded:** only the stage each building shows, and the next one while an upgrade toward it runs.
-- **At level 30:** 171 + 172 + 109 kB for the island, the Lighthouse and the Refinery, about 0.45 MB.
+- **At level 30:** 171 + 163 + 113 + 109 kB for the island, its ground, the Lighthouse and the Refinery, about 0.55 MB. The ground adds one draw call.
 
 ### What a phone downloads, and how soon the city shows (owner, 19 October)
 

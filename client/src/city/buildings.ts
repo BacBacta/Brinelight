@@ -10,7 +10,7 @@ import { createSites, type SiteBox } from "./site.js";
 import { createModelSites } from "./modelSite.js";
 import { TIER_SCALE, createTierDetails, tierOf } from "./tiers.js";
 import { blenderLook } from "../scene/cityLook.js";
-import { isStaged, levelShape, loadStage, showLevel, stageName } from "./staged.js";
+import { groundName, hasGround, isStaged, levelShape, loadStage, showLevel, stageName } from "./staged.js";
 
 type Plot = { group: THREE.Group; hit: THREE.Mesh; key: string };
 
@@ -129,6 +129,8 @@ export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: T
         if (id === "lighthouse") {
           // The Lighthouse's next model is fetched while its upgrade runs (it has no building site).
           if (job && staged(id)) void loadStage(stageName(id, level + 1));
+          // And the island's ground of its next era.
+          if (job && blenderLook() && hasGround()) void loadStage(groundName(level + 1));
           continue;
         }
         const working = !!job;

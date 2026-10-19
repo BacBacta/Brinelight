@@ -11,7 +11,7 @@ import { PLOT_ROOM, hexReach } from "../src/scene/buildings.js";
 import { hexX, hexZ } from "../src/scene/island.js";
 import { RAFT_FILL } from "../src/scene/coast.js";
 import { PIER_SLOTS } from "../src/scene/framing.js";
-import { SITE_PARTS, STAGES, isStaged, levelShape, shownModels, stageName, stageOf } from "../src/city/staged.js";
+import { SITE_PARTS, STAGES, groundName, hasGround, isStaged, levelShape, shownModels, stageName, stageOf } from "../src/city/staged.js";
 import { readGlb } from "./glb.js";
 
 const file = (name: string) => new URL(`../public/city/${name}.glb`, import.meta.url).pathname;
@@ -89,11 +89,11 @@ describe("the buildings remade in Blender", () => {
   it("a city fetches only the models of its buildings' current era: for a new player, then at the Lighthouse 30", () => {
     const levels = (l: number) => Object.fromEntries(BUILDING_IDS.map((id) => [id, l])) as Record<BuildingId, number>;
     const fresh = { ...levels(0), lighthouse: 1 };
-    expect(shownModels({ buildings: fresh, queue: [] })).toEqual([...STAGED.filter((id) => id === "lighthouse").map((id) => `${id}-1`), ...SITE_PARTS]);
-    expect(shownModels({ buildings: levels(30), queue: [] })).toEqual(STAGED.map((id) => `${id}-30`));
-    expect(shownModels({ buildings: levels(17), queue: [] })).toEqual(STAGED.map((id) => `${id}-15`));
+    expect(shownModels({ buildings: fresh, queue: [] })).toEqual([...STAGED.filter((id) => id === "lighthouse").map((id) => `${id}-1`), "ground-1", ...SITE_PARTS]);
+    expect(shownModels({ buildings: levels(30), queue: [] })).toEqual([...STAGED.map((id) => `${id}-30`), "ground-25"]);
+    expect(shownModels({ buildings: levels(17), queue: [] })).toEqual([...STAGED.map((id) => `${id}-15`), "ground-15"]);
     // An upgrade at work: its building site, never the next era (fetched in the background once the city shows).
-    expect(shownModels({ buildings: levels(19), queue: [{ id: "refinery" }] })).toEqual([...STAGED.map((id) => `${id}-15`), ...SITE_PARTS]);
+    expect(shownModels({ buildings: levels(19), queue: [{ id: "refinery" }] })).toEqual([...STAGED.map((id) => `${id}-15`), "ground-15", ...SITE_PARTS]);
   });
 
   it("the Lighthouse's lantern is inside its lantern room, for the beams and the light", () => {
@@ -132,4 +132,34 @@ describe("the island made to the grid", () => {
         if (inside) expect(meadow.some((p) => Math.hypot(p.x - x, p.z - z) < 1.3)).toBe(true);
       }
   });
+});
+
+describe("the island's ground through the Lighthouse's eras", () => {
+  const ERAS = [1, 5, 10, 15, 20, 25];
+  const plots: { x: number; z: number }[] = [];
+  for (let q = -2; q <= 2; q++) for (let r = -2; r <= 2; r++) if (Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)) <= 2) plots.push({ x: hexX(q, r), z: hexZ(r) });
+  const rooms = [...RAFT_SLOTS.filter((s) => s.ring === 3).map((s) => ({ x: hexX(s.q, s.r), z: hexZ(s.r) })), ...PIER_SLOTS.map(([q, r]) => ({ x: hexX(q, r), z: hexZ(r) }))];
+
+  it("one ground an era, the one of the Lighthouse's level (the Modern era's at 30)", () => {
+    expect(hasGround()).toBe(true);
+    expect([1, 4, 5, 9, 10, 15, 20, 24, 25, 29, 30].map(groundName)).toEqual(["ground-1", "ground-1", "ground-5", "ground-5", "ground-10", "ground-15", "ground-20", "ground-20", "ground-25", "ground-25", "ground-25"]);
+  });
+
+  for (const era of ERAS) {
+    const points = drawn(`ground-${era}`, Infinity);
+    it(`ground-${era}: on the island, not on the rafts' rooms, nothing standing where a building stands, low`, () => {
+      for (const p of points) {
+        // Within the meadow's margin past the plots (0.1), with the quays' curb (0.12).
+        expect(Math.min(...plots.map((c) => hexReach(p.x - c.x, p.z - c.z)))).toBeLessThanOrEqual(1.12);
+        if (p.y > -0.42) for (const c of rooms) expect(hexReach(p.x - c.x, p.z - c.z)).toBeGreaterThan(RAFT_FILL);
+        // Above the paths, nothing inside a building's room on its plot.
+        if (p.y > 0.03) for (const c of plots) expect(hexReach(p.x - c.x, p.z - c.z), `${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)}`).toBeGreaterThanOrEqual(PLOT_ROOM);
+        expect(p.y).toBeLessThan(0.6);
+      }
+    });
+    it(`ground-${era}: within its budget (4,000 triangles, 200 kB)`, () => {
+      expect(CITY_MANIFEST[`ground-${era}`]!.triangles).toBeLessThanOrEqual(4000);
+      expect(CITY_MANIFEST[`ground-${era}`]!.kB).toBeLessThanOrEqual(200);
+    });
+  }
 });
