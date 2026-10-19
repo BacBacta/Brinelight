@@ -228,8 +228,19 @@ if (new URLSearchParams(location.search).has("rules")) {
   }
 
   let fps: ReturnType<typeof createFpsCounter> | null = null;
+  /** The city's normal view fits below the panels at the top and above the tab bar (scene/framing.ts). */
+  function cityBand() {
+    let top = 0;
+    for (const el of document.querySelectorAll(".hud > *, .sub > *")) {
+      const r = el.getBoundingClientRect();
+      if (r.height > 0) top = Math.max(top, r.bottom);
+    }
+    const nav = document.querySelector(".nav")?.getBoundingClientRect();
+    return { top: top + 4, bottom: (nav && nav.height > 0 ? nav.top : innerHeight) - 4 };
+  }
   const scene = startScene(canvas, {
     home: HOME,
+    band: cityBand,
     quality: forcedQuality(location.search),
     onRaftBuildings: (models) => city?.useRaftBuildings(models),
     onLoaded: (kit, buildings, models) => {

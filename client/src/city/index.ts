@@ -1,11 +1,12 @@
 import type { BuildingId, RaftBuildingId, TechId, TroopType } from "@brinelight/shared";
 import { lighthouseScale, type BuildingModels, type Kit, type Models, type RaftBuildingModels, type SceneHandle } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
+import { coastAt } from "../scene/coast.js";
 import { createCityBuildings } from "./buildings.js";
 import { createLabels } from "./labels.js";
 import { createQueue } from "./queue.js";
 import { createRaftSheet } from "./raftSheet.js";
-import { RAFT_WIDTH, createCityRafts, raftSlots, slotPosition } from "./rafts.js";
+import { RAFT_FILL, createCityRafts, raftSlots, slotPosition } from "./rafts.js";
 import { createSheet } from "./sheet.js";
 
 export type City = {
@@ -46,7 +47,7 @@ export function createCity(
   },
 ): City {
   const buildings = createCityBuildings(kit, models, (o) => scene.add(o));
-  const rafts = createCityRafts(kit, others.raft, (o) => scene.add(o));
+  const rafts = createCityRafts(kit, others.raft, (o) => scene.add(o), coastAt);
   // Labels float just above each model at its full size (a smaller tier leaves them where they were, so they keep their
   // places among the others); the Lighthouse's grows with its level.
   const labels = createLabels(root, scene, (id, levels) =>
@@ -116,7 +117,8 @@ export function createCity(
       buildings.refresh(state);
       rafts.refresh(state);
       // The foam goes around the rafts afloat and the shipyard at work.
-      scene.setMoored(raftSlots(state).filter((s) => s.view !== "free").map((s) => ({ ...slotPosition(s.key), r: RAFT_WIDTH / 2 })));
+      // The foam hugs the raft (inside its room), so the water between two rafts shows.
+      scene.setMoored(raftSlots(state).filter((s) => s.view !== "free").map((s) => ({ ...slotPosition(s.key), r: RAFT_FILL * 0.8 })));
       raftSheet.update(state, game.speed());
       labels.update(state, game.speed());
       queue.update(state, game.speed());

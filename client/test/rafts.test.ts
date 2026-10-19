@@ -2,7 +2,9 @@ import * as THREE from "three";
 import { RAFT_BUILD_TIME, RAFT_MAX, RAFT_MAX_HP, RAFT_SLOTS, applyAction, newPlayerState, raftCap, type PlayerState } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
 import { RAFT_TEXT, raftSheetHtml } from "../src/city/raftSheet.js";
-import { RAFT_WIDTH, createCityRafts, raftGeometry, raftSlots } from "../src/city/rafts.js";
+import { RAFT_FILL, RAFT_WIDTH, WALKWAY_GRIP, createCityRafts, raftGeometry, raftSlots, raftVariant, raftWalkways } from "../src/city/rafts.js";
+import { hexX, hexZ } from "../src/scene/island.js";
+import { hexReach } from "../src/scene/buildings.js";
 import { SAVE_KEY, openSave, saveGame, type KeyValueStore } from "../src/state/save.js";
 
 const memoryStore = (): KeyValueStore & { data: Map<string, string> } => {
@@ -51,11 +53,13 @@ describe("raft slots around the island", () => {
     rafts.refresh(full);
     rafts.animate(1.5);
     const meshes = rafts.meshes as THREE.InstancedMesh[];
-    expect(meshes).toHaveLength(4);
+    // The rafts (one mesh per model), the free slots' glow and rim, the tap shapes, and the walkways.
+    expect(meshes).toHaveLength(5);
     expect(meshes.every((m) => m instanceof THREE.InstancedMesh)).toBe(true);
     expect(meshes[0]!.count).toBe(RAFT_MAX);
+    expect(meshes[4]!.count).toBe(raftWalkways(RAFT_SLOTS.slice(0, RAFT_MAX).map((s) => s.key), () => 0).length);
     // One scaffolding model aside; nothing else is added, whatever the number of rafts.
-    expect(added).toHaveLength(5);
+    expect(added).toHaveLength(6);
     rafts.refresh(lit(4));
     expect(meshes[0]!.count).toBe(0);
     expect(meshes[1]!.count).toBe(raftSlots(lit(4)).length);
@@ -63,13 +67,19 @@ describe("raft slots around the island", () => {
 });
 
 describe("the raft model", () => {
-  it("one geometry with the model's texture, centered on its slot, standing on its bottom, RAFT_WIDTH wide", () => {
-    const { geometry, material } = raftGeometry(raftModel());
+  it("one geometry with the model's texture, centered on its slot, standing on its bottom, as large as its room", () => {
+    const { geometry, material, deck } = raftGeometry(raftModel());
     geometry.computeBoundingBox();
     const box = geometry.boundingBox!;
     expect(box.min.y).toBeCloseTo(0, 6);
     expect((box.min.x + box.max.x) / 2).toBeCloseTo(0, 6);
-    expect(Math.max(box.max.x - box.min.x, box.max.z - box.min.z)).toBeCloseTo(RAFT_WIDTH, 6);
+    // Its farthest point touches its room's hexagon (RAFT_FILL), never past it.
+    const pos = geometry.getAttribute("position");
+    let reach = 0;
+    for (let i = 0; i < pos.count; i++) reach = Math.max(reach, hexReach(pos.getX(i), pos.getZ(i)));
+    expect(reach).toBeCloseTo(RAFT_FILL, 5);
+    expect(Math.max(box.max.x - box.min.x, box.max.z - box.min.z)).toBeLessThanOrEqual(RAFT_WIDTH);
+    expect(deck).toBeGreaterThan(0);
     expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
   });
 
@@ -125,5 +135,42 @@ describe("rafts without an account", () => {
     const opened = openSave(store, 0);
     expect(opened.rejected).toBe(false);
     expect(opened.state).toEqual(newPlayerState());
+  });
+});
+
+describe("the floating village", () => {
+  const all = RAFT_SLOTS.map((s) => s.key);
+  const at = (key: string) => {
+    const s = RAFT_SLOTS.find((x) => x.key === key)!;
+    return { x: hexX(s.q, s.r), z: hexZ(s.r), ring: s.ring };
+  };
+
+  it("two rafts side by side never show the same model: the variant is (q − r) mod 3", () => {
+    for (const a of RAFT_SLOTS)
+      for (const b of RAFT_SLOTS) {
+        if (Math.hypot(hexX(a.q, a.r) - hexX(b.q, b.r), hexZ(a.r) - hexZ(b.r)) > 2.01 || a.key === b.key) continue;
+        expect(raftVariant(a.key), `${a.key} ${b.key}`).not.toBe(raftVariant(b.key));
+      }
+    // With one model, every raft shows it.
+    expect(new Set(all.map((k) => raftVariant(k, 1)))).toEqual(new Set([0]));
+  });
+
+  it("one walkway per raft toward the island: ring 3 to the shore, ring 4 to a raft of ring 3 beside it", () => {
+    const coast = () => 4.6;
+    const ways = raftWalkways(all, coast);
+    expect(ways).toHaveLength(all.length);
+    // A raft of ring 4 alone, with no raft of ring 3 beside it, has none.
+    const outer = all.find((k) => at(k).ring === 4)!;
+    expect(raftWalkways([outer], coast)).toEqual([]);
+    for (const w of ways) {
+      expect(w.length, JSON.stringify(w)).toBeGreaterThan(0);
+      // It lies on the water between rooms: its middle is in no raft's room.
+      for (const k of all) {
+        const r = at(k);
+        expect(hexReach(w.x - r.x, w.z - r.z), `${JSON.stringify(w)} ${k}`).toBeGreaterThan(RAFT_FILL - WALKWAY_GRIP);
+      }
+    }
+    // The same rafts always get the same walkways.
+    expect(raftWalkways(all, coast)).toEqual(ways);
   });
 });

@@ -3,6 +3,8 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { loadBuildings, tierOf, type BuildingModels } from "./buildings.js";
 import { ISLAND_ANISOTROPY, filterTexture, fitIsland, loadModels, loadRaftBuildings, type Models, type RaftBuildingModels } from "./models.js";
 import { createCamera, createControls, frameCity } from "./camera.js";
+import { shapeCoast } from "./coast.js";
+import { cityFraming } from "./framing.js";
 import { createIsland, type Kit } from "./island.js";
 import { createLighthouse, lighthouseScale } from "./lighthouse.js";
 import { applyQualityStep, createQualityMonitor, type QualityStep } from "./quality.js";
@@ -34,7 +36,7 @@ export type RenderStats = { step: QualityStep; forced: boolean; mood: SeaMood; c
 export type ScreenPoint = { x: number; y: number; depth: number; visible: boolean };
 
 export type SceneHandle = {
-  /** Moves the camera back and resizes the Lighthouse for this level. */
+  /** Resizes the Lighthouse for this level, and puts the camera back on the normal view. */
   setLighthouseLevel(level: number): void;
   /** Shows the city or the sea; only the shown view moves with your fingers. */
   setView(view: View): void;
@@ -54,7 +56,7 @@ export type SceneHandle = {
   setMood(mood: SeaMood, now?: boolean): void;
   /** How much the Lighthouses' beams show, 0 to 1 (the sea map's Lighthouses follow it). */
   readonly beams: number;
-  /** The rafts moored around the island (and the shipyard at work): the foam goes around them. */
+  /** The rafts moored around the island (and the shipyard at work): the foam goes around them, and the normal view keeps them on screen. */
   setMoored(discs: readonly Disc[]): void;
   /** Quality step and the last frame's draw calls and triangles (renderer.info). */
   stats(): RenderStats;
@@ -72,6 +74,8 @@ export type SceneOptions = {
   /** The buildings on rafts, loaded after the city shows. */
   onRaftBuildings?: (models: RaftBuildingModels) => void;
   onError?: (err: unknown) => void;
+  /** The band of the screen the city's normal view must fit in, in CSS pixels: below the top panels, above the bottom ones. */
+  band?: () => { top: number; bottom: number };
 };
 
 const KIT_URL = `${import.meta.env.BASE_URL}prototype/assets/phare.glb`;
@@ -104,9 +108,17 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   const home = options.home ?? { x: 0, z: 0 };
   let view: View = "city";
 
+  /** The camera's distance the city's fog was set for (the prototype's farthest view), and how far it is pushed back now. */
+  const FOG_SET_AT = 39.6;
+  let fogScale = 1;
   const layout = () => {
     renderer.setSize(innerWidth, innerHeight, false);
-    frameCity(camera, controls, innerWidth / innerHeight, level);
+    const band = options.band?.() ?? { top: 0, bottom: innerHeight };
+    const framing = cityFraming({ width: innerWidth, height: innerHeight, ...band }, moored);
+    frameCity(camera, controls, innerWidth / innerHeight, framing);
+    // The fog keeps its look at any distance: it was set for the prototype's farthest view.
+    fogScale = Math.max(1, framing.distance / FOG_SET_AT);
+    showMood(moodAt);
     sea.layout(innerWidth / innerHeight, home);
   };
   const shown = () => (view === "city" ? { scene, camera, controls } : sea);
@@ -118,7 +130,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   let beams = 0;
   const showMood = (t: number) => {
     const city = mixLook(CITY_CALM, CITY_MIST, t);
-    applyLook(look, city);
+    applyLook(look, { ...city, fog: { ...city.fog, near: city.fog.near * fogScale, far: city.fog.far * fogScale } });
     const atSea = mixLook(SEA_CALM, SEA_MIST, t);
     applyLook(sea.look, atSea);
     water.setLead(city.lead, city.sky[2]);
@@ -142,6 +154,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       gltf.scenes.forEach((sc) => (kit[sc.name] = sc));
       filterTexture(models.island, Math.min(ISLAND_ANISOTROPY, renderer.capabilities.getMaxAnisotropy()));
       const island = fitIsland(models.island);
+      shapeCoast(island);
       scene.add(createIsland(island));
       shore = createShore(island);
       water.setShore(shore.distances(moored));
@@ -229,8 +242,10 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       return beams;
     },
     setMoored(discs) {
+      const changed = discs.length !== moored.length || discs.some((d, i) => d.x !== moored[i]!.x || d.z !== moored[i]!.z);
       moored = discs;
       if (shore) water.setShore(shore.distances(discs));
+      if (changed) layout();
     },
     stats() {
       return { step, forced: forced !== null, mood, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles };

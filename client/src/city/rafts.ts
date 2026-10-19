@@ -6,8 +6,10 @@
  * per type, with room for the RAFT_BUILDING_MAX_COPIES rafts a type may have. No 3D label: the sheet and the queue say it.
  */
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { RAFT_BUILDING_MAX_COPIES, RAFT_DAMAGED_BELOW, RAFT_SLOTS, raftCap, slotOpen, yardSlot, type RaftBuildingId } from "@brinelight/shared";
 import { RAFT_BUILDING_IDS, bakeModel, hexX, hexZ, kitModel, type Kit, type RaftBuildingModels } from "../scene/index.js";
+import { RAFT_FILL } from "../scene/coast.js";
 import type { PlayerState } from "../state/index.js";
 
 export type RaftSlotView = "raft" | "damaged" | "building" | "free";
@@ -43,11 +45,66 @@ export function raftBuildingsShown(state: PlayerState): Record<RaftBuildingId, s
   return out;
 }
 
-/** A building's turn on its raft, from its slot as in the prototype ((q × 1.3 + r) mod 6): never randomness. */
-export const raftBuildingTurn = (key: string): number => {
+/** A building's turn on its raft: every one faces the camera, as the island's do (week 8: no raft turned at random). */
+export const raftBuildingTurn = (_key: string): number => 0;
+
+/**
+ * Which of the raft models a slot shows: (q − r) mod 3, a fixed rule that gives two rafts side by side two different
+ * models (every neighbor of a slot is 1 or 2 away from it, mod 3). With fewer models, the rule wraps around them.
+ */
+export const raftVariant = (key: string, models = 3): number => {
   const s = RAFT_SLOTS.find((x) => x.key === key)!;
-  return (s.q * 1.3 + s.r) % 6;
+  return ((((s.q - s.r) % 3) + 3) % 3) % models;
 };
+
+/** The six slots around a slot, in axial coordinates. */
+const NEIGHBORS = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+  [1, -1],
+  [-1, 1],
+] as const;
+
+/** A walkway: its middle on the water, its direction (turn around the vertical, its length along +z turned), its length. */
+export type Walkway = { x: number; z: number; turn: number; length: number };
+
+/** How far a walkway reaches onto a raft's deck, or onto the island's shore. */
+export const WALKWAY_GRIP = 0.12;
+
+/**
+ * The walkways of the floating village, one per raft, toward the island: a raft of ring 3 to the island's shore
+ * (`coastAt`), a raft of ring 4 to a raft of ring 3 beside it (the first of its neighbors in NEIGHBORS order, a fixed
+ * rule), or none while no raft of ring 3 is moored beside it. Pure: the same rafts always get the same walkways.
+ */
+export function raftWalkways(moored: readonly string[], coastAt: (angle: number) => number): Walkway[] {
+  const here = new Set(moored);
+  const out: Walkway[] = [];
+  for (const key of moored) {
+    const s = RAFT_SLOTS.find((x) => x.key === key)!;
+    const x = hexX(s.q, s.r);
+    const z = hexZ(s.r);
+    if (s.ring === 3) {
+      const d = Math.hypot(x, z);
+      // From the raft's side facing the island to the shore, along the line to the island's center.
+      const from = d - RAFT_FILL + WALKWAY_GRIP;
+      const to = coastAt(Math.atan2(z, x)) - WALKWAY_GRIP;
+      if (from > to) {
+        const mid = (from + to) / 2;
+        out.push({ x: (x / d) * mid, z: (z / d) * mid, turn: Math.atan2(-x, -z), length: from - to });
+      }
+      continue;
+    }
+    const inner = NEIGHBORS.map(([dq, dr]) => RAFT_SLOTS.find((o) => o.q === s.q + dq && o.r === s.r + dr)).find((o) => o && o.ring === 3 && here.has(o.key));
+    if (!inner) continue;
+    const ox = hexX(inner.q, inner.r);
+    const oz = hexZ(inner.r);
+    const gap = Math.hypot(ox - x, oz - z) - 2 * RAFT_FILL;
+    out.push({ x: (x + ox) / 2, z: (z + oz) / 2, turn: Math.atan2(ox - x, oz - z), length: gap + 2 * WALKWAY_GRIP });
+  }
+  return out;
+}
 
 export type CityRafts = {
   /** The shapes a tap is tested against: the slots, and the buildings on rafts once they are loaded. */
@@ -64,13 +121,16 @@ export type CityRafts = {
 };
 
 const MAX = RAFT_SLOTS.length;
-/** A raft's widest side, close to its slot (a tile is 2 wide), and where its bottom sits: the barrels in the water. */
-export const RAFT_WIDTH = 1.75;
+/**
+ * The room of a raft: the hexagon of its slot (whose sides are 1 from its center), shrunk to RAFT_FILL. Two rafts side by
+ * side then have 2 × (1 − RAFT_FILL) of water between them, and a raft of ring 3 a little less to the island's shore.
+ */
+export { RAFT_FILL };
+/** The widest a raft can be: its room's hexagon, corner to corner. */
+export const RAFT_WIDTH = (2 * RAFT_FILL) / Math.cos(Math.PI / 6);
 const RAFT_BOTTOM = -0.62;
-/** Height of the raft's deck above its bottom, where its building stands (measured on the raft model). */
-export const RAFT_DECK = 0.7;
 /** The room a building takes on its raft: its widest side, and its height (the Watchtower is the tallest). */
-export const RAFT_BUILDING_FIT = { width: 1.25, height: 1.5 };
+export const RAFT_BUILDING_FIT = { width: 1.1, height: 1.5 };
 
 /** A building's model as one geometry, centered, its bottom at y = 0, fitted to RAFT_BUILDING_FIT. */
 export function raftBuildingGeometry(model: THREE.Object3D): { geometry: THREE.BufferGeometry; material: THREE.Material } {
@@ -87,30 +147,67 @@ export function raftBuildingGeometry(model: THREE.Object3D): { geometry: THREE.B
   return { geometry, material };
 }
 
-/** The raft model as one geometry, centered on its slot, its bottom at y = 0 and RAFT_WIDTH wide. */
-export function raftGeometry(model: THREE.Object3D): { geometry: THREE.BufferGeometry; material: THREE.Material } {
+/** Hex distance with the slots' orientation: a slot's sides are 1 from its center. */
+const hexReach = (x: number, z: number) => Math.max(Math.abs(x), Math.abs(x / 2 + z * 0.866), Math.abs(-x / 2 + z * 0.866));
+
+/**
+ * The raft model as one geometry, centered on its slot, its bottom at y = 0, as large as its room allows (RAFT_FILL),
+ * and the height of its deck, where its building stands.
+ */
+export function raftGeometry(model: THREE.Object3D): { geometry: THREE.BufferGeometry; material: THREE.Material; deck: number } {
   const { geometry, material } = bakeModel(model);
   geometry.computeBoundingBox();
   const box = geometry.boundingBox!;
-  const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
   geometry.translate(-center.x, -box.min.y, -center.z);
-  const s = RAFT_WIDTH / Math.max(size.x, size.z);
+  const pos = geometry.getAttribute("position");
+  let reach = 0;
+  for (let i = 0; i < pos.count; i++) reach = Math.max(reach, hexReach(pos.getX(i), pos.getZ(i)));
+  const s = RAFT_FILL / reach;
   geometry.scale(s, s, s);
+  geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
-  return { geometry, material };
+  // The deck is the top of the raft's middle, where its building stands (the middle stays free on every raft model).
+  const ray = new THREE.Raycaster(new THREE.Vector3(0, 100, 0), new THREE.Vector3(0, -1, 0));
+  const deck = ray.intersectObject(new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })))[0]?.point.y ?? geometry.boundingBox!.max.y / 2;
+  return { geometry, material, deck };
 }
 
-export function createCityRafts(kit: Kit, model: THREE.Object3D, add: (o: THREE.Object3D) => void): CityRafts {
-  const raftParts = raftGeometry(model);
-  const deck = new THREE.InstancedMesh(raftParts.geometry, raftParts.material, MAX);
-  deck.castShadow = true;
-  deck.receiveShadow = true;
-  const ghostGeo = new THREE.CircleGeometry(1.05, 6);
+/** A walkway of length 1 along +z, its middle at the origin: a deck of planks between two rails, in driftwood. */
+export function walkwayGeometry(): THREE.BufferGeometry {
+  const part = (w: number, h: number, d: number, x: number, y: number, color: string) => {
+    const g = new THREE.BoxGeometry(w, h, d).translate(x, y, 0).toNonIndexed();
+    g.deleteAttribute("uv");
+    const c = new THREE.Color(color);
+    g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(Array.from({ length: g.getAttribute("position").count }, () => [c.r, c.g, c.b]).flat()), 3));
+    return g;
+  };
+  return mergeGeometries([part(0.3, 0.05, 1, 0, 0, "#C9A77A"), part(0.035, 0.12, 1, -0.15, 0.08, "#8C6B4A"), part(0.035, 0.12, 1, 0.15, 0.08, "#8C6B4A")]);
+}
+
+/**
+ * The rafts of the city. `models` are the raft's models, one per variant (raftVariant picks one per slot); until the
+ * painted variants are made, there is one.
+ */
+export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THREE.Object3D[], add: (o: THREE.Object3D) => void, coastAt: (angle: number) => number = () => 0): CityRafts {
+  const variants = (Array.isArray(models) ? models : [models]).map(raftGeometry);
+  // One InstancedMesh per variant: draw calls grow with the models, never with the rafts.
+  const decks = variants.map((v) => {
+    const mesh = new THREE.InstancedMesh(v.geometry, v.material, MAX);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return mesh;
+  });
+  const deckHeight = Math.max(...variants.map((v) => v.deck));
+  const walk = new THREE.InstancedMesh(walkwayGeometry(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true }), MAX * 3);
+  walk.castShadow = true;
+  walk.receiveShadow = true;
+  const room = RAFT_FILL / Math.cos(Math.PI / 6);
+  const ghostGeo = new THREE.CircleGeometry(room, 6);
   ghostGeo.rotateX(-Math.PI / 2);
   ghostGeo.rotateY(Math.PI / 6);
   const ghost = new THREE.InstancedMesh(ghostGeo, new THREE.MeshBasicMaterial({ color: "#FFE27A", transparent: true, opacity: 0.16, depthWrite: false }), MAX);
-  const ringGeo = new THREE.RingGeometry(0.92, 1.04, 6, 1);
+  const ringGeo = new THREE.RingGeometry(room - 0.11, room, 6, 1);
   ringGeo.rotateX(-Math.PI / 2);
   ringGeo.rotateY(Math.PI / 6);
   const ringM = new THREE.MeshBasicMaterial({ color: "#FFE27A", transparent: true, opacity: 0.75, depthWrite: false });
@@ -119,7 +216,7 @@ export function createCityRafts(kit: Kit, model: THREE.Object3D, add: (o: THREE.
   const scaffold = kitModel(kit, "building_scaffolding");
   scaffold.scale.setScalar(0.8);
   scaffold.visible = false;
-  const meshes = [deck, ghost, ring, hit];
+  const meshes = [...decks, ghost, ring, hit, walk];
   for (const m of meshes) {
     m.count = 0;
     m.frustumCulled = false;
@@ -134,8 +231,9 @@ export function createCityRafts(kit: Kit, model: THREE.Object3D, add: (o: THREE.
   const q = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
   const one = new THREE.Vector3(1, 1, 1);
+  const sc = new THREE.Vector3();
   const p = new THREE.Vector3();
-  let afloat: { key: string; x: number; z: number; tilt: number; bob: number }[] = [];
+  let afloat: { key: string; x: number; z: number; variant: number; index: number; bob: number }[] = [];
   let hitSlots: string[] = [];
   let key = "";
   // The buildings on rafts: one InstancedMesh per type once loaded, and the slots each one stands on.
@@ -148,20 +246,19 @@ export function createCityRafts(kit: Kit, model: THREE.Object3D, add: (o: THREE.
   /** Places the rafts, and the buildings on them, at their height on the water at `now` (a gentle bob, as in the prototype). */
   const placeRafts = (now: number) => {
     const height = new Map<string, number>();
-    afloat.forEach((r, i) => {
+    for (const r of afloat) {
       const y = Math.sin(now * 1.3 + r.bob) * 0.04;
       height.set(r.key, y);
-      q.setFromAxisAngle(up, r.tilt);
-      deck.setMatrixAt(i, m4.compose(p.set(r.x, RAFT_BOTTOM + y, r.z), q, one));
-    });
-    deck.instanceMatrix.needsUpdate = true;
+      decks[r.variant]!.setMatrixAt(r.index, m4.compose(p.set(r.x, RAFT_BOTTOM + y, r.z), q.identity(), one));
+    }
+    for (const d of decks) d.instanceMatrix.needsUpdate = true;
     for (const id of RAFT_BUILDING_IDS) {
       const mesh = onRafts[id];
       if (!mesh) continue;
       standing[id].forEach((slot, i) => {
         const { x, z } = slotPosition(slot);
         q2.setFromAxisAngle(up, raftBuildingTurn(slot));
-        mesh.setMatrixAt(i, m4.compose(p.set(x, RAFT_BOTTOM + RAFT_DECK + (height.get(slot) ?? 0), z), q2, one));
+        mesh.setMatrixAt(i, m4.compose(p.set(x, RAFT_BOTTOM + deckHeight + (height.get(slot) ?? 0), z), q2, one));
       });
       mesh.instanceMatrix.needsUpdate = true;
     }
@@ -222,8 +319,9 @@ export function createCityRafts(kit: Kit, model: THREE.Object3D, add: (o: THREE.
       hitSlots = [];
       let free = 0;
       scaffold.visible = false;
+      const counts = decks.map(() => 0);
       for (const s of slots) {
-        const { x, z, q: col } = slotPosition(s.key);
+        const { x, z } = slotPosition(s.key);
         // Hash of the slot, never randomness: the same raft looks the same on every device.
         const bob = (Math.abs(x * 7.3 + z * 3.1) % 6.28) as number;
         if (s.view === "free") {
@@ -231,8 +329,10 @@ export function createCityRafts(kit: Kit, model: THREE.Object3D, add: (o: THREE.
           ring.setMatrixAt(free, m4.makeTranslation(x, -0.19, z));
           free++;
         } else {
-          afloat.push({ key: s.key, x, z, tilt: (Math.PI / 6) * (col % 2 ? 1 : -1), bob });
-          deck.setColorAt(afloat.length - 1, s.view === "damaged" ? damaged : sound);
+          const variant = raftVariant(s.key, decks.length);
+          const index = counts[variant]!++;
+          afloat.push({ key: s.key, x, z, variant, index, bob });
+          decks[variant]!.setColorAt(index, s.view === "damaged" ? damaged : sound);
           if (s.view === "building") {
             scaffold.position.set(x, 0, z);
             scaffold.visible = true;
@@ -241,14 +341,22 @@ export function createCityRafts(kit: Kit, model: THREE.Object3D, add: (o: THREE.
         hit.setMatrixAt(hitSlots.length, m4.makeTranslation(x, 0.5, z));
         hitSlots.push(s.key);
       }
-      deck.count = afloat.length;
+      decks.forEach((d, i) => (d.count = counts[i]!));
+      // The walkways, between rafts moored side by side and from the first ring to the shore.
+      const ways = raftWalkways(
+        slots.filter((x) => x.view === "raft" || x.view === "damaged").map((x) => x.key),
+        coastAt,
+      );
+      ways.forEach((w, i) => walk.setMatrixAt(i, m4.compose(p.set(w.x, RAFT_BOTTOM + deckHeight - 0.08, w.z), q.setFromAxisAngle(up, w.turn), sc.set(1, 1, w.length))));
+      walk.count = ways.length;
+      walk.instanceMatrix.needsUpdate = true;
       ghost.count = free;
       ring.count = free;
       hit.count = hitSlots.length;
       for (const m of [ghost, ring, hit]) m.instanceMatrix.needsUpdate = true;
       // A tap is tested against the slots shown now, not the ones at the first refresh.
       hit.computeBoundingSphere();
-      if (deck.instanceColor) deck.instanceColor.needsUpdate = true;
+      for (const d of decks) if (d.instanceColor) d.instanceColor.needsUpdate = true;
       placeRafts(0);
       // A tap on a building is tested against where it stands now.
       for (const id of RAFT_BUILDING_IDS) onRafts[id]?.computeBoundingSphere();

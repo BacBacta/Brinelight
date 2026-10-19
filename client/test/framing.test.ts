@@ -1,11 +1,7 @@
-import { fileURLToPath } from "node:url";
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
-import { CITY_ANGLE, CITY_FOV, PIER_SLOTS, SHORE_LINE, SIDE_MARGIN, cityFraming, cityPoints, openSlots, type View } from "../src/scene/framing.js";
+import { CITY_ANGLE, CITY_FOV, PIER_SLOTS, SIDE_MARGIN, cityFraming, cityPoints, openSlots, type View } from "../src/scene/framing.js";
 import { hexX, hexZ } from "../src/scene/island.js";
-import { fitIsland } from "../src/scene/models.js";
-import { SHORE } from "../src/scene/shore.js";
-import { readGlb } from "./glb.js";
 
 // The band between the panels, as measured on these screens (the top bar and the Mist above, the tab bar below).
 const PHONES: View[] = [
@@ -59,19 +55,14 @@ describe("the city's normal view", () => {
     expect(openSlots(30).some((s) => PIER_SLOTS.some(([q, r]) => s.x === hexX(q, r) && s.z === hexZ(r)))).toBe(false);
   });
 
-  it("the shore line is where the island's model meets the water", () => {
-    const island = fitIsland(Object.values(readGlb(fileURLToPath(new URL("../public/models/island.glb", import.meta.url))).scenes)[0]!);
-    island.updateMatrixWorld(true);
-    const ray = new THREE.Raycaster();
-    const land = (x: number, z: number) => {
-      ray.set(new THREE.Vector3(x, 10, z), new THREE.Vector3(0, -1, 0));
-      return (ray.intersectObject(island, true)[0]?.point.y ?? -9) >= SHORE.waterY;
-    };
-    for (const [x, z] of SHORE_LINE) {
-      const r = Math.hypot(x, z);
-      // Land just inside the line, water just outside it.
-      expect(land((x * (r - 0.1)) / r, (z * (r - 0.1)) / r), `${x},${z} inside`).toBe(true);
-      expect(land((x * (r + 0.1)) / r, (z * (r + 0.1)) / r), `${x},${z} outside`).toBe(false);
+  it("never makes the island small: at its farthest (all 39 rafts), the island still spans most of the screen's width", () => {
+    for (const view of PHONES) {
+      const far = cityFraming(view, openSlots(30));
+      const near = cityFraming(view, []);
+      const shore = onScreen(view, cityPoints([]).slice(0, 36), far);
+      const width = Math.max(...shore.map((p) => p.x)) - Math.min(...shore.map((p) => p.x));
+      expect(width / view.width, `${view.width}`).toBeGreaterThan(0.6);
+      expect(near.distance).toBeLessThan(far.distance);
     }
   });
 });

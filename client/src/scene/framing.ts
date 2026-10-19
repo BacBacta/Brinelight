@@ -1,10 +1,12 @@
 /**
- * The city's normal view (week 8, task 1): the camera as close as it can be while the island and every raft slot open
- * at this Lighthouse level stay on screen, between the panels at the top and the tab bar at the bottom. The camera's
- * angle is the prototype's; only its distance and the point it looks at change with the screen.
+ * The city's normal view (week 8): the camera as close as it can be while the island, the pier and every raft moored
+ * stay on screen, between the panels at the top and the tab bar at the bottom. It moves back a little with each raft:
+ * no closer than the island and the pier alone allow, no farther than all 39 rafts need. The camera's angle is the
+ * prototype's; only its distance and the point it looks at change.
  */
 import * as THREE from "three";
 import { RAFT_SLOTS, slotOpen } from "@brinelight/shared";
+import { coastAt } from "./coast.js";
 import { hexX, hexZ } from "./island.js";
 
 /** The screen in CSS pixels, and the band the city must fit in: below the top panels, above the bottom ones. */
@@ -28,19 +30,16 @@ export const PIER_SLOTS: readonly (readonly [number, number])[] = [
   [2, -4],
 ];
 
-/**
- * The island's shore, where its land meets the water, every 10° from +x (measured once on its model, as fitted by
- * fitIsland; a test checks it against the model), and the foam's width beyond it.
- */
-export const SHORE_LINE: readonly (readonly [number, number])[] = [[4.85,0],[4.78,0.84],[4.79,1.74],[4.72,2.73],[4.21,3.54],[3.57,4.25],[2.75,4.76],[1.85,5.07],[0.89,5.02],[0,5.15],[-0.89,5.02],[-1.88,5.17],[-2.63,4.55],[-3.57,4.25],[-4.25,3.57],[-4.81,2.78],[-5.22,1.9],[-5.42,0.96],[-5.3,0],[-5.02,-0.89],[-4.93,-1.8],[-4.59,-2.65],[-3.95,-3.31],[-3.28,-3.91],[-2.65,-4.59],[-1.86,-5.12],[-0.99,-5.61],[0,-5.2],[0.89,-5.02],[1.76,-4.84],[2.55,-4.42],[3.31,-3.95],[3.95,-3.31],[4.37,-2.53],[4.75,-1.73],[4.97,-0.88]];
-export const FOAM = 0.4;
+/** What shows past the coast: the island's rocky sides going down into the water, and the foam around them. */
+export const FOAM = 0.8;
 
 /** The points that must stay on screen: the island's shore with its foam, the pier's slots, and the hexagon of each raft at `rafts`. */
 export function cityPoints(rafts: readonly { x: number; z: number }[]): THREE.Vector3[] {
   const points: THREE.Vector3[] = [];
-  for (const [x, z] of SHORE_LINE) {
-    const r = Math.hypot(x, z);
-    points.push(new THREE.Vector3((x * (r + FOAM)) / r, 0, (z * (r + FOAM)) / r));
+  for (let i = 0; i < 36; i++) {
+    const a = (i / 36) * Math.PI * 2;
+    const r = coastAt(a) + FOAM;
+    points.push(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r));
   }
   for (const { x, z } of [...rafts, ...PIER_SLOTS.map(([q, r]) => ({ x: hexX(q, r), z: hexZ(r) }))]) {
     for (let i = 0; i < 6; i++) {

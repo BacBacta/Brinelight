@@ -720,6 +720,15 @@ Also: the real triangles of the city at its most go into `docs/perf.md`, and an 
 4. The Harbor on plot 0,-2 and the Fishery on plot 2,0, with the pier and one boat per fleet at home. Only what is drawn moves: no city data, no shared rule, no migration. The rule of the coastal buildings is tested.
 5. The labels: the level badge by default, the full label on the building touched or when something happens, never under a panel, with the test of the layout.
 
+## The rafts and the framing (19 October, after a player's capture of 39 rafts)
+
+The owner chose the floating village, in painted models; the Refinery waits.
+
+- **Done in code now, with today's raft model:** each raft on its slot of the grid, never turned, inside its slot's hexagon shrunk to 82 % (water between them); one walkway per raft toward the island; the model of a slot picked by `(q − r) mod 3`; one InstancedMesh per model; the island's coast moved onto the grid (`coast.ts`).
+- **The framing:** the camera moves back a little with each moored raft so the island, the pier and every raft stay on screen at 360 and 412 px; never closer than the island and the pier alone allow, never farther than all 39 rafts need. The pinch zoom stays.
+- **The painted models:** the brief is `docs/raft-models.md` (three decks and a damaged one, an optional walkway; at most 1,000 triangles each). The owner makes them; the code takes them as they come.
+- **Tested:** the framing (on screen between the panels at both widths, the tightest, never smaller than 60 % of the screen's width for the island), the coast (the rim plots on the meadow, a raft of ring 3 at most a quarter on the beach), the walkways (one per raft, never in another raft's room), the variants (no two neighbors alike).
+
 ## The questions, as they were asked
 
 1. **The buildings' lists (task 1):** do the details and transformations suit you, building by building? One line to change is enough to change the rule.

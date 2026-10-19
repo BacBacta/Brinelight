@@ -7,9 +7,10 @@ import { cpus } from "node:os";
 import type { BrowserContext, Locator, Page } from "playwright-core";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import * as THREE from "three";
-import { HOUR, PROMOTE_TIME, RAFT_INSTALL_TIME, RAFT_SLOTS, advance, heal, installOnRaft, newPlayerState, promote, raftUpgradeTime, research, sail, upgrade, type ActionResult, type PlayerState, type RaftBuildingId } from "@brinelight/shared";
-import { frameCity } from "../client/src/scene/camera.js";
-import { SHORE_RADIUS } from "../client/src/scene/models.js";
+import { BUILDINGS, BUILDING_IDS, HOUR, PROMOTE_TIME, RAFT_INSTALL_TIME, RAFT_SLOTS, advance, heal, installOnRaft, newPlayerState, promote, raftUpgradeTime, research, sail, upgrade, type ActionResult, type PlayerState, type RaftBuildingId } from "@brinelight/shared";
+import { CITY_ANGLE, CITY_FOV, cityFraming } from "../client/src/scene/framing.js";
+import { PLOTS } from "../client/src/city/plots.js";
+import { coastAt } from "../client/src/scene/coast.js";
 import { CITY_KEY_PREFIX } from "../client/src/account/actions.js";
 import { PROFILE_TEXT } from "../client/src/account/profile.js";
 import { TEXT } from "../client/src/account/index.js";
@@ -73,25 +74,48 @@ async function openGame(context: BrowserContext): Promise<Page> {
   return page;
 }
 
-/** Taps a building in the 3D view, just under its label, until its sheet opens. */
+/** The slots with a raft (or the shipyard at work) in the city the page shows: the normal view keeps them on screen. */
+async function mooredOn(page: Page): Promise<string[]> {
+  const state = await page.evaluate(
+    ({ prefix, local }) => {
+      const account = Object.keys(localStorage).find((k) => k.startsWith(prefix));
+      if (account) return JSON.parse(localStorage.getItem(account) ?? "null")?.server?.state ?? null;
+      return JSON.parse(localStorage.getItem(local) ?? "null")?.state ?? null;
+    },
+    { prefix: CITY_KEY_PREFIX, local: SAVE_KEY },
+  );
+  if (!state) return [];
+  const yard = state.yard && state.yard.kind !== "repair" ? [state.yard.slot as string] : [];
+  return [...Object.keys(state.rafts ?? {}), ...yard];
+}
+
+/** Where to tap a building: its plot's middle, a little above the ground, with the game's normal view; then under its label. */
+async function tapsFor(page: Page, name: string): Promise<{ x: number; y: number }[]> {
+  const id = BUILDING_IDS.find((b) => BUILDINGS[b].name === name)!;
+  const [q, r] = PLOTS[id];
+  const size = page.viewportSize()!;
+  const at = cityCamera(size.width, size.height, await mooredOn(page))(2 * (q + r / 2), 0.5, 1.732 * r);
+  const taps = [at];
+  const box = await page.locator(".labels.city .bl", { hasText: name }).first().boundingBox();
+  if (box) for (const dy of [30, 45, 60, 20]) taps.push({ x: box.x + box.width / 2, y: box.y + box.height + dy });
+  return taps;
+}
+
+/** Taps a building in the 3D view until its sheet opens. */
 async function openSheet(page: Page, name: string): Promise<void> {
   await page.waitForTimeout(300);
-  const label = page.locator(".labels.city .bl", { hasText: name }).first();
-  const box = (await label.boundingBox())!;
-  for (const dy of [30, 45, 60, 20]) {
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height + dy);
+  for (const t of await tapsFor(page, name)) {
+    await page.mouse.click(t.x, t.y);
     if (await page.locator(".sheet:not(.profile)", { hasText: name }).isVisible()) return;
   }
   throw new Error(`Could not open the sheet of ${name}`);
 }
 
-/** Taps a building in the 3D view, just under its label, and upgrades it from its sheet. */
+/** Taps a building in the 3D view, and upgrades it from its sheet. */
 async function upgradeBuilding(page: Page, name: string): Promise<void> {
   await page.waitForTimeout(300);
-  const label = page.locator(".labels.city .bl", { hasText: name }).first();
-  const box = (await label.boundingBox())!;
-  for (const dy of [30, 45, 60, 20]) {
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height + dy);
+  for (const t of await tapsFor(page, name)) {
+    await page.mouse.click(t.x, t.y);
     const sheet = page.locator(".sheet:not(.profile)", { hasText: name });
     if (await sheet.isVisible()) {
       await sheet.locator('[data-act="upgrade"]').click();
@@ -435,7 +459,7 @@ describe("the queue", () => {
       expect(folded.map((r) => r.text), `${size.width} px`).toEqual(names.slice(0, 3));
       // Folded, the queue ends above the island's shore wherever they share the screen's width.
       const queue = (await page.locator(".queue").boundingBox())!;
-      const shore = shoreOnScreen(6, size.width, size.height).filter((pt) => pt.x >= queue.x && pt.x <= queue.x + queue.width);
+      const shore = shoreOnScreen(size.width, size.height).filter((pt) => pt.x >= queue.x && pt.x <= queue.x + queue.width);
       expect(shore.length).toBeGreaterThan(0);
       expect(queue.y + queue.height, `${size.width} px`).toBeLessThan(Math.min(...shore.map((pt) => pt.y)));
       await page.screenshot({ path: `e2e/.shots/shot-queue-folded-${size.width}.png` });
@@ -471,7 +495,7 @@ describe("buildings on rafts", () => {
     ];
     for (const size of SIZES) {
       // The two lowest slots on screen: a free raft, then the Kelp Greenhouse level 2; the others around them.
-      const clear = slotsOnScreen(6, size.width, size.height);
+      const clear = slotsOnScreen(size.width, size.height);
       const rest = RAFT_SLOTS.filter((x) => x.ring === 3 && x.key !== clear[0]!.slot && x.key !== clear[1]!.slot).map((x) => x.key);
       const equipped = [clear[1]!.slot, ...rest.slice(0, 5)];
       const base = newPlayerState();
@@ -494,7 +518,10 @@ describe("buildings on rafts", () => {
       await page.screenshot({ path: `e2e/.shots/shot-rafts-${size.width}.png` });
 
       const sheet = page.locator(".raft-sheet:not([hidden])");
-      await page.mouse.click(clear[0]!.x, clear[0]!.y);
+      // The camera stands back to show the city's rafts: where the slots are with them.
+      const moored = Object.keys(city.rafts);
+      const first = slotAt(clear[0]!.slot, size.width, size.height, moored);
+      await page.mouse.click(first.x, first.y);
       await sheet.waitFor();
       expect(await sheet.locator("h2").textContent()).toBe("Raft");
       expect(await sheet.locator("[data-raft-building]").count()).toBe(3);
@@ -507,7 +534,8 @@ describe("buildings on rafts", () => {
       await page.locator(".toast", { hasText: "Each type is limited to 2 rafts" }).waitFor();
       await sheet.locator('[data-act="close"]').click();
 
-      await page.mouse.click(clear[1]!.x, clear[1]!.y);
+      const second = slotAt(clear[1]!.slot, size.width, size.height, moored);
+      await page.mouse.click(second.x, second.y);
       await sheet.waitFor();
       expect(await sheet.locator("h2").textContent()).toBe("Kelp Greenhouse");
       expect(await sheet.textContent()).toContain("Kelp Greenhouse level 2: +9 fish/h.");
@@ -1097,7 +1125,7 @@ describe("the look", () => {
   it("every sheet, the top bar and the queue, at 412 and 360 px", async () => {
     for (const size of SIZES) {
       const w = size.width;
-      const clear = slotsOnScreen(6, size.width, size.height);
+      const clear = slotsOnScreen(size.width, size.height);
       const base = newPlayerState();
 
       // A built city: every building, a research, a work at the shipyard, rafts, wounded and captains.
@@ -1180,7 +1208,7 @@ describe("the look", () => {
       await openSheet(page, "Refinery");
       await look(page, sheet(page), `refinery-refused-${w}`);
       await close(page);
-      const free = slotsOnScreen(4, size.width, size.height)[0]!;
+      const free = slotsOnScreen(size.width, size.height)[0]!;
       await page.mouse.click(free.x, free.y);
       await page.locator(".raft-sheet:not([hidden])").waitFor();
       await look(page, page.locator(".raft-sheet"), `raft-slot-${w}`);
@@ -1545,7 +1573,8 @@ describe("signed in", () => {
     const base = newPlayerState();
     await h.putCity(p.playerId, { ...base, buildings: { ...base.buildings, observatory: 1 }, stock: { oil: 5000, fish: 5000, wood: 5000, rope: 3 } });
     await show(p.page);
-    await p.page.locator(".labels.city .bl", { hasText: "Observatory" }).first().waitFor();
+    // Its label is there (a badge, or hidden where labels crowd: the tap goes to the building itself).
+    await p.page.locator(".labels.city .bl", { hasText: "Observatory" }).first().waitFor({ state: "attached" });
     await openSheet(p.page, "Observatory");
     await p.page.locator('[data-act="research"][data-tech="refining"]').click();
     await expect.poll(async () => (await serverCity(p.token) as { state: { research: { id: string } | null } } | null)?.state.research?.id, NET).toBe("refining");
@@ -1739,7 +1768,7 @@ describe("signed in", () => {
     await calm(p.page);
 
     // Where a slot of the first ring is on screen, from the game's own starting camera for this Lighthouse level.
-    const { slot, x, y } = slotOnScreen(4);
+    const { slot, x, y } = slotOnScreen();
     await p.page.mouse.click(x, y);
     const sheet = p.page.locator(".raft-sheet:not([hidden])");
     await sheet.waitFor();
@@ -1759,7 +1788,11 @@ describe("signed in", () => {
     await show(p.page);
     await expect.poll(async () => ((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.rafts[slot], NET).toEqual(done.rafts[slot]);
     await p.page.waitForTimeout(500);
-    await p.page.mouse.click(x, y);
+    // The camera stands back to show the moored rafts: where the slot is now.
+    {
+      const now = slotAt(slot, 412, 915, [slot]);
+      await p.page.mouse.click(now.x, now.y);
+    }
     await expect.poll(() => p.page.locator(".raft-sheet:not([hidden])").textContent(), NET).toContain("Sturdiness");
     await p.page.screenshot({ path: "e2e/.shots/shot-raft.png" });
     await p.context.close();
@@ -1795,7 +1828,7 @@ describe("signed in", () => {
   it("repairing the rafts: from a raft's sheet, all damaged rafts at once, paid in oil, sound again by the server's clock", async () => {
     const p = await signedInPlayer();
     const base = newPlayerState();
-    const { slot, x, y } = slotOnScreen(4);
+    const { slot } = slotOnScreen();
     const other = RAFT_SLOTS.find((s) => s.ring === 3 && s.key !== slot)!.key;
     // Two rafts after Mists not held (the e2e harness only).
     await h.putCity(p.playerId, { ...base, buildings: { ...base.buildings, lighthouse: 4 }, stock: { oil: 5000, fish: 5000, wood: 5000, rope: 20 }, rafts: { [slot]: { hp: 65, building: null, level: 0 }, [other]: { hp: 25, building: null, level: 0 } } });
@@ -1803,7 +1836,11 @@ describe("signed in", () => {
     await expect.poll(async () => Object.keys(((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.rafts ?? {}).length, NET).toBe(2);
     await p.page.waitForTimeout(500);
     await calm(p.page);
-    await p.page.mouse.click(x, y);
+    // The camera stands back to show the moored rafts: where the slot is now.
+    {
+      const now = slotAt(slot, 412, 915, [slot, other]);
+      await p.page.mouse.click(now.x, now.y);
+    }
     const sheet = p.page.locator(".raft-sheet:not([hidden])");
     await sheet.waitFor();
     await expect.poll(() => sheet.locator(".box", { hasText: "Repair the 2 damaged rafts" }).count(), NET).toBe(1);
@@ -1914,14 +1951,18 @@ describe("signed in", () => {
   it("a building on a raft: put from the raft's sheet, found again after a reload, standing by the server's clock, then upgraded", async () => {
     const p = await signedInPlayer();
     const base = newPlayerState();
-    const { slot, x, y } = slotOnScreen(4);
+    const { slot } = slotOnScreen();
     await h.putCity(p.playerId, { ...base, buildings: { ...base.buildings, lighthouse: 4 }, stock: { oil: 5000, fish: 5000, wood: 5000, rope: 20 }, rafts: { [slot]: { hp: 100, building: null, level: 0 } } });
     await show(p.page);
     await expect.poll(async () => Object.keys(((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.rafts ?? {}), NET).toEqual([slot]);
     await p.page.waitForTimeout(500);
     // The Lighthouse rose to level 4 on the server: its celebration goes first.
     await calm(p.page);
-    await p.page.mouse.click(x, y);
+    // The camera stands back to show the moored rafts: where the slot is now.
+    {
+      const now = slotAt(slot, 412, 915, [slot]);
+      await p.page.mouse.click(now.x, now.y);
+    }
     const sheet = p.page.locator(".raft-sheet:not([hidden])");
     await sheet.waitFor();
     await sheet.locator('[data-act="install"][data-building="greenhouse"]').click();
@@ -1945,7 +1986,11 @@ describe("signed in", () => {
     await show(p.page);
     await expect.poll(async () => ((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.rafts[slot]?.building, NET).toBe("greenhouse");
     await p.page.waitForTimeout(500);
-    await p.page.mouse.click(x, y);
+    // The camera stands back to show the moored rafts: where the slot is now.
+    {
+      const now = slotAt(slot, 412, 915, [slot]);
+      await p.page.mouse.click(now.x, now.y);
+    }
     await expect.poll(() => p.page.locator(".raft-sheet:not([hidden]) h2").textContent(), NET).toBe("Kelp Greenhouse");
     await p.page.locator('.raft-sheet:not([hidden]) [data-act="upgrade-raft"]').click();
     await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).yard, NET).toMatchObject({ slot, kind: "upgrade", duration: raftUpgradeTime(1) });
@@ -1956,20 +2001,25 @@ describe("signed in", () => {
 });
 
 /**
- * Where a lit slot of the first ring is on the 412 × 915 screen, with the game's starting camera (frameCity) for this
- * Lighthouse level: the one lowest on screen that stays clear of the top bar and the bottom menu.
+ * Where a lit slot of the first ring is on the 412 × 915 screen, with the game's normal view of a city with no raft:
+ * the one lowest on screen that stays clear of the top bar and the bottom menu.
  */
-function slotOnScreen(lighthouse: number): { slot: string; x: number; y: number } {
-  const clear = slotsOnScreen(lighthouse, 412, 915);
+function slotOnScreen(): { slot: string; x: number; y: number } {
+  const clear = slotsOnScreen(412, 915);
   if (!clear[0]) throw new Error("No raft slot clear on screen");
   return clear[0];
 }
 
-/** The game's starting camera (frameCity) for this Lighthouse level, on a w × h screen, and a point's place on that screen. */
-function cityCamera(lighthouse: number, w: number, hgt: number) {
-  const camera = new THREE.PerspectiveCamera(40, w / hgt, 0.1, 200);
-  const target = new THREE.Vector3();
-  frameCity(camera, { target, update: () => camera.lookAt(target) } as unknown as Parameters<typeof frameCity>[1], w / hgt, lighthouse);
+/**
+ * The game's normal view (scene/framing.ts) on a w × h screen, with rafts on the slots `moored` (and the shipyard's),
+ * and a point's place on that screen. The band between the panels is the one the game measures at 360 and 412 px.
+ */
+function cityCamera(w: number, hgt: number, moored: readonly string[] = []) {
+  const rafts = moored.map((k) => RAFT_SLOTS.find((s) => s.key === k)!).map((s) => ({ x: 2 * (s.q + s.r / 2), z: 1.732 * s.r }));
+  const framing = cityFraming({ width: w, height: hgt, top: 92, bottom: hgt - 75 }, rafts);
+  const camera = new THREE.PerspectiveCamera(CITY_FOV, w / hgt, 0.1, 400);
+  camera.position.copy(framing.target).addScaledVector(CITY_ANGLE, framing.distance);
+  camera.lookAt(framing.target);
   camera.updateMatrixWorld();
   return (x: number, y: number, z: number) => {
     const v = new THREE.Vector3(x, y, z).project(camera);
@@ -1977,17 +2027,26 @@ function cityCamera(lighthouse: number, w: number, hgt: number) {
   };
 }
 
+/** Where a slot is on a w × h screen, with rafts on `moored`. */
+function slotAt(key: string, w: number, hgt: number, moored: readonly string[]): { slot: string; x: number; y: number } {
+  const s = RAFT_SLOTS.find((x) => x.key === key)!;
+  return { slot: key, ...cityCamera(w, hgt, moored)(2 * (s.q + s.r / 2), 0, 1.732 * s.r) };
+}
+
 /** The slots of the first ring clear of the top bar and the bottom menu on a w × h screen, lowest on screen first. */
-function slotsOnScreen(lighthouse: number, w: number, hgt: number): { slot: string; x: number; y: number }[] {
-  const at = cityCamera(lighthouse, w, hgt);
+function slotsOnScreen(w: number, hgt: number, moored: readonly string[] = []): { slot: string; x: number; y: number }[] {
+  const at = cityCamera(w, hgt, moored);
   return RAFT_SLOTS.filter((s) => s.ring === 3)
     .map((s) => ({ slot: s.key, ...at(2 * (s.q + s.r / 2), 0, 1.732 * s.r) }))
     .filter((p) => p.x > 40 && p.x < w - 40 && p.y > 200 && p.y < hgt - 140)
     .sort((a, b) => b.y - a.y);
 }
 
-/** The island's shore (its meadow's edge, SHORE_RADIUS from the center) on a w × h screen, every 5 degrees. */
-function shoreOnScreen(lighthouse: number, w: number, hgt: number): { x: number; y: number }[] {
-  const at = cityCamera(lighthouse, w, hgt);
-  return Array.from({ length: 72 }, (_, i) => at(SHORE_RADIUS * Math.cos((i * Math.PI) / 36), 0, SHORE_RADIUS * Math.sin((i * Math.PI) / 36)));
+/** The island's coast on a w × h screen, every 5 degrees, with rafts on `moored`. */
+function shoreOnScreen(w: number, hgt: number, moored: readonly string[] = []): { x: number; y: number }[] {
+  const at = cityCamera(w, hgt, moored);
+  return Array.from({ length: 72 }, (_, i) => {
+    const a = (i * Math.PI) / 36;
+    return at(coastAt(a) * Math.cos(a), 0, coastAt(a) * Math.sin(a));
+  });
 }

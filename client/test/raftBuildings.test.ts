@@ -170,8 +170,8 @@ describe("buildings on rafts in the city", () => {
     rafts.refresh(s);
     rafts.useBuildings({ greenhouse: tower(), smokehouse: tower(), watchtower: tower() });
     rafts.animate(2);
-    expect(added).toHaveLength(5 + 3);
-    const onRafts = rafts.meshes.slice(4) as THREE.InstancedMesh[];
+    expect(added).toHaveLength(6 + 3);
+    const onRafts = rafts.meshes.slice(5) as THREE.InstancedMesh[];
     expect(onRafts.map((m) => [m.userData.raftBuilding, m.count, m.visible])).toEqual([
       ["greenhouse", 2, true],
       ["smokehouse", 0, false],
@@ -190,7 +190,7 @@ describe("buildings on rafts in the city", () => {
     // The city changes: the meshes stay, their counts follow.
     rafts.refresh(moored());
     expect(onRafts.map((m) => m.count)).toEqual([0, 0, 0]);
-    expect(added).toHaveLength(8);
+    expect(added).toHaveLength(9);
   });
 });
 

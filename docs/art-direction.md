@@ -54,6 +54,10 @@ Three states, with a fade between them.
 | Observatory | Round turret, verdigris dome, telescope |
 | Infirmary | Low building, white cross on a cream canvas roof, awning with cots |
 
+## Rafts
+
+- A floating village: hexagonal decks on the grid, water between them, walkways toward the island. Three painted decks (sail, nets, planters) and a damaged one, as briefed in `docs/raft-models.md`.
+
 ## Captains
 
 - Painted bust portraits, in three-quarter view.
