@@ -334,9 +334,11 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     },
     focus(building, others) {
       focused = true;
-      // Between the top panels and the sheet, which takes the bottom of the screen up to 45 % of its height, or more.
+      // Between the top panels and the sheet: its top when it says where it is (a short sheet leaves more room), else
+      // 45 % of the screen's height.
       const band = options.band?.() ?? { top: 0, bottom: innerHeight };
-      const bottom = Math.min(innerHeight * 0.45, (options.sheetTop?.() ?? Infinity) - 8);
+      const sheet = options.sheetTop?.();
+      const bottom = sheet ? sheet - 8 : innerHeight * 0.45;
       const close = clearView({ width: innerWidth, height: innerHeight, top: band.top, bottom: Math.max(band.top + 80, bottom) }, building, others);
       glideTo(close.target.clone().addScaledVector(close.angle, close.distance), close.target);
     },

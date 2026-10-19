@@ -340,6 +340,10 @@ Measured with the city at 412 × 915 (container, quality 2, the e2e's counter), 
 | The Shelters, six eras (seven models) | 772 to 1,316 | 57 to 87 kB |
 | The Barracks, six eras (seven models) | 710 to 1,072 | 53 to 83 kB |
 | The Infirmary, six eras (seven models) | 708 to 1,232 | 53 to 80 kB |
+| The Fishery, six eras (seven models) | 646 to 1,036 | 52 to 70 kB |
+| The Lumberyard, six eras (seven models) | 764 to 1,024 | 57 to 70 kB |
+| The Harbor, six eras (seven models) | 720 to 928 | 55 to 65 kB |
+| The Harbor's pier and boat (one an era) | 460 to 780 | 43 to 59 kB (one more draw call) |
 
 - **What is downloaded:** only the stage each building shows, and the next one while an upgrade toward it runs.
 - **At level 30:** 171 + 163 + 113 + 109 kB for the island, its ground, the Lighthouse and the Refinery, about 0.55 MB. The ground adds one draw call.

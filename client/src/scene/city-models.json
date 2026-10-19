@@ -221,6 +221,228 @@
    }
   ]
  },
+ "fishery-1": {
+  "kB": 51.6,
+  "triangles": 646,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1278,
+    "height": 0.521,
+    "reach": 0.91
+   },
+   {
+    "level": 2,
+    "indices": 1518,
+    "height": 0.521,
+    "reach": 0.91
+   },
+   {
+    "level": 3,
+    "indices": 1710,
+    "height": 0.521,
+    "reach": 0.91
+   },
+   {
+    "level": 4,
+    "indices": 1938,
+    "height": 0.521,
+    "reach": 0.91
+   }
+  ]
+ },
+ "fishery-10": {
+  "kB": 64.9,
+  "triangles": 900,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1956,
+    "height": 1.45,
+    "reach": 0.91
+   },
+   {
+    "level": 11,
+    "indices": 2076,
+    "height": 1.45,
+    "reach": 0.91
+   },
+   {
+    "level": 12,
+    "indices": 2244,
+    "height": 1.45,
+    "reach": 0.91
+   },
+   {
+    "level": 13,
+    "indices": 2376,
+    "height": 1.45,
+    "reach": 0.91
+   },
+   {
+    "level": 14,
+    "indices": 2700,
+    "height": 1.45,
+    "reach": 0.91
+   }
+  ]
+ },
+ "fishery-15": {
+  "kB": 68.8,
+  "triangles": 1036,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2136,
+    "height": 1.22,
+    "reach": 0.91
+   },
+   {
+    "level": 16,
+    "indices": 2400,
+    "height": 1.22,
+    "reach": 0.91
+   },
+   {
+    "level": 17,
+    "indices": 2664,
+    "height": 1.22,
+    "reach": 0.91
+   },
+   {
+    "level": 18,
+    "indices": 2784,
+    "height": 1.22,
+    "reach": 0.91
+   },
+   {
+    "level": 19,
+    "indices": 3108,
+    "height": 1.22,
+    "reach": 0.91
+   }
+  ]
+ },
+ "fishery-20": {
+  "kB": 70.4,
+  "triangles": 960,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2316,
+    "height": 0.88,
+    "reach": 0.927
+   },
+   {
+    "level": 21,
+    "indices": 2424,
+    "height": 0.88,
+    "reach": 0.927
+   },
+   {
+    "level": 22,
+    "indices": 2556,
+    "height": 0.88,
+    "reach": 0.927
+   },
+   {
+    "level": 23,
+    "indices": 2760,
+    "height": 0.88,
+    "reach": 0.927
+   },
+   {
+    "level": 24,
+    "indices": 2880,
+    "height": 0.88,
+    "reach": 0.927
+   }
+  ]
+ },
+ "fishery-25": {
+  "kB": 63.4,
+  "triangles": 844,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1680,
+    "height": 0.87,
+    "reach": 0.91
+   },
+   {
+    "level": 26,
+    "indices": 1992,
+    "height": 0.87,
+    "reach": 0.91
+   },
+   {
+    "level": 27,
+    "indices": 2196,
+    "height": 0.87,
+    "reach": 0.91
+   },
+   {
+    "level": 28,
+    "indices": 2364,
+    "height": 0.87,
+    "reach": 0.91
+   },
+   {
+    "level": 29,
+    "indices": 2532,
+    "height": 0.87,
+    "reach": 0.91
+   }
+  ]
+ },
+ "fishery-30": {
+  "kB": 65.3,
+  "triangles": 888,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2664,
+    "height": 0.87,
+    "reach": 0.91
+   }
+  ]
+ },
+ "fishery-5": {
+  "kB": 65.6,
+  "triangles": 910,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1728,
+    "height": 0.912,
+    "reach": 0.91
+   },
+   {
+    "level": 6,
+    "indices": 2124,
+    "height": 0.912,
+    "reach": 0.91
+   },
+   {
+    "level": 7,
+    "indices": 2214,
+    "height": 0.912,
+    "reach": 0.91
+   },
+   {
+    "level": 8,
+    "indices": 2418,
+    "height": 0.912,
+    "reach": 0.91
+   },
+   {
+    "level": 9,
+    "indices": 2730,
+    "height": 0.912,
+    "reach": 0.91
+   }
+  ]
+ },
  "ground-1": {
   "kB": 56.3,
   "triangles": 510,
@@ -290,6 +512,312 @@
     "indices": 6372,
     "height": 0.16,
     "reach": 5.068
+   }
+  ]
+ },
+ "harbor-1": {
+  "kB": 55.3,
+  "triangles": 736,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1524,
+    "height": 0.54,
+    "reach": 0.802
+   },
+   {
+    "level": 2,
+    "indices": 1788,
+    "height": 0.54,
+    "reach": 0.802
+   },
+   {
+    "level": 3,
+    "indices": 1980,
+    "height": 0.54,
+    "reach": 0.802
+   },
+   {
+    "level": 4,
+    "indices": 2208,
+    "height": 0.54,
+    "reach": 0.802
+   }
+  ]
+ },
+ "harbor-10": {
+  "kB": 64.6,
+  "triangles": 916,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1956,
+    "height": 1.42,
+    "reach": 0.891
+   },
+   {
+    "level": 11,
+    "indices": 2076,
+    "height": 1.42,
+    "reach": 0.891
+   },
+   {
+    "level": 12,
+    "indices": 2292,
+    "height": 1.42,
+    "reach": 0.891
+   },
+   {
+    "level": 13,
+    "indices": 2424,
+    "height": 1.42,
+    "reach": 0.891
+   },
+   {
+    "level": 14,
+    "indices": 2748,
+    "height": 1.42,
+    "reach": 0.891
+   }
+  ]
+ },
+ "harbor-15": {
+  "kB": 62.8,
+  "triangles": 928,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1812,
+    "height": 1.66,
+    "reach": 0.867
+   },
+   {
+    "level": 16,
+    "indices": 2076,
+    "height": 1.66,
+    "reach": 0.867
+   },
+   {
+    "level": 17,
+    "indices": 2340,
+    "height": 1.66,
+    "reach": 0.867
+   },
+   {
+    "level": 18,
+    "indices": 2460,
+    "height": 1.66,
+    "reach": 0.867
+   },
+   {
+    "level": 19,
+    "indices": 2784,
+    "height": 1.66,
+    "reach": 0.867
+   }
+  ]
+ },
+ "harbor-20": {
+  "kB": 54.5,
+  "triangles": 720,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1596,
+    "height": 1.562,
+    "reach": 0.884
+   },
+   {
+    "level": 21,
+    "indices": 1704,
+    "height": 1.562,
+    "reach": 0.884
+   },
+   {
+    "level": 22,
+    "indices": 1836,
+    "height": 1.562,
+    "reach": 0.884
+   },
+   {
+    "level": 23,
+    "indices": 2040,
+    "height": 1.562,
+    "reach": 0.884
+   },
+   {
+    "level": 24,
+    "indices": 2160,
+    "height": 1.562,
+    "reach": 0.884
+   }
+  ]
+ },
+ "harbor-25": {
+  "kB": 60.7,
+  "triangles": 832,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1644,
+    "height": 1.475,
+    "reach": 0.914
+   },
+   {
+    "level": 26,
+    "indices": 1956,
+    "height": 1.475,
+    "reach": 0.914
+   },
+   {
+    "level": 27,
+    "indices": 2160,
+    "height": 1.475,
+    "reach": 0.914
+   },
+   {
+    "level": 28,
+    "indices": 2328,
+    "height": 1.475,
+    "reach": 0.914
+   },
+   {
+    "level": 29,
+    "indices": 2496,
+    "height": 1.475,
+    "reach": 0.914
+   }
+  ]
+ },
+ "harbor-30": {
+  "kB": 62.3,
+  "triangles": 832,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2496,
+    "height": 1.475,
+    "reach": 0.914
+   }
+  ]
+ },
+ "harbor-5": {
+  "kB": 58.7,
+  "triangles": 808,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1284,
+    "height": 0.978,
+    "reach": 0.891
+   },
+   {
+    "level": 6,
+    "indices": 1680,
+    "height": 0.978,
+    "reach": 0.891
+   },
+   {
+    "level": 7,
+    "indices": 1908,
+    "height": 0.978,
+    "reach": 0.891
+   },
+   {
+    "level": 8,
+    "indices": 2112,
+    "height": 0.978,
+    "reach": 0.891
+   },
+   {
+    "level": 9,
+    "indices": 2424,
+    "height": 0.978,
+    "reach": 0.891
+   }
+  ]
+ },
+ "harbor-pier-1": {
+  "kB": 42.8,
+  "triangles": 508,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1524,
+    "height": -0.219,
+    "reach": 4.09
+   }
+  ]
+ },
+ "harbor-pier-10": {
+  "kB": 55.5,
+  "triangles": 684,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2052,
+    "height": -0.163,
+    "reach": 4.435
+   }
+  ]
+ },
+ "harbor-pier-15": {
+  "kB": 51.0,
+  "triangles": 740,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2220,
+    "height": -0.07,
+    "reach": 4.435
+   }
+  ]
+ },
+ "harbor-pier-20": {
+  "kB": 59.0,
+  "triangles": 780,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2340,
+    "height": 0.14,
+    "reach": 4.435
+   }
+  ]
+ },
+ "harbor-pier-25": {
+  "kB": 55.5,
+  "triangles": 676,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2028,
+    "height": -0.085,
+    "reach": 4.448
+   }
+  ]
+ },
+ "harbor-pier-30": {
+  "kB": 55.6,
+  "triangles": 676,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2028,
+    "height": -0.085,
+    "reach": 4.448
+   }
+  ]
+ },
+ "harbor-pier-5": {
+  "kB": 42.6,
+  "triangles": 460,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1380,
+    "height": 0.16,
+    "reach": 4.1
    }
   ]
  },
@@ -775,6 +1303,228 @@
     "indices": 396,
     "height": 0.04,
     "reach": 0.29
+   }
+  ]
+ },
+ "lumberyard-1": {
+  "kB": 61.2,
+  "triangles": 764,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1644,
+    "height": 0.529,
+    "reach": 0.9
+   },
+   {
+    "level": 2,
+    "indices": 1908,
+    "height": 0.529,
+    "reach": 0.9
+   },
+   {
+    "level": 3,
+    "indices": 2064,
+    "height": 0.529,
+    "reach": 0.9
+   },
+   {
+    "level": 4,
+    "indices": 2292,
+    "height": 0.529,
+    "reach": 0.9
+   }
+  ]
+ },
+ "lumberyard-10": {
+  "kB": 65.3,
+  "triangles": 944,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2040,
+    "height": 1.26,
+    "reach": 0.86
+   },
+   {
+    "level": 11,
+    "indices": 2160,
+    "height": 1.26,
+    "reach": 0.86
+   },
+   {
+    "level": 12,
+    "indices": 2376,
+    "height": 1.26,
+    "reach": 0.86
+   },
+   {
+    "level": 13,
+    "indices": 2508,
+    "height": 1.26,
+    "reach": 0.86
+   },
+   {
+    "level": 14,
+    "indices": 2832,
+    "height": 1.26,
+    "reach": 0.86
+   }
+  ]
+ },
+ "lumberyard-15": {
+  "kB": 56.9,
+  "triangles": 836,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1536,
+    "height": 1.36,
+    "reach": 0.86
+   },
+   {
+    "level": 16,
+    "indices": 1800,
+    "height": 1.36,
+    "reach": 0.86
+   },
+   {
+    "level": 17,
+    "indices": 2064,
+    "height": 1.36,
+    "reach": 0.86
+   },
+   {
+    "level": 18,
+    "indices": 2184,
+    "height": 1.36,
+    "reach": 0.86
+   },
+   {
+    "level": 19,
+    "indices": 2508,
+    "height": 1.36,
+    "reach": 0.86
+   }
+  ]
+ },
+ "lumberyard-20": {
+  "kB": 59.1,
+  "triangles": 764,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1728,
+    "height": 0.9,
+    "reach": 0.86
+   },
+   {
+    "level": 21,
+    "indices": 1836,
+    "height": 0.9,
+    "reach": 0.86
+   },
+   {
+    "level": 22,
+    "indices": 1968,
+    "height": 0.9,
+    "reach": 0.86
+   },
+   {
+    "level": 23,
+    "indices": 2172,
+    "height": 0.9,
+    "reach": 0.86
+   },
+   {
+    "level": 24,
+    "indices": 2292,
+    "height": 0.9,
+    "reach": 0.86
+   }
+  ]
+ },
+ "lumberyard-25": {
+  "kB": 65.3,
+  "triangles": 956,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2016,
+    "height": 0.86,
+    "reach": 0.86
+   },
+   {
+    "level": 26,
+    "indices": 2328,
+    "height": 0.86,
+    "reach": 0.86
+   },
+   {
+    "level": 27,
+    "indices": 2532,
+    "height": 0.86,
+    "reach": 0.86
+   },
+   {
+    "level": 28,
+    "indices": 2700,
+    "height": 0.86,
+    "reach": 0.86
+   },
+   {
+    "level": 29,
+    "indices": 2868,
+    "height": 0.86,
+    "reach": 0.86
+   }
+  ]
+ },
+ "lumberyard-30": {
+  "kB": 65.7,
+  "triangles": 956,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2868,
+    "height": 0.86,
+    "reach": 0.86
+   }
+  ]
+ },
+ "lumberyard-5": {
+  "kB": 70.4,
+  "triangles": 1024,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1740,
+    "height": 0.732,
+    "reach": 0.86
+   },
+   {
+    "level": 6,
+    "indices": 2136,
+    "height": 0.732,
+    "reach": 0.86
+   },
+   {
+    "level": 7,
+    "indices": 2364,
+    "height": 0.732,
+    "reach": 0.86
+   },
+   {
+    "level": 8,
+    "indices": 2760,
+    "height": 0.732,
+    "reach": 0.86
+   },
+   {
+    "level": 9,
+    "indices": 3072,
+    "height": 0.732,
+    "reach": 0.86
    }
   ]
  },
