@@ -22,7 +22,7 @@ import { createCity, type City } from "./city/index.js";
 import { isStaged, loadStage, shownModels, tallestHeight } from "./city/staged.js";
 import { blenderLook } from "./scene/cityLook.js";
 import { showRules } from "./rules.js";
-import { forcedQuality, startScene, type View } from "./scene/index.js";
+import { forcedQuality, startScene, type Kit, type Models, type View } from "./scene/index.js";
 import { createSea, type Sea } from "./sea/index.js";
 import { createFpsCounter } from "./ui/fps.js";
 import { fpsWanted } from "./ui/fpsMeter.js";
@@ -48,6 +48,8 @@ if (new URLSearchParams(location.search).has("rules")) {
   showRules(app);
 } else {
   document.body.classList.add("scene");
+  // The look made in Blender (?blender): its sheets take at most half the screen, so the close view shows the building.
+  document.body.classList.toggle("era-look", blenderLook());
   app.innerHTML = `<canvas id="cv" aria-label="3D view of your city"></canvas><p class="loading" role="status">Loading your city…</p>`;
   const status = app.querySelector<HTMLParagraphElement>(".loading")!;
   const canvas = app.querySelector<HTMLCanvasElement>("#cv")!;
@@ -111,6 +113,7 @@ if (new URLSearchParams(location.search).has("rules")) {
   };
 
   const showView = (v: View) => {
+    if (v === "sea") openSea();
     scene.setView(v);
     document.body.classList.toggle("at-sea", v === "sea");
     city?.closeSheet();
@@ -240,6 +243,36 @@ if (new URLSearchParams(location.search).has("rules")) {
     const nav = document.querySelector(".nav")?.getBoundingClientRect();
     return { top: top + 4, bottom: (nav && nav.height > 0 ? nav.top : innerHeight) - 4 };
   }
+  // The sea: made at once with the old look; with the look made in Blender, at your first visit at sea, when its models
+  // (the prototype's kit, the wreck, the camp, your boat) are fetched.
+  const seaLater = blenderLook();
+  function makeSea(kit: Kit, models: Models): void {
+    if (sea) return;
+    sea = createSea(kit, models, scene, canvas, app, {
+      state: () => state,
+      sail: (site) => {
+        act({ type: "sail", site });
+        sea?.closeSheet();
+      },
+      readReport: (reportId) => act({ type: "readReport", reportId }),
+      soon: () => ui.toast("Coming soon", "", "~"),
+      speed,
+    });
+    refresh();
+  }
+  let seaAsked = false;
+  function openSea(): void {
+    if (!seaLater || seaAsked) return;
+    seaAsked = true;
+    scene.loadSea().then(
+      ({ kit, models }) => makeSea(kit, models),
+      (err: unknown) => {
+        seaAsked = false;
+        console.error(err);
+        ui.toast("Could not load the sea. Try again.", "bad", "!");
+      },
+    );
+  }
   // The look made in Blender (?blender, week 8): the old models of the buildings remade are not fetched, and the city
   // shows once the models of their current era are there.
   const remade = blenderLook() ? Object.fromEntries(BUILDING_IDS.filter(isStaged).map((id) => [id, tallestHeight(id)])) : undefined;
@@ -253,23 +286,15 @@ if (new URLSearchParams(location.search).has("rules")) {
     },
     remade,
     ready,
+    seaLater,
     band: cityBand,
     quality: forcedQuality(location.search),
     onRaftBuildings: (models) => city?.useRaftBuildings(models),
     onLoaded: (kit, buildings, models) => {
       status.remove();
       fps?.modelsLoaded();
+      if (!seaLater) makeSea(kit, models);
       city = createCity(kit, buildings, models, scene, canvas, app, { state: () => state, upgrade: (building) => act({ type: "upgrade", building }), research: (tech) => act({ type: "research", tech }), train: (troop) => act({ type: "train", troop }), promote: (troop) => act({ type: "promote", troop }), heal: () => act({ type: "heal" }), stoke: (on) => act({ type: "stoke", on }), dockRaft: (slot) => act({ type: "dockRaft", slot }), installOnRaft: (slot, building) => act({ type: "installOnRaft", slot, building }), upgradeRaft: (slot) => act({ type: "upgradeRaft", slot }), repairRafts: () => act({ type: "repairRafts" }), toCity: () => ui.showView("city"), speed });
-      sea = createSea(kit, models, scene, canvas, app, {
-        state: () => state,
-        sail: (site) => {
-          act({ type: "sail", site });
-          sea?.closeSheet();
-        },
-        readReport: (reportId) => act({ type: "readReport", reportId }),
-        soon: () => ui.toast("Coming soon", "", "~"),
-        speed,
-      });
       refresh();
     },
     onError: () => (status.textContent = "Could not load the 3D models. Reload the page."),

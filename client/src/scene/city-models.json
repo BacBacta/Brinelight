@@ -1,71 +1,71 @@
 {
  "ground-1": {
-  "kB": 76.1,
-  "triangles": 588,
+  "kB": 56.3,
+  "triangles": 510,
   "levels": [
    {
     "level": 0,
-    "indices": 1764,
+    "indices": 1530,
     "height": 0.324,
     "reach": 5.078
    }
   ]
  },
  "ground-10": {
-  "kB": 198.4,
-  "triangles": 2480,
+  "kB": 165.4,
+  "triangles": 2436,
   "levels": [
    {
     "level": 0,
-    "indices": 7440,
+    "indices": 7308,
     "height": 0.16,
     "reach": 5.068
    }
   ]
  },
  "ground-15": {
-  "kB": 98.1,
-  "triangles": 992,
+  "kB": 131.1,
+  "triangles": 1956,
   "levels": [
    {
     "level": 0,
-    "indices": 2976,
+    "indices": 5868,
     "height": 0.09,
     "reach": 5.08
    }
   ]
  },
  "ground-20": {
-  "kB": 189.0,
-  "triangles": 2432,
+  "kB": 170.2,
+  "triangles": 2676,
   "levels": [
    {
     "level": 0,
-    "indices": 7296,
+    "indices": 8028,
     "height": 0.5,
     "reach": 5.08
    }
   ]
  },
  "ground-25": {
-  "kB": 163.4,
-  "triangles": 1788,
+  "kB": 149.1,
+  "triangles": 2076,
   "levels": [
    {
     "level": 0,
-    "indices": 5364,
+    "indices": 6228,
     "height": 0.54,
     "reach": 5.1
    }
   ]
  },
  "ground-5": {
-  "kB": 190.9,
-  "triangles": 2436,
+  "kB": 147.6,
+  "triangles": 2124,
   "levels": [
    {
     "level": 0,
-    "indices": 7308,
+    "indices": 6372,
     "height": 0.16,
     "reach": 5.068
    }
@@ -226,54 +226,64 @@
   "lantern": 3.36
  },
  "lighthouse-25": {
-  "kB": 104.6,
-  "triangles": 1634,
+  "kB": 101.4,
+  "triangles": 1590,
   "levels": [
    {
     "level": 0,
-    "indices": 4122,
+    "indices": 3990,
     "height": 4.22,
     "reach": 0.877
    },
    {
     "level": 26,
-    "indices": 4434,
+    "indices": 4302,
     "height": 4.22,
     "reach": 0.877
    },
    {
     "level": 27,
-    "indices": 4638,
+    "indices": 4506,
     "height": 4.22,
     "reach": 0.877
    },
    {
     "level": 28,
-    "indices": 4806,
+    "indices": 4674,
     "height": 4.22,
     "reach": 0.877
    },
    {
     "level": 29,
-    "indices": 4902,
+    "indices": 4770,
     "height": 4.22,
     "reach": 0.877
    }
   ],
-  "lantern": 3.73
+  "lantern": 3.73,
+  "radar": [
+   0.22,
+   4.03,
+   -0.12
+  ]
  },
  "lighthouse-30": {
-  "kB": 112.7,
-  "triangles": 1774,
+  "kB": 110.5,
+  "triangles": 1730,
   "levels": [
    {
     "level": 0,
-    "indices": 5322,
+    "indices": 5190,
     "height": 4.35,
     "reach": 0.877
    }
   ],
-  "lantern": 3.73
+  "lantern": 3.73,
+  "radar": [
+   0.22,
+   4.03,
+   -0.12
+  ]
  },
  "lighthouse-5": {
   "kB": 92.5,
@@ -311,6 +321,18 @@
    }
   ],
   "lantern": 2.46
+ },
+ "lighthouse-radar": {
+  "kB": 13.6,
+  "triangles": 132,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 396,
+    "height": 0.04,
+    "reach": 0.29
+   }
+  ]
  },
  "refinery-1": {
   "kB": 85.6,

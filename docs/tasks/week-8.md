@@ -122,7 +122,7 @@ Level 30 is the Modern era complete: the Modern building with all its details an
 - Workshop: brick terraced houses with chimneys.
 - Industry: a three-story house with steel balconies and a water tank on the roof.
 - Electricity: houses with glazed loggias, power lines, street lamps.
-- Modern: a stepped glass-and-wood apartment block, roof gardens, solar panels.
+- Modern: a stepped glass-and-wood apartment block, roof gardens, solar panels. At 30: a gold pavilion on the roof garden.
 
 **The Barracks** (low palisade, training dummy, navy banner)
 - Salvage: a driftwood palisade, a training dummy, a navy banner on a pole.
@@ -130,7 +130,7 @@ Level 30 is the Modern era complete: the Modern building with all its details an
 - Workshop: a brick drill hall with a training yard and a tower.
 - Industry: a riveted steel armory, a watchtower with a searchlight.
 - Electricity: a steel-and-glass hall, electric floodlights over the yard.
-- Modern: a clean concrete-and-glass base, an antenna, a landing pad (no aircraft).
+- Modern: a clean concrete-and-glass base, an antenna, a landing pad (no aircraft). At 30: a gold rim to the pad.
 
 **The Harbor** (L-shaped pier, bollards, boat, crane)
 - Salvage: a driftwood pier on barrels, a rowboat, a rope bollard.
@@ -154,7 +154,8 @@ Level 30 is the Modern era complete: the Modern building with all its details an
 - Workshop: a brick infirmary with tall windows and a chimney.
 - Industry: a two-story hall with a steel balcony and a water tank.
 - Electricity: a glass-roofed ward, electric lamps, a generator hut.
-- Modern: a clean white clinic, wide windows, solar panels, an antenna with a light.
+- Modern: a clean white clinic, wide windows, solar panels, an antenna with a light. At 30: a gold rim along the roof.
+- Its cross is white on navy in every era, never on red: the red cross is a protected emblem.
 
 **The island** (it follows the Lighthouse's era: the city's era). One island model, and over it one small ground model an era (`assets/blender/ground.py`): paths along the plots' shared edges, between their outlines, and things along the coast.
 - Salvage: earth paths between the plots, driftwood stakes on the coast.
@@ -170,6 +171,7 @@ Level 30 is the Modern era complete: the Modern building with all its details an
 
 1. The Refinery in its six eras: its band at levels 1, 5, 10, 15, 20, 25 and 30, in the normal view and the close view. The owner approves it first.
 2. Then the Lighthouse and the island (meeting 1 again), then the other buildings (meeting 2), then the rafts (meeting 3).
+3. Meeting 2 goes in three groups, the owner approving each: the Shelters, the Barracks and the Infirmary; then the coast's Fishery, Lumberyard and Harbor; then the Observatory (seven buildings are left once the Refinery is done).
 
 ## For every task this week
 

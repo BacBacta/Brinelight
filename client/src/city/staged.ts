@@ -51,8 +51,15 @@ export const SITE_PARTS = ["site-frame", "site-mast", "site-arm", "site-crate"] 
 export function shownModels(state: { buildings: Record<BuildingId, number>; queue: readonly { id: string }[] }): string[] {
   const out = BUILDING_IDS.filter((id) => isStaged(id) && state.buildings[id] > 0).map((id) => stageName(id, state.buildings[id]));
   if (hasGround()) out.push(groundName(state.buildings.lighthouse));
+  if (isStaged("lighthouse") && radarAt(state.buildings.lighthouse)) out.push("lighthouse-radar");
   const sites = state.queue.some((j) => (BUILDING_IDS as readonly string[]).includes(j.id)) || BUILDING_IDS.some((id) => state.buildings[id] === 0);
   return sites ? [...out, ...SITE_PARTS] : out;
+}
+
+/** Where the Lighthouse's radar turns at this level (its Modern era), if it has one. */
+export function radarAt(level: number): [number, number, number] | undefined {
+  const at = CITY_MANIFEST[stageName("lighthouse", level)]?.radar;
+  return at ? [at[0]!, at[1]!, at[2]!] : undefined;
 }
 
 /** The lantern's height of the Lighthouse at this level (the beams and the light go there). */

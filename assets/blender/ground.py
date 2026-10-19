@@ -240,7 +240,7 @@ def era(first):
 def lamps(color, height):
     """A lamp post at each crossing near the middle: a slim post, a cap, a warm globe."""
     out = []
-    for x, z in crossings(3.2):
+    for x, z in crossings(2.7):
         out += [cylinder(0.016, height, (x, height / 2, z), color, sides=6, bevel=0), sphere(0.034, (x, height + 0.03, z), "gold", subdivisions=1), cylinder(0.03, 0.02, (x, height + 0.07, z), color, sides=6, bevel=0)]
     return out
 

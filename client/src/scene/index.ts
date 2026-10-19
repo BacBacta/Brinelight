@@ -42,6 +42,8 @@ export type SceneHandle = {
   setLighthouseLevel(level: number): void;
   /** The Lighthouse's model made in Blender for its level's stage, at its own size, its lantern at `lantern`. */
   useLighthouseStage(object: THREE.Object3D, lantern: number, top: number): void;
+  /** The Lighthouse's radar (its Modern era), turning at `at` on its mast; null takes it off. */
+  useLighthouseRadar(object: THREE.Object3D | null, at?: readonly [number, number, number]): void;
   /**
    * The close view (week 8): the camera glides toward a building, so it fills about half of the screen above its sheet,
    * going around it if need be until none of the `others` hides it; `unfocus` glides back to the normal view. With
@@ -51,6 +53,8 @@ export type SceneHandle = {
   unfocus(): void;
   /** Shows the city or the sea; only the shown view moves with your fingers. */
   setView(view: View): void;
+  /** The sea's models, fetched once (at once, unless `seaLater` held them back): the kit and all the models. */
+  loadSea(): Promise<{ kit: Kit; models: Models }>;
   readonly view: View;
   /** Adds an object to the city (default) or to the sea. */
   add(object: THREE.Object3D, view?: View): void;
@@ -88,6 +92,11 @@ export type SceneOptions = {
    */
   remade?: Partial<Record<BuildingId, number>>;
   ready?: Promise<unknown>;
+  /**
+   * The sea's models wait for your first visit at sea (with the look made in Blender): the prototype's kit (2.9 MB) and
+   * the wreck, the camp and your boat are not fetched for the city's first image; `loadSea` fetches them.
+   */
+  seaLater?: boolean;
   /** The buildings on rafts, loaded after the city shows. */
   onRaftBuildings?: (models: RaftBuildingModels) => void;
   onError?: (err: unknown) => void;
@@ -195,18 +204,31 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   // the city shows once all are there. The buildings on rafts follow.
   const loader = new GLTFLoader();
   const blender = blenderLook();
-  // The island made to the grid replaces the old island: that one is not fetched.
+  // The island made to the grid replaces the old island: that one is not fetched. With `seaLater`, the sea's own
+  // models wait for your first visit at sea.
+  const seaOnly = ["wreck", "camp", "boat"] as const;
+  const later = !!options.seaLater;
+  let city: { kit: Kit; models: Models } | null = null;
+  let cityLoaded = () => {};
+  const cityDone = new Promise<void>((resolve) => (cityLoaded = resolve));
+  let seaModels: Promise<{ kit: Kit; models: Models }> | null = null;
+  const kitOf = (gltf: { scenes: THREE.Group[] }): Kit => {
+    const kit: Kit = {};
+    gltf.scenes.forEach((sc) => (kit[sc.name] = sc));
+    return kit;
+  };
   Promise.all([
-    loader.loadAsync(KIT_URL),
+    later ? Promise.resolve({ scenes: [] as THREE.Group[] }) : loader.loadAsync(KIT_URL),
     loadBuildings(loader, options.remade),
-    loadModels(loader, blender ? ["island"] : []),
+    loadModels(loader, [...(blender ? (["island"] as const) : []), ...(later ? seaOnly : [])]),
     blender ? loader.loadAsync(cityModelUrl("island")) : null,
     options.ready,
   ]).then(
     ([gltf, buildings, models, gridModel]) => {
       if (disposed) return;
-      const kit: Kit = {};
-      gltf.scenes.forEach((sc) => (kit[sc.name] = sc));
+      const kit = kitOf(gltf);
+      city = { kit, models };
+      cityLoaded();
       const anisotropy = Math.min(ISLAND_ANISOTROPY, renderer.capabilities.getMaxAnisotropy());
       let island: THREE.Object3D;
       if (gridModel) {
@@ -299,6 +321,9 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       sizeLighthouse();
       layout();
     },
+    useLighthouseRadar(object, at) {
+      lighthouse.useRadar(object, at);
+    },
     useLighthouseStage(object, lantern, top) {
       const moved = !lighthouseStaged || top !== lighthouseTop;
       lighthouseStaged = true;
@@ -319,6 +344,19 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       if (!focused) return;
       focused = false;
       glideTo(normal.target.clone().addScaledVector(CITY_ANGLE, normal.distance), normal.target.clone());
+    },
+    loadSea() {
+      if (!seaModels) {
+        if (!later) seaModels = cityDone.then(() => city!);
+        else
+          seaModels = Promise.all([loader.loadAsync(KIT_URL), loadModels(loader, ["island", "raft"]), cityDone]).then(([gltf, more]) => {
+            const kit = kitOf(gltf);
+            // The city's models gain the sea's: the same object, so what holds it sees them.
+            for (const id of seaOnly) city!.models[id] = more[id];
+            return { kit, models: city!.models };
+          });
+      }
+      return seaModels;
     },
     setView(v) {
       view = v;

@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import { BUILDING_FIX, PLOT_ROOM, footprintReach, type BuildingModel, type Tier } from "./buildings.js";
 
+/** The Modern era's radar: one turn in this many seconds, slow and even. */
+export const RADAR_TURN = 8;
+
 /** Size of the Lighthouse in the city: it grows with its level, up to 1.25 (prototype). */
 export function lighthouseScale(level: number): number {
   return Math.min(1.25, 0.82 + level * 0.045);
@@ -13,6 +16,8 @@ export type Lighthouse = {
   useModel(model: BuildingModel): void;
   /** The model of its stage (made in Blender), at its own size: the beams and the light go to `lantern`, its height. */
   useStaged(object: THREE.Object3D, lantern: number): void;
+  /** The Modern era's radar bar, turning slowly around its mast at `at` (still with reduced motion); null takes it off. */
+  useRadar(object: THREE.Object3D | null, at?: readonly [number, number, number]): void;
   /**
    * The widest it may grow and stay within its plot (PLOT_ROOM): past it, it only grows taller. Infinity before its
    * model is there.
@@ -84,6 +89,10 @@ export function createLighthouse(opts: { gold?: boolean; light?: boolean } = {})
 
   let beams = 0;
   let staged: THREE.Object3D | null = null;
+  // The radar turns once every RADAR_TURN seconds; with reduced motion it stays still.
+  const radar = new THREE.Group();
+  g.add(radar);
+  const still = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
   pivot.visible = false;
   let widthCap = Infinity;
   return {
@@ -97,11 +106,18 @@ export function createLighthouse(opts: { gold?: boolean; light?: boolean } = {})
     },
     animate(now) {
       pivot.rotation.y = now;
+      if (!still && radar.children.length) radar.rotation.y = (now / RADAR_TURN) * Math.PI * 2;
       beamM.opacity = 0.12 * (1 + Math.sin(now * 6) * 0.05) * beams;
     },
     setBeams(amount) {
       beams = amount;
       pivot.visible = amount > 0.001;
+    },
+    useRadar(object, at) {
+      radar.clear();
+      if (!object || !at) return;
+      radar.position.set(at[0], at[1], at[2]);
+      radar.add(object);
     },
     useStaged(object, lantern) {
       for (const m of tower) m.visible = false;

@@ -357,4 +357,18 @@ With `?blender`, the old models of the buildings remade and the old island are n
 - **Half of it is the prototype's kit** (`phare.glb`, 2.9 MB): the sea's sites and the old details still use it. Once every building is remade, it can wait until you first go to sea, and the city's first image would need about 2.9 MB.
 - The game's code is about 340 kB; the old models of the seven buildings not remade yet about 1.07 MB.
 
+### The sea's models wait for the sea (owner, 19 October, night)
+
+With `?blender`, the prototype's kit (`phare.glb`, 2.9 MB) and the wreck, the camp and your boat wait for your first visit at sea; the island's ground is now counted. Same measure (10 Mbit/s, 40 ms, three runs, median), the Blender bake paused so the machine is free:
+
+| City | First image | Downloaded in all |
+| --- | --- | --- |
+| New player, old look (today's default) | 10.6 s | 5.8 MB |
+| New player, `?blender` | 7.5 s | 2.5 MB, all before the first image |
+| Lighthouse 30 city, old look | 10.5 s | 5.8 MB |
+| Lighthouse 30 city, `?blender` | 8.0 s | 2.6 MB, of which 0.45 MB after the first image (the raft buildings) |
+
+- **The goal of about 3 MB holds; the goal of 5 s cannot be judged here.** With no network limit at all, the first image still takes 7.2 s with `?blender` and 7.5 s with the old look: this container draws without a graphics chip (software WebGL), and decoding the textures, compiling the shaders and building the scene take that time. The network now costs about 1 s of the 7.5. A real phone must say what is left.
+- **What weighs the most before the first image** (new player): the old models of the seven buildings not remade yet (1.07 MB; each building remade takes its old model off), the island (171 kB), three.js (145 kB), the raft (101 kB), the Lighthouse (98 kB), the Refinery (86 kB), the building site's parts (95 kB), the ground (57 kB), the game's code (59 kB), the fonts (76 kB).
+
 **Next:** an entry-level phone must still be measured before players are invited.

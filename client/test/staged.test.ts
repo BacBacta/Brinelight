@@ -11,7 +11,7 @@ import { PLOT_ROOM, hexReach } from "../src/scene/buildings.js";
 import { hexX, hexZ } from "../src/scene/island.js";
 import { RAFT_FILL } from "../src/scene/coast.js";
 import { PIER_SLOTS } from "../src/scene/framing.js";
-import { SITE_PARTS, STAGES, groundName, hasGround, isStaged, levelShape, shownModels, stageName, stageOf } from "../src/city/staged.js";
+import { SITE_PARTS, STAGES, groundName, hasGround, isStaged, levelShape, radarAt, shownModels, stageName, stageOf } from "../src/city/staged.js";
 import { readGlb } from "./glb.js";
 
 const file = (name: string) => new URL(`../public/city/${name}.glb`, import.meta.url).pathname;
@@ -90,10 +90,27 @@ describe("the buildings remade in Blender", () => {
     const levels = (l: number) => Object.fromEntries(BUILDING_IDS.map((id) => [id, l])) as Record<BuildingId, number>;
     const fresh = { ...levels(0), lighthouse: 1 };
     expect(shownModels({ buildings: fresh, queue: [] })).toEqual([...STAGED.filter((id) => id === "lighthouse").map((id) => `${id}-1`), "ground-1", ...SITE_PARTS]);
-    expect(shownModels({ buildings: levels(30), queue: [] })).toEqual([...STAGED.map((id) => `${id}-30`), "ground-25"]);
+    expect(shownModels({ buildings: levels(30), queue: [] })).toEqual([...STAGED.map((id) => `${id}-30`), "ground-25", "lighthouse-radar"]);
     expect(shownModels({ buildings: levels(17), queue: [] })).toEqual([...STAGED.map((id) => `${id}-15`), "ground-15"]);
     // An upgrade at work: its building site, never the next era (fetched in the background once the city shows).
     expect(shownModels({ buildings: levels(19), queue: [{ id: "refinery" }] })).toEqual([...STAGED.map((id) => `${id}-15`), "ground-15", ...SITE_PARTS]);
+  });
+
+  it("the Modern Lighthouse's radar turns on its mast, within its plot and under its top; no other era has one", () => {
+    const bar = drawn("lighthouse-radar", Infinity);
+    const half = Math.max(...bar.map((p) => Math.hypot(p.x, p.z)));
+    for (const s of STAGES) {
+      const at = radarAt(s);
+      if (s < 25) {
+        expect(at, `lighthouse-${s}`).toBeUndefined();
+        continue;
+      }
+      expect(at).toBeDefined();
+      const [x, y, z] = at!;
+      // Whatever way it points, its tips stay on the plot.
+      for (let a = 0; a < 360; a += 15) expect(hexReach(x + Math.cos((a * Math.PI) / 180) * half, z + Math.sin((a * Math.PI) / 180) * half)).toBeLessThanOrEqual(PLOT_ROOM);
+      expect(y + Math.max(...bar.map((p) => p.y))).toBeLessThan(levelShape("lighthouse", s).height);
+    }
   });
 
   it("the Lighthouse's lantern is inside its lantern room, for the beams and the light", () => {

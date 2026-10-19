@@ -117,9 +117,10 @@ export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: T
   return {
     hits: BUILDING_IDS.map((id) => plots[id].hit),
     refresh(state) {
-      // The old details only on the buildings not remade yet.
+      // The old details only on the buildings not remade yet, and none at all with the look made in Blender: they came
+      // from the prototype's kit, which that look no longer fetches for the city.
       const old = { ...state.buildings };
-      for (const id of BUILDING_IDS) if (staged(id)) old[id] = 0;
+      for (const id of BUILDING_IDS) if (staged(id) || blenderLook()) old[id] = 0;
       details.refresh(old);
       growth.refresh(old);
       const shown: { x: number; z: number; box: SiteBox; moving: boolean }[] = [];

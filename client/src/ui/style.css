@@ -71,6 +71,8 @@ body.at-sea .build-badge:not([hidden]){display:inline-flex}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:20;max-height:78vh;display:flex;flex-direction:column;border-radius:22px 22px 0 0;border-bottom:0;padding:0 0 calc(10px + env(safe-area-inset-bottom,0px));animation:up .22s ease-out}
 .sheet[hidden]{display:none}
 @keyframes up{from{transform:translateY(40px);opacity:0}}
+/* With the look made in Blender (week 8), a sheet takes at most half the screen: the close view shows the building above it. */
+@media (max-width:899px){.era-look .sheet{max-height:50vh}}
 @media (min-width:900px){.sheet{left:auto;right:16px;bottom:16px;top:76px;width:420px;max-height:none;border-radius:20px;border-bottom:2.5px solid var(--edge)}}
 .sh-h{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:2px solid rgba(255,255,255,.08)}
 .sh-h h2{margin:0;font-family:var(--f-d);font-weight:400;font-size:22px;flex:1}

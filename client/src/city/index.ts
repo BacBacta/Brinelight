@@ -10,7 +10,7 @@ import { createRaftSheet } from "./raftSheet.js";
 import { RAFT_FILL, createCityRafts, raftSlots, slotPosition } from "./rafts.js";
 import { createSheet } from "./sheet.js";
 import { blenderLook } from "../scene/cityLook.js";
-import { groundName, hasGround, isStaged, lanternHeight, levelShape, loadStage, showLevel, stageName } from "./staged.js";
+import { groundName, hasGround, isStaged, lanternHeight, levelShape, loadStage, radarAt, showLevel, stageName } from "./staged.js";
 
 export type City = {
   /** Shows the state: models, labels, queue and open sheet. */
@@ -62,6 +62,8 @@ export function createCity(
 ): City {
   const buildings = createCityBuildings(kit, models, (o) => scene.add(o));
   const rafts = createCityRafts(kit, others.raft, (o) => scene.add(o), coastAt);
+  // With the look made in Blender, the prototype's kit is not there: the shipyard's scaffolding is the building sites'.
+  if (blenderLook()) void loadStage("site-frame").then((frame) => rafts.useScaffold(frame.clone()));
   // Labels float just above each model at its full size (a smaller tier leaves them where they were, so they keep their
   // places among the others); the Lighthouse's grows with its level.
   const staged = (id: BuildingId) => blenderLook() && isStaged(id);
@@ -97,6 +99,9 @@ export function createCity(
       if (lighthouseShown !== level) return;
       showLevel(model, "lighthouse", level);
       scene.useLighthouseStage(model, lanternHeight(level), levelShape("lighthouse", level).height);
+      const at = radarAt(level);
+      if (!at) scene.useLighthouseRadar(null);
+      else void loadStage("lighthouse-radar").then((radar) => lighthouseShown === level && scene.useLighthouseRadar(radar, at));
     });
   };
   const queue = createQueue(root, () => game.toCity());

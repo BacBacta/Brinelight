@@ -118,6 +118,8 @@ export type CityRafts = {
   readonly meshes: THREE.Object3D[];
   /** The buildings on rafts, once loaded: from then on they stand on the rafts that carry them. */
   useBuildings(models: RaftBuildingModels): void;
+  /** The scaffolding over a raft the shipyard builds, in place of the prototype kit's (the look made in Blender). */
+  useScaffold(model: THREE.Object3D): void;
 };
 
 const MAX = RAFT_SLOTS.length;
@@ -213,7 +215,8 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
   const ringM = new THREE.MeshBasicMaterial({ color: "#FFE27A", transparent: true, opacity: 0.75, depthWrite: false });
   const ring = new THREE.InstancedMesh(ringGeo, ringM, MAX);
   const hit = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1.4, 6), new THREE.MeshBasicMaterial({ visible: false }), MAX);
-  const scaffold = kitModel(kit, "building_scaffolding");
+  const scaffold = new THREE.Group();
+  scaffold.add(kitModel(kit, "building_scaffolding"));
   scaffold.scale.setScalar(0.8);
   scaffold.visible = false;
   const meshes = [...decks, ghost, ring, hit, walk];
@@ -284,6 +287,10 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
       if (h.object === hit) return hitSlots[h.instanceId] ?? null;
       const id = RAFT_BUILDING_IDS.find((b) => onRafts[b] === h.object);
       return id ? (standing[id][h.instanceId] ?? null) : null;
+    },
+    useScaffold(model) {
+      scaffold.clear();
+      scaffold.add(model);
     },
     useBuildings(models) {
       if (Object.keys(onRafts).length) return;
