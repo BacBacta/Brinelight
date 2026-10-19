@@ -2,6 +2,54 @@
 
 Goal of the week: the game server runs on a Hetzner machine, at `https://api.brinelight.xyz`, with the game at `https://play.brinelight.xyz`. Its database is backed up every night, a restore is tested on its own every week, and you get an e-mail when the server is down. The kit has been ready since week 4 (`deploy/`, `docs/deploy.md`) and the CI starts it on every push. This week makes it real, then measures how many players one machine holds. Before it, a task from the players' feedback that needs nothing from the server: buildings that change with every level. Three smaller tasks follow: the Mist and Leviathan hours per server, the CI actions on Node 24, and the other buildings that pass the storage.
 
+**Changed on 19 October, evening (owner): the city's look comes first.** The whole city is remade in Blender (`bpy` 5.2.2 with the style pass) before anything else: see "The city remade in Blender" just below. Task 3 (online) and the load test's run on the CX23 wait until it is done; tasks 2 and 4's script are done (`6f4ee97`, `9db6892`).
+
+## The city remade in Blender (owner, 19 October, evening)
+
+### What is remade
+
+- **The island**, made to the grid with a clean coast, and **the Lighthouse**.
+- **The eight other buildings of the island.**
+- **The floating village:** three deck variants, the damaged raft, the raft being built, the walkways, the free slot; and the three raft buildings at their levels 1 to 3.
+- **The building sites** during an upgrade.
+
+### What each building does, level by level
+
+- **Seven models:** the four tiers at levels 1, 10, 20 and 30, and the transformations at 5, 15 and 25. Each changes what the normal view sees: the silhouette, the height, the material (wood, stone, brass), the roof's color.
+- **A detail at every other level** (23 for a building), large enough to be seen when the camera comes close. A model carries the details of the levels before it, and those of its own levels as separate parts that show one by one.
+- **Always under the top of the Lighthouse, never out of its plot:** checked by tests at every level, on what the scripts measure from each model.
+
+### Where things stand
+
+- **Coastal buildings** (Harbor, Fishery) on a plot of the island's edge, turned toward the sea, with the rule tested; their boats and piers always on the water.
+- **Rafts** on the grid, a strip of water between them, no overlap, the island always in the middle.
+- **Labels:** level badges; the full label only on the building touched or when there is something to do; never under a panel.
+- **Camera:** the framing that moves back with the rafts; it comes close when a building is touched.
+
+### How it is made
+
+- **One Python script per model** in `assets/blender/`, from the kit of parts (`kit.py`) and its style pass.
+- `assets/make-models.py` serves the models in `client/public/city/` (512 px WebP, 1,024 for the island, quantized geometry) and writes their measures (height, reach on the plot, triangles, details) in a manifest the tests read.
+- **What the phone draws:**
+  - one draw call per building, its base and its shown details merged when a level changes;
+  - a model is loaded when its tier is needed, the next one while the upgrade toward it runs.
+- **Until the owner approves them,** the new models show only with `?blender` in the address; once approved, they replace the old ones. The old models and the code of the small details (`growth.ts`, `tiers.ts`, the code-built site) are removed at the very end, once everything that replaces them is approved.
+
+### Three meetings: Claude Code stops and waits for the owner's approval at each
+
+1. **The island, the Lighthouse and the Refinery, finished:** the normal view and the close view, at levels 1, 5, 10, 15, 20, 25 and 30.
+2. **The other buildings**, three at a time: the Fishery, the Lumberyard and the Shelters; then the Barracks, the Harbor and the Observatory; then the Infirmary.
+3. **The rafts and the raft buildings, and the whole city** with 3, 15 and 39 rafts, at 360 and 412 px.
+
+### At each meeting
+
+- **Performance:** draw calls, triangles and file weights. An entry-level phone is measured before players are invited.
+- **Look captures:** any one that moves is shown to the owner before its reference is made again.
+
+### What does not change
+
+The rules of the game, the cities' data and the server.
+
 Do the tasks in order, one per session. For each one: read CLAUDE.md, say what you will do and what you will not do, wait for approval, write the code, run `npm run check` (and `npm run e2e` when the client changes), commit, push. One pull request for the whole week.
 
 ## For every task this week
@@ -543,6 +591,8 @@ How it is tested:
 
 ## Task 3 · Online (you, step by step; Claude Code guides and checks)
 
+**On hold (19 October, evening): after the city remade in Blender.**
+
 Nothing to code. Each step is in `docs/deploy.md`, with what you should see. At the end of each step, send the output it asks for: never a password, a key or the content of `.env`.
 
 1. **Create the Hetzner account** at accounts.hetzner.com.
@@ -582,6 +632,8 @@ What it does not do: no player is invited yet (task 4 comes first); no deploy ke
 How it is tested: the checklist above. Each step has its expected output, and Claude Code compares what you send with it.
 
 ## Task 4 · How many players one CX23 holds (the load test)
+
+**The script is done (`9db6892`); its run on the CX23 waits for task 3.**
 
 What it does:
 
