@@ -11,3 +11,6 @@ e2e/.shots/
 deploy/.local-*
 deploy/.env
 deploy/local-test/logs/
+.venv-blender/
+assets/blender/out/
+__pycache__/
