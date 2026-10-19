@@ -2,11 +2,12 @@
 A trial of Blender for Brinelight's models (owner's request, 19 October): the Refinery at levels 1, 10, 20 and 30, and
 a raft of the floating village, sound, damaged and being built. Nothing here goes into the game by itself.
 
-    .venv-blender/bin/python assets/blender/trial.py <out dir>
+    .venv-blender/bin/python assets/blender/trial.py <out dir> [--style]
 
 Each model is built in the game's units from the kit (kit.py), its colors and soft shadows baked into one texture,
 and exported as <out dir>/<name>.glb. The Refinery grows with its level: wood (1 to 9), a stone plinth (10), brass
 (20), a verdigris roof (30); its vat and chimney rise, a tank, a flare tower and a gantry come with the tiers.
+With --style, the Refinery gets the style pass (kit.py): grain, a shade per part, lit edges, two soft shadows.
 """
 import math
 import sys
@@ -152,16 +153,17 @@ def raft(kind):
     return obj
 
 
-def main(out):
+def main(out, style=False):
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     jobs = [(f"refinery-{lv}", lambda lv=lv: refinery(lv)) for lv in (1, 10, 20, 30)] + [(f"raft-{k}", lambda k=k: raft(k)) for k in ("sound", "damaged", "building")]
     for name, make in jobs:
-        kit.reset()
+        kit.reset(style=style and name.startswith("refinery"))
         obj = make()
         tris = kit.bake_and_export(obj, out / f"{name}.glb")
         print(f"{name:<16} {tris:5d} triangles  {(out / f'{name}.glb').stat().st_size / 1024:6.0f} kB", flush=True)
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "assets/blender/out")
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    main(args[0] if args else "assets/blender/out", style="--style" in sys.argv)

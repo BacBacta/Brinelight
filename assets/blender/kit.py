@@ -40,10 +40,25 @@ def srgb(hex_color):
 
 _materials = {}
 
+# The style pass (owner, 19 October): each part's color varies a little, wood and stone get a grain, the edges catch
+# the light, the tops are lighter and the feet darker. Off, the parts are flat colors (the first trial's look).
+_style = {"on": False}
+# What each palette color is made of, for its grain and how much its edges catch the light.
+FINISH = {
+    "wood": ("wood", 0.7),
+    "plank": ("wood", 0.6),
+    "stone": ("stone", 0.7),
+    "stone_dark": ("stone", 0.8),
+    "brass": ("metal", 1.0),
+    "copper": ("metal", 0.9),
+    "gold": ("metal", 0.6),
+}
 
-def reset():
-    """An empty scene."""
+
+def reset(style=False):
+    """An empty scene; `style` turns the style pass on for the parts made after it."""
     _materials.clear()
+    _style["on"] = style
     bpy.ops.wm.read_factory_settings(use_empty=True)
     for block in (bpy.data.meshes, bpy.data.materials, bpy.data.images):
         for item in list(block):
@@ -54,12 +69,117 @@ def material(name):
     """A plain material of a palette color, made once."""
     if name not in _materials:
         m = bpy.data.materials.new(name)
-        m.use_nodes = True
         bsdf = m.node_tree.nodes["Principled BSDF"]
         bsdf.inputs["Base Color"].default_value = srgb(PALETTE[name])
         bsdf.inputs["Roughness"].default_value = 0.8
+        if _style["on"]:
+            _paint(m, name)
         _materials[name] = m
     return _materials[name]
+
+
+def _paint(m, name):
+    """
+    The style pass on a material: its color times its grain, the part's own small variation (stored by `join`), a
+    lighter top and a darker foot, and lighter edges. All of it lands in the baked color.
+    """
+    nt = m.node_tree
+    n, link = nt.nodes.new, nt.links.new
+    kind, edge = FINISH.get(name, ("paint", 0.5))
+
+    def ranged(socket, a, b, c, d):
+        r = n("ShaderNodeMapRange")
+        r.clamp = True
+        link(socket, r.inputs["Value"])
+        for k, v in zip(("From Min", "From Max", "To Min", "To Max"), (a, b, c, d)):
+            r.inputs[k].default_value = v
+        return r.outputs["Result"]
+
+    def times(a, b):
+        m_ = n("ShaderNodeMath")
+        m_.operation = "MULTIPLY"
+        link(a, m_.inputs[0])
+        link(b, m_.inputs[1])
+        return m_.outputs["Value"]
+
+    geo = n("ShaderNodeNewGeometry")
+    coords = n("ShaderNodeTexCoord").outputs["Object"]
+    # The part's own shade: each piece of wood, each hoop, a little different.
+    variation = n("ShaderNodeAttribute")
+    variation.attribute_name = "variation"
+    f = ranged(variation.outputs["Fac"], 0, 1, 0.84, 1.1)
+    # Lighter on top, darker underneath, as under a soft sky.
+    up = n("ShaderNodeSeparateXYZ")
+    link(geo.outputs["True Normal"], up.inputs[0])
+    f = times(f, ranged(up.outputs["Z"], -1, 1, 0.86, 1.05))
+    # A darker foot, where the sea and the dirt reach.
+    at = n("ShaderNodeSeparateXYZ")
+    link(geo.outputs["Position"], at.inputs[0])
+    f = times(f, ranged(at.outputs["Z"], 0.0, 0.3, 0.8, 1.0))
+    # The grain: long streaks in wood, mottles in stone.
+    if kind in ("wood", "stone"):
+        noise = n("ShaderNodeTexNoise")
+        noise.inputs["Detail"].default_value = 4
+        if kind == "wood":
+            stretch = n("ShaderNodeMapping")
+            stretch.inputs["Scale"].default_value = (3, 3, 40)
+            link(coords, stretch.inputs["Vector"])
+            link(stretch.outputs["Vector"], noise.inputs["Vector"])
+            noise.inputs["Scale"].default_value = 4
+            f = times(f, ranged(noise.outputs["Fac"], 0.3, 0.7, 0.78, 1.12))
+        else:
+            link(coords, noise.inputs["Vector"])
+            noise.inputs["Scale"].default_value = 14
+            f = times(f, ranged(noise.outputs["Fac"], 0.35, 0.65, 0.85, 1.08))
+    base = n("ShaderNodeRGB")
+    base.outputs[0].default_value = srgb(PALETTE[name])
+    shaded = n("ShaderNodeVectorMath")
+    shaded.operation = "SCALE"
+    link(base.outputs[0], shaded.inputs[0])
+    link(f, shaded.inputs["Scale"])
+    # The edges: where the rounded normal leaves the face's, the color is lighter, as worn and lit.
+    bevel = n("ShaderNodeBevel")
+    bevel.inputs["Radius"].default_value = 0.025
+    dot = n("ShaderNodeVectorMath")
+    dot.operation = "DOT_PRODUCT"
+    link(bevel.outputs["Normal"], dot.inputs[0])
+    link(geo.outputs["True Normal"], dot.inputs[1])
+    rim = ranged(dot.outputs["Value"], 0.96, 0.75, 0, edge)
+    light = n("ShaderNodeVectorMath")
+    light.operation = "MULTIPLY_ADD"
+    link(shaded.outputs["Vector"], light.inputs[0])
+    light.inputs[1].default_value = (1.45, 1.4, 1.28)
+    light.inputs[2].default_value = (0.09, 0.08, 0.05)
+    mix = n("ShaderNodeMix")
+    mix.data_type = "RGBA"
+    link(rim, mix.inputs["Factor"])
+    link(shaded.outputs["Vector"], mix.inputs[6])
+    link(light.outputs["Vector"], mix.inputs[7])
+    link(mix.outputs[2], nt.nodes["Principled BSDF"].inputs["Base Color"])
+
+
+def _vary(obj):
+    """Stores a random shade for each separate piece of the model (geometry nodes: one value per mesh island)."""
+    ng = bpy.data.node_groups.new("vary", "GeometryNodeTree")
+    ng.interface.new_socket("Geometry", in_out="INPUT", socket_type="NodeSocketGeometry")
+    ng.interface.new_socket("Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
+    n, link = ng.nodes.new, ng.links.new
+    gin, gout = n("NodeGroupInput"), n("NodeGroupOutput")
+    island = n("GeometryNodeInputMeshIsland")
+    rnd = n("FunctionNodeRandomValue")
+    rnd.data_type = "FLOAT"
+    rnd.inputs["Seed"].default_value = 7
+    link(island.outputs["Island Index"], rnd.inputs["ID"])
+    store = n("GeometryNodeStoreNamedAttribute")
+    store.data_type = "FLOAT"
+    store.domain = "FACE"
+    store.inputs["Name"].default_value = "variation"
+    link(gin.outputs[0], store.inputs["Geometry"])
+    link(rnd.outputs["Value"], store.inputs["Value"])
+    link(store.outputs["Geometry"], gout.inputs[0])
+    mod = obj.modifiers.new("vary", "NODES")
+    mod.node_group = ng
+    bpy.ops.object.modifier_apply(modifier=mod.name)
 
 
 def _finish(obj, color, bevel, segments):
@@ -189,6 +309,8 @@ def join(parts, name):
     obj.name = name
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     bpy.ops.object.shade_flat()
+    if _style["on"]:
+        _vary(obj)
     return obj
 
 
@@ -208,7 +330,6 @@ def bake_and_export(obj, path, size=1024, ao_strength=0.5, samples=48):
     scene.cycles.samples = samples
     if scene.world is None:
         scene.world = bpy.data.worlds.new("world")
-    scene.world.light_settings.distance = 0.35
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
@@ -234,18 +355,23 @@ def bake_and_export(obj, path, size=1024, ao_strength=0.5, samples=48):
     scene.render.bake.use_pass_color = True
     scene.render.bake.margin = 6
     bpy.ops.object.bake(type="DIFFUSE")
-    ao = target("ao")
-    bpy.ops.object.bake(type="AO")
-    # The colors under soft shadows: occlusion darkens by `ao_strength` at most, never to black.
     c = np.array(color.pixels[:]).reshape(size, size, 4)
-    a = np.array(ao.pixels[:]).reshape(size, size, 4)[:, :, :1]
-    c[:, :, :3] *= (1 - ao_strength) + ao_strength * a
+    # The colors under soft shadows: occlusion darkens by `ao_strength` at most, never to black. With the style pass,
+    # two of them: a short one in the creases and a wide, soft one under roofs and between the parts.
+    # Their shadows lean to blue, as painted under a warm light (per channel: red, green, blue).
+    shadows = [(0.12, (0.36, 0.33, 0.24)), (0.6, (0.42, 0.38, 0.26))] if _style["on"] else [(0.35, (ao_strength,) * 3)]
+    for distance, strength in shadows:
+        scene.world.light_settings.distance = distance
+        ao = target(f"ao{distance}")
+        bpy.ops.object.bake(type="AO")
+        a = np.array(ao.pixels[:]).reshape(size, size, 4)[:, :, :1]
+        k = np.array(strength)
+        c[:, :, :3] *= (1 - k) + k * a
     final = bpy.data.images.new("texture", size, size)
     final.pixels[:] = c.ravel()
     final.file_format = "JPEG"
     # One material with the baked texture.
     mat = bpy.data.materials.new("baked")
-    mat.use_nodes = True
     nodes = mat.node_tree.nodes
     bsdf = nodes["Principled BSDF"]
     bsdf.inputs["Roughness"].default_value = 0.85
@@ -259,7 +385,7 @@ def bake_and_export(obj, path, size=1024, ao_strength=0.5, samples=48):
         export_format="GLB",
         use_selection=True,
         export_image_format="JPEG",
-        export_jpeg_quality=90,
+        export_image_quality=90,
         export_yup=True,
         export_apply=True,
     )
