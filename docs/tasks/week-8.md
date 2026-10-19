@@ -71,22 +71,38 @@ A player's feedback: "When you upgrade a building, it stays the same. It should 
 
 ### What it does
 
-1. **The building site, while it is upgraded.**
-   - Around the building, scaffolding made in code: four poles, two levels of planks and a ladder, sized to its model. A pile of planks and a pulley sit beside it.
-   - A small crane arm swings slowly (±25°), with a crate going up and down. It stands still with reduced motion.
-   - Above the building, under its name, a thin gold bar and the time left ("2 h 10"), in the building's label.
-   - When the work ends, the site disappears, the new level's detail appears, and the existing celebration plays.
-   - The Lighthouse gets the same site. A building not built yet shows the site, at full size.
-2. **A small detail at every level.**
-   - Each building has six kinds of small details of its own, picked from what it does (the lists below).
-   - **The rule:** at every level that is not a transformation, the next kind in its list is added (after the sixth, the first again: a second barrel, then a third), at the next free place around or on the building.
-   - The places are fixed per building: a ring of spots between the building and the edge of its plot, spots on the walls the camera sees, and spots on its roof, measured once from its model. Nothing is drawn at random, and a detail never moves once it is there.
-   - The details grow with the building's tier size (86 %, 93 %, 100 %), so they stay against its walls.
-   - Each detail is a few code-built shapes (boxes, cylinders, cones, a flat flag) in the colors of the art direction: 60 triangles at most.
-3. **A transformation at levels 5, 10, 15, 20, 25 and 30.**
-   - A larger piece, built the same way, changes the building's silhouette: an annex, a floor, a stone base, a tower or a mast, brass and lit windows, a crowning piece.
-   - Each one is 300 triangles at most. The sizes of the three tiers stay as today (86 %, 93 %, 100 %); past level 10, a building grows taller with its pieces, not wider: nothing leaves its plot.
-   - The flag, crate, barrel and lantern of today's tiers are replaced by the details of the lists.
+Revised on 19 October after a player's capture: at the city's normal distance a building is about 60 px high and the labels cover the top of the screen, so no small detail can be seen there. The owner's decisions: **from afar, size and tiers; up close, every level.** The first version (23 small details, commit `4a7391a`) is replaced.
+
+The work, in this order:
+
+1. **The framing (the city's normal view).**
+   - Today the camera stands 39.6 from the city in portrait from Lighthouse 8: the island fills only the middle third of the screen.
+   - New: the tightest distance where the island **and every raft slot open at this Lighthouse level** (ring 3, and ring 4 from Lighthouse 8) stay on screen, between the top panels and the tab bar, at 360 px wide as at 412.
+   - Worked out by a pure function from the screen's size and the Lighthouse's level (`cityFraming` in `client/src/scene/camera.ts`); the camera's angle does not change.
+2. **The labels.**
+   - By default a building shows only its level badge, above its roof.
+   - Its full label (name, level, bar and time left) shows on the building you touched, on a building at work, on a suggested upgrade (↑), and for a few seconds after an upgrade ends.
+   - A label never goes under a panel (top bar, Mist, queue, Tasks, the quest card, tab bar): it is reduced to its badge, or hidden if even its badge would touch one. Labels never cover each other (the layout of week 6).
+3. **The coast: what floats is in the water.**
+   - Today the Harbor (plot 0,-1) and the Fishery (plot 1,0) stand inland: the water is 3.3 and 2.9 from their centers, and the boat and pier of their models lie on the grass.
+   - **The Harbor moves to plot 0,-2** (back shore) and **the Fishery to plot 2,0** (right shore), each turned toward the sea. Plots 0,-1 and 1,0 stay free.
+   - **The prototype's pier comes back**, from the Harbor's shore into the sea, on the raft slots the rules already keep for it (1,-3, 1,-4, 2,-4). It shows one boat per fleet at home (the fleets the Harbor allows, minus those at sea), up to 6 berths.
+   - **Only what is drawn moves:** the plots are in `client/src/city/plots.ts` (the client's display). No city data, no shared rule and no saved field changes: no migration.
+   - **The rule, tested:** a coastal building (Harbor, Fishery) stands on a plot of ring 2 whose water is within 1.3 of its center, turned toward the water; whatever of it leaves its plot is over the water (measured on the island's model), the rest stays in its plot. The pier and every boat are over the water.
+4. **The close view.**
+   - Touching a building glides the camera toward it (about 0.6 s): the building fills about half the screen above its sheet. Closing the sheet glides it back where it was.
+   - With reduced motion, the camera jumps instead of gliding.
+   - The pinch zoom stays as it is (from the normal view down to a distance of 9).
+5. **The buildings: from afar, size and tiers; up close, every level.**
+   - **Size:** a building widens from 86 % to 100 % between levels 1 and 10, a little at every level, then grows in height only: +55 % at level 30 over level 1. It never leaves its plot, and its top (flag included) stays under the top of the Lighthouse, whose level is always at least its own.
+   - **Material by tier** (on the building's own model, by height bands, in its shader): wood at 1 to 9, a stone base from 10, the upper part in brass from 20, a colored roof at 30 (each building its color, from the art direction).
+   - **A flag** on the roof, facing the camera, in its tier's color: cream (1 to 9), navy (10 to 19), red (20 to 29), gold (30); a lit lantern on its pole from 20.
+   - **The transformations** at 5, 10, 15, 20, 25 and 30 stay (the lists below), large and high, and grow with the building.
+   - **One detail per level**, as in the lists below, larger than in the first version (at least 25 px high on a 360-px screen in the close view):
+     - each of the six kinds of a building has **one place**, on a side the close view sees; its copies gather there (a second barrel beside the first, a third on top);
+     - a detail that the close view would not see is not placed: every detail of every level is tested as seen from the close view;
+     - details grow with the building's width, and stand on the ground, on a roof, or on a wall: nothing floats.
+6. **The building site** (done in `4a7391a`): scaffolding, pulley, pile of planks and a crane whose crate goes up and down; the time left in the label. It follows the building's new size.
 
 **For the phone:**
 - All the details and transformations of the eight buildings and the Lighthouse are one merged mesh (with vertex colors, one material), and everything that glows (lamps, lit windows, flames) a second one. Both are rebuilt only when a level changes.
@@ -111,13 +127,14 @@ A player's feedback: "When you upgrade a building, it stays the same. It should 
 
 ### The order of the work
 
-1. **The Refinery alone, first:** its site and its 30 levels. You see the 30 captures (a close-up at each level, in the CI's artifact) before the other buildings are started.
-2. **The other eight buildings of the island**, with the Lighthouse.
-3. **The buildings of the rafts.**
+1. **The framing and the labels**, then **the coast** (Harbor, Fishery, pier and boats).
+2. **The Refinery with the new approach:** you see it at levels 1, 5, 10, 20 and 30, in the normal view and in the close view, before the other buildings are started.
+3. **The other eight buildings of the island**, with the Lighthouse.
+4. **The buildings of the rafts.**
 
 ### Level by level
 
-Level 1 is the building as it is today. The **transformations** are in bold. The Refinery comes first, as in the order of the work. For the other levels, the detail named is the one added at that level.
+Level 1 is the building as it is today. The **transformations** are in bold. The Refinery comes first, as in the order of the work. For the other levels, the detail named is the one added at that level. Size, material and flag change with the level as said above, on top of these lists.
 
 #### Refinery
 
@@ -456,13 +473,16 @@ Their highest level is **3** (`RAFT_BUILDING_MAX_LEVEL` in the rules; two copies
 
 ### How it is tested
 
-- **The rule is a pure function**, `detailsAt(building, level)`, in `client/src/city/growth.ts`, tested without a browser:
-  - for each building and each level from 1 to 30, the details are those of the lists above;
-  - a level's details are the previous level's plus one (or plus its transformation): nothing moves or disappears;
-  - nothing reaches out of the plot (`PLOT_ROOM`, with the test of week 6 against the neighbor plots and the raft slots), and nothing of a raft building leaves its raft;
-  - the damage mark's spot is never taken by a detail;
-  - at most 3,000 triangles per island building at level 30, 400 per raft building at level 3;
-  - two meshes for all the details, rafts included, whatever the city, and two more while building.
+- **The framing:** for 360 × 800 and 412 × 915 and every Lighthouse level, the island's shore and every open raft slot (with its raft) project inside the screen between the panels; at 95 % of the distance found, one of them leaves it (the tightest).
+- **The labels:** the layout is a pure function (`client/src/city/overlap.ts`), tested with the panels' rectangles: no label or badge touches a panel or another label; a building at work, touched, suggested or just finished shows its full label; the others their badge.
+- **The coast:** the rule of the coastal buildings above, on the island's model; the pier and the boats over the water and off every other raft slot; the boats shown are the fleets at home, up to 6.
+- **The close view:** where it goes is a pure function (building, screen, sheet height → camera target and distance), tested so the building's top and foot stay on screen above the sheet.
+- **The buildings, without a browser** (`client/test/growth.test.ts`):
+  - for each building and each level from 1 to 30, the details are those of the lists below, one more at each level, nothing moving or disappearing;
+  - nothing reaches out of the plot; nothing floats (each detail stands on the ground or a roof of the model, or hangs on a wall);
+  - every detail is seen from the close view (a ray from the camera to its center meets nothing of the building before it);
+  - each building's top, flag included, stays under the Lighthouse's top at the same level;
+  - at most 60 triangles a detail and 300 a transformation; two meshes for all the details, whatever the city, and two more while building.
 - **The e2e "building tiers"**, at 412 and 360 px:
   - the city with every building at level 1, 5, 10, 15, 20, 25 and 30, with six rafts and their six buildings;
   - one building site on the island and one on a raft;
@@ -473,7 +493,7 @@ Their highest level is **3** (`RAFT_BUILDING_MAX_LEVEL` in the rules; two copies
 - **The look references:**
   - None of the 52 should move: they all hide the 3D view and the labels.
   - The new references: the 7 levels of the city, the 2 building sites, the raft buildings at 3 levels and the damaged raft, at 412 and 360 (26 images). They are 3D drawings: the CI's processors may draw them a little differently, as they do the captains' rows (question 2).
-  - The Refinery's 30 close-ups are for you to look at, in the CI's artifact; they are not references.
+  - The Refinery at levels 1, 5, 10, 20 and 30, in the normal view and the close view, is for you to look at, in the CI's artifact; these are not references.
   - When the task is coded, you see the new captures, and any capture that moved, before any reference is made again.
 - `docs/art-direction.md` (the tiers become levels and transformations) and a line in `docs/decisions.md`.
 
@@ -691,6 +711,14 @@ The plan is accepted. To the questions below:
 12. **The other buildings:** no option ruled out; the three are measured.
 
 Also: the real triangles of the city at its most go into `docs/perf.md`, and an entry-level phone is measured before players are invited.
+
+## The owner's decisions on task 1 (19 October, after a player's capture)
+
+1. Growth in height, material by tier (wood, stone, brass, colored roof), the flag in its tier's color, the top under the Lighthouse's: yes. One detail per level stays, larger, seen in the close view; only what the close view cannot see is removed.
+2. The framing: the tightest distance where the island and every raft stay on screen at 360 px wide (shown at 360 and 412), not a fixed distance that would cut rafts.
+3. The close view when a building is touched: yes, gliding, back when the sheet closes, a jump with reduced motion.
+4. The Harbor on plot 0,-2 and the Fishery on plot 2,0, with the pier and one boat per fleet at home. Only what is drawn moves: no city data, no shared rule, no migration. The rule of the coastal buildings is tested.
+5. The labels: the level badge by default, the full label on the building touched or when something happens, never under a panel, with the test of the layout.
 
 ## The questions, as they were asked
 
