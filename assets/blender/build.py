@@ -1,7 +1,7 @@
 """
 Builds the city's models into assets/blender/out/ (not committed), then serve.py serves them to the game.
 
-    .venv-blender/bin/python assets/blender/build.py [island] [lighthouse] [refinery] [site] [--fast] [--stage 5]
+    .venv-blender/bin/python assets/blender/build.py [island] [ground] [lighthouse] [refinery] [site] [--fast] [--stage 5]
     python3 assets/blender/serve.py
 
 --fast bakes small textures with few samples, to look at shapes in the game quickly; never served for good.
@@ -24,6 +24,11 @@ def main(args):
             import island
 
             island.main(OUT, fast=fast)
+            continue
+        if name == "ground":
+            import ground
+
+            ground.build(OUT, fast=fast, only=only)
             continue
         if name == "site":
             import site_models

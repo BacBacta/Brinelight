@@ -93,12 +93,12 @@ Level 30 is the Modern era complete: the Modern building with all its details an
 - Modern: a glass-and-steel processing tower, slim white tanks, solar panels on the roofs, an antenna with a warm light.
 
 **The Lighthouse** (oil lamp → great lens → electric light → modern beacon with radar)
-- Salvage: a driftwood tower on its rock, an oil lamp in a glazed box, a rope ladder.
-- Colony: a plank tower painted in white and red bands on a stone base, an oil lantern room, a gallery.
-- Workshop: a brick tower in bands, a great lens in a larger lantern room, the keeper's brick house.
-- Industry: a riveted iron lantern and gallery, the great lens turned by clockwork, a steam fog horn.
-- Electricity: an electric lamp in a steel lantern, cables to a generator hut, a small wind turbine.
-- Modern: a slim white concrete tower with clean lines, a bright warm beacon, a turning radar, solar panels, an antenna.
+- Salvage: four driftwood poles on its rock, braced, rag bands in white and red, an oil lamp in a glazed box, a rope ladder.
+- Colony: an octagonal plank tower in white and red bands, its timber frame showing, on a stone base; an oil lantern room, a wooden gallery.
+- Workshop: a bare brick tower with two white bands, a stone corbel, a great lens ringed with brass in a larger lantern room, the keeper's brick house.
+- Industry: a skeletal tower of riveted iron (six legs braced in crosses) around a slim banded column, a riveted iron lantern, the lens turned by clockwork, a steam fog horn.
+- Electricity: a square concrete tower in three setbacks, white with a red top, an electric lamp in a steel lantern under a steel dome, cables to a generator hut, a small wind turbine.
+- Modern: a slim white concrete tower with two red bands at its top, a bright warm beacon, a radar, solar panels, an antenna; a riveted plate where it was mended. At 30: a gold cap, rail and crown.
 
 **The Fishery** (open hut on stilts, drying nets, upturned boat)
 - Salvage: a tarp over driftwood stilts, nets on poles, an upturned rowboat.
@@ -156,13 +156,13 @@ Level 30 is the Modern era complete: the Modern building with all its details an
 - Electricity: a glass-roofed ward, electric lamps, a generator hut.
 - Modern: a clean white clinic, wide windows, solar panels, an antenna with a light.
 
-**The island** (it follows the Lighthouse's era: the city's era)
-- Salvage: the meadow, earth paths between the plots, driftwood stakes.
-- Colony: earth paths edged with stones, small fences.
-- Workshop: cobbled paths.
+**The island** (it follows the Lighthouse's era: the city's era). One island model, and over it one small ground model an era (`assets/blender/ground.py`): paths along the plots' shared edges, between their outlines, and things along the coast.
+- Salvage: earth paths between the plots, driftwood stakes on the coast.
+- Colony: earth paths edged with stones, small wooden fences on the coast.
+- Workshop: cobbled paths, the fences.
 - Industry: paved paths, iron bollards on the coast.
-- Electricity: lampposts along the paths.
-- Modern: concrete quays along the coast, paved walks.
+- Electricity: paved paths, lamp posts at the crossings, the bollards.
+- Modern: paved walks, white lamp posts with a warm light, concrete quays all along the coast.
 
 **The raft buildings** (Greenhouse, Smokehouse, Watchtower) have three levels: they follow the floating village's look, not the eras (meeting 3).
 

@@ -133,6 +133,7 @@ From 19 October the city is remade with Blender 5.2.2 run from Python (`assets/b
   - The Modern era's bright light is the palette's warm gold, never a cold white or a neon.
   - Its flag in its era's color: cream (Salvage, Colony), navy (Workshop, Industry), copper (Electricity), gold (Modern). Brick red stays the pirates'.
   - It always stays under the top of the Lighthouse and inside its plot (tested at every level).
+- **The island's ground** follows the Lighthouse's era: earth paths and driftwood stakes, stone-edged paths and fences, cobbles, paving and iron bollards, lamp posts, then concrete quays all along the coast. One small model an era, laid over the island.
 - **The building site**: a scaffolding stretched to the building, and a crane whose arm swings and whose crate goes up and down.
 
 `assets/blender/build.py` makes them; `assets/blender/serve.py` serves them like `make-models.py` does.

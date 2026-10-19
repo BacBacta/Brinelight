@@ -44,6 +44,10 @@ PALETTE = {
     "tin": "#9AA0A0",
     "solar": "#163A63",
     "steam": "#F4F1EA",
+    # The island's ground through the eras (week 8): earth paths, cobbles, paving.
+    "earth": "#A8865C",
+    "cobble": "#A9A397",
+    "paving": "#BDB6A8",
 }
 
 
@@ -81,6 +85,9 @@ FINISH = {
     "tin": ("tin", 0.5),
     "solar": ("solar", 0.4),
     "steam": ("paint", 0.0),
+    "earth": ("stone", 0.0),
+    "cobble": ("cobble", 0.0),
+    "paving": ("paving", 0.0),
 }
 
 
@@ -172,7 +179,7 @@ def _paint(m, name):
         link(coords, wave.inputs["Vector"])
         f = times(f, ranged(wave.outputs["Fac"], 0.2, 0.8, 0.84, 1.08))
     # Walls' own patterns, on (x + y, z): they run along any wall facing the camera or the side.
-    if kind in ("brick", "tin", "solar", "glass"):
+    if kind in ("brick", "tin", "solar", "glass", "cobble", "paving"):
         sep = n("ShaderNodeSeparateXYZ")
         link(coords, sep.inputs[0])
         across = n("ShaderNodeMath")
@@ -185,7 +192,22 @@ def _paint(m, name):
         flat = n("ShaderNodeCombineXYZ")
         link(sep.outputs["X"], flat.inputs["X"])
         link(sep.outputs["Y"], flat.inputs["Y"])
-        if kind in ("brick", "solar"):
+        if kind in ("cobble", "paving"):
+            # Stones laid on the ground, on (x, y): small cobbles in staggered rows, or square slabs.
+            b = n("ShaderNodeTexBrick")
+            b.inputs["Color1"].default_value = (1.04, 1.04, 1.04, 1)
+            b.inputs["Color2"].default_value = (0.84, 0.84, 0.84, 1)
+            b.inputs["Mortar"].default_value = (0.6, 0.6, 0.6, 1)
+            b.inputs["Scale"].default_value = 12 if kind == "cobble" else 5
+            b.inputs["Mortar Size"].default_value = 0.06 if kind == "cobble" else 0.025
+            b.inputs["Brick Width"].default_value = 0.6 if kind == "cobble" else 0.5
+            b.inputs["Row Height"].default_value = 0.4 if kind == "cobble" else 0.5
+            b.offset = 0.5 if kind == "cobble" else 0
+            link(flat.outputs[0], b.inputs["Vector"])
+            bw = n("ShaderNodeRGBToBW")
+            link(b.outputs["Color"], bw.inputs[0])
+            f = times(f, bw.outputs[0])
+        elif kind in ("brick", "solar"):
             b = n("ShaderNodeTexBrick")
             b.inputs["Color1"].default_value = (1, 1, 1, 1)
             b.inputs["Color2"].default_value = (0.86, 0.86, 0.86, 1)
