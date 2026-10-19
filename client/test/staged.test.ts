@@ -11,7 +11,8 @@ import { PLOT_ROOM, hexReach } from "../src/scene/buildings.js";
 import { hexX, hexZ } from "../src/scene/island.js";
 import { RAFT_FILL } from "../src/scene/coast.js";
 import { PIER_SLOTS } from "../src/scene/framing.js";
-import { SITE_PARTS, STAGES, groundName, hasGround, isStaged, levelShape, radarAt, shownModels, stageName, stageOf } from "../src/city/staged.js";
+import { SITE_PARTS, STAGES, extraName, groundName, hasGround, isStaged, levelShape, radarAt, shownModels, stageName, stageOf } from "../src/city/staged.js";
+import { ERA_PLOTS } from "../src/city/plots.js";
 import { readGlb } from "./glb.js";
 
 const file = (name: string) => new URL(`../public/city/${name}.glb`, import.meta.url).pathname;
@@ -90,10 +91,11 @@ describe("the buildings remade in Blender", () => {
     const levels = (l: number) => Object.fromEntries(BUILDING_IDS.map((id) => [id, l])) as Record<BuildingId, number>;
     const fresh = { ...levels(0), lighthouse: 1 };
     expect(shownModels({ buildings: fresh, queue: [] })).toEqual([...STAGED.filter((id) => id === "lighthouse").map((id) => `${id}-1`), "ground-1", ...SITE_PARTS]);
-    expect(shownModels({ buildings: levels(30), queue: [] })).toEqual([...STAGED.map((id) => `${id}-30`), "ground-25", "lighthouse-radar"]);
-    expect(shownModels({ buildings: levels(17), queue: [] })).toEqual([...STAGED.map((id) => `${id}-15`), "ground-15"]);
+    const stagesAt = (l: number) => STAGED.flatMap((id) => [stageName(id, l), extraName(id, l) ?? []].flat());
+    expect(shownModels({ buildings: levels(30), queue: [] })).toEqual([...stagesAt(30), "ground-25", "lighthouse-radar"]);
+    expect(shownModels({ buildings: levels(17), queue: [] })).toEqual([...stagesAt(17), "ground-15"]);
     // An upgrade at work: its building site, never the next era (fetched in the background once the city shows).
-    expect(shownModels({ buildings: levels(19), queue: [{ id: "refinery" }] })).toEqual([...STAGED.map((id) => `${id}-15`), "ground-15", ...SITE_PARTS]);
+    expect(shownModels({ buildings: levels(19), queue: [{ id: "refinery" }] })).toEqual([...stagesAt(19), "ground-15", ...SITE_PARTS]);
   });
 
   it("the Modern Lighthouse's radar turns on its mast, within its plot and under its top; no other era has one", () => {
@@ -177,6 +179,41 @@ describe("the island's ground through the Lighthouse's eras", () => {
     it(`ground-${era}: within its budget (4,000 triangles, 200 kB)`, () => {
       expect(CITY_MANIFEST[`ground-${era}`]!.triangles).toBeLessThanOrEqual(4000);
       expect(CITY_MANIFEST[`ground-${era}`]!.kB).toBeLessThanOrEqual(200);
+    });
+  }
+});
+
+describe.runIf(isStaged("harbor"))("the Harbor's pier and boat lie on the water, in the slots the rules keep for them", () => {
+  const [hq, hr] = ERA_PLOTS.harbor;
+  const at = { x: hexX(hq, hr), z: hexZ(hr) };
+  const plots: { x: number; z: number }[] = [];
+  for (let q = -2; q <= 2; q++) for (let r = -2; r <= 2; r++) if (Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)) <= 2) plots.push({ x: hexX(q, r), z: hexZ(r) });
+  const pier = PIER_SLOTS.map(([q, r]) => ({ x: hexX(q, r), z: hexZ(r) }));
+  const rafts = RAFT_SLOTS.map((s) => ({ x: hexX(s.q, s.r), z: hexZ(s.r) }));
+  const WATER = -0.42;
+
+  it("the Harbor stands on the coast, by the first slot kept for its pier", () => {
+    expect(Math.max(Math.abs(hq), Math.abs(hr), Math.abs(hq + hr))).toBe(2);
+    expect(pier.some((c) => Math.hypot(c.x - at.x, c.z - at.z) < 2.01)).toBe(true);
+  });
+
+  for (const s of STAGES) {
+    it(`harbor-pier-${s}: on its plot or in the pier's slots, never in a raft's room; past the coast, on the water`, () => {
+      expect(extraName("harbor", s)).toBe(`harbor-pier-${s}`);
+      const points = drawn(`harbor-pier-${s}`, Infinity).map((p) => new THREE.Vector3(p.x + at.x, p.y, p.z + at.z));
+      let afloat = false;
+      for (const p of points) {
+        const tag = `${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)}`;
+        const onPlot = hexReach(p.x - at.x, p.z - at.z) <= 1.1;
+        // In a pier slot's hexagon, or crossing the edge between two of them.
+        expect(onPlot || pier.some((c) => hexReach(p.x - c.x, p.z - c.z) <= 1.05), tag).toBe(true);
+        for (const c of rafts) expect(hexReach(p.x - c.x, p.z - c.z), tag).toBeGreaterThan(RAFT_FILL);
+        const onIsland = plots.some((c) => hexReach(p.x - c.x, p.z - c.z) <= 1.1);
+        // Past the coast: nothing higher than a deck and its boat over the water, and the boat sits in it.
+        if (!onIsland) expect(p.y, tag).toBeLessThan(0.4);
+        if (!onIsland && p.y < WATER - 0.02) afloat = true;
+      }
+      expect(afloat, "a boat sits in the water").toBe(true);
     });
   }
 });

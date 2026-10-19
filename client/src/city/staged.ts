@@ -49,11 +49,22 @@ export const SITE_PARTS = ["site-frame", "site-mast", "site-arm", "site-crate"] 
  * come.
  */
 export function shownModels(state: { buildings: Record<BuildingId, number>; queue: readonly { id: string }[] }): string[] {
-  const out = BUILDING_IDS.filter((id) => isStaged(id) && state.buildings[id] > 0).map((id) => stageName(id, state.buildings[id]));
+  const out = BUILDING_IDS.filter((id) => isStaged(id) && state.buildings[id] > 0).flatMap((id) => [stageName(id, state.buildings[id]), extraName(id, state.buildings[id]) ?? []].flat());
   if (hasGround()) out.push(groundName(state.buildings.lighthouse));
   if (isStaged("lighthouse") && radarAt(state.buildings.lighthouse)) out.push("lighthouse-radar");
   const sites = state.queue.some((j) => (BUILDING_IDS as readonly string[]).includes(j.id)) || BUILDING_IDS.some((id) => state.buildings[id] === 0);
   return sites ? [...out, ...SITE_PARTS] : out;
+}
+
+/**
+ * Models laid with a building's stage, from its plot's center: the Harbor's pier and boat, on the water past its plot
+ * (assets/blender/harbor.py). Their name at a level, if the building has one.
+ */
+const STAGE_EXTRAS: Partial<Record<BuildingId, string>> = { harbor: "harbor-pier" };
+export function extraName(id: BuildingId, level: number): string | null {
+  const extra = STAGE_EXTRAS[id];
+  const name = extra ? `${extra}-${stageOf(level)}` : null;
+  return name && CITY_MANIFEST[name] ? name : null;
 }
 
 /** Where the Lighthouse's radar turns at this level (its Modern era), if it has one. */

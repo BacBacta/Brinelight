@@ -100,21 +100,21 @@ Level 30 is the Modern era complete: the Modern building with all its details an
 - Electricity: a square concrete tower in three setbacks, white with a red top, an electric lamp in a steel lantern under a steel dome, cables to a generator hut, a small wind turbine.
 - Modern: a slim white concrete tower with two red bands at its top, a bright warm beacon, a radar, solar panels, an antenna; a riveted plate where it was mended. At 30: a gold cap, rail and crown.
 
-**The Fishery** (open hut on stilts, drying nets, upturned boat)
+**The Fishery** (open hut on stilts, drying nets, upturned boat). On the east coast, its open side and its jetty face the sea; its plot's edge there lies right by the rafts' rooms, so its boats stay on land and its jetty on its plot.
 - Salvage: a tarp over driftwood stilts, nets on poles, an upturned rowboat.
-- Colony: a plank hut on stilts, racks of drying fish, a small pier.
+- Colony: a plank hut on stilts, racks of drying fish, a small jetty.
 - Workshop: a brick smokehouse with its chimney, barrels of salted fish.
 - Industry: a steel cannery shed, a conveyor to the pier, a winch crane, steam.
 - Electricity: a glass-roofed fish hall, cold rooms with fans, electric lamps over the pier.
-- Modern: a clean steel-and-glass fish market, a refrigerated container, solar panels.
+- Modern: a clean steel-and-glass fish market, a refrigerated container, solar panels. At 30: a gold rim to its canopy.
 
 **The Lumberyard** (lean-to, bleached driftwood logs, circular saw)
 - Salvage: a lean-to, piles of driftwood, a hand saw on trestles.
 - Colony: a plank shed on stone, stacked boards, a pit saw.
-- Workshop: a brick sawmill with a water wheel or treadmill, a log slide.
+- Workshop: a brick sawmill with a treadwheel, a log slide.
 - Industry: a steam sawmill, a big circular saw, a steel log crane.
 - Electricity: an electric saw hall with a glass roof, a log conveyor, overhead cables.
-- Modern: a clean timber-and-glass workshop, a robotic saw arm, solar panels on the drying sheds.
+- Modern: a clean timber-and-glass workshop, a robotic saw arm, solar panels on the drying sheds. At 30: a gold arm.
 
 **The Shelters** (cluster of huts and patched tents, washing line)
 - Salvage: patched tents and driftwood huts, a washing line.
@@ -132,13 +132,13 @@ Level 30 is the Modern era complete: the Modern building with all its details an
 - Electricity: a steel-and-glass hall, electric floodlights over the yard.
 - Modern: a clean concrete-and-glass base, an antenna, a landing pad (no aircraft). At 30: a gold rim to the pad.
 
-**The Harbor** (L-shaped pier, bollards, boat, crane)
+**The Harbor** (L-shaped pier, bollards, boat, crane). On the coast at the back left: on its plot, its office and its crane at the quay facing the pier; on the water, its pier and its boat, one model an era, from the coast into the first slot the rules keep for the pier, on into the third, where it turns and the boat lies (tested: on the water, never on a raft's room).
 - Salvage: a driftwood pier on barrels, a rowboat, a rope bollard.
 - Colony: a plank pier on stone piles, a small sailing boat, a wooden crane.
 - Workshop: a stone quay, a brick harbor office, a hand crane.
 - Industry: a steel pier, a steam crane, a small steamboat.
 - Electricity: an electric crane, lamps along the pier, a motor launch.
-- Modern: a concrete quay, a gantry crane, a modern boat, a radar mast.
+- Modern: a concrete quay, a gantry crane, a modern boat, a radar mast. At 30: gold legs to the gantry, a gold stripe on the boat.
 
 **The Observatory** (round turret, verdigris dome, telescope)
 - Salvage: a platform on stilts with a spyglass on a tripod.

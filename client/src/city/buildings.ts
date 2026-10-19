@@ -10,7 +10,7 @@ import { createSites, type SiteBox } from "./site.js";
 import { createModelSites } from "./modelSite.js";
 import { TIER_SCALE, createTierDetails, tierOf } from "./tiers.js";
 import { blenderLook } from "../scene/cityLook.js";
-import { groundName, hasGround, isStaged, levelShape, loadStage, showLevel, stageName } from "./staged.js";
+import { extraName, groundName, hasGround, isStaged, levelShape, loadStage, showLevel, stageName } from "./staged.js";
 
 type Plot = { group: THREE.Group; hit: THREE.Mesh; key: string };
 
@@ -96,12 +96,15 @@ export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: T
         return;
       }
       const key = p.key;
-      void loadStage(stageName(id, level)).then((model) => {
+      // Its stage's model, and what is laid with it (the Harbor's pier and boat, from the plot's center).
+      const extra = extraName(id, level);
+      void Promise.all([loadStage(stageName(id, level)), extra ? loadStage(extra) : null]).then(([model, more]) => {
         // A later level may have come while it loaded: only the latest is shown.
         if (p.key !== key) return;
-        p.group.children.filter((c) => c !== p.hit && c !== model).forEach((c) => p.group.remove(c));
+        p.group.children.filter((c) => c !== p.hit && c !== model && c !== more).forEach((c) => p.group.remove(c));
         showLevel(model, id, level);
         p.group.add(model);
+        if (more) p.group.add(more);
       });
       return;
     }
@@ -142,6 +145,8 @@ export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: T
             shown.push({ ...plotPosition(id), box: { reach, height }, moving: working });
             // The model of the next level is fetched while the work runs.
             void loadStage(stageName(id, level + 1));
+            const extra = extraName(id, level + 1);
+            if (extra) void loadStage(extra);
           } else {
             const box = boxes[id];
             const s = TIER_SCALE[tierOf(Math.max(1, level))];
