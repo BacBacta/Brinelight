@@ -52,6 +52,125 @@ The rules of the game, the cities' data and the server.
 
 Do the tasks in order, one per session. For each one: read CLAUDE.md, say what you will do and what you will not do, wait for approval, write the code, run `npm run check` (and `npm run e2e` when the client changes), commit, push. One pull request for the whole week.
 
+## The eras (owner, 19 October, night, after a player's look at the Blender images)
+
+The player saw no progress toward something more modern: changing a material is the same building repainted. A building now goes through **six eras**, each with its own architecture and silhouette, as a drowned world rebuilds. The details of each level stay, within each era (they no longer carry over to the next era, whose building is a new one). The rules and the cities' data do not change: an era is only what a level draws.
+
+| Levels | Era | Materials and signs |
+| --- | --- | --- |
+| 1–4 | **Salvage** | Driftwood, rope, tarpaulins, patched tin sheets; on stilts or drums |
+| 5–9 | **Colony** | Clean planks, stone foundations, the first glazed windows, shingles |
+| 10–14 | **Workshop** | Brick, timber beams, the first machines, a tall chimney |
+| 15–19 | **Industry** | Riveted steel, tanks, pipes, steam, cranes |
+| 20–24 | **Electricity** | Steel frames, glass roofs, cables, electric lamps, wind turbines |
+| 25–30 | **Modern** | Glass and steel, clean lines, solar panels, antennas, bright warm light |
+
+Level 30 is the Modern era complete: the Modern building with all its details and a crown (the last detail).
+
+### What the art direction asks, and how the eras follow it
+
+1. **"Would survivors have built this from what the sea washes up?"** Every era stays rebuilt by hand:
+   - the Modern era's glass and steel come in panels of slightly different sizes, held by visible bolts;
+   - driftwood stays on the piers and in small touches up to the end.
+2. **"Never more than three palette colors on one building"** holds for the accent colors. Five neutral materials join the palette, as materials rather than colors:
+   - steel (`#8E979C`);
+   - glass (pale turquoise, `#A9DCD8`);
+   - brick (`#B9674A`);
+   - concrete (`#C8C1B4`);
+   - the solar panels' navy (the palette's navy).
+3. **Brick red belongs to the pirates.** The Workshop's brick is a terracotta (`#B9674A`), browner and duller than the pirates' `#E2572F`.
+4. **"No neon."** The Modern era's "bright light" is the palette's warm gold, never a cold white or a neon color. In the Mist, the Lighthouse's beams stay the only light that moves.
+5. **Not grim:** the Salvage era is patched but warm (cream canvas, ropes, a lantern), never a ruin.
+
+### Era by era: what each building looks like
+
+**The Refinery** (art direction: a round hooped vat, a short copper chimney)
+- Salvage: a lean-to of driftwood and tin on drums, two oil drums over a fire, a stovepipe, a tarp.
+- Colony: a plank workshop on a stone foundation, a hooped wooden vat, a glazed window, a shingle roof.
+- Workshop: a brick still-house with a tall brick chimney, timber beams, a copper boiler and its flywheel pump.
+- Industry: two tall riveted steel tanks, pipes and a catwalk between them, steam from a vent, a small gantry crane.
+- Electricity: a steel-framed hall with a glass roof, a wind turbine taller than the hall, cables on poles, electric lamps.
+- Modern: a glass-and-steel processing tower, slim white tanks, solar panels on the roofs, an antenna with a warm light.
+
+**The Lighthouse** (oil lamp → great lens → electric light → modern beacon with radar)
+- Salvage: a driftwood tower on its rock, an oil lamp in a glazed box, a rope ladder.
+- Colony: a plank tower painted in white and red bands on a stone base, an oil lantern room, a gallery.
+- Workshop: a brick tower in bands, a great lens in a larger lantern room, the keeper's brick house.
+- Industry: a riveted iron lantern and gallery, the great lens turned by clockwork, a steam fog horn.
+- Electricity: an electric lamp in a steel lantern, cables to a generator hut, a small wind turbine.
+- Modern: a slim white concrete tower with clean lines, a bright warm beacon, a turning radar, solar panels, an antenna.
+
+**The Fishery** (open hut on stilts, drying nets, upturned boat)
+- Salvage: a tarp over driftwood stilts, nets on poles, an upturned rowboat.
+- Colony: a plank hut on stilts, racks of drying fish, a small pier.
+- Workshop: a brick smokehouse with its chimney, barrels of salted fish.
+- Industry: a steel cannery shed, a conveyor to the pier, a winch crane, steam.
+- Electricity: a glass-roofed fish hall, cold rooms with fans, electric lamps over the pier.
+- Modern: a clean steel-and-glass fish market, a refrigerated container, solar panels.
+
+**The Lumberyard** (lean-to, bleached driftwood logs, circular saw)
+- Salvage: a lean-to, piles of driftwood, a hand saw on trestles.
+- Colony: a plank shed on stone, stacked boards, a pit saw.
+- Workshop: a brick sawmill with a water wheel or treadmill, a log slide.
+- Industry: a steam sawmill, a big circular saw, a steel log crane.
+- Electricity: an electric saw hall with a glass roof, a log conveyor, overhead cables.
+- Modern: a clean timber-and-glass workshop, a robotic saw arm, solar panels on the drying sheds.
+
+**The Shelters** (cluster of huts and patched tents, washing line)
+- Salvage: patched tents and driftwood huts, a washing line.
+- Colony: plank cottages on stone, shingle roofs, the first windows.
+- Workshop: brick terraced houses with chimneys.
+- Industry: a three-story house with steel balconies and a water tank on the roof.
+- Electricity: houses with glazed loggias, power lines, street lamps.
+- Modern: a stepped glass-and-wood apartment block, roof gardens, solar panels.
+
+**The Barracks** (low palisade, training dummy, navy banner)
+- Salvage: a driftwood palisade, a training dummy, a navy banner on a pole.
+- Colony: a plank hall on a stone foundation, a palisade with a gate, a lookout.
+- Workshop: a brick drill hall with a training yard and a tower.
+- Industry: a riveted steel armory, a watchtower with a searchlight.
+- Electricity: a steel-and-glass hall, electric floodlights over the yard.
+- Modern: a clean concrete-and-glass base, an antenna, a landing pad (no aircraft).
+
+**The Harbor** (L-shaped pier, bollards, boat, crane)
+- Salvage: a driftwood pier on barrels, a rowboat, a rope bollard.
+- Colony: a plank pier on stone piles, a small sailing boat, a wooden crane.
+- Workshop: a stone quay, a brick harbor office, a hand crane.
+- Industry: a steel pier, a steam crane, a small steamboat.
+- Electricity: an electric crane, lamps along the pier, a motor launch.
+- Modern: a concrete quay, a gantry crane, a modern boat, a radar mast.
+
+**The Observatory** (round turret, verdigris dome, telescope)
+- Salvage: a platform on stilts with a spyglass on a tripod.
+- Colony: a wooden round tower with a hand-turned roof.
+- Workshop: a brick turret with a copper dome and a brass telescope.
+- Industry: a riveted steel dome on rails, a large refractor, clockwork.
+- Electricity: an electric dome, a weather station with its anemometer, cables.
+- Modern: a white dome, a radio dish, solar panels, an antenna.
+
+**The Infirmary** (low building, white cross on a cream canvas roof, awning with cots)
+- Salvage: a canvas tent with a white cross, cots under an awning.
+- Colony: a plank cabin, a canvas awning, a water barrel.
+- Workshop: a brick infirmary with tall windows and a chimney.
+- Industry: a two-story hall with a steel balcony and a water tank.
+- Electricity: a glass-roofed ward, electric lamps, a generator hut.
+- Modern: a clean white clinic, wide windows, solar panels, an antenna with a light.
+
+**The island** (it follows the Lighthouse's era: the city's era)
+- Salvage: the meadow, earth paths between the plots, driftwood stakes.
+- Colony: earth paths edged with stones, small fences.
+- Workshop: cobbled paths.
+- Industry: paved paths, iron bollards on the coast.
+- Electricity: lampposts along the paths.
+- Modern: concrete quays along the coast, paved walks.
+
+**The raft buildings** (Greenhouse, Smokehouse, Watchtower) have three levels: they follow the floating village's look, not the eras (meeting 3).
+
+### The order
+
+1. The Refinery in its six eras: its band at levels 1, 5, 10, 15, 20, 25 and 30, in the normal view and the close view. The owner approves it first.
+2. Then the Lighthouse and the island (meeting 1 again), then the other buildings (meeting 2), then the rafts (meeting 3).
+
 ## For every task this week
 
 - **Secrets never leave the server.** `deploy/.env` (the database password, the e-mail for the certificates), the SSH private key, the `brinelight` user's password, and the Hetzner, Vercel and Cloudflare logins: only you type them, on the server or in the provider's console.

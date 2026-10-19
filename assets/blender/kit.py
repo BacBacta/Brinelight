@@ -36,6 +36,14 @@ PALETTE = {
     "rock_dark": "#4E4A45",
     "sand": "#D9C9A3",
     "seabed": "#3F6F6B",
+    # The eras' materials (week 8): neutral, not accent colors.
+    "steel": "#8E979C",
+    "glass": "#A9DCD8",
+    "brick": "#B9674A",
+    "concrete": "#C8C1B4",
+    "tin": "#9AA0A0",
+    "solar": "#163A63",
+    "steam": "#F4F1EA",
 }
 
 
@@ -66,6 +74,13 @@ FINISH = {
     "rock_dark": ("rock", 0.5),
     "sand": ("grass", 0.0),
     "seabed": ("stone", 0.0),
+    "steel": ("metal", 0.6),
+    "glass": ("glass", 0.8),
+    "brick": ("brick", 0.3),
+    "concrete": ("stone", 0.35),
+    "tin": ("tin", 0.5),
+    "solar": ("solar", 0.4),
+    "steam": ("paint", 0.0),
 }
 
 
@@ -156,6 +171,43 @@ def _paint(m, name):
         wave.inputs["Detail"].default_value = 3
         link(coords, wave.inputs["Vector"])
         f = times(f, ranged(wave.outputs["Fac"], 0.2, 0.8, 0.84, 1.08))
+    # Walls' own patterns, on (x + y, z): they run along any wall facing the camera or the side.
+    if kind in ("brick", "tin", "solar", "glass"):
+        sep = n("ShaderNodeSeparateXYZ")
+        link(coords, sep.inputs[0])
+        across = n("ShaderNodeMath")
+        across.operation = "ADD"
+        link(sep.outputs["X"], across.inputs[0])
+        link(sep.outputs["Y"], across.inputs[1])
+        wall = n("ShaderNodeCombineXYZ")
+        link(across.outputs[0], wall.inputs["X"])
+        link(sep.outputs["Z"], wall.inputs["Y"])
+        flat = n("ShaderNodeCombineXYZ")
+        link(sep.outputs["X"], flat.inputs["X"])
+        link(sep.outputs["Y"], flat.inputs["Y"])
+        if kind in ("brick", "solar"):
+            b = n("ShaderNodeTexBrick")
+            b.inputs["Color1"].default_value = (1, 1, 1, 1)
+            b.inputs["Color2"].default_value = (0.86, 0.86, 0.86, 1)
+            b.inputs["Mortar"].default_value = (0.62, 0.62, 0.62, 1) if kind == "brick" else (1.7, 1.7, 1.7, 1)
+            b.inputs["Scale"].default_value = 9 if kind == "brick" else 16
+            b.inputs["Mortar Size"].default_value = 0.025 if kind == "brick" else 0.04
+            if kind == "solar":
+                b.offset = 0
+                b.inputs["Brick Width"].default_value = 0.5
+                b.inputs["Row Height"].default_value = 0.5
+            link((flat if kind == "solar" else wall).outputs[0], b.inputs["Vector"])
+            bw = n("ShaderNodeRGBToBW")
+            link(b.outputs["Color"], bw.inputs[0])
+            f = times(f, bw.outputs[0])
+        else:
+            w = n("ShaderNodeTexWave")
+            w.wave_type = "BANDS"
+            w.bands_direction = "X"
+            w.inputs["Scale"].default_value = 30 if kind == "tin" else 2.5
+            w.inputs["Distortion"].default_value = 0 if kind == "tin" else 2
+            link(wall.outputs[0], w.inputs["Vector"])
+            f = times(f, ranged(w.outputs["Fac"], 0, 1, 0.82, 1.06) if kind == "tin" else ranged(w.outputs["Fac"], 0, 1, 0.92, 1.12))
     # The grain: long streaks in wood, mottles in stone.
     if kind in ("wood", "stone", "rock"):
         noise = n("ShaderNodeTexNoise")
@@ -272,6 +324,15 @@ def ring(radius, thickness, height, at, color, sides=20):
     obj = bpy.context.active_object
     mod = obj.modifiers.new("solid", "SOLIDIFY")
     mod.thickness = thickness
+    return _place(_finish(obj, color, 0, 1), at)
+
+
+def sphere(radius, at, color, subdivisions=1, squash=1.0):
+    """A ball (a puff of steam, a dome, a lamp): an icosphere, `squash` its height over its width."""
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=subdivisions, radius=radius)
+    obj = bpy.context.active_object
+    obj.scale = (1, 1, squash)
+    bpy.ops.object.transform_apply(scale=True)
     return _place(_finish(obj, color, 0, 1), at)
 
 

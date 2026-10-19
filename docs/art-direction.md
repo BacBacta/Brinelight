@@ -128,9 +128,10 @@ From 19 October the city is remade with Blender 5.2.2 run from Python (`assets/b
 - two shadows lean to blue.
 
 - **The island**: the 19 plots' hexagons edge to edge, widened by 0.1 past the plots, so its coast follows the grid. The rafts of ring 3 float in its notches. Its cliff never comes out past the meadow above the water.
-- **A building**: seven models (tiers at 1, 10, 20 and 30; transformations at 5, 15 and 25), and a detail at every other level, at the front, on the walls the camera sees, or on a roof.
-  - Its tiers' materials: wood, a stone plinth at 10, brass at 20, verdigris roofs at 30.
-  - Its flag in its tier's color: cream, navy, verdigris, gold. Brick red stays the pirates'.
+- **A building goes through six eras** (owner, 19 October; `docs/tasks/week-8.md`, "The eras"): Salvage (levels 1–4), Colony (5–9), Workshop (10–14), Industry (15–19), Electricity (20–24), Modern (25–30). Each era is a new building, with its own architecture and silhouette, not the same one repainted; a detail at every other level within its era, at the front, on the walls the camera sees, or on a roof. Level 30 is the Modern era complete, with a crown.
+  - Five neutral materials join the palette, as materials rather than colors: steel `#8E979C`, glass `#A9DCD8`, a terracotta brick `#B9674A` (browner and duller than the pirates' red), concrete `#C8C1B4`, and the solar panels' navy. The three-color rule holds for the accent colors.
+  - The Modern era's bright light is the palette's warm gold, never a cold white or a neon.
+  - Its flag in its era's color: cream (Salvage, Colony), navy (Workshop, Industry), copper (Electricity), gold (Modern). Brick red stays the pirates'.
   - It always stays under the top of the Lighthouse and inside its plot (tested at every level).
 - **The building site**: a scaffolding stretched to the building, and a crane whose arm swings and whose crate goes up and down.
 

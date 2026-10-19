@@ -1,13 +1,21 @@
 """
-A building's seven models (owner, 19 October): its tiers at levels 1, 10, 20 and 30 and its transformations at 5, 15
-and 25. The model of a stage carries the details of the levels before it, and the details of its own levels tagged
-with their level (kit.tag): the game shows them one by one, with one draw call (serve.py orders the triangles).
+A building's models (owner, 19 October): one for each of the six eras (Salvage 1–4, Colony 5–9, Workshop 10–14,
+Industry 15–19, Electricity 20–24, Modern 25–30), each with its own architecture, and the Modern era complete at 30.
+The model of a stage carries the details of its own levels tagged with their level (kit.tag): the game shows them one
+by one, with one draw call (serve.py orders the triangles). A new era is a new building: the details of the era before
+do not carry over; within the Modern era, the model of level 30 keeps those of 26 to 29.
 """
 from pathlib import Path
 
 import kit
 
 STAGES = [1, 5, 10, 15, 20, 25, 30]
+# The first level of each era.
+ERAS = {1: "salvage", 5: "colony", 10: "workshop", 15: "industry", 20: "electricity", 25: "modern"}
+
+
+def era_of(level):
+    return ERAS[max(e for e in ERAS if e <= max(1, level))]
 
 
 def stage_of(level):
@@ -20,7 +28,7 @@ def next_stage(stage):
     return later[0] if later else 31
 
 
-# The flag of each tier, in the palette (brick red belongs to the pirates).
+# The flag of each era, in the palette (brick red belongs to the pirates).
 FLAG = {1: "cream", 10: "navy", 20: "copper", 30: "gold"}
 
 
@@ -41,9 +49,9 @@ def build(name, base, details, out, fast=False, only=None, meta=None):
         kit.reset(style=True)
         parts = list(base(stage))
         for level in sorted(details):
-            if level < stage:
+            if level < stage and era_of(level) == era_of(stage):
                 parts += details[level](stage)
-            elif level < next_stage(stage):
+            elif stage < level < next_stage(stage):
                 parts += kit.tag(details[level](stage), level)
         obj = kit.join(parts, f"{name}-{stage}")
         path = out / f"{name}-{stage}.glb"
