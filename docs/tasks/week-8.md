@@ -80,7 +80,8 @@ A player's feedback: "When you upgrade a building, it stays the same. It should 
 2. **A small detail at every level.**
    - Each building has six kinds of small details of its own, picked from what it does (the lists below).
    - **The rule:** at every level that is not a transformation, the next kind in its list is added (after the sixth, the first again: a second barrel, then a third), at the next free place around or on the building.
-   - The places are fixed per building: a ring of spots between the building and the edge of its plot, and spots on its roof, measured once from its model. Nothing is drawn at random, and a detail never moves once it is there.
+   - The places are fixed per building: a ring of spots between the building and the edge of its plot, spots on the walls the camera sees, and spots on its roof, measured once from its model. Nothing is drawn at random, and a detail never moves once it is there.
+   - The details grow with the building's tier size (86 %, 93 %, 100 %), so they stay against its walls.
    - Each detail is a few code-built shapes (boxes, cylinders, cones, a flat flag) in the colors of the art direction: 60 triangles at most.
 3. **A transformation at levels 5, 10, 15, 20, 25 and 30.**
    - A larger piece, built the same way, changes the building's silhouette: an annex, a floor, a stone base, a tower or a mast, brass and lit windows, a crowning piece.

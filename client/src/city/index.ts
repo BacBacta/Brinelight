@@ -76,6 +76,7 @@ export function createCity(
   scene.onFrame((now, view) => {
     if (view !== "city") return;
     rafts.animate(now);
+    buildings.animate(now);
     labels.place(sheet.current);
   });
 
@@ -117,7 +118,7 @@ export function createCity(
       // The foam goes around the rafts afloat and the shipyard at work.
       scene.setMoored(raftSlots(state).filter((s) => s.view !== "free").map((s) => ({ ...slotPosition(s.key), r: RAFT_WIDTH / 2 })));
       raftSheet.update(state, game.speed());
-      labels.update(state);
+      labels.update(state, game.speed());
       queue.update(state, game.speed());
       sheet.update(state, game.speed());
     },

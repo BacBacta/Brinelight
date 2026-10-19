@@ -10,6 +10,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { BUILDING_IDS, type BuildingId, type Buildings } from "@brinelight/shared";
 import { bakeModel, kitModel, type Kit } from "../scene/index.js";
 import { tierOf, type Tier } from "../scene/buildings.js";
+import { GROWTH } from "./growth.js";
 
 export { PLOT_ROOM, footprintReach, hexReach, tierOf, type Tier } from "../scene/buildings.js";
 
@@ -66,9 +67,9 @@ export function createTierDetails(kit: Kit, positionOf: (id: BuildingId) => { x:
   add(lanterns);
   const m = new THREE.Matrix4();
   return {
-    /** The Lighthouse keeps its own growth: the details are for the eight others. */
+    /** The Lighthouse keeps its own growth, and a building with a level-by-level growth (city/growth.ts) has its own details. */
     refresh(buildings: Buildings) {
-      const tiers = BUILDING_IDS.map((id) => (id === "lighthouse" ? 0 : tierOf(buildings[id])));
+      const tiers = BUILDING_IDS.map((id) => (id === "lighthouse" || GROWTH[id] ? 0 : tierOf(buildings[id])));
       const next = tiers.join();
       if (next === key) return;
       key = next;

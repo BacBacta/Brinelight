@@ -1,8 +1,11 @@
 import * as THREE from "three";
 import { BUILDING_IDS, type BuildingId } from "@brinelight/shared";
-import { hexX, hexZ, kitModel, lighthouseScale, type BuildingModels, type Kit } from "../scene/index.js";
+import { hexX, hexZ, lighthouseScale, type BuildingModels, type Kit } from "../scene/index.js";
+import { hexReach } from "../scene/buildings.js";
 import type { PlayerState } from "../state/index.js";
+import { createGrowth } from "./growth.js";
 import { PLOTS } from "./plots.js";
+import { createSites, type SiteBox } from "./site.js";
 import { TIER_SCALE, createTierDetails, tierOf } from "./tiers.js";
 
 type Plot = { group: THREE.Group; hit: THREE.Mesh; key: string };
@@ -14,7 +17,28 @@ export type CityBuildings = {
   refresh(state: PlayerState): void;
   /** Shows the yellow ring under a building, or hides it. */
   select(id: BuildingId | null): void;
+  /** Moves the cranes of the building sites. */
+  animate(now: number): void;
 };
+
+/** A model's room on its plot at a size: its half width and half depth (from its center), and its height. */
+export function siteBox(object: THREE.Object3D, scale: number): SiteBox {
+  object.updateMatrixWorld(true);
+  const v = new THREE.Vector3();
+  let reach = 0;
+  let height = 0;
+  object.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const pos = mesh.geometry.getAttribute("position");
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld);
+      reach = Math.max(reach, hexReach(v.x, v.z));
+      height = Math.max(height, v.y);
+    }
+  });
+  return { reach: reach * scale, height: height * scale };
+}
 
 export const plotPosition = (id: BuildingId) => {
   const [q, r] = PLOTS[id];
@@ -23,6 +47,10 @@ export const plotPosition = (id: BuildingId) => {
 
 export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: THREE.Object3D) => void): CityBuildings {
   const details = createTierDetails(kit, plotPosition, add);
+  const growth = createGrowth(plotPosition, add, (level) => TIER_SCALE[tierOf(Math.max(1, level))]);
+  const sites = createSites(add, BUILDING_IDS.length);
+  // Each model's box at full size, for its building site.
+  const boxes = Object.fromEntries(BUILDING_IDS.map((id) => [id, siteBox(models[id].object, 1)])) as Record<BuildingId, SiteBox>;
   const hitMaterial = new THREE.MeshBasicMaterial({ visible: false });
   const plots = {} as Record<BuildingId, Plot>;
 
@@ -49,20 +77,14 @@ export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: T
   ring.visible = false;
   add(ring);
 
-  const rebuild = (id: Exclude<BuildingId, "lighthouse">, level: number, working: boolean) => {
+  const rebuild = (id: Exclude<BuildingId, "lighthouse">, level: number) => {
     const p = plots[id];
     p.group.children.filter((c) => c !== p.hit).forEach((c) => p.group.remove(c));
     if (level > 0) {
-      // Its tier's size; its tier's details are placed by `details`.
+      // Its tier's size; its details are placed by `growth` (or, until it has one, its tier's by `details`).
       const model = models[id].object.clone(true);
       model.scale.setScalar(TIER_SCALE[tierOf(level)]);
       p.group.add(model);
-    }
-    if (level === 0 || working) {
-      const s = kitModel(kit, "building_scaffolding");
-      s.scale.setScalar(level === 0 ? 1 : 0.75);
-      if (level > 0) s.position.set(-0.45, 0, 0.45);
-      p.group.add(s);
     }
   };
 
@@ -70,15 +92,27 @@ export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: T
     hits: BUILDING_IDS.map((id) => plots[id].hit),
     refresh(state) {
       details.refresh(state.buildings);
+      growth.refresh(state.buildings);
+      const shown: { x: number; z: number; box: SiteBox; moving: boolean }[] = [];
       for (const id of BUILDING_IDS) {
         if (id === "lighthouse") continue;
         const level = state.buildings[id];
         const working = state.queue.some((j) => j.id === id);
-        const key = `${level}|${working}`;
+        // A building site around a building at work, at its size; around a building not built yet, at its first size.
+        if (working || level === 0) {
+          const box = boxes[id];
+          const s = TIER_SCALE[tierOf(Math.max(1, level))];
+          shown.push({ ...plotPosition(id), box: { reach: box.reach * s, height: box.height * s }, moving: working });
+        }
+        const key = `${level}`;
         if (plots[id].key === key) continue;
         plots[id].key = key;
-        rebuild(id, level, working);
+        rebuild(id, level);
       }
+      sites.show(shown);
+    },
+    animate(now) {
+      sites.animate(now);
     },
     select(id) {
       ring.visible = id !== null;

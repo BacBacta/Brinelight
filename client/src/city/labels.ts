@@ -3,6 +3,7 @@ import type { SceneHandle } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 import { plotPosition } from "./buildings.js";
 import { layoutLabels, type LabelBox } from "./overlap.js";
+import { formatTimeLeft } from "./format.js";
 import { progress, suggestedUpgrades } from "./suggest.js";
 
 /** Level labels above the buildings, as in the prototype. */
@@ -12,13 +13,13 @@ export function createLabels(root: HTMLElement, scene: SceneHandle, heightOf: (i
   layer.className = "labels city";
   layer.setAttribute("aria-hidden", "true");
   root.appendChild(layer);
-  type Label = { el: HTMLDivElement; key: string; bar: HTMLElement | null; w: number; h: number; compactW: number; compactH: number };
+  type Label = { el: HTMLDivElement; key: string; bar: HTMLElement | null; left: HTMLElement | null; w: number; h: number; compactW: number; compactH: number };
   const els = {} as Record<BuildingId, Label>;
   for (const id of BUILDING_IDS) {
     const el = document.createElement("div");
     el.className = "bl";
     layer.appendChild(el);
-    els[id] = { el, key: "", bar: null, w: 0, h: 0, compactW: 0, compactH: 0 };
+    els[id] = { el, key: "", bar: null, left: null, w: 0, h: 0, compactW: 0, compactH: 0 };
   }
   // The game's font can arrive after a first measure (font-display: swap): sizes are measured again once it is there,
   // or a label measured with the fallback font would be wider on screen than the layout thinks.
@@ -38,8 +39,8 @@ export function createLabels(root: HTMLElement, scene: SceneHandle, heightOf: (i
   let levels: Buildings | null = null;
 
   return {
-    /** Text, arrows and progress bars, from the state. */
-    update(state: PlayerState) {
+    /** Text, arrows, progress bars and the time left of the works, from the state (times sped up by `speed`, as the queue's). */
+    update(state: PlayerState, speed = 1) {
       levels = state.buildings;
       const suggested = suggestedUpgrades(state);
       for (const id of BUILDING_IDS) {
@@ -54,11 +55,16 @@ export function createLabels(root: HTMLElement, scene: SceneHandle, heightOf: (i
           L.el.innerHTML =
             (up ? '<span class="up">↑</span>' : "") +
             (level === 0 && !job ? `<b class="new">＋<span class="nm"> ${name}</span></b>` : `<b><span class="nm">${name} </span><i>${level}</i></b>`) +
-            (job ? '<span class="pb"><i></i></span>' : "");
+            (job ? '<span class="pb"><i></i></span><small class="tl"></small>' : "");
           L.bar = L.el.querySelector(".pb i");
+          L.left = L.el.querySelector(".tl");
           L.w = 0;
         }
         if (job && L.bar) L.bar.style.width = `${(progress(job) * 100).toFixed(1)}%`;
+        if (job && L.left) {
+          const text = formatTimeLeft(job.left / speed);
+          if (L.left.textContent !== text) L.left.textContent = text;
+        }
       }
     },
     /**
