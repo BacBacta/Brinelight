@@ -272,3 +272,40 @@ With the protocol at the top of this file, on the pull request's Cloudflare prev
 4. In the city at step 0, turn the camera toward the horizon: the Mist's veil (with `&mist`) and the shore's foam should hold still while the camera stays still.
 
 Note each FPS and min, with the draw calls and triangles the counter shows, in the results table above.
+
+## How many players one CX23 holds (week 8, task 4)
+
+`npm run load` (`tools/load/`, Node, no new dependency) plays simulated players against a game server. Each one signs in with its own throwaway Ed25519 key, made by the script and forgotten when it ends, exactly as a wallet signs in. Then it plays at a human rhythm: an action every 20 to 60 seconds (an upgrade, a fleet, a claim; the rules refuse many of them, as they would a new player's), and a `GET /city` at each "launch", every 3 to 7 minutes. The server's limits are never changed: sign-ins go at 18 a minute, under the limit of 20 a minute per address, so 500 players take about 28 minutes to arrive. Sign-ins are counted apart, never in a stage's measures.
+
+It reports, for each stage: the answers a second, the median and the slowest 1 % (p99), the refusals by the rules, the "too many" (429) and the errors. It exits with 1 at the first 429 or error. The CI runs it with 20 players for 30 seconds against the whole stack (job `deploy`).
+
+### On the real server, before it opens (owner, with Claude Code)
+
+1. **A backup just before** (on the server): `sudo systemctl start brinelight-backup.service`, and note the file name it prints (`journalctl -u brinelight-backup.service -n 3`).
+2. **The machine's processor and memory**, in a second SSH window on the server, until the test ends (`Ctrl+C`):
+
+   ```
+   while true; do docker stats --no-stream --format '{{.Name}},{{.CPUPerc}},{{.MemUsage}}' | sed "s/^/$(date -u +%T),/" >> ~/load-stats.csv; sleep 5; done
+   ```
+
+3. **The test**, from your computer (not from the server: it would take the server's processor), about an hour:
+
+   ```
+   npm run load -- --url https://api.brinelight.xyz --origin https://play.brinelight.xyz --stages 100,250,500 --stage-seconds 600
+   ```
+
+4. **The database put back as it was**: `sudo ./restore.sh replace` with the backup of step 1 (it removes the test's players and cities).
+5. The results go in the table below, with `~/load-stats.csv`'s highest processor and memory for each stage; then delete `~/load-stats.csv`.
+
+### When to move to the CX33
+
+When, at the busy hour, the processor stays over 70 %, or the p99 of the actions goes over 500 ms. The CX33 (4 vCPU, 8 GB, about €10.70 a month) is one click in the Hetzner console and a few minutes offline; the data stays (`docs/tasks/week-8.md`, "What it costs").
+
+### Results
+
+| Where | Players | Answers a second | p50 (ms) | p99 (ms) | Processor (server, db) | Memory (server, db) | Refused by the rules | 429 / errors |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| This machine's container, the whole stack in Docker (19 October; not a measure of the CX23) | 20 | 0.37 | 17 | 25 | 2.5 %, 0.8 % | 58 MB, 38 MB | 6 | 0 / 0 |
+| CX23 | 100 | | | | | | | |
+| CX23 | 250 | | | | | | | |
+| CX23 | 500 | | | | | | | |

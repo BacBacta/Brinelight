@@ -75,6 +75,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
       - run: shellcheck deploy/*.sh
       - name: Start the stack
         working-directory: deploy
@@ -110,6 +115,12 @@ jobs:
           docker compose start db
           for _ in $(seq 1 30); do if health | grep -q '^200 '; then break; fi; sleep 2; done
           expect '^200 .*"ok":true'
+      - name: Load test (20 players for 30 seconds; the real one runs on the server, docs/perf.md)
+        working-directory: deploy
+        run: |
+          # Caddy's local certificate, trusted for this run only.
+          docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt "$RUNNER_TEMP/caddy-root.crt"
+          NODE_EXTRA_CA_CERTS="$RUNNER_TEMP/caddy-root.crt" npm run load -- --url https://localhost --origin https://play.example.test --stages 20 --stage-seconds 30 --stats
       - if: failure()
         working-directory: deploy
         run: docker compose logs --tail 100
