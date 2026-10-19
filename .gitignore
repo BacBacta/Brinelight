@@ -14,3 +14,4 @@ deploy/local-test/logs/
 .venv-blender/
 assets/blender/out/
 __pycache__/
+*.timestamp-*.mjs
