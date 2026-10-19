@@ -4,7 +4,7 @@ from the game's camera angle (46° down, from the front), in the afternoon sun.
 
     .venv-blender/bin/python assets/blender/lineup.py <out.png> refinery-1 refinery-5 ... [--width 2600] [--src assets/blender/out]
 
-Reads client/public/city/<name>.glb (what the game draws, its baked style pass included), or the models just built
+A name "a+b" lays several models on the same plot (the Harbor and its pier). Reads client/public/city/<name>.glb (what the game draws, its baked style pass included), or the models just built
 with --src.
 """
 import math
@@ -36,7 +36,9 @@ def main(out, names, width, src=CITY):
     tops = []
     for i, name in enumerate(names):
         before = set(bpy.data.objects)
-        bpy.ops.import_scene.gltf(filepath=str(Path(src) / f"{name}.glb"))
+        # "a+b" lays several models on the same plot (the Harbor and its pier).
+        for part in name.split("+"):
+            bpy.ops.import_scene.gltf(filepath=str(Path(src) / f"{part}.glb"))
         new = [o for o in bpy.data.objects if o not in before and o.parent is None]
         for o in new:
             o.location.x += i * GAP

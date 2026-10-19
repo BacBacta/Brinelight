@@ -39,6 +39,10 @@ def main(args):
         stages.build(name, module.base, module.DETAILS, OUT, fast=fast, only=only, meta=getattr(module, "meta", None))
         for extra, make in getattr(module, "EXTRAS", {}).items():
             stages.build_one(extra, make, OUT, fast=fast)
+        # Models of their own for each stage (the Harbor's pier and boat), laid by the game with the stage's.
+        for extra, make in getattr(module, "STAGE_EXTRAS", {}).items():
+            for stage in only or stages.STAGES:
+                stages.build_one(f"{extra}-{stage}", (lambda st: lambda: make(st))(stage), OUT, fast=fast)
 
 
 if __name__ == "__main__":
