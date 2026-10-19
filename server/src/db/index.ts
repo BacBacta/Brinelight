@@ -25,6 +25,9 @@ export async function openDatabase(url: string | undefined = process.env.DATABAS
     const { drizzle } = await import("drizzle-orm/node-postgres");
     const { migrate } = await import("drizzle-orm/node-postgres/migrator");
     const pool = new Pool({ connectionString: url });
+    // A connection lost while idle (the database restarted) is replaced at the next query; without this listener, it
+    // would stop the server.
+    pool.on("error", (error) => console.error(`Database connection lost: ${error.message}`));
     const db = drizzle(pool, { schema });
     await migrate(db, { migrationsFolder: MIGRATIONS });
     return { db: db as unknown as Db, engine: "postgres", close: () => pool.end() };

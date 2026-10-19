@@ -1,0 +1,38 @@
+# The down alert (docs/deploy.md, "Be warned if the server goes down"): every 10 minutes, /health must say "ok":true.
+# A failed run makes GitHub send you an e-mail. Off until the repository variable API_URL is set (for instance
+# https://api.brinelight.xyz). GitHub may start a scheduled run several minutes late at busy times, and turns the
+# schedule off after 60 days without activity on a public repository (it e-mails you; docs/deploy.md says how to turn
+# it on again).
+name: watch
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Another address to check once, instead of API_URL (for instance a fake one, to see a failure)"
+        required: false
+
+permissions: {}
+
+jobs:
+  health:
+    if: vars.API_URL != '' || inputs.url != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: /health says ok
+        env:
+          API_URL: ${{ inputs.url || vars.API_URL }}
+        run: |
+          url="${API_URL%/}/health"
+          if ! body="$(curl -sS --max-time 20 --retry 2 --retry-delay 10 "$url")"; then
+            echo "::error::$url does not answer."
+            exit 1
+          fi
+          echo "$body"
+          if ! jq -e '.ok == true' > /dev/null <<< "$body"; then
+            echo "::error::$url answers, but something is wrong: $body"
+            exit 1
+          fi

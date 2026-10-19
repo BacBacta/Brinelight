@@ -18,7 +18,17 @@ Players ──https──> play.brinelight.xyz  (Cloudflare Pages: the game itse
                                └─ PostgreSQL 18  (not reachable from outside, no Internet access)
 ```
 
-- Cost: the domain (already bought), the Hetzner CX23 server (about €5 a month), and Hetzner Backups (20 % of the server price).
+- Cost, excluding VAT (Hetzner's prices since 15 June 2026, from a price tracker: check them in the Hetzner console before creating the server):
+
+  | Item | € a month |
+  | --- | --- |
+  | Hetzner Cloud **CX23** (2 vCPU, 4 GB, 40 GB, Germany) | 5.49 |
+  | Its IPv4 address | 0.50 |
+  | Hetzner Backups (20 % of the server's price) | 1.10 |
+  | PostgreSQL, the certificate, the game on Cloudflare Pages, the down alert on GitHub Actions | 0 |
+  | **Total** | **7.09**, about €8.50 with VAT |
+
+  The domain is already bought (renewed once a year at Vercel). When players come, the next step is the CX33 (about €10.70 a month), one click in the console.
 - Everything on the server runs in Docker. The settings live in one file on the server, `deploy/.env`, never in the repository.
 
 ## The order
@@ -32,10 +42,10 @@ Players ──https──> play.brinelight.xyz  (Cloudflare Pages: the game itse
 | 5 | Server | Prepare it, then close SSH to your key only |
 | 6 | Server | Download the game and fill in the settings |
 | 7 | Server | Start, and check |
-| 8 | Server | Nightly backups, and a test restore |
+| 8 | Server | Nightly backups, and a test restore every week |
 | 9 | Cloudflare, then Vercel | `play.brinelight.xyz` and the server address for the game |
 | 10 | Your phone and computer | The test of the week |
-| 11 | UptimeRobot | Be warned if the server goes down |
+| 11 | GitHub | Be warned if the server goes down |
 
 The rest of the guide is for later: updating, restoring, solving problems.
 
@@ -294,13 +304,27 @@ docker compose ps
 
 The first start takes a few minutes. After it, `docker compose ps` shows three lines: `db` (healthy), `server` (healthy) and `caddy` (running, with ports 80 and 443).
 
-Then, from your computer or your phone, open `https://api.brinelight.xyz/health`. You should see:
+Then, from your computer or your phone, open `https://api.brinelight.xyz/health`. Right now, before the first backup (step 8), you should see:
 
 ```
-{"ok":true,"service":"brinelight","version":"0.1.0"}
+{"ok":false,"service":"brinelight","version":"0.1.0","database":"ok","backup":"none","restore":"none"}
 ```
+
+That is expected: the server and its database work (`"database":"ok"`), and `/health` says no backup exists yet. After step 8 it says `"ok":true`.
 
 The first certificate can take a minute. If it does not come, see "Solving problems" below.
+
+### What `/health` checks
+
+| Field | `ok` when | Not ok |
+| --- | --- | --- |
+| `database` | The database answers within 2 seconds | `down` |
+| `backup` | The last nightly backup succeeded less than 26 hours ago | `late` (a night missed), `none` (never made) |
+| `restore` | The last weekly test restore succeeded | `failed`. Before the first one: `none`, which does not count |
+
+`ok` is `true` only when all three are fine; otherwise the answer comes with the status 503, and the down alert (step 11) warns you. The backup and the test restore each write one line (a time, and "ok" or "failed") in `/var/lib/brinelight/status/`, which the game server reads, read-only: never a dump.
+
+Docker's own check (`server (healthy)` in `docker compose ps`) only says the game server answers: restarting it would not mend a late backup.
 
 ## 8. Backups
 
@@ -316,23 +340,23 @@ The first certificate can take a minute. If it does not come, see "Solving probl
 
 They complete each other: the nightly backup is exact and quick to restore, but it lives on the same disk as the database, so it disappears with the server. The Hetzner Backup survives the server, but restores everything at once, and copies a database that is running (PostgreSQL then restarts as after a power cut: it works, but the nightly dump is cleaner). The Hetzner Backup also contains the nightly dumps of the days before.
 
-### Turn on the nightly backup
+### Turn on the nightly backup and the weekly test restore
 
 ```
 cd ~/brinelight/deploy
 sudo ./install-backup.sh
 ```
 
-It shows the next run. Make one now, and look at it:
+It installs two timers and shows their next runs: the backup every night around 03:30 UTC, and a test restore of the latest backup every Sunday at 04:30 UTC (the same as the test below, nothing live is changed). Make a backup now, and look at it:
 
 ```
 sudo systemctl start brinelight-backup.service
 sudo ls -lh /var/backups/brinelight/
 ```
 
-You should see a file like `brinelight-2026-10-20-033012.dump`.
+You should see a file like `brinelight-2026-10-20-033012.dump`. `https://api.brinelight.xyz/health` now says `"ok":true` and `"backup":"ok"`.
 
-### Test a restore (do it now, then once a month)
+### Test a restore (do it now; then the timer does it every Sunday)
 
 ```
 sudo ./restore.sh test
@@ -346,7 +370,9 @@ Live right now:  N players, N cities
 Test restore OK. The temporary database was deleted; the live database was not touched.
 ```
 
-The numbers can differ a little if players signed up since the backup.
+The numbers can differ a little if players signed up since the backup. `/health` now says `"restore":"ok"`.
+
+To run the weekly test by hand, as the timer does: `sudo systemctl start brinelight-restore-test.service`, then `systemctl status brinelight-restore-test.service` (the last lines show its result). If it fails, `/health` says `"restore":"failed"` and the alert warns you: run `sudo ./restore.sh test` to read the error.
 
 ## 9. The game on `play.brinelight.xyz` (Cloudflare Pages, then Vercel)
 
@@ -382,18 +408,20 @@ Then open `https://play.brinelight.xyz`, tap the Power card (top left): the Prof
 
 ## 11. Be warned if the server goes down
 
-A free service checks the server every 5 minutes and sends you an e-mail when it stops answering.
+A GitHub Actions workflow of the repository (`.github/workflows/watch.yml`) opens `https://api.brinelight.xyz/health` every 10 minutes. When the server does not answer, or `/health` does not say `"ok":true` (the database down, a backup late, a test restore failed), the run fails and GitHub sends you an e-mail. It is free, and needs no new account. (UptimeRobot's free plan is for non-commercial use only since late 2024, and Brinelight will sell cosmetics.)
 
-With **UptimeRobot** (free plan), or Better Stack (free plan, same idea):
+1. On github.com, the repository → **Settings → Secrets and variables → Actions → Variables → New repository variable**:
+   - Name: `API_URL`
+   - Value: `https://api.brinelight.xyz`
 
-1. Create an account at uptimerobot.com.
-2. **New monitor**:
-   - Type: **Keyword** (it checks that the answer really says the server is fine).
-   - URL: `https://api.brinelight.xyz/health`
-   - Keyword: `"ok":true`, alert when the keyword is **not** found.
-   - Interval: **5 minutes**.
-   - Alert contact: your e-mail.
-3. Save. Test it once: on the server, `docker compose stop caddy`; within 5 to 10 minutes you get an e-mail. Then `docker compose start caddy`, and you get a "back up" e-mail.
+   The workflow is off until this variable exists.
+2. Check that GitHub e-mails you on failures: your avatar → **Settings → Notifications → Actions**: "Only notify for failed workflows" ticked, with e-mail.
+3. Test it once: the repository → **Actions → watch → Run workflow**, and in "Another address" type `https://brinelight-test.invalid`. The run fails and you get an e-mail. Run it again with the field empty: it checks `API_URL` and passes.
+
+What to know:
+- GitHub can start a scheduled run several minutes late when it is busy. For a check every 3 minutes, Better Stack's free plan does the same with a new account.
+- **GitHub turns off the scheduled workflows of a public repository after 60 days without activity on it** (no push, no pull request), and tells you by e-mail. To turn it on again: the repository → **Actions → watch → Enable workflow**.
+- One e-mail per failed run: a server down for an hour sends about six.
 
 ---
 
@@ -410,7 +438,23 @@ All as `brinelight`, in `~/brinelight/deploy`.
   ~/brinelight/deploy/update.sh
   ```
 
-  It makes a backup, fetches `main`, rebuilds, restarts, and checks `/health`. Database migrations apply by themselves when the server starts. A city stored in an older shape is brought up to date when it is read, and written in the current shape at its next change (`docs/decisions.md`).
+  It makes a backup, fetches `main`, rebuilds, restarts, and checks that `/health` says `"database":"ok"`. Database migrations apply by themselves when the server starts. A city stored in an older shape is brought up to date when it is read, and written in the current shape at its next change (`docs/decisions.md`). After an update that changed `deploy/systemd/`, run `sudo ./install-backup.sh` once more.
+
+- **Go back to the previous version** after an update that went wrong. `update.sh` printed the backup it made first (`Backup written: …`). Then:
+
+  ```
+  cd ~/brinelight
+  git log --oneline -5
+  ```
+
+  The second line is the version before the update. Go back to it, and restart:
+
+  ```
+  git checkout <its 7 characters>
+  cd deploy && docker compose up -d --build
+  ```
+
+  If the new version changed the database (a migration), also put the database back as it was before the update: `sudo ./restore.sh replace` with the backup `update.sh` made (see "Restore for real"). Everything saved since is lost. When `main` is fixed, `git checkout main`, then `update.sh` as usual.
 
 - **Space left on the disk**: `df -h /`
 
@@ -447,6 +491,10 @@ In the Hetzner console: **Server → Backups → (a day) → Restore**. The serv
 
 ## Solving problems
 
+- **`/health` answers, but with `"ok":false`** (the alert e-mail)
+  - `"database":"down"`: `docker compose ps` and `docker compose logs --tail 50 db`; `docker compose start db` if it stopped.
+  - `"backup":"late"` or `"none"`: `systemctl status brinelight-backup.timer` (installed?) and `journalctl -u brinelight-backup.service -n 30` (the error of the last run). Run one by hand: `sudo systemctl start brinelight-backup.service`.
+  - `"restore":"failed"`: `sudo ./restore.sh test` shows the error; then `journalctl -u brinelight-restore-test.service -n 30`.
 - **`https://api.brinelight.xyz/health` does not answer**
   - `docker compose ps`: is everything up? If not, `docker compose logs --tail 50 <service>`.
   - The certificate: `docker compose logs caddy | tail -30`. Usual causes: the `A` record does not point to the server yet (`dig +short api.brinelight.xyz`, or dnschecker.org); the record was typed as `api.brinelight.xyz` in Vercel's Name field instead of `api`, which gives `api.brinelight.xyz.brinelight.xyz`; `API_DOMAIN` in `.env` is not exactly `api.brinelight.xyz`.

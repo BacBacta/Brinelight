@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Installs the nightly backup (a systemd timer). Run once, with sudo:  sudo ./install-backup.sh
+# Installs the nightly backup and the weekly test restore (two systemd timers). Run once, with sudo:  sudo ./install-backup.sh
+# Running it again after an update is safe: it rewrites the same units.
 set -euo pipefail
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -8,10 +9,12 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 DEPLOY_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-sed "s#__DEPLOY_DIR__#$DEPLOY_DIR#" "$DEPLOY_DIR/systemd/brinelight-backup.service" > /etc/systemd/system/brinelight-backup.service
-cp "$DEPLOY_DIR/systemd/brinelight-backup.timer" /etc/systemd/system/brinelight-backup.timer
+for unit in brinelight-backup brinelight-restore-test; do
+  sed "s#__DEPLOY_DIR__#$DEPLOY_DIR#" "$DEPLOY_DIR/systemd/$unit.service" > "/etc/systemd/system/$unit.service"
+  cp "$DEPLOY_DIR/systemd/$unit.timer" "/etc/systemd/system/$unit.timer"
+done
 systemctl daemon-reload
-systemctl enable --now brinelight-backup.timer
+systemctl enable --now brinelight-backup.timer brinelight-restore-test.timer
 
-echo "Nightly backup installed. Next run:"
-systemctl list-timers brinelight-backup.timer --no-pager
+echo "Nightly backup and weekly test restore installed. Next runs:"
+systemctl list-timers brinelight-backup.timer brinelight-restore-test.timer --no-pager

@@ -12,6 +12,7 @@ import { actionRoutes } from "./city/actions.js";
 import { cityRoutes } from "./city/routes.js";
 import { loadConfig, type Config } from "./config.js";
 import type { Db } from "./db/index.js";
+import { health } from "./health.js";
 import { INVALID_LEVEL, INVALID_REQUEST, SERVER_ERROR, TOO_MANY_REQUESTS, UNKNOWN_BUILDING } from "./refusals.js";
 
 export type AppOptions = {
@@ -53,7 +54,11 @@ export async function buildApp(options: AppOptions = {}) {
     return reply.code(500).send(SERVER_ERROR);
   });
 
-  app.get("/health", async () => ({ ok: true, service: "brinelight", version: "0.1.0" }));
+  // The database, the nightly backup and the weekly test restore (health.ts); 503 when one fails, for the down alert.
+  app.get("/health", async (_req, reply) => {
+    const status = await health({ db: options.db, statusDir: config.statusDir, now: (options.now ?? (() => new Date()))(), version: "0.1.0" });
+    return reply.code(status.ok ? 200 : 503).send(status);
+  });
 
   app.get<{ Params: { id: string; level: string } }>("/rules/buildings/:id/:level", async (req, reply) => {
     const id = req.params.id as BuildingId;
