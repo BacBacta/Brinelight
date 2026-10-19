@@ -467,7 +467,8 @@ Their highest level is **3** (`RAFT_BUILDING_MAX_LEVEL` in the rules; two copies
   - one building site on the island and one on a raft;
   - the raft buildings at levels 1, 2 and 3, and a damaged raft carrying a building at level 3.
 
-  It records the draw calls and triangles of each into `docs/perf.md`. Then you check the entry-level phone and the S22 with `?fps`.
+  It records the draw calls and triangles of each into `docs/perf.md`, with the real triangles of the city at its most (island at 30, raft buildings at 3). Then you check the entry-level phone and the S22 with `?fps`.
+- **Before players are invited, an entry-level phone is measured** with the city at its most, with the protocol of `docs/perf.md` (owner's decision, 19 October).
 - **The look references:**
   - None of the 52 should move: they all hide the 3D view and the labels.
   - The new references: the 7 levels of the city, the 2 building sites, the raft buildings at 3 levels and the damaged raft, at 412 and 360 (26 images). They are 3D drawings: the CI's processors may draw them a little differently, as they do the captains' rows (question 2).
@@ -491,6 +492,7 @@ What it does:
   - A GitHub Actions workflow (`.github/workflows/watch.yml`) calls `https://api.brinelight.xyz/health` every 10 minutes and fails when the answer is not `"ok":true`. GitHub e-mails you when a scheduled run fails.
   - It is turned off while `api.brinelight.xyz` does not exist: it starts when you set the repository variable `API_URL` (task 3).
   - The limit: GitHub can delay a scheduled run by several minutes at busy times. Better Stack's free plan checks every 3 minutes, with a new account (question 7).
+  - GitHub turns off the scheduled workflows of a public repository after 60 days without activity on it, and says so by e-mail. `docs/deploy.md` says how to turn it on again: the repository → **Actions** → the workflow → **Enable workflow**.
 - **`docs/deploy.md` brought up to date:**
   - today's prices;
   - the new `/health`;
@@ -501,7 +503,7 @@ What it does:
 What it does not do:
 - It does not rent anything.
 - It does not deploy from the CI.
-- It does not copy the backups off the machine (question 6).
+- It does not copy the backups off the machine (question 6): Hetzner Backups are enough for now. **A copy outside Hetzner is needed before players are invited** (owner's decision, 19 October).
 - It does not touch sign-in, sessions or the rules of the game.
 
 How it is tested:
@@ -594,10 +596,10 @@ What it does:
 
 - **A list of servers in the rules** (`shared/src/rules/servers.ts`).
   - Each server has a name, its Mist hours, its Leviathan hours and its daily reset hour.
-  - Today there is one: `s1`, with your hours (question 10).
+  - Today there is one: `s1`. Its hours stay in UTC (no summer time to handle), with one change (question 10): **the first Leviathan rises at 11:00 UTC instead of 13:00**; the one of 19:00, the Mist (04:00, 12:00, 20:00) and the reset (00:00) do not move.
   - The calendar is in the rules, not in a `.env`, because the client reads the same calendar to draw the countdowns.
 - **The city knows its server** (`server: "s1"`).
-  - City shape 10, with its migration: the cities stored before get `s1`, and `s1` keeps today's hours unless you choose others.
+  - City shape 10, with its migration: the cities stored before get `s1`.
   - `mistAt`, `huntAt` and the daily reset read the city's server.
   - The server sets it when the city is made; the client never sends it.
 - **What changes if `s1`'s hours change:**
@@ -670,7 +672,26 @@ How it is tested: the measures in a table, before anything is applied. Once you 
 - Payments.
 - The daily recruitment (week 15).
 
-## Questions for you
+## The owner's answers (19 October)
+
+The plan is accepted. To the questions below:
+
+1. **The island's lists:** accepted. The Refinery comes alone first: its captures at its 30 levels and its building site are shown before the others. If the small details do not show with the game's camera, they are made bigger rather than more numerous.
+2. **The 3D captures:** at zero pixels if three CI runs draw them identically; otherwise a small tolerance, for these new captures only. The 52 others stay at zero pixels.
+3. **The raft buildings:** a detail at level 2, and the transformation at level 3.
+4. **The machine:** the CX23.
+5. **Deploying:** by hand for now.
+6. **Backups:** Hetzner Backups are enough for now. A copy outside Hetzner is needed before players are invited.
+7. **The alert:** GitHub Actions. `docs/deploy.md` says that GitHub turns off the scheduled workflows of a public repository after 60 days without activity, and how to turn them on again.
+8. **The load test:** on the real server before it opens, with the database put back afterwards.
+9. **The CI's actions:** pinned to their full commit, with the version as a comment.
+10. **The hours of `s1`:** they stay in UTC. Only change: the first Leviathan at 11:00 instead of 13:00; the one of 19:00, the Mist and the reset do not move.
+11. **The first Solana proof:** week 9.
+12. **The other buildings:** no option ruled out; the three are measured.
+
+Also: the real triangles of the city at its most go into `docs/perf.md`, and an entry-level phone is measured before players are invited.
+
+## The questions, as they were asked
 
 1. **The buildings' lists (task 1):** do the details and transformations suit you, building by building? One line to change is enough to change the rule.
 2. **The 3D captures of task 1:** compared at zero pixels like the others, if three CI runs on different processors draw them identically (I would check first)? Or compared with a small tolerance, or only shown in the CI's artifact for you to look at?
