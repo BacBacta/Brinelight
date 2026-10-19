@@ -1,4 +1,226 @@
 {
+ "barracks-1": {
+  "kB": 83.3,
+  "triangles": 948,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2340,
+    "height": 1.0,
+    "reach": 0.704
+   },
+   {
+    "level": 2,
+    "indices": 2448,
+    "height": 1.0,
+    "reach": 0.704
+   },
+   {
+    "level": 3,
+    "indices": 2712,
+    "height": 1.0,
+    "reach": 0.704
+   },
+   {
+    "level": 4,
+    "indices": 2844,
+    "height": 1.0,
+    "reach": 0.704
+   }
+  ]
+ },
+ "barracks-10": {
+  "kB": 66.4,
+  "triangles": 872,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1728,
+    "height": 1.69,
+    "reach": 0.86
+   },
+   {
+    "level": 11,
+    "indices": 2016,
+    "height": 1.69,
+    "reach": 0.86
+   },
+   {
+    "level": 12,
+    "indices": 2148,
+    "height": 1.69,
+    "reach": 0.86
+   },
+   {
+    "level": 13,
+    "indices": 2424,
+    "height": 1.69,
+    "reach": 0.86
+   },
+   {
+    "level": 14,
+    "indices": 2616,
+    "height": 1.69,
+    "reach": 0.86
+   }
+  ]
+ },
+ "barracks-15": {
+  "kB": 66.4,
+  "triangles": 1038,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2154,
+    "height": 1.62,
+    "reach": 0.86
+   },
+   {
+    "level": 16,
+    "indices": 2682,
+    "height": 1.62,
+    "reach": 0.86
+   },
+   {
+    "level": 17,
+    "indices": 2898,
+    "height": 1.62,
+    "reach": 0.86
+   },
+   {
+    "level": 18,
+    "indices": 3018,
+    "height": 1.62,
+    "reach": 0.86
+   },
+   {
+    "level": 19,
+    "indices": 3114,
+    "height": 1.62,
+    "reach": 0.86
+   }
+  ]
+ },
+ "barracks-20": {
+  "kB": 52.7,
+  "triangles": 710,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1512,
+    "height": 1.15,
+    "reach": 0.86
+   },
+   {
+    "level": 21,
+    "indices": 1752,
+    "height": 1.15,
+    "reach": 0.86
+   },
+   {
+    "level": 22,
+    "indices": 1956,
+    "height": 1.15,
+    "reach": 0.86
+   },
+   {
+    "level": 23,
+    "indices": 1998,
+    "height": 1.15,
+    "reach": 0.86
+   },
+   {
+    "level": 24,
+    "indices": 2130,
+    "height": 1.15,
+    "reach": 0.86
+   }
+  ]
+ },
+ "barracks-25": {
+  "kB": 68.4,
+  "triangles": 956,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2172,
+    "height": 1.475,
+    "reach": 0.86
+   },
+   {
+    "level": 26,
+    "indices": 2376,
+    "height": 1.475,
+    "reach": 0.86
+   },
+   {
+    "level": 27,
+    "indices": 2568,
+    "height": 1.475,
+    "reach": 0.86
+   },
+   {
+    "level": 28,
+    "indices": 2700,
+    "height": 1.475,
+    "reach": 0.86
+   },
+   {
+    "level": 29,
+    "indices": 2868,
+    "height": 1.475,
+    "reach": 0.86
+   }
+  ]
+ },
+ "barracks-30": {
+  "kB": 70.4,
+  "triangles": 956,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2868,
+    "height": 1.475,
+    "reach": 0.86
+   }
+  ]
+ },
+ "barracks-5": {
+  "kB": 81.7,
+  "triangles": 1072,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2496,
+    "height": 1.352,
+    "reach": 0.86
+   },
+   {
+    "level": 6,
+    "indices": 2640,
+    "height": 1.352,
+    "reach": 0.86
+   },
+   {
+    "level": 7,
+    "indices": 2784,
+    "height": 1.352,
+    "reach": 0.86
+   },
+   {
+    "level": 8,
+    "indices": 3012,
+    "height": 1.352,
+    "reach": 0.86
+   },
+   {
+    "level": 9,
+    "indices": 3216,
+    "height": 1.352,
+    "reach": 0.86
+   }
+  ]
+ },
  "ground-1": {
   "kB": 56.3,
   "triangles": 510,
@@ -68,6 +290,228 @@
     "indices": 6372,
     "height": 0.16,
     "reach": 5.068
+   }
+  ]
+ },
+ "infirmary-1": {
+  "kB": 53.0,
+  "triangles": 708,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1428,
+    "height": 0.46,
+    "reach": 0.703
+   },
+   {
+    "level": 2,
+    "indices": 1692,
+    "height": 0.46,
+    "reach": 0.703
+   },
+   {
+    "level": 3,
+    "indices": 1920,
+    "height": 0.46,
+    "reach": 0.703
+   },
+   {
+    "level": 4,
+    "indices": 2124,
+    "height": 0.46,
+    "reach": 0.703
+   }
+  ]
+ },
+ "infirmary-10": {
+  "kB": 62.8,
+  "triangles": 884,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1704,
+    "height": 1.03,
+    "reach": 0.86
+   },
+   {
+    "level": 11,
+    "indices": 1908,
+    "height": 1.03,
+    "reach": 0.86
+   },
+   {
+    "level": 12,
+    "indices": 2232,
+    "height": 1.03,
+    "reach": 0.86
+   },
+   {
+    "level": 13,
+    "indices": 2436,
+    "height": 1.03,
+    "reach": 0.86
+   },
+   {
+    "level": 14,
+    "indices": 2652,
+    "height": 1.03,
+    "reach": 0.86
+   }
+  ]
+ },
+ "infirmary-15": {
+  "kB": 79.8,
+  "triangles": 1232,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2556,
+    "height": 0.925,
+    "reach": 0.86
+   },
+   {
+    "level": 16,
+    "indices": 2808,
+    "height": 0.925,
+    "reach": 0.86
+   },
+   {
+    "level": 17,
+    "indices": 3156,
+    "height": 0.925,
+    "reach": 0.86
+   },
+   {
+    "level": 18,
+    "indices": 3360,
+    "height": 0.925,
+    "reach": 0.86
+   },
+   {
+    "level": 19,
+    "indices": 3696,
+    "height": 0.925,
+    "reach": 0.86
+   }
+  ]
+ },
+ "infirmary-20": {
+  "kB": 76.2,
+  "triangles": 1028,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1824,
+    "height": 0.842,
+    "reach": 0.86
+   },
+   {
+    "level": 21,
+    "indices": 2028,
+    "height": 0.842,
+    "reach": 0.86
+   },
+   {
+    "level": 22,
+    "indices": 2448,
+    "height": 0.842,
+    "reach": 0.86
+   },
+   {
+    "level": 23,
+    "indices": 2772,
+    "height": 0.842,
+    "reach": 0.86
+   },
+   {
+    "level": 24,
+    "indices": 3084,
+    "height": 0.842,
+    "reach": 0.86
+   }
+  ]
+ },
+ "infirmary-25": {
+  "kB": 56.2,
+  "triangles": 756,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1320,
+    "height": 1.132,
+    "reach": 0.86
+   },
+   {
+    "level": 26,
+    "indices": 1524,
+    "height": 1.132,
+    "reach": 0.86
+   },
+   {
+    "level": 27,
+    "indices": 1752,
+    "height": 1.132,
+    "reach": 0.86
+   },
+   {
+    "level": 28,
+    "indices": 2124,
+    "height": 1.132,
+    "reach": 0.86
+   },
+   {
+    "level": 29,
+    "indices": 2268,
+    "height": 1.132,
+    "reach": 0.86
+   }
+  ]
+ },
+ "infirmary-30": {
+  "kB": 58.6,
+  "triangles": 800,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2400,
+    "height": 1.132,
+    "reach": 0.86
+   }
+  ]
+ },
+ "infirmary-5": {
+  "kB": 64.7,
+  "triangles": 904,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1992,
+    "height": 0.713,
+    "reach": 0.86
+   },
+   {
+    "level": 6,
+    "indices": 2304,
+    "height": 0.713,
+    "reach": 0.86
+   },
+   {
+    "level": 7,
+    "indices": 2508,
+    "height": 0.713,
+    "reach": 0.86
+   },
+   {
+    "level": 8,
+    "indices": 2652,
+    "height": 0.713,
+    "reach": 0.86
+   },
+   {
+    "level": 9,
+    "indices": 2712,
+    "height": 0.713,
+    "reach": 0.86
    }
   ]
  },
@@ -553,6 +997,228 @@
     "indices": 2946,
     "height": 1.34,
     "reach": 0.855
+   }
+  ]
+ },
+ "shelters-1": {
+  "kB": 57.1,
+  "triangles": 772,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1632,
+    "height": 0.58,
+    "reach": 0.85
+   },
+   {
+    "level": 2,
+    "indices": 1896,
+    "height": 0.58,
+    "reach": 0.85
+   },
+   {
+    "level": 3,
+    "indices": 2088,
+    "height": 0.58,
+    "reach": 0.85
+   },
+   {
+    "level": 4,
+    "indices": 2316,
+    "height": 0.58,
+    "reach": 0.85
+   }
+  ]
+ },
+ "shelters-10": {
+  "kB": 86.9,
+  "triangles": 1316,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 3168,
+    "height": 1.17,
+    "reach": 0.86
+   },
+   {
+    "level": 11,
+    "indices": 3360,
+    "height": 1.17,
+    "reach": 0.86
+   },
+   {
+    "level": 12,
+    "indices": 3612,
+    "height": 1.17,
+    "reach": 0.86
+   },
+   {
+    "level": 13,
+    "indices": 3780,
+    "height": 1.17,
+    "reach": 0.86
+   },
+   {
+    "level": 14,
+    "indices": 3948,
+    "height": 1.17,
+    "reach": 0.86
+   }
+  ]
+ },
+ "shelters-15": {
+  "kB": 82.6,
+  "triangles": 1264,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2892,
+    "height": 1.76,
+    "reach": 0.86
+   },
+   {
+    "level": 16,
+    "indices": 3180,
+    "height": 1.76,
+    "reach": 0.86
+   },
+   {
+    "level": 17,
+    "indices": 3300,
+    "height": 1.76,
+    "reach": 0.86
+   },
+   {
+    "level": 18,
+    "indices": 3624,
+    "height": 1.76,
+    "reach": 0.86
+   },
+   {
+    "level": 19,
+    "indices": 3792,
+    "height": 1.76,
+    "reach": 0.86
+   }
+  ]
+ },
+ "shelters-20": {
+  "kB": 69.8,
+  "triangles": 1000,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2208,
+    "height": 1.77,
+    "reach": 0.86
+   },
+   {
+    "level": 21,
+    "indices": 2412,
+    "height": 1.77,
+    "reach": 0.86
+   },
+   {
+    "level": 22,
+    "indices": 2580,
+    "height": 1.77,
+    "reach": 0.86
+   },
+   {
+    "level": 23,
+    "indices": 2892,
+    "height": 1.77,
+    "reach": 0.86
+   },
+   {
+    "level": 24,
+    "indices": 3000,
+    "height": 1.77,
+    "reach": 0.86
+   }
+  ]
+ },
+ "shelters-25": {
+  "kB": 82.2,
+  "triangles": 1128,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2508,
+    "height": 1.84,
+    "reach": 0.86
+   },
+   {
+    "level": 26,
+    "indices": 2712,
+    "height": 1.84,
+    "reach": 0.86
+   },
+   {
+    "level": 27,
+    "indices": 2904,
+    "height": 1.84,
+    "reach": 0.86
+   },
+   {
+    "level": 28,
+    "indices": 3108,
+    "height": 1.84,
+    "reach": 0.86
+   },
+   {
+    "level": 29,
+    "indices": 3384,
+    "height": 1.84,
+    "reach": 0.86
+   }
+  ]
+ },
+ "shelters-30": {
+  "kB": 86.8,
+  "triangles": 1204,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 3612,
+    "height": 1.84,
+    "reach": 0.86
+   }
+  ]
+ },
+ "shelters-5": {
+  "kB": 76.7,
+  "triangles": 1072,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2160,
+    "height": 0.88,
+    "reach": 0.86
+   },
+   {
+    "level": 6,
+    "indices": 2472,
+    "height": 0.88,
+    "reach": 0.86
+   },
+   {
+    "level": 7,
+    "indices": 2676,
+    "height": 0.88,
+    "reach": 0.86
+   },
+   {
+    "level": 8,
+    "indices": 2988,
+    "height": 0.88,
+    "reach": 0.86
+   },
+   {
+    "level": 9,
+    "indices": 3216,
+    "height": 0.88,
+    "reach": 0.86
    }
   ]
  },

@@ -337,6 +337,9 @@ Measured with the city at 412 × 915 (container, quality 2, the e2e's counter), 
 | The island's ground, one an era (six models) | 588 to 2,480 | 76 to 198 kB |
 | The Refinery, six eras (seven models) | 896 to 1,556 | 69 to 109 kB |
 | The building site, four pieces | 1,076 in all | 93 kB in all |
+| The Shelters, six eras (seven models) | 772 to 1,316 | 57 to 87 kB |
+| The Barracks, six eras (seven models) | 710 to 1,072 | 53 to 83 kB |
+| The Infirmary, six eras (seven models) | 708 to 1,232 | 53 to 80 kB |
 
 - **What is downloaded:** only the stage each building shows, and the next one while an upgrade toward it runs.
 - **At level 30:** 171 + 163 + 113 + 109 kB for the island, its ground, the Lighthouse and the Refinery, about 0.55 MB. The ground adds one draw call.
