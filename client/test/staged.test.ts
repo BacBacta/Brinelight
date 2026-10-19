@@ -11,7 +11,7 @@ import { PLOT_ROOM, hexReach } from "../src/scene/buildings.js";
 import { hexX, hexZ } from "../src/scene/island.js";
 import { RAFT_FILL } from "../src/scene/coast.js";
 import { PIER_SLOTS } from "../src/scene/framing.js";
-import { STAGES, isStaged, levelShape, stageName, stageOf } from "../src/city/staged.js";
+import { SITE_PARTS, STAGES, isStaged, levelShape, shownModels, stageName, stageOf } from "../src/city/staged.js";
 import { readGlb } from "./glb.js";
 
 const file = (name: string) => new URL(`../public/city/${name}.glb`, import.meta.url).pathname;
@@ -84,6 +84,16 @@ describe("the buildings remade in Blender", () => {
       }
     expect(CITY_MANIFEST.island!.triangles).toBeLessThanOrEqual(3000);
     expect(CITY_MANIFEST.island!.kB).toBeLessThanOrEqual(260);
+  });
+
+  it("a city fetches only the models of its buildings' current era: for a new player, then at the Lighthouse 30", () => {
+    const levels = (l: number) => Object.fromEntries(BUILDING_IDS.map((id) => [id, l])) as Record<BuildingId, number>;
+    const fresh = { ...levels(0), lighthouse: 1 };
+    expect(shownModels({ buildings: fresh, queue: [] })).toEqual([...STAGED.filter((id) => id === "lighthouse").map((id) => `${id}-1`), ...SITE_PARTS]);
+    expect(shownModels({ buildings: levels(30), queue: [] })).toEqual(STAGED.map((id) => `${id}-30`));
+    expect(shownModels({ buildings: levels(17), queue: [] })).toEqual(STAGED.map((id) => `${id}-15`));
+    // An upgrade at work: its building site, never the next era (fetched in the background once the city shows).
+    expect(shownModels({ buildings: levels(19), queue: [{ id: "refinery" }] })).toEqual([...STAGED.map((id) => `${id}-15`), ...SITE_PARTS]);
   });
 
   it("the Lighthouse's lantern is inside its lantern room, for the beams and the light", () => {

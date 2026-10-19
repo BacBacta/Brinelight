@@ -100,10 +100,16 @@ export function normalizeBuilding(model: THREE.Object3D, fit: BuildingFit, fix: 
   return { object, height: size.y * s };
 }
 
-/** Loads the nine models in parallel with the scene's loader, each fitted to its tile. */
-export async function loadBuildings(loader: GLTFLoader): Promise<BuildingModels> {
-  const loaded = await Promise.all(BUILDING_IDS.map((id) => loader.loadAsync(buildingUrl(id))));
+/**
+ * Loads the nine models in parallel with the scene's loader, each fitted to its tile. The buildings in `remade` (made in
+ * Blender, week 8) are not fetched: they stand in as an empty model of the height given.
+ */
+export async function loadBuildings(loader: GLTFLoader, remade: Partial<Record<BuildingId, number>> = {}): Promise<BuildingModels> {
+  const loaded = await Promise.all(BUILDING_IDS.map((id) => (remade[id] === undefined ? loader.loadAsync(buildingUrl(id)) : null)));
   const out = {} as BuildingModels;
-  BUILDING_IDS.forEach((id, i) => (out[id] = normalizeBuilding(loaded[i]!.scene, id === "lighthouse" ? LIGHTHOUSE_FIT : TILE_FIT, BUILDING_FIX[id])));
+  BUILDING_IDS.forEach((id, i) => {
+    const gltf = loaded[i];
+    out[id] = gltf ? normalizeBuilding(gltf.scene, id === "lighthouse" ? LIGHTHOUSE_FIT : TILE_FIT, BUILDING_FIX[id]) : { object: new THREE.Group(), height: remade[id]! };
+  });
   return out;
 }

@@ -1,4 +1,4 @@
-import type { BuildingId, RaftBuildingId, TechId, TroopType } from "@brinelight/shared";
+import { BUILDING_IDS, type BuildingId, type RaftBuildingId, type TechId, type TroopType } from "@brinelight/shared";
 import { lighthouseScale, type BuildingModels, type Kit, type Models, type RaftBuildingModels, type SceneHandle } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 import { coastAt } from "../scene/coast.js";
@@ -131,10 +131,11 @@ export function createCity(
       sheet.open(id, game.state(), game.speed());
       buildings.select(id);
       if (blenderLook()) {
-        const { x, z } = plotPosition(id);
-        const level = Math.max(1, game.state().buildings[id]);
-        const shape = staged(id) ? levelShape(id, level) : { height: id === "lighthouse" ? 3 : models[id].height, reach: 0.9 };
-        scene.focus(x, z, shape.height, shape.reach);
+        const all = buildings.volumes(game.state());
+        scene.focus(
+          all[id],
+          BUILDING_IDS.filter((o) => o !== id).map((o) => all[o]),
+        );
       }
     } else {
       if (blenderLook()) scene.unfocus();

@@ -53,11 +53,10 @@ export function cityPoints(rafts: readonly { x: number; z: number }[], tops: rea
   return points;
 }
 
-/** Where the points land on screen, in pixels, with the camera at `distance` from `target` (on the ground, at x = `targetX`). */
-function bounds(view: View, points: readonly THREE.Vector3[], distance: number, targetZ: number, targetX = 0) {
+/** Where the points land on screen, in pixels, with the camera at `distance` from `target` (on the ground), from `angle`. */
+function bounds(view: View, points: readonly THREE.Vector3[], distance: number, target: THREE.Vector3, angle: THREE.Vector3 = CITY_ANGLE) {
   const camera = new THREE.PerspectiveCamera(CITY_FOV, view.width / view.height, 0.1, 400);
-  const target = new THREE.Vector3(targetX, 0, targetZ);
-  camera.position.copy(target).addScaledVector(CITY_ANGLE, distance);
+  camera.position.copy(target).addScaledVector(angle, distance);
   camera.lookAt(target);
   camera.updateMatrixWorld();
   const v = new THREE.Vector3();
@@ -77,22 +76,27 @@ function bounds(view: View, points: readonly THREE.Vector3[], distance: number, 
   return { left, right, top, bottom };
 }
 
-/** The point the camera looks at, on the z axis, that puts the points in the middle of the band, at this distance. */
-function centered(view: View, points: readonly THREE.Vector3[], distance: number, x = 0, from = 0): number {
+/**
+ * The point the camera looks at that puts the points in the middle of the band, at this distance: `origin` moved on
+ * the ground toward the camera or away from it.
+ */
+function centered(view: View, points: readonly THREE.Vector3[], distance: number, origin: THREE.Vector3 = new THREE.Vector3(), angle: THREE.Vector3 = CITY_ANGLE): THREE.Vector3 {
   const middle = (view.top + view.bottom) / 2;
-  const off = (z: number) => {
-    const b = bounds(view, points, distance, z, x);
+  const toward = new THREE.Vector3(angle.x, 0, angle.z).normalize();
+  const at = (s: number) => origin.clone().addScaledVector(toward, s);
+  const off = (s: number) => {
+    const b = bounds(view, points, distance, at(s), angle);
     return (b.top + b.bottom) / 2 - middle;
   };
   // The secant method: the points move on screen almost in proportion to the target.
-  let [z0, z1] = [from, from - 1];
-  let [f0, f1] = [off(z0), off(z1)];
+  let [s0, s1] = [0, -1];
+  let [f0, f1] = [off(s0), off(s1)];
   for (let i = 0; i < 8 && Math.abs(f1) > 0.25 && f1 !== f0; i++) {
-    const z2 = z1 - (f1 * (z1 - z0)) / (f1 - f0);
-    [z0, f0] = [z1, f1];
-    [z1, f1] = [z2, off(z2)];
+    const s2 = s1 - (f1 * (s1 - s0)) / (f1 - f0);
+    [s0, f0] = [s1, f1];
+    [s1, f1] = [s2, off(s2)];
   }
-  return z1;
+  return at(s1);
 }
 
 /**
@@ -101,8 +105,7 @@ function centered(view: View, points: readonly THREE.Vector3[], distance: number
 export function cityFraming(view: View, rafts: readonly { x: number; z: number }[], tops: readonly { x: number; y: number; z: number }[] = []): { distance: number; target: THREE.Vector3 } {
   const points = cityPoints(rafts, tops);
   const fits = (distance: number) => {
-    const z = centered(view, points, distance);
-    const b = bounds(view, points, distance, z);
+    const b = bounds(view, points, distance, centered(view, points, distance));
     return b.left >= SIDE_MARGIN && b.right <= view.width - SIDE_MARGIN && b.top >= view.top && b.bottom <= view.bottom;
   };
   let [near, far] = [5, 200];
@@ -111,27 +114,31 @@ export function cityFraming(view: View, rafts: readonly { x: number; z: number }
     if (fits(mid)) far = mid;
     else near = mid;
   }
-  return { distance: far, target: new THREE.Vector3(0, 0, centered(view, points, far)) };
+  return { distance: far, target: centered(view, points, far) };
 }
 
 /** The pinch zoom's closest distance: the close view never goes nearer. */
 export const CLOSE_MIN = 9;
 
+/** A building's room, for the close view: its plot's center, its height and its reach (hex distance) on its plot. */
+export type Volume = { x: number; z: number; height: number; reach: number };
+
 /**
- * The close view of a building (week 8): the camera at the normal view's angle, as close as the building allows while
- * its foot (its reach on its plot) and its top stay in the band (between the top panels and the sheet's top), never
- * nearer than CLOSE_MIN; the building centered in the band.
+ * The close view of a building (week 8): the camera at the normal view's height above the ground, from `angle` (the
+ * normal view's, or turned around the building, `turned`), as close as the building allows while its foot (its reach on
+ * its plot) and its top stay in the band (between the top panels and the sheet's top), never nearer than CLOSE_MIN; the
+ * building centered in the band.
  */
-export function closeFraming(view: View, b: { x: number; z: number; height: number; reach: number }): { distance: number; target: THREE.Vector3 } {
+export function closeFraming(view: View, b: Volume, angle: THREE.Vector3 = CITY_ANGLE): { distance: number; target: THREE.Vector3 } {
   const points: THREE.Vector3[] = [new THREE.Vector3(b.x, b.height, b.z)];
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
     points.push(new THREE.Vector3(b.x + Math.cos(a) * b.reach, 0, b.z + Math.sin(a) * b.reach));
     points.push(new THREE.Vector3(b.x + Math.cos(a) * b.reach * 0.7, b.height * 0.8, b.z + Math.sin(a) * b.reach * 0.7));
   }
+  const origin = new THREE.Vector3(b.x, 0, b.z);
   const fits = (distance: number) => {
-    const z = centered(view, points, distance, b.x, b.z);
-    const r = bounds(view, points, distance, z, b.x);
+    const r = bounds(view, points, distance, centered(view, points, distance, origin, angle), angle);
     return r.left >= SIDE_MARGIN && r.right <= view.width - SIDE_MARGIN && r.top >= view.top && r.bottom <= view.bottom;
   };
   let [near, far] = [CLOSE_MIN, 60];
@@ -142,6 +149,72 @@ export function closeFraming(view: View, b: { x: number; z: number; height: numb
       else near = mid;
     }
   } else far = near;
-  return { distance: far, target: new THREE.Vector3(b.x, 0, centered(view, points, far, b.x, b.z)) };
+  return { distance: far, target: centered(view, points, far, origin, angle) };
 }
 
+const UP = new THREE.Vector3(0, 1, 0);
+/** The normal view's angle turned by `turn` radians around the vertical (the camera going around the island). */
+export const turned = (turn: number): THREE.Vector3 => CITY_ANGLE.clone().applyAxisAngle(UP, turn);
+
+/** The others are taken as upright cylinders this wide, for their reach: a building fills its plot's middle, not its corners. */
+const BODY = 0.8;
+
+/**
+ * The share of a building a camera at `eye` does not see because the `others` hide it: points over the building's side
+ * turned to the camera (five across, five up), each hidden when the line from it to the camera goes through another
+ * building's body (an upright cylinder) below its top.
+ */
+export function hiddenShare(b: Volume, others: readonly Volume[], eye: THREE.Vector3): number {
+  const toEye = new THREE.Vector2(eye.x - b.x, eye.z - b.z).normalize();
+  const across = new THREE.Vector2(-toEye.y, toEye.x);
+  let hidden = 0;
+  let count = 0;
+  for (let i = -2; i <= 2; i++)
+    for (let j = 0; j < 5; j++) {
+      const side = (i / 2) * b.reach * 0.75;
+      const p = new THREE.Vector3(b.x + across.x * side + toEye.x * b.reach * 0.5, b.height * ((j + 0.5) / 5), b.z + across.y * side + toEye.y * b.reach * 0.5);
+      count++;
+      if (others.some((o) => blocks(p, eye, o))) hidden++;
+    }
+  return hidden / count;
+}
+
+/** Whether the line from `p` to `eye` goes through `o`'s body below its top. */
+function blocks(p: THREE.Vector3, eye: THREE.Vector3, o: Volume): boolean {
+  const r = o.reach * BODY;
+  const dx = eye.x - p.x;
+  const dz = eye.z - p.z;
+  const fx = p.x - o.x;
+  const fz = p.z - o.z;
+  const a = dx * dx + dz * dz;
+  const bb = 2 * (fx * dx + fz * dz);
+  const c = fx * fx + fz * fz - r * r;
+  const disc = bb * bb - 4 * a * c;
+  if (a === 0 || disc < 0) return false;
+  const t0 = (-bb - Math.sqrt(disc)) / (2 * a);
+  const t1 = (-bb + Math.sqrt(disc)) / (2 * a);
+  if (t1 <= 0 || t0 >= 1) return false;
+  // The line climbs toward the camera: it is lowest where it enters the body.
+  const y = p.y + (eye.y - p.y) * Math.max(0, t0);
+  return y < o.height;
+}
+
+/** The turns the close view tries, nearest to the normal view's angle first: every 15° each way, around the island. */
+const TURNS = [0, ...Array.from({ length: 12 }, (_, k) => [(k + 1) * 15, -(k + 1) * 15]).flat()].map((d) => (d * Math.PI) / 180);
+
+/**
+ * The close view of a building that nothing hides (owner, 19 October): the normal view's angle when nothing hides it
+ * from there, else the nearest turn around it from which nothing does (or, failing one, the least hidden).
+ */
+export function clearView(view: View, b: Volume, others: readonly Volume[]): { distance: number; target: THREE.Vector3; angle: THREE.Vector3; turn: number } {
+  let best: { distance: number; target: THREE.Vector3; angle: THREE.Vector3; turn: number; hidden: number } | null = null;
+  for (const turn of TURNS) {
+    const angle = turned(turn);
+    const f = closeFraming(view, b, angle);
+    const hidden = hiddenShare(b, others, f.target.clone().addScaledVector(angle, f.distance));
+    if (!best || hidden < best.hidden) best = { ...f, angle, turn, hidden };
+    if (hidden === 0) break;
+  }
+  const { hidden: _, ...out } = best!;
+  return out;
+}

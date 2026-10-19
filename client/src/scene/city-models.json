@@ -379,48 +379,48 @@
   ]
  },
  "refinery-25": {
-  "kB": 73.0,
-  "triangles": 896,
+  "kB": 101.9,
+  "triangles": 1456,
   "levels": [
    {
     "level": 0,
-    "indices": 1920,
+    "indices": 3600,
     "height": 3.16,
     "reach": 0.906
    },
    {
     "level": 26,
-    "indices": 2064,
+    "indices": 3744,
     "height": 3.16,
     "reach": 0.906
    },
    {
     "level": 27,
-    "indices": 2232,
+    "indices": 3912,
     "height": 3.16,
     "reach": 0.906
    },
    {
     "level": 28,
-    "indices": 2544,
+    "indices": 4224,
     "height": 3.16,
     "reach": 0.906
    },
    {
     "level": 29,
-    "indices": 2688,
+    "indices": 4368,
     "height": 3.16,
     "reach": 0.906
    }
   ]
  },
  "refinery-30": {
-  "kB": 80.0,
-  "triangles": 996,
+  "kB": 109.1,
+  "triangles": 1556,
   "levels": [
    {
     "level": 0,
-    "indices": 2988,
+    "indices": 4668,
     "height": 3.255,
     "reach": 0.906
    }

@@ -1,11 +1,12 @@
 import * as THREE from "three";
+import type { BuildingId } from "@brinelight/shared";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { loadBuildings, tierOf, type BuildingModels } from "./buildings.js";
 import { ISLAND_ANISOTROPY, filterTexture, fitIsland, loadModels, loadRaftBuildings, type Models, type RaftBuildingModels } from "./models.js";
 import { createCamera, createControls, frameCity } from "./camera.js";
 import { shapeCoast } from "./coast.js";
 import { blenderLook, cityModelUrl, gridIsland } from "./cityLook.js";
-import { CITY_ANGLE, cityFraming, closeFraming } from "./framing.js";
+import { CITY_ANGLE, cityFraming, clearView, type Volume } from "./framing.js";
 import { createIsland, type Kit } from "./island.js";
 import { createLighthouse, lighthouseScale } from "./lighthouse.js";
 import { applyQualityStep, createQualityMonitor, type QualityStep } from "./quality.js";
@@ -42,10 +43,11 @@ export type SceneHandle = {
   /** The Lighthouse's model made in Blender for its level's stage, at its own size, its lantern at `lantern`. */
   useLighthouseStage(object: THREE.Object3D, lantern: number, top: number): void;
   /**
-   * The close view (week 8): the camera glides toward a building at (x, z), `height` high, so it fills about half of
-   * the screen above its sheet; `unfocus` glides back to the normal view. With reduced motion, it jumps.
+   * The close view (week 8): the camera glides toward a building, so it fills about half of the screen above its sheet,
+   * going around it if need be until none of the `others` hides it; `unfocus` glides back to the normal view. With
+   * reduced motion, it jumps.
    */
-  focus(x: number, z: number, height: number, reach: number): void;
+  focus(building: Volume, others: readonly Volume[]): void;
   unfocus(): void;
   /** Shows the city or the sea; only the shown view moves with your fingers. */
   setView(view: View): void;
@@ -78,13 +80,21 @@ export type SceneOptions = {
   quality?: QualityStep | null;
   /** Where the sea camera first looks: your city on the sea map. */
   home?: { x: number; z: number };
-  /** Called once phare.glb, the nine buildings and the other models are loaded. */
+  /** Called once phare.glb, the nine buildings and the other models are loaded (and what `ready` waits for). */
   onLoaded?: (kit: Kit, buildings: BuildingModels, models: Models) => void;
+  /**
+   * The buildings made in Blender (week 8), with the height they stand in at: their old models are not fetched. The
+   * city shows once `ready` is done too: the models of their current era, so they are there from the first image.
+   */
+  remade?: Partial<Record<BuildingId, number>>;
+  ready?: Promise<unknown>;
   /** The buildings on rafts, loaded after the city shows. */
   onRaftBuildings?: (models: RaftBuildingModels) => void;
   onError?: (err: unknown) => void;
   /** The band of the screen the city's normal view must fit in, in CSS pixels: below the top panels, above the bottom ones. */
   band?: () => { top: number; bottom: number };
+  /** The top of the sheet open at the bottom of the screen, if one is (CSS pixels): the close view stays above it. */
+  sheetTop?: () => number | null;
 };
 
 const KIT_URL = `${import.meta.env.BASE_URL}prototype/assets/phare.glb`;
@@ -123,7 +133,8 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   // The close view's glide, and the normal view to come back to.
   let normal = { distance: 30, target: new THREE.Vector3() };
   let focused = false;
-  let glide: { from: [THREE.Vector3, THREE.Vector3]; to: [THREE.Vector3, THREE.Vector3]; start: number } | null = null;
+  // The glide goes around the point looked at (its distance and its angles move), never through the island.
+  let glide: { from: [THREE.Spherical, THREE.Vector3]; to: [THREE.Spherical, THREE.Vector3]; start: number } | null = null;
   const GLIDE = 0.6;
   const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
   const glideTo = (position: THREE.Vector3, target: THREE.Vector3) => {
@@ -134,7 +145,12 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       glide = null;
       return;
     }
-    glide = { from: [camera.position.clone(), controls.target.clone()], to: [position, target], start: performance.now() };
+    const from = new THREE.Spherical().setFromVector3(camera.position.clone().sub(controls.target));
+    const to = new THREE.Spherical().setFromVector3(position.clone().sub(target));
+    // The shorter way around.
+    while (to.theta - from.theta > Math.PI) to.theta -= Math.PI * 2;
+    while (from.theta - to.theta > Math.PI) to.theta += Math.PI * 2;
+    glide = { from: [from, controls.target.clone()], to: [to, target], start: performance.now() };
   };
   const layout = () => {
     renderer.setSize(innerWidth, innerHeight, false);
@@ -179,7 +195,14 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   // the city shows once all are there. The buildings on rafts follow.
   const loader = new GLTFLoader();
   const blender = blenderLook();
-  Promise.all([loader.loadAsync(KIT_URL), loadBuildings(loader), loadModels(loader), blender ? loader.loadAsync(cityModelUrl("island")) : null]).then(
+  // The island made to the grid replaces the old island: that one is not fetched.
+  Promise.all([
+    loader.loadAsync(KIT_URL),
+    loadBuildings(loader, options.remade),
+    loadModels(loader, blender ? ["island"] : []),
+    blender ? loader.loadAsync(cityModelUrl("island")) : null,
+    options.ready,
+  ]).then(
     ([gltf, buildings, models, gridModel]) => {
       if (disposed) return;
       const kit: Kit = {};
@@ -259,8 +282,10 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     if (glide && view === "city") {
       const t = Math.min(1, (performance.now() - glide.start) / (GLIDE * 1000));
       const e = t * t * (3 - 2 * t);
-      camera.position.lerpVectors(glide.from[0], glide.to[0], e);
+      const [a, b] = [glide.from[0], glide.to[0]];
       controls.target.lerpVectors(glide.from[1], glide.to[1], e);
+      const at = new THREE.Spherical(a.radius + (b.radius - a.radius) * e, a.phi + (b.phi - a.phi) * e, a.theta + (b.theta - a.theta) * e);
+      camera.position.setFromSpherical(at).add(controls.target);
       if (t >= 1) glide = null;
     }
     v.controls.update();
@@ -282,12 +307,13 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       sizeLighthouse();
       if (moved) layout();
     },
-    focus(x, z, height, reach) {
+    focus(building, others) {
       focused = true;
-      // Between the top panels and the sheet, which takes the bottom of the screen up to 45 % of its height.
+      // Between the top panels and the sheet, which takes the bottom of the screen up to 45 % of its height, or more.
       const band = options.band?.() ?? { top: 0, bottom: innerHeight };
-      const close = closeFraming({ width: innerWidth, height: innerHeight, top: band.top, bottom: innerHeight * 0.45 }, { x, z, height, reach });
-      glideTo(close.target.clone().addScaledVector(CITY_ANGLE, close.distance), close.target);
+      const bottom = Math.min(innerHeight * 0.45, (options.sheetTop?.() ?? Infinity) - 8);
+      const close = clearView({ width: innerWidth, height: innerHeight, top: band.top, bottom: Math.max(band.top + 80, bottom) }, building, others);
+      glideTo(close.target.clone().addScaledVector(close.angle, close.distance), close.target);
     },
     unfocus() {
       if (!focused) return;

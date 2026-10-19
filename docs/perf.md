@@ -334,10 +334,26 @@ Measured with the city at 412 × 915 (container, quality 2, the e2e's counter), 
 | --- | --- | --- |
 | The island (made to the grid) | 2,656 | 171 kB (the old one: 2,517 and 222 kB) |
 | The Lighthouse, seven stages | 1,198 to 3,092 | 78 to 172 kB |
-| The Refinery, seven stages | 1,054 to 3,222 | 73 to 175 kB |
+| The Refinery, six eras (seven models) | 896 to 1,556 | 69 to 109 kB |
 | The building site, four pieces | 1,076 in all | 93 kB in all |
 
 - **What is downloaded:** only the stage each building shows, and the next one while an upgrade toward it runs.
-- **At level 30:** 171 + 172 + 175 kB for the island, the Lighthouse and the Refinery, about 0.5 MB.
+- **At level 30:** 171 + 172 + 109 kB for the island, the Lighthouse and the Refinery, about 0.45 MB.
+
+### What a phone downloads, and how soon the city shows (owner, 19 October)
+
+With `?blender`, the old models of the buildings remade and the old island are no longer fetched, and the city waits for the models of its buildings' current era before its first image (they no longer pop in after it). The next era is fetched in the background once an upgrade toward it runs. Measured in Chromium at 412 × 915 with the network held to 10 Mbit/s and 40 ms, cache off, three runs each (median):
+
+| City | First image | Downloaded in all |
+| --- | --- | --- |
+| New player, old look (today's default) | 11.0 s | 5.8 MB |
+| New player, `?blender` before | 10.5 s | 6.2 MB |
+| New player, `?blender` now | 10.3 s | 5.7 MB |
+| Lighthouse 30 city, old look | 11.7 s | 5.8 MB |
+| Lighthouse 30 city, `?blender` before | 11.0 s | 6.3 MB |
+| Lighthouse 30 city, `?blender` now | 10.6 s | 5.9 MB |
+
+- **Half of it is the prototype's kit** (`phare.glb`, 2.9 MB): the sea's sites and the old details still use it. Once every building is remade, it can wait until you first go to sea, and the city's first image would need about 2.9 MB.
+- The game's code is about 340 kB; the old models of the seven buildings not remade yet about 1.07 MB.
 
 **Next:** an entry-level phone must still be measured before players are invited.

@@ -11,7 +11,7 @@
  * light sounds of wood and rope, made by the game, that you can turn off in the Profile.
  * The reference prototype stays playable at /prototype/.
  */
-import { HOME, applyAction, yardSlot, type GameAction } from "@brinelight/shared";
+import { BUILDING_IDS, HOME, applyAction, yardSlot, type GameAction } from "@brinelight/shared";
 import type { Wallet } from "@wallet-standard/base";
 import type { ActionInput } from "./account/actions.js";
 import { createAccount, isUntouched } from "./account/index.js";
@@ -19,6 +19,8 @@ import { apiUrl, createApi } from "./account/api.js";
 import { createProfile } from "./account/profile.js";
 import { watchWallets } from "./account/wallets.js";
 import { createCity, type City } from "./city/index.js";
+import { isStaged, loadStage, shownModels, tallestHeight } from "./city/staged.js";
+import { blenderLook } from "./scene/cityLook.js";
 import { showRules } from "./rules.js";
 import { forcedQuality, startScene, type View } from "./scene/index.js";
 import { createSea, type Sea } from "./sea/index.js";
@@ -238,8 +240,19 @@ if (new URLSearchParams(location.search).has("rules")) {
     const nav = document.querySelector(".nav")?.getBoundingClientRect();
     return { top: top + 4, bottom: (nav && nav.height > 0 ? nav.top : innerHeight) - 4 };
   }
+  // The look made in Blender (?blender, week 8): the old models of the buildings remade are not fetched, and the city
+  // shows once the models of their current era are there.
+  const remade = blenderLook() ? Object.fromEntries(BUILDING_IDS.filter(isStaged).map((id) => [id, tallestHeight(id)])) : undefined;
+  const ready = blenderLook() ? Promise.all(shownModels(state).map(loadStage)) : undefined;
   const scene = startScene(canvas, {
     home: HOME,
+    // The sheet open at the bottom (on a phone; on a wide screen it stands at the right): its height, not its slide-in.
+    sheetTop: () => {
+      const open = document.querySelector<HTMLElement>(".sheet:not([hidden])");
+      return open && innerWidth < 900 ? innerHeight - open.offsetHeight : null;
+    },
+    remade,
+    ready,
     band: cityBand,
     quality: forcedQuality(location.search),
     onRaftBuildings: (models) => city?.useRaftBuildings(models),

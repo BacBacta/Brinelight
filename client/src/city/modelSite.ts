@@ -7,7 +7,7 @@
 import * as THREE from "three";
 import { CITY_MANIFEST } from "../scene/cityLook.js";
 import { CRANE_PERIOD, CRANE_SWING, CRATE_LIFT, cranePlace, craneScale, siteRadius, type SiteBox } from "./site.js";
-import { loadStage } from "./staged.js";
+import { SITE_PARTS, loadStage } from "./staged.js";
 
 /** The scaffolding's model is made for a building reaching this far, 1 high. */
 const FRAME_REACH = 0.95;
@@ -16,7 +16,7 @@ export function createModelSites(add: (o: THREE.Object3D) => void) {
   const root = new THREE.Group();
   root.name = "sites";
   add(root);
-  const parts = Promise.all(["site-frame", "site-mast", "site-arm", "site-crate"].map((n) => loadStage(n)));
+  const parts = Promise.all(SITE_PARTS.map((n) => loadStage(n)));
   const arm = CITY_MANIFEST["site-arm"] as { mast?: number } | undefined;
   const mastTop = arm?.mast ?? 1.54;
   let shown: { arm: THREE.Object3D; crate: THREE.Object3D; moving: boolean; phase: number }[] = [];

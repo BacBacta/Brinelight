@@ -2,9 +2,10 @@ import * as THREE from "three";
 import { BUILDING_IDS, type BuildingId } from "@brinelight/shared";
 import { hexX, hexZ, lighthouseScale, type BuildingModels, type Kit } from "../scene/index.js";
 import { hexReach } from "../scene/buildings.js";
+import type { Volume } from "../scene/framing.js";
 import type { PlayerState } from "../state/index.js";
 import { createGrowth } from "./growth.js";
-import { PLOTS } from "./plots.js";
+import { plotOf } from "./plots.js";
 import { createSites, type SiteBox } from "./site.js";
 import { createModelSites } from "./modelSite.js";
 import { TIER_SCALE, createTierDetails, tierOf } from "./tiers.js";
@@ -22,6 +23,8 @@ export type CityBuildings = {
   select(id: BuildingId | null): void;
   /** Moves the cranes of the building sites. */
   animate(now: number): void;
+  /** The room each building takes at its level (a building not built yet: its building site's), for the close view. */
+  volumes(state: PlayerState): Record<BuildingId, Volume>;
 };
 
 /** A model's room on its plot at a size: its half width and half depth (from its center), and its height. */
@@ -44,7 +47,7 @@ export function siteBox(object: THREE.Object3D, scale: number): SiteBox {
 }
 
 export const plotPosition = (id: BuildingId) => {
-  const [q, r] = PLOTS[id];
+  const [q, r] = plotOf(id);
   return { x: hexX(q, r), z: hexZ(r) };
 };
 
@@ -121,9 +124,13 @@ export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: T
       growth.refresh(old);
       const shown: { x: number; z: number; box: SiteBox; moving: boolean }[] = [];
       for (const id of BUILDING_IDS) {
-        if (id === "lighthouse") continue;
         const level = state.buildings[id];
         const job = state.queue.find((j) => j.id === id);
+        if (id === "lighthouse") {
+          // The Lighthouse's next model is fetched while its upgrade runs (it has no building site).
+          if (job && staged(id)) void loadStage(stageName(id, level + 1));
+          continue;
+        }
         const working = !!job;
         // A building site around a building at work, at its size; around a building not built yet, at its first size.
         if (working || level === 0) {
@@ -147,6 +154,20 @@ export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: T
     },
     animate(now) {
       sites.animate(now);
+    },
+    volumes(state) {
+      const out = {} as Record<BuildingId, Volume>;
+      for (const id of BUILDING_IDS) {
+        const level = Math.max(1, state.buildings[id]);
+        const at = plotPosition(id);
+        if (staged(id)) out[id] = { ...at, ...levelShape(id, level) };
+        else if (id === "lighthouse") out[id] = { ...at, height: models.lighthouse.height * lighthouseScale(level), reach: 0.8 };
+        else {
+          const s = TIER_SCALE[tierOf(level)];
+          out[id] = { ...at, height: boxes[id].height * s, reach: boxes[id].reach * s };
+        }
+      }
+      return out;
     },
     select(id) {
       ring.visible = id !== null;

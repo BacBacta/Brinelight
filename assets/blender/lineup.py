@@ -2,9 +2,10 @@
 A row of served models side by side, for the owner's meetings: each model on its own hexagonal plot of meadow, seen
 from the game's camera angle (46° down, from the front), in the afternoon sun.
 
-    .venv-blender/bin/python assets/blender/lineup.py <out.png> refinery-1 refinery-5 ... [--width 2600]
+    .venv-blender/bin/python assets/blender/lineup.py <out.png> refinery-1 refinery-5 ... [--width 2600] [--src assets/blender/out]
 
-Reads client/public/city/<name>.glb (what the game draws, its baked style pass included).
+Reads client/public/city/<name>.glb (what the game draws, its baked style pass included), or the models just built
+with --src.
 """
 import math
 import sys
@@ -30,12 +31,12 @@ def plot(x):
     obj.data.materials.append(mat)
 
 
-def main(out, names, width):
+def main(out, names, width, src=CITY):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     tops = []
     for i, name in enumerate(names):
         before = set(bpy.data.objects)
-        bpy.ops.import_scene.gltf(filepath=str(CITY / f"{name}.glb"))
+        bpy.ops.import_scene.gltf(filepath=str(Path(src) / f"{name}.glb"))
         new = [o for o in bpy.data.objects if o not in before and o.parent is None]
         for o in new:
             o.location.x += i * GAP
@@ -79,6 +80,6 @@ def main(out, names, width):
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    width = int(args[args.index("--width") + 1]) if "--width" in args else 2600
-    rest = [a for i, a in enumerate(args) if a != "--width" and (i == 0 or args[i - 1] != "--width")]
-    main(rest[0], rest[1:], width)
+    opts = {k: args[args.index(k) + 1] for k in ("--width", "--src") if k in args}
+    rest = [a for i, a in enumerate(args) if not a.startswith("--") and (i == 0 or not args[i - 1].startswith("--"))]
+    main(rest[0], rest[1:], int(opts.get("--width", 2600)), opts.get("--src", CITY))

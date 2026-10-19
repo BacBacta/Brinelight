@@ -199,29 +199,46 @@ def electricity(s):
 # ----------------------------------------------------------------------------------------------------------------- Modern
 MOD_FLOOR = 0.1
 TOWER = (-0.22, -0.2, 0.56, 0.5, 2.1)  # x, z, width, depth, height
+# The tower's floors (heights over the floor) and its mullions (from its middle), uneven on purpose.
+MOD_FLOORS = (0.26, 0.62, 0.82, 1.26, 1.46, 1.86)
+MOD_MULLIONS = (-0.28, -0.1, 0.06, 0.28)
 
 
 def modern(s):
     f = MOD_FLOOR
     tx, tz, tw, td, th = TOWER
     p = [box((1.46, f, 1.26), (0, f / 2, 0), "concrete", bevel=0.01)]
-    # The glass-and-steel tower, in two volumes, white bands at each floor, a slim crown.
+    # The glass-and-steel tower, still built by survivors' hands (docs/art-direction.md): floors of uneven heights, panes
+    # of different widths, bolts where the frame meets, a pane replaced by a riveted steel plate, a copper patch.
+    front = tz + td / 2
     p.append(box((tw, th, td), (tx, f + th / 2, tz), "glass", bevel=0.006))
-    for k in range(1, 7):
-        p.append(box((tw + 0.02, 0.025, td + 0.02), (tx, f + th * k / 7, tz), "white", bevel=0))
-    for x in (-tw / 2, 0, tw / 2):
-        p.append(box((0.03, th, 0.03), (tx + x, f + th / 2, tz + td / 2 + 0.005), "white", bevel=0))
+    for y in MOD_FLOORS:
+        p.append(box((tw + 0.02, 0.025, td + 0.02), (tx, f + y, tz), "white", bevel=0))
+    for x in MOD_MULLIONS:
+        p.append(box((0.03, th, 0.03), (tx + x, f + th / 2, front + 0.005), "white", bevel=0))
+    for y in MOD_FLOORS:
+        for x in MOD_MULLIONS:
+            p.append(box((0.03, 0.03, 0.02), (tx + x, f + y, front + 0.022), "dark", bevel=0))
+    p.append(box((0.13, 0.22, 0.012), (tx - 0.165, f + 1.02, front + 0.01), "steel", bevel=0.002))
+    for dx in (-0.05, 0.05):
+        for dy in (-0.09, 0.09):
+            p.append(box((0.018, 0.018, 0.012), (tx - 0.165 + dx, f + 1.02 + dy, front + 0.02), "dark", bevel=0))
+    p.append(box((0.1, 0.12, 0.012), (tx + 0.17, f + 1.66, front + 0.01), "copper", bevel=0.002))
     p.append(box((tw * 0.7, 0.3, td * 0.7), (tx, f + th + 0.15, tz), "white", bevel=0.01))
-    # The low wing at the right, solar panels on its roof.
+    # The low wing at the right: three panes of different widths, two solar panels that do not match, and a driftwood
+    # brace still holding its right corner.
     p.append(box((0.62, 0.46, 0.6), (0.38, f + 0.23, -0.1), "white", bevel=0.01))
-    p.append(box((0.5, 0.14, 0.02), (0.38, f + 0.3, 0.205), "glass", bevel=0.003))
-    for k in range(2):
-        p.append(box((0.26, 0.02, 0.44), (0.24 + k * 0.28, f + 0.52, -0.1), "solar", bevel=0, tilt=(math.radians(-14), 0)))
-    # Slim white tanks at the front left, capsule tops.
+    for x, w in ((0.19, 0.12), (0.34, 0.16), (0.53, 0.2)):
+        p.append(box((w, 0.14, 0.02), (x, f + 0.3, 0.205), "glass", bevel=0.003))
+    for x, w, t in ((0.22, 0.24, -14), (0.5, 0.3, -18)):
+        p.append(box((w, 0.02, 0.44), (x, f + 0.52, -0.1), "solar", bevel=0, tilt=(math.radians(t), 0)))
+    p.append(rod((0.72, f, 0.22), (0.67, f + 0.42, 0.17), 0.02, "plank", 5))
+    # Slim white tanks at the front left, capsule tops; the second lashed with a rope band.
     for x in (-0.58, -0.4):
         p.append(cylinder(0.075, 0.7, (x, f + 0.35, 0.3), "white", sides=10, bevel=0))
         p.append(sphere(0.075, (x, f + 0.7, 0.3), "white", subdivisions=1, squash=0.6))
         p.append(band(0.08, 0.025, (x, f + 0.5, 0.3), "gold", sides=10))
+    p.append(band(0.08, 0.02, (-0.4, f + 0.24, 0.3), "plank", sides=10))
     # The antenna on the tower, its warm light at the top.
     p.append(cylinder(0.018, 0.6, (tx + 0.1, f + th + 0.6, tz), "steel", sides=5, bevel=0))
     p.append(sphere(0.04, (tx + 0.1, f + th + 0.92, tz), "gold", subdivisions=1))

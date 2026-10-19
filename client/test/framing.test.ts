@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
-import { CITY_ANGLE, CITY_FOV, CLOSE_MIN, PIER_SLOTS, SIDE_MARGIN, cityFraming, cityPoints, closeFraming, openSlots, type View } from "../src/scene/framing.js";
+import { CITY_ANGLE, CITY_FOV, CLOSE_MIN, PIER_SLOTS, SIDE_MARGIN, cityFraming, cityPoints, clearView, closeFraming, hiddenShare, openSlots, type View } from "../src/scene/framing.js";
 import { hexX, hexZ } from "../src/scene/island.js";
 
 // The band between the panels, as measured on these screens (the top bar and the Mist above, the tab bar below).
@@ -93,3 +93,42 @@ describe("the close view of a building (week 8)", () => {
   }
 });
 
+
+describe("the close view goes around a building until nothing hides it (owner, 19 October)", () => {
+  const view = { ...PHONES[1]!, bottom: PHONES[1]!.height * 0.45 };
+  const lighthouse = { x: 0, z: 0, height: 4.3, reach: 0.88 };
+  const eye = (f: { distance: number; target: THREE.Vector3; angle: THREE.Vector3 }) => f.target.clone().addScaledVector(f.angle, f.distance);
+
+  it("a building nothing hides is seen from the normal view's angle", () => {
+    const front = { x: hexX(0, 1), z: hexZ(1), height: 1.3, reach: 0.85 };
+    const f = clearView(view, front, [lighthouse]);
+    expect(f.turn).toBe(0);
+    expect(f.angle.distanceTo(CITY_ANGLE)).toBeLessThan(1e-9);
+  });
+
+  it("a low building right behind the tall Lighthouse: the camera turns around it, and from there nothing hides it", () => {
+    const behind = { x: hexX(1, -2), z: hexZ(-2), height: 1.3, reach: 0.85 };
+    const fromFront = closeFraming(view, behind);
+    expect(hiddenShare(behind, [lighthouse], fromFront.target.clone().addScaledVector(CITY_ANGLE, fromFront.distance))).toBeGreaterThan(0.3);
+    const f = clearView(view, behind, [lighthouse]);
+    expect(f.turn).not.toBe(0);
+    expect(hiddenShare(behind, [lighthouse], eye(f))).toBe(0);
+    // Still at the normal view's height above the ground, only turned around the vertical.
+    expect(f.angle.y).toBeCloseTo(CITY_ANGLE.y, 9);
+  });
+
+  it("from the turned angle, its foot and its top still fit between the top panels and the sheet", () => {
+    const behind = { x: hexX(1, -2), z: hexZ(-2), height: 1.3, reach: 0.85 };
+    const f = clearView(view, behind, [lighthouse]);
+    const camera = new THREE.PerspectiveCamera(CITY_FOV, view.width / view.height, 0.1, 400);
+    camera.position.copy(eye(f));
+    camera.lookAt(f.target);
+    camera.updateMatrixWorld();
+    for (const p of [new THREE.Vector3(behind.x, behind.height, behind.z), new THREE.Vector3(behind.x, 0, behind.z)]) {
+      const v = p.project(camera);
+      const y = ((1 - v.y) / 2) * view.height;
+      expect(y).toBeGreaterThanOrEqual(view.top - 0.5);
+      expect(y).toBeLessThanOrEqual(view.bottom + 0.5);
+    }
+  });
+});

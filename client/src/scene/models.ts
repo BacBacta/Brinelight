@@ -14,11 +14,11 @@ export type Models = Record<ModelId, THREE.Object3D>;
 
 export const modelUrl = (id: string): string => `${import.meta.env.BASE_URL}models/${id}.glb`;
 
-/** Loads the models in parallel with the scene's loader, as they come (each placed where it is used). */
-export async function loadModels(loader: GLTFLoader): Promise<Models> {
-  const loaded = await Promise.all(MODEL_IDS.map((id) => loader.loadAsync(modelUrl(id))));
+/** Loads the models in parallel with the scene's loader, as they come (each placed where it is used); those `without` stand in empty. */
+export async function loadModels(loader: GLTFLoader, without: readonly ModelId[] = []): Promise<Models> {
+  const loaded = await Promise.all(MODEL_IDS.map((id) => (without.includes(id) ? null : loader.loadAsync(modelUrl(id)))));
   const out = {} as Models;
-  MODEL_IDS.forEach((id, i) => (out[id] = loaded[i]!.scene));
+  MODEL_IDS.forEach((id, i) => (out[id] = loaded[i]?.scene ?? new THREE.Group()));
   return out;
 }
 
