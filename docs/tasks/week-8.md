@@ -28,7 +28,7 @@ Hetzner prices since 15 June 2026, excluding VAT. They come from a price tracker
 | Down alert | GitHub Actions on a public repository (task 2); or Better Stack, free plan | 0 |
 | **Total** | | **7.09**, about **€8.50 with VAT** (VAT is your country's) |
 | Domain `brinelight.xyz` | Already bought at Vercel; renewed once a year (price in your Vercel account) | – |
-| *Optional:* Storage Box BX11 | 1 TB elsewhere at Hetzner for the nightly dumps (question 5) | *about 3.20* |
+| *Optional:* Storage Box BX11 | 1 TB elsewhere at Hetzner for the nightly dumps (question 6) | *about 3.20* |
 
 **Why the CX23:**
 - It is the cheapest machine with room for PostgreSQL, Node and Caddy together (4 GB of memory).
@@ -90,53 +90,33 @@ A player's feedback: "When you upgrade a building, it stays the same. It should 
 **For the phone:**
 - All the details and transformations of the eight buildings and the Lighthouse are one merged mesh (with vertex colors, one material), and everything that glows (lamps, lit windows, flames) a second one. Both are rebuilt only when a level changes.
 - So it is the same two draw calls as today's tiers, whatever the levels. The building sites are one merged mesh, plus one InstancedMesh for the moving cranes and crates: two draw calls more, only while something is being built (today: one kit model per site).
-- Estimate for the city, with the counter of the e2e (container, quality 2; to be measured in the task):
+- **The rafts' details join the same two merged meshes: no draw call more.**
+  - Rafts bob on the water today: each frame moves their instances by `sin(time × 1.3 + phase) × 0.04`.
+  - Each vertex of a detail gets its raft's phase as an attribute: 0 amplitude for the island, the raft's for a raft. The material's vertex shader (and its shadow) adds the same bob, so a raft's details move with it inside the merged mesh, with no matrix per frame.
+  - A raft's building site joins the sites' mesh in the same way. The shipyard works on one raft at a time.
+- Estimate for the city, with the counter of the e2e (container, quality 2; to be measured in the task). Rafts included: six rafts carrying the six raft buildings (two of each type, the most the rules allow), at level 1, 2 and 3 for the island's 1, 15 and 30. Today's figures for the rafts come from `docs/perf.md` (week 4: about 5 calls for the rafts; week 5: 3 calls and 14.3 k triangles for six raft buildings; 1.4 k triangles per raft).
 
-| Every building at level | Draw calls today | After | Triangles today | After (estimate) |
+| City | Draw calls today | After | Triangles today | After (estimate) |
 | --- | --- | --- | --- | --- |
-| 1 (Lighthouse 4) | 16 | 16 | 29.3 k | about 29.5 k |
-| 15 | 18 (as at level 10) | 18 | 33.3 k | about 42 k |
-| 30 | 18 | 18 | 33.3 k | about 55 k |
-| A building site at work | +1 or +2 (one kit model per site) | +2 for all the sites | | about +0.6 k per site |
+| Island at level 1 (Lighthouse 4), raft buildings at 1 | 24 | 24 | about 52 k | about 52 k |
+| Island at 15, raft buildings at 2 | 26 | 26 | about 56 k | about 65 k |
+| Island at 30, raft buildings at 3 | 26 | 26 | about 56 k | about 80 k |
+| A building site at work (island or raft) | +1 or +2 (one kit model per site) | +2 for all the sites | | about +0.6 k per site |
 
-- Each building stays under 3,000 triangles of details at level 30 (23 details of 60 at most, six transformations of 300 at most). The Galaxy S22 drew the city at 60 FPS with 86 draw calls and 66.7 k triangles (`docs/perf.md`).
+- Each island building stays under 3,000 triangles of details at level 30 (23 details of 60 at most, six transformations of 300 at most), and each raft building under 400.
+  - The Galaxy S22 drew the city at 60 FPS with 86 draw calls and 66.7 k triangles (`docs/perf.md`).
+  - At 80 k, the city at level 30 goes past what has been measured on a phone. If a phone drops under 30 FPS, the first lever is lighter details (30 triangles instead of 60), without touching the draw calls.
+  - A city with all 39 rafts adds about 46 k triangles of decks whatever this task does.
+
+### The order of the work
+
+1. **The Refinery alone, first:** its site and its 30 levels. You see the 30 captures (a close-up at each level, in the CI's artifact) before the other buildings are started.
+2. **The other eight buildings of the island**, with the Lighthouse.
+3. **The buildings of the rafts.**
 
 ### Level by level
 
-Level 1 is the building as it is today. The **transformations** are in bold. For the other levels, the detail named is the one added at that level.
-
-#### Lighthouse
-
-- 1 · the building as it is today (its tower grows with its level, as today)
-- 2 · a stone at the rock's foot
-- 3 · a coil of rope on the pier
-- 4 · a buoy moored at the pier
-- **5 · TRANSFORMATION:** **the gallery**: a walkway ring around the lantern room, with its rail
-- 6 · a small pennant on the gallery rail
-- 7 · a lamp on the gallery
-- 8 · a gull perch post
-- 9 · a second stone at the rock's foot
-- **10 · TRANSFORMATION:** **a second lamp ring** under the lantern, which glows warmer
-- 11 · a second coil of rope on the pier
-- 12 · a second buoy moored at the pier
-- 13 · a second small pennant on the gallery rail
-- 14 · a second lamp on the gallery
-- **15 · TRANSFORMATION:** **a stone base**: the rock becomes a cut-stone plinth with steps to the pier
-- 16 · a second gull perch post
-- 17 · a third stone at the rock's foot
-- 18 · a third coil of rope on the pier
-- 19 · a third buoy moored at the pier
-- **20 · TRANSFORMATION:** **taller**: one more stone section under the lantern, and two long banners down the tower
-- 21 · a third small pennant on the gallery rail
-- 22 · a third lamp on the gallery
-- 23 · a third gull perch post
-- 24 · a fourth stone at the rock's foot
-- **25 · TRANSFORMATION:** **brass trims**: the lantern's roof and the rail turn brass, and a ring of lit windows
-- 26 · a fourth coil of rope on the pier
-- 27 · a fourth buoy moored at the pier
-- 28 · a fourth small pennant on the gallery rail
-- 29 · a fourth lamp on the gallery
-- **30 · TRANSFORMATION:** **a golden crown** on the lantern, and its glow at its brightest
+Level 1 is the building as it is today. The **transformations** are in bold. The Refinery comes first, as in the order of the work. For the other levels, the detail named is the one added at that level.
 
 #### Refinery
 
@@ -170,6 +150,39 @@ Level 1 is the building as it is today. The **transformations** are in bold. For
 - 28 · a fourth lit warning lamp
 - 29 · a fourth stack of two drums
 - **30 · TRANSFORMATION:** **a gantry** over the tanks, with lamps along it
+
+#### Lighthouse
+
+- 1 · the building as it is today (its tower grows with its level, as today)
+- 2 · a stone at the rock's foot
+- 3 · a coil of rope on the pier
+- 4 · a buoy moored at the pier
+- **5 · TRANSFORMATION:** **the gallery**: a walkway ring around the lantern room, with its rail
+- 6 · a small pennant on the gallery rail
+- 7 · a lamp on the gallery
+- 8 · a gull perch post
+- 9 · a second stone at the rock's foot
+- **10 · TRANSFORMATION:** **a second lamp ring** under the lantern, which glows warmer
+- 11 · a second coil of rope on the pier
+- 12 · a second buoy moored at the pier
+- 13 · a second small pennant on the gallery rail
+- 14 · a second lamp on the gallery
+- **15 · TRANSFORMATION:** **a stone base**: the rock becomes a cut-stone plinth with steps to the pier
+- 16 · a second gull perch post
+- 17 · a third stone at the rock's foot
+- 18 · a third coil of rope on the pier
+- 19 · a third buoy moored at the pier
+- **20 · TRANSFORMATION:** **taller**: one more stone section under the lantern, and two long banners down the tower
+- 21 · a third small pennant on the gallery rail
+- 22 · a third lamp on the gallery
+- 23 · a third gull perch post
+- 24 · a fourth stone at the rock's foot
+- **25 · TRANSFORMATION:** **brass trims**: the lantern's roof and the rail turn brass, and a ring of lit windows
+- 26 · a fourth coil of rope on the pier
+- 27 · a fourth buoy moored at the pier
+- 28 · a fourth small pennant on the gallery rail
+- 29 · a fourth lamp on the gallery
+- **30 · TRANSFORMATION:** **a golden crown** on the lantern, and its glow at its brightest
 
 #### Fishery
 
@@ -403,11 +416,41 @@ Level 1 is the building as it is today. The **transformations** are in bold. For
 - **30 · TRANSFORMATION:** **a glass greenhouse** at the side, lit from inside
 
 
+### The buildings of the rafts
+
+Their highest level is **3** (`RAFT_BUILDING_MAX_LEVEL` in the rules; two copies of each type at most), so they never reach a level 5. Proposed, with the same idea scaled to three levels: a small detail at level 2, and the **transformation at level 3**, their last level (question 3). The building site is the same as the island's, scaled to the raft.
+
+- **Everything stays on the raft:**
+  - The details stand on the deck and its rails, inside the raft's hexagon: never over the water, never on the next raft.
+  - The test of place of week 6 gets this case: every detail of every raft building, at each level, in each of the 39 slots, against the raft's own outline and its neighbors' (rafts and plots).
+- **A damaged raft stays plain to see** (under 60 sturdiness):
+  - Its deck is darker today. Its details get the same darker tint.
+  - It gets a damage mark: two broken planks standing up and a dark hole at the front edge of the deck, the side the camera sees. That spot is kept free: no detail is ever placed there, so nothing hides the mark.
+  - The mark goes away when the raft is repaired.
+
+#### Kelp Greenhouse
+
+- 1 · the building as it is today
+- 2 · a row of kelp trays along the deck's rail
+- **3 · TRANSFORMATION:** **a glass roof** over the beds, lit from inside, and a water barrel
+
+#### Smokehouse
+
+- 1 · the building as it is today
+- 2 · a rack of hanging fish
+- **3 · TRANSFORMATION:** **a taller chimney** with a lit lantern, and a pile of wood on the deck
+
+#### Watchtower
+
+- 1 · the building as it is today
+- 2 · a shield and a spyglass on the rail
+- **3 · TRANSFORMATION:** **a higher platform** with a flag and a signal lamp
+
 ### What it does not do
 
 - No change to the rules, the balance, the server, or what the client sends.
 - No new model, no paid asset, no Higgsfield credit, no new dependency: everything is three.js shapes in code.
-- The rafts' buildings and the Lighthouses at sea stay as they are.
+- The Lighthouses at sea stay as they are.
 - No sound beyond today's celebration.
 
 ### How it is tested
@@ -415,13 +458,20 @@ Level 1 is the building as it is today. The **transformations** are in bold. For
 - **The rule is a pure function**, `detailsAt(building, level)`, in `client/src/city/growth.ts`, tested without a browser:
   - for each building and each level from 1 to 30, the details are those of the lists above;
   - a level's details are the previous level's plus one (or plus its transformation): nothing moves or disappears;
-  - nothing reaches out of the plot (`PLOT_ROOM`, with the test of week 6 against the neighbor plots and the raft slots);
-  - at most 3,000 triangles per building at level 30;
-  - two meshes for all the details whatever the city, and two more while building.
-- **The e2e "building tiers"** captures the city with every building at level 1, 5, 10, 15, 20, 25 and 30, and one building site, at 412 and 360 px. It records the draw calls and triangles of each into `docs/perf.md`. Then you check the entry-level phone and the S22 with `?fps`.
+  - nothing reaches out of the plot (`PLOT_ROOM`, with the test of week 6 against the neighbor plots and the raft slots), and nothing of a raft building leaves its raft;
+  - the damage mark's spot is never taken by a detail;
+  - at most 3,000 triangles per island building at level 30, 400 per raft building at level 3;
+  - two meshes for all the details, rafts included, whatever the city, and two more while building.
+- **The e2e "building tiers"**, at 412 and 360 px:
+  - the city with every building at level 1, 5, 10, 15, 20, 25 and 30, with six rafts and their six buildings;
+  - one building site on the island and one on a raft;
+  - the raft buildings at levels 1, 2 and 3, and a damaged raft carrying a building at level 3.
+
+  It records the draw calls and triangles of each into `docs/perf.md`. Then you check the entry-level phone and the S22 with `?fps`.
 - **The look references:**
   - None of the 52 should move: they all hide the 3D view and the labels.
-  - The new captures (7 levels and the building site, at 412 and 360: 16 images) are 3D drawings. The CI's processors may draw them a little differently, as they do the captains' rows (question 2).
+  - The new references: the 7 levels of the city, the 2 building sites, the raft buildings at 3 levels and the damaged raft, at 412 and 360 (26 images). They are 3D drawings: the CI's processors may draw them a little differently, as they do the captains' rows (question 2).
+  - The Refinery's 30 close-ups are for you to look at, in the CI's artifact; they are not references.
   - When the task is coded, you see the new captures, and any capture that moved, before any reference is made again.
 - `docs/art-direction.md` (the tiers become levels and transformations) and a line in `docs/decisions.md`.
 
@@ -440,7 +490,7 @@ What it does:
 - **The down alert, free and with no new account:**
   - A GitHub Actions workflow (`.github/workflows/watch.yml`) calls `https://api.brinelight.xyz/health` every 10 minutes and fails when the answer is not `"ok":true`. GitHub e-mails you when a scheduled run fails.
   - It is turned off while `api.brinelight.xyz` does not exist: it starts when you set the repository variable `API_URL` (task 3).
-  - The limit: GitHub can delay a scheduled run by several minutes at busy times. Better Stack's free plan checks every 3 minutes, with a new account (question 6).
+  - The limit: GitHub can delay a scheduled run by several minutes at busy times. Better Stack's free plan checks every 3 minutes, with a new account (question 7).
 - **`docs/deploy.md` brought up to date:**
   - today's prices;
   - the new `/health`;
@@ -451,7 +501,7 @@ What it does:
 What it does not do:
 - It does not rent anything.
 - It does not deploy from the CI.
-- It does not copy the backups off the machine (question 5).
+- It does not copy the backups off the machine (question 6).
 - It does not touch sign-in, sessions or the rules of the game.
 
 How it is tested:
@@ -544,7 +594,7 @@ What it does:
 
 - **A list of servers in the rules** (`shared/src/rules/servers.ts`).
   - Each server has a name, its Mist hours, its Leviathan hours and its daily reset hour.
-  - Today there is one: `s1`, with your hours (question 9).
+  - Today there is one: `s1`, with your hours (question 10).
   - The calendar is in the rules, not in a `.env`, because the client reads the same calendar to draw the countdowns.
 - **The city knows its server** (`server: "s1"`).
   - City shape 10, with its migration: the cities stored before get `s1`, and `s1` keeps today's hours unless you choose others.
@@ -577,7 +627,7 @@ What it does:
   - `checkout@v5`;
   - `upload-artifact@v6`, because its v5 still ran on Node 20 by default;
   - `setup-node`: the first version whose release notes say Node 24.
-- Each version is pinned to its full commit (the 40-character SHA), with the version as a comment, if you choose it (question 8).
+- Each version is pinned to its full commit (the 40-character SHA), with the version as a comment, if you choose it (question 9).
 - One line in `docs/decisions.md`, and the open question about Node 20 removed.
 
 What it does not do:
@@ -613,10 +663,10 @@ How it is tested: the measures in a table, before anything is applied. Once you 
 
 ## Not this week
 
-- Deploying from the CI (question 4).
+- Deploying from the CI (question 5).
 - A second region, or a test server.
 - Multiplayer (weeks 9 to 13).
-- The first proof on Solana, planned for week 8 in the roadmap of 17 October (question 10).
+- The first proof on Solana, planned for week 8 in the roadmap of 17 October (question 11).
 - Payments.
 - The daily recruitment (week 15).
 
@@ -624,14 +674,15 @@ How it is tested: the measures in a table, before anything is applied. Once you 
 
 1. **The buildings' lists (task 1):** do the details and transformations suit you, building by building? One line to change is enough to change the rule.
 2. **The 3D captures of task 1:** compared at zero pixels like the others, if three CI runs on different processors draw them identically (I would check first)? Or compared with a small tolerance, or only shown in the CI's artifact for you to look at?
-3. **The machine:** the CX23 in Germany (€7.09 a month with IPv4 and Backups, excluding VAT), after checking the price in the Hetzner console. Or do you prefer to start with the CX33 (about €10.70)?
-4. **Deploying:**
+3. **The raft buildings' levels:** their highest level is 3, so a transformation "every 5 levels" never comes. A small detail at level 2, and the transformation at level 3, their last?
+4. **The machine:** the CX23 in Germany (€7.09 a month with IPv4 and Backups, excluding VAT), after checking the price in the Hetzner console. Or do you prefer to start with the CX33 (about €10.70)?
+5. **Deploying:**
    - by hand for now: one command on the server, `~/brinelight/deploy/update.sh`, after each merge of a week's pull request;
    - or from the CI, which needs an SSH key for GitHub stored in GitHub's secrets, and a server that accepts it. I propose by hand until players are there.
-5. **The backups off the machine:** the nightly dumps live on the server, and Hetzner Backups copy the whole server every day, outside it. Is that enough for now, or do you want a Storage Box BX11 (about €3.20 a month, to confirm) that receives a copy of each night's dump?
-6. **The alert:** GitHub Actions every 10 minutes (free, no new account, sometimes late), or Better Stack's free plan (every 3 minutes, an account to create; its terms to check for a game that sells something)?
-7. **The load test:** on the real server before it opens, with the database put back afterwards (my proposal)? Or on a second CX23 rented for one hour (a few cents, then deleted)?
-8. **The CI's actions:** pinned to their full commit (safer: a tag can be moved), or to their major version (simpler to read)?
-9. **The hours of server `s1`:** keep today's (Mist 04:00, 12:00, 20:00; Leviathan 13:00, 19:00; reset 00:00 UTC), or choose them for your players' evenings (for example, in Paris time: Leviathan at 12:30 and 20:30, reset at 05:00)?
-10. **The first Solana proof**, planned for week 8 in the roadmap: leave it for week 9, since putting the server online is the heart of this week?
-11. **The other buildings:** the three options are measured first. Is there one you want to rule out before measuring?
+6. **The backups off the machine:** the nightly dumps live on the server, and Hetzner Backups copy the whole server every day, outside it. Is that enough for now, or do you want a Storage Box BX11 (about €3.20 a month, to confirm) that receives a copy of each night's dump?
+7. **The alert:** GitHub Actions every 10 minutes (free, no new account, sometimes late), or Better Stack's free plan (every 3 minutes, an account to create; its terms to check for a game that sells something)?
+8. **The load test:** on the real server before it opens, with the database put back afterwards (my proposal)? Or on a second CX23 rented for one hour (a few cents, then deleted)?
+9. **The CI's actions:** pinned to their full commit (safer: a tag can be moved), or to their major version (simpler to read)?
+10. **The hours of server `s1`:** keep today's (Mist 04:00, 12:00, 20:00; Leviathan 13:00, 19:00; reset 00:00 UTC), or choose them for your players' evenings (for example, in Paris time: Leviathan at 12:30 and 20:30, reset at 05:00)?
+11. **The first Solana proof**, planned for week 8 in the roadmap: leave it for week 9, since putting the server online is the heart of this week?
+12. **The other buildings:** the three options are measured first. Is there one you want to rule out before measuring?
