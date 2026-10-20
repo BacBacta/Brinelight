@@ -190,6 +190,8 @@ export function createCity(
     update(state) {
       showLighthouse(state.buildings.lighthouse);
       buildings.refresh(state);
+      // With ?blender, every building stays whole in the normal view, between the cards (main.ts).
+      if (blenderLook()) scene.setBuildings(Object.values(buildings.volumes(state)));
       rafts.refresh(state);
       life?.update(state);
       // The foam goes around the rafts afloat and the shipyard at work.

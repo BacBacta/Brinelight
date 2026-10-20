@@ -136,11 +136,13 @@ export const CITY_FILL = 0.75;
 export type Fill = { share: number; coast: Coast };
 
 /**
- * The city's normal view on this screen: the shortest distance at which the island, the pier and the rafts fit in the band (to a hundredth), and the point it looks at, which centers them in it.
+ * The city's normal view on this screen: the shortest distance at which the island, the pier, the rafts and the `tops`
+ * (the tallest tops; with ?blender, every building's top and foot, buildingPoints) fit in the band (to a hundredth), and
+ * the point it looks at, which centers them in it.
  * With `fill` (owner, after the style pass), the city's coast and rafts never span less than that share of the screen's
- * width: when the band is too short for the whole city (works under way over the screen's top), the camera comes closer,
- * only the buildings (their plots' middles and the tallest tops) still in the band; the shore, a raft or the pier may
- * then pass under a panel. Otherwise the framing is the one above.
+ * width: when the band is too short for the whole city (the cards of the works under way, the quest card), the camera
+ * comes closer, only the buildings (their plots' middles and the `tops`) still in the band; the shore, a raft or the
+ * pier may then pass under a card. Otherwise the framing is the one above.
  */
 export function cityFraming(view: View, rafts: readonly { x: number; z: number }[], tops: readonly { x: number; y: number; z: number }[] = [], fill?: Fill): { distance: number; target: THREE.Vector3 } {
   const extent = fill ? cityExtent(rafts, fill.coast) : [];
@@ -166,6 +168,17 @@ export function cityFraming(view: View, rafts: readonly { x: number; z: number }
   return whole.distance <= far ? whole : { distance: far, target: centered(view, points, far) };
 }
 
+/** What of a building must show on screen: its top, its foot (its reach on its plot) and its roof's edge. */
+export function buildingPoints(b: Volume): THREE.Vector3[] {
+  const points: THREE.Vector3[] = [new THREE.Vector3(b.x, b.height, b.z)];
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
+    points.push(new THREE.Vector3(b.x + Math.cos(a) * b.reach, 0, b.z + Math.sin(a) * b.reach));
+    points.push(new THREE.Vector3(b.x + Math.cos(a) * b.reach * 0.7, b.height * 0.8, b.z + Math.sin(a) * b.reach * 0.7));
+  }
+  return points;
+}
+
 /** The pinch zoom's closest distance: the close view never goes nearer. */
 export const CLOSE_MIN = 9;
 
@@ -179,12 +192,7 @@ export type Volume = { x: number; z: number; height: number; reach: number };
  * building centered in the band.
  */
 export function closeFraming(view: View, b: Volume, angle: THREE.Vector3 = CITY_ANGLE): { distance: number; target: THREE.Vector3 } {
-  const points: THREE.Vector3[] = [new THREE.Vector3(b.x, b.height, b.z)];
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
-    points.push(new THREE.Vector3(b.x + Math.cos(a) * b.reach, 0, b.z + Math.sin(a) * b.reach));
-    points.push(new THREE.Vector3(b.x + Math.cos(a) * b.reach * 0.7, b.height * 0.8, b.z + Math.sin(a) * b.reach * 0.7));
-  }
+  const points = buildingPoints(b);
   const origin = new THREE.Vector3(b.x, 0, b.z);
   const fits = (distance: number) => {
     const r = bounds(view, points, distance, centered(view, points, distance, origin, angle), angle);

@@ -112,12 +112,14 @@ if (new URLSearchParams(location.search).has("rules")) {
     quest.update(state);
     tasks.update(state);
     ui.update(state);
+    scene.reframe();
   };
 
   const showView = (v: View) => {
     if (v === "sea") openSea();
     scene.setView(v);
     document.body.classList.toggle("at-sea", v === "sea");
+    scene.reframe();
     city?.closeSheet();
     sea?.closeSheet();
     captains.close();
@@ -236,7 +238,7 @@ if (new URLSearchParams(location.search).has("rules")) {
 
   let fps: ReturnType<typeof createFpsCounter> | null = null;
   /** The city's normal view fits below the panels at the top and above the tab bar (scene/framing.ts). */
-  function cityBand() {
+  function panelBand() {
     let top = 0;
     for (const el of document.querySelectorAll(".hud > *, .sub > *")) {
       const r = el.getBoundingClientRect();
@@ -244,6 +246,22 @@ if (new URLSearchParams(location.search).has("rules")) {
     }
     const nav = document.querySelector(".nav")?.getBoundingClientRect();
     return { top: top + 4, bottom: (nav && nav.height > 0 ? nav.top : innerHeight) - 4 };
+  }
+  /**
+   * The normal view's band with ?blender: below the cards at the top too (the works under way, Tasks) and above the
+   * quest card, so that no building passes under one (owner, on the S22). At sea, the band the city last had.
+   */
+  let lastCityBand: { top: number; bottom: number } | null = null;
+  function cityBand() {
+    if (document.body.classList.contains("at-sea") && lastCityBand) return lastCityBand;
+    const band = panelBand();
+    for (const el of document.querySelectorAll(".queue, .rail")) {
+      const r = el.getBoundingClientRect();
+      if (r.height > 0) band.top = Math.max(band.top, r.bottom + 4);
+    }
+    const quest = document.querySelector(".quest")?.getBoundingClientRect();
+    if (quest && quest.height > 0) band.bottom = Math.min(band.bottom, quest.top - 4);
+    return (lastCityBand = band);
   }
   // The sea: made at once with the old look; with the look made in Blender, at your first visit at sea, when its models
   // (the prototype's kit, the wreck, the camp, your boat) are fetched.
@@ -295,7 +313,8 @@ if (new URLSearchParams(location.search).has("rules")) {
     village,
     terrain: blenderLook() && hasTerrain() ? terrainName(state.buildings.lighthouse) : undefined,
     seaLater,
-    band: cityBand,
+    band: panelBand,
+    cityBand: blenderLook() ? cityBand : undefined,
     quality: forcedQuality(location.search),
     onRaftBuildings: (models) => city?.useRaftBuildings(models),
     onLoaded: (kit, buildings, models) => {

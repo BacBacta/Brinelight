@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
-import { CITY_ANGLE, CITY_FILL, CITY_FOV, CLOSE_MIN, PIER_SLOTS, SIDE_MARGIN, cityExtent, cityFraming, cityPoints, cityWidthShare, clearView, closeFraming, hiddenShare, openSlots, type View } from "../src/scene/framing.js";
+import { BUILDING_IDS } from "@brinelight/shared";
+import { CITY_ANGLE, CITY_FILL, CITY_FOV, CLOSE_MIN, PIER_SLOTS, SIDE_MARGIN, buildingPoints, cityExtent, cityFraming, cityPoints, cityWidthShare, clearView, closeFraming, hiddenShare, openSlots, type View, type Volume } from "../src/scene/framing.js";
+import { ERA_PLOTS } from "../src/city/plots.js";
+import { isStaged, shownShape } from "../src/city/staged.js";
 import { terrainCoast } from "../src/scene/terrainCoast.js";
 import { hexX, hexZ } from "../src/scene/island.js";
 
@@ -102,6 +105,51 @@ describe("with ?blender, the city never spans less than three quarters of the sc
       const d = sizes.map((c) => cityFraming(view, c.rafts, [], fill).distance);
       for (let i = 1; i < d.length; i++) expect(d[i]!, `${view.width} ${sizes[i]!.name}`).toBeGreaterThanOrEqual(d[i - 1]! - 0.01);
     }
+  });
+});
+
+describe("with ?blender, on the owner's S22 too (384 × 699 px), no building passes under a card", () => {
+  const fill = { share: CITY_FILL, coast: terrainCoast };
+  // The bands main.ts measures with ?blender (360, 384 and 412 px wide): below the Tasks button, or below the cards of
+  // two works under way; above the tab bar, or above the quest card.
+  const screens = [
+    { width: 360, height: 800, tops: [154, 202], bottoms: [725, 652] },
+    { width: 384, height: 699, tops: [154, 202], bottoms: [624, 551] },
+    { width: 412, height: 915, tops: [154, 202], bottoms: [840, 767] },
+  ];
+  const views: View[] = screens.flatMap(({ tops, bottoms, ...s }) => tops.flatMap((top) => bottoms.map((bottom) => ({ ...s, top, bottom }))));
+  // Each building at its tallest and widest, whatever its level.
+  const levels = Array.from({ length: 30 }, (_, i) => i + 1);
+  const volumes: Volume[] = BUILDING_IDS.map((id) => {
+    const [q, r] = ERA_PLOTS[id];
+    const shapes = levels.map((l) => shownShape(id, l));
+    return { x: hexX(q, r), z: hexZ(r), height: Math.max(...shapes.map((s) => s.height)), reach: Math.max(...shapes.map((s) => s.reach)) };
+  });
+  const points = volumes.flatMap(buildingPoints);
+  const sizes = [
+    { name: "a new city", rafts: [] },
+    { name: "3 rafts", rafts: openSlots(1).slice(0, 3) },
+    { name: "15 rafts", rafts: openSlots(10).slice(0, 15) },
+    { name: "39 rafts", rafts: openSlots(30) },
+  ];
+
+  it("every building is made in Blender", () => {
+    expect(BUILDING_IDS.every(isStaged)).toBe(true);
+  });
+
+  it("at 360, 384 and 412 px, with or without works under way and the quest card: 75 % or more, every building whole in the band", () => {
+    for (const view of views)
+      for (const c of sizes) {
+        const f = cityFraming(view, c.rafts, points, fill);
+        const label = `${view.width}×${view.height} ${view.top}-${view.bottom} ${c.name}`;
+        expect(cityWidthShare(view, c.rafts, f, terrainCoast), label).toBeGreaterThanOrEqual(CITY_FILL - 0.01);
+        for (const p of onScreen(view, points, f)) {
+          expect(p.y, label).toBeGreaterThanOrEqual(view.top - 0.01);
+          expect(p.y, label).toBeLessThanOrEqual(view.bottom + 0.01);
+          expect(p.x, label).toBeGreaterThanOrEqual(0);
+          expect(p.x, label).toBeLessThanOrEqual(view.width);
+        }
+      }
   });
 });
 

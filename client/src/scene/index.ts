@@ -6,7 +6,7 @@ import { ISLAND_ANISOTROPY, filterTexture, fitIsland, loadModels, loadRaftBuildi
 import { createCamera, createControls, frameCity } from "./camera.js";
 import { shapeCoast } from "./coast.js";
 import { CITY_MANIFEST, SEA_RISE, blenderLook, cityModelUrl, gridIsland } from "./cityLook.js";
-import { CITY_ANGLE, CITY_FILL, cityFraming, clearView, type Volume } from "./framing.js";
+import { CITY_ANGLE, CITY_FILL, buildingPoints, cityFraming, clearView, type Volume } from "./framing.js";
 import { createIsland, type Kit } from "./island.js";
 import { createLighthouse, lighthouseScale } from "./lighthouse.js";
 import { QUALITY_STEPS, applyQualityStep, createQualityMonitor, type QualityStep } from "./quality.js";
@@ -89,6 +89,13 @@ export type SceneHandle = {
   setMood(mood: SeaMood, now?: boolean): void;
   /** How much the Lighthouses' beams show, 0 to 1 (the sea map's Lighthouses follow it). */
   readonly beams: number;
+  /** The buildings' room at their levels (with ?blender): each one's top and foot stays in the normal view's band. */
+  setBuildings(volumes: readonly Volume[]): void;
+  /**
+   * The band or the buildings changed (a card came or went, a building grew): the normal view follows, gliding there if
+   * the camera was on it.
+   */
+  reframe(): void;
   /** The rafts moored around the island (and the shipyard at work): the foam goes around them, and the normal view keeps them on screen. */
   setMoored(discs: readonly Disc[]): void;
   /** Quality step and the last frame's draw calls and triangles (renderer.info). */
@@ -125,8 +132,10 @@ export type SceneOptions = {
    */
   terrain?: string;
   onError?: (err: unknown) => void;
-  /** The band of the screen the city's normal view must fit in, in CSS pixels: below the top panels, above the bottom ones. */
+  /** The band of the screen the city's close view must fit in, in CSS pixels: below the top panels, above the bottom ones. */
   band?: () => { top: number; bottom: number };
+  /** The normal view's band, if it is narrower (with ?blender: below the cards at the top too, above the quest card). */
+  cityBand?: () => { top: number; bottom: number };
   /** The top of the sheet open at the bottom of the screen, if one is (CSS pixels): the close view stays above it. */
   sheetTop?: () => number | null;
 };
@@ -205,15 +214,24 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     while (from.theta - to.theta > Math.PI) to.theta += Math.PI * 2;
     glide = { from: [from, controls.target.clone()], to: [to, target], start: performance.now() };
   };
+  // The buildings' room (with ?blender): each one's top and foot stays in the normal view's band.
+  let volumes: readonly Volume[] = [];
+  let framedBand = { top: 0, bottom: 0 };
+  let stale = false;
+  const cityFramingNow = () => {
+    const band = (options.cityBand ?? options.band)?.() ?? { top: 0, bottom: innerHeight };
+    framedBand = band;
+    // The Lighthouse made in Blender is taller: its top stays on screen too.
+    const tops = [...(lighthouseStaged ? [{ x: 0, y: lighthouseTop, z: 0 }] : []), ...volumes.flatMap(buildingPoints)];
+    // With ?blender, the city spans three quarters of the screen's width (owner, after the style pass).
+    return cityFraming({ width: innerWidth, height: innerHeight, ...band }, moored, tops, blenderLook() ? { share: CITY_FILL, coast: terrainCoast } : undefined);
+  };
   const layout = () => {
     renderer.setSize(innerWidth, innerHeight, false);
     post?.setSize(innerWidth, innerHeight, renderer.getPixelRatio());
-    const band = options.band?.() ?? { top: 0, bottom: innerHeight };
-    // The Lighthouse made in Blender is taller: its top stays on screen too.
-    const tops = lighthouseStaged ? [{ x: 0, y: lighthouseTop, z: 0 }] : [];
-    // With ?blender, the city spans three quarters of the screen's width (owner, after the style pass).
-    const framing = cityFraming({ width: innerWidth, height: innerHeight, ...band }, moored, tops, blenderLook() ? { share: CITY_FILL, coast: terrainCoast } : undefined);
+    const framing = cityFramingNow();
     normal = framing;
+    stale = false;
     if (focused) {
       camera.aspect = innerWidth / innerHeight;
       camera.updateProjectionMatrix();
@@ -367,7 +385,11 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       controls.target.lerpVectors(glide.from[1], glide.to[1], e);
       const at = new THREE.Spherical(a.radius + (b.radius - a.radius) * e, a.phi + (b.phi - a.phi) * e, a.theta + (b.theta - a.theta) * e);
       camera.position.setFromSpherical(at).add(controls.target);
-      if (t >= 1) glide = null;
+      if (t >= 1) {
+        glide = null;
+        // Zooming out stops at the normal view again, once the camera is back there.
+        if (!focused) controls.maxDistance = Math.max(40, normal.distance);
+      }
     }
     v.controls.update();
     for (const cb of frameCallbacks) cb(now, view);
@@ -454,6 +476,31 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     },
     get beams() {
       return beams;
+    },
+    setBuildings(next) {
+      const same = next.length === volumes.length && next.every((v, i) => v.x === volumes[i]!.x && v.z === volumes[i]!.z && v.height === volumes[i]!.height && v.reach === volumes[i]!.reach);
+      if (same) return;
+      volumes = next;
+      stale = true;
+    },
+    reframe() {
+      // The old look keeps its framing: set on resizing, on mooring and on the Lighthouse's growth only.
+      if (!blenderLook()) return;
+      const band = (options.cityBand ?? options.band)?.() ?? { top: 0, bottom: innerHeight };
+      if (!stale && Math.abs(band.top - framedBand.top) <= 1 && Math.abs(band.bottom - framedBand.bottom) <= 1) return;
+      stale = false;
+      const before = normal;
+      const atNormal = camera.position.distanceTo(before.target.clone().addScaledVector(CITY_ANGLE, before.distance)) < 0.05 && controls.target.distanceTo(before.target) < 0.05;
+      normal = cityFramingNow();
+      fogScale = Math.max(1, normal.distance / FOG_SET_AT);
+      showMood(moodAt);
+      if (focused) return;
+      // Before the city's first image, at once; then it glides there, unless you had moved the camera.
+      if (shownAt === null) frameCity(camera, controls, innerWidth / innerHeight, normal);
+      else if (atNormal) {
+        controls.maxDistance = Math.max(40, normal.distance, before.distance);
+        glideTo(normal.target.clone().addScaledVector(CITY_ANGLE, normal.distance), normal.target.clone());
+      } else controls.maxDistance = Math.max(40, normal.distance);
     },
     setMoored(discs) {
       const changed = discs.length !== moored.length || discs.some((d, i) => d.x !== moored[i]!.x || d.z !== moored[i]!.z);
