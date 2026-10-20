@@ -27,6 +27,12 @@ export const demoAllowed = (env: { DEV: boolean; VITE_BRANCH_PREVIEW?: string },
 /** The rafts' buildings: each type on two rafts at its top level (the rules allow no more), the other rafts bare. */
 const RAFT_BUILDINGS = ["greenhouse", "smokehouse", "watchtower", "greenhouse", "smokehouse", "watchtower"] as const;
 
+/**
+ * Time left on the demo's building site. The Refinery's level 29 to 30 takes about 8.7 years by the rules (6 × 1.5^29
+ * prototype seconds): started long ago, two days and five hours are left.
+ */
+const SITE_LEFT = 53 * 3600;
+
 /** The demo's city at `clock` (seconds): every building at the Lighthouse's level, the Refinery's next level being built. */
 export function demoCity(name: DemoName, clock: number): PlayerState {
   const d = DEMOS[name];
@@ -36,7 +42,7 @@ export function demoCity(name: DemoName, clock: number): PlayerState {
   const slots = [...RAFT_SLOTS].sort((a, b) => a.ring - b.ring || Math.atan2(a.q, a.r) - Math.atan2(b.q, b.r)).slice(0, d.rafts);
   const rafts = Object.fromEntries(slots.map((s, i) => [s.key, { hp: 100, building: RAFT_BUILDINGS[i] ?? null, level: RAFT_BUILDINGS[i] ? 3 : 0 }]));
   const duration = upgradeTime("refinery", buildings.refinery);
-  return { ...base, buildings, rafts, survivors: d.survivors, queue: [{ id: "refinery", left: duration * 0.6, duration }] };
+  return { ...base, buildings, rafts, survivors: d.survivors, queue: [{ id: "refinery", left: Math.min(SITE_LEFT, duration), duration }] };
 }
 
 /** A store in memory: the demo's city and the sounds' setting live there, and go with the page. */

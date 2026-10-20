@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { build } from "vite";
 import { describe, expect, it } from "vitest";
 import { RAFT_BUILDING_MAX_COPIES, RAFT_SLOTS, parseState, survivorCap } from "@brinelight/shared";
+import { formatTimeLeft } from "../src/city/format.js";
 import { DEMOS, demoAllowed, demoCity, demoWanted, memoryStore } from "../src/demo.js";
 import { previewBuild, previewHost } from "../src/preview.js";
 
@@ -60,6 +61,8 @@ describe("?demo, the demonstration cities for measuring on a phone", () => {
     expect(RAFT_SLOTS).toHaveLength(39);
     expect(RAFT_SLOTS.every((x) => s.rafts[x.key])).toBe(true);
     expect(s.queue).toHaveLength(1);
+    // Its time left reads as a game's would: two days and five hours, not years (owner, on the S22).
+    expect(formatTimeLeft(s.queue[0]!.left)).toBe("2 d 05 h");
     expect(s.survivors).toBe(106);
     expect(s.survivors).toBeLessThanOrEqual(survivorCap(s.buildings.shelters));
     for (const b of ["greenhouse", "smokehouse", "watchtower"]) expect(Object.values(s.rafts).filter((r) => r.building === b)).toHaveLength(RAFT_BUILDING_MAX_COPIES);

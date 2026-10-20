@@ -55,6 +55,15 @@ describe("formats", () => {
     expect(formatDuration(7800)).toBe("2 h 10 min");
   });
 
+  it("from 48 hours on, in days and hours (owner, on the demo's Refinery 29 to 30: 46020 h)", () => {
+    expect(formatTimeLeft(47 * 3600 + 59 * 60)).toBe("47 h 59");
+    expect(formatTimeLeft(48 * 3600)).toBe("2 d 00 h");
+    expect(formatTimeLeft(3 * 86400 + 4 * 3600 + 30 * 60)).toBe("3 d 04 h");
+    expect(formatTimeLeft(46020 * 3600 + 15 * 60)).toBe("1917 d 12 h");
+    expect(formatDuration(47 * 3600 + 59 * 60)).toBe("47 h 59 min");
+    expect(formatDuration(43.4 * 86400)).toBe("43 d 09 h");
+  });
+
   it("a duration sped up by DEV_SPEED (60) is shown in seconds", () => {
     expect(formatDuration(3240 / 60)).toBe("54 s");
     expect(formatDuration(7800 / 60)).toBe("2 min");
