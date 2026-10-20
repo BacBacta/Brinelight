@@ -344,8 +344,9 @@ Measured with the city at 412 × 915 (container, quality 2, the e2e's counter), 
 | The Lumberyard, six eras (seven models) | 764 to 1,024 | 57 to 70 kB |
 | The Harbor, six eras (seven models) | 720 to 928 | 55 to 65 kB |
 | The Harbor's pier and boat (one an era) | 460 to 780 | 43 to 59 kB (one more draw call) |
+| The Observatory, six eras (seven models) | 892 to 1,392 | 68 to 94 kB |
 
-- **What is downloaded:** only the stage each building shows, and the next one while an upgrade toward it runs.
+- **What is downloaded:** only the stage each building shows, and the next one while an upgrade toward it runs. With the Observatory, all nine buildings are remade: with `?blender`, no old building model is fetched any more.
 - **At level 30:** 171 + 163 + 113 + 109 kB for the island, its ground, the Lighthouse and the Refinery, about 0.55 MB. The ground adds one draw call.
 
 ### What a phone downloads, and how soon the city shows (owner, 19 October)

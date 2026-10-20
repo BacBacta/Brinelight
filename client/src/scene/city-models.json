@@ -1528,6 +1528,228 @@
    }
   ]
  },
+ "observatory-1": {
+  "kB": 76.6,
+  "triangles": 1028,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2364,
+    "height": 1.11,
+    "reach": 0.611
+   },
+   {
+    "level": 2,
+    "indices": 2616,
+    "height": 1.11,
+    "reach": 0.611
+   },
+   {
+    "level": 3,
+    "indices": 2964,
+    "height": 1.11,
+    "reach": 0.611
+   },
+   {
+    "level": 4,
+    "indices": 3084,
+    "height": 1.11,
+    "reach": 0.611
+   }
+  ]
+ },
+ "observatory-10": {
+  "kB": 67.9,
+  "triangles": 900,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1776,
+    "height": 1.362,
+    "reach": 0.86
+   },
+   {
+    "level": 11,
+    "indices": 2124,
+    "height": 1.362,
+    "reach": 0.86
+   },
+   {
+    "level": 12,
+    "indices": 2244,
+    "height": 1.362,
+    "reach": 0.86
+   },
+   {
+    "level": 13,
+    "indices": 2376,
+    "height": 1.362,
+    "reach": 0.86
+   },
+   {
+    "level": 14,
+    "indices": 2700,
+    "height": 1.362,
+    "reach": 0.86
+   }
+  ]
+ },
+ "observatory-15": {
+  "kB": 94.4,
+  "triangles": 1392,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 3300,
+    "height": 1.14,
+    "reach": 0.86
+   },
+   {
+    "level": 16,
+    "indices": 3552,
+    "height": 1.14,
+    "reach": 0.86
+   },
+   {
+    "level": 17,
+    "indices": 3732,
+    "height": 1.14,
+    "reach": 0.86
+   },
+   {
+    "level": 18,
+    "indices": 3852,
+    "height": 1.14,
+    "reach": 0.86
+   },
+   {
+    "level": 19,
+    "indices": 4176,
+    "height": 1.14,
+    "reach": 0.86
+   }
+  ]
+ },
+ "observatory-20": {
+  "kB": 87.1,
+  "triangles": 1148,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2640,
+    "height": 1.148,
+    "reach": 0.86
+   },
+   {
+    "level": 21,
+    "indices": 2988,
+    "height": 1.148,
+    "reach": 0.86
+   },
+   {
+    "level": 22,
+    "indices": 3120,
+    "height": 1.148,
+    "reach": 0.86
+   },
+   {
+    "level": 23,
+    "indices": 3324,
+    "height": 1.148,
+    "reach": 0.86
+   },
+   {
+    "level": 24,
+    "indices": 3444,
+    "height": 1.148,
+    "reach": 0.86
+   }
+  ]
+ },
+ "observatory-25": {
+  "kB": 68.8,
+  "triangles": 892,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2016,
+    "height": 1.234,
+    "reach": 0.86
+   },
+   {
+    "level": 26,
+    "indices": 2136,
+    "height": 1.234,
+    "reach": 0.86
+   },
+   {
+    "level": 27,
+    "indices": 2340,
+    "height": 1.234,
+    "reach": 0.86
+   },
+   {
+    "level": 28,
+    "indices": 2508,
+    "height": 1.234,
+    "reach": 0.86
+   },
+   {
+    "level": 29,
+    "indices": 2676,
+    "height": 1.234,
+    "reach": 0.86
+   }
+  ]
+ },
+ "observatory-30": {
+  "kB": 69.1,
+  "triangles": 892,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2676,
+    "height": 1.234,
+    "reach": 0.86
+   }
+  ]
+ },
+ "observatory-5": {
+  "kB": 71.2,
+  "triangles": 982,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1998,
+    "height": 1.28,
+    "reach": 0.86
+   },
+   {
+    "level": 6,
+    "indices": 2250,
+    "height": 1.28,
+    "reach": 0.86
+   },
+   {
+    "level": 7,
+    "indices": 2430,
+    "height": 1.28,
+    "reach": 0.86
+   },
+   {
+    "level": 8,
+    "indices": 2634,
+    "height": 1.28,
+    "reach": 0.86
+   },
+   {
+    "level": 9,
+    "indices": 2946,
+    "height": 1.28,
+    "reach": 0.86
+   }
+  ]
+ },
  "refinery-1": {
   "kB": 85.6,
   "triangles": 1314,
