@@ -326,7 +326,8 @@ def landfill(L, height_at):
     for k in range(5):
         a, r = rng.uniform(0, 6.28), rng.uniform(0.1, 0.6)
         x, z = f["x"] + math.cos(a) * r, f["z"] + math.sin(a) * r
-        kit.cone(rng.uniform(0.18, 0.3), rng.uniform(0.08, 0.14), (x, height_at(x, z) + 0.04, z), "earth", sides=10)
+        # A low heap of earth, sitting on the fill.
+        kit.sphere(rng.uniform(0.16, 0.26), (x, height_at(x, z), z), "earth", subdivisions=2, squash=0.35)
     x, z = f["x"] - 0.35, f["z"] + 0.25
     y = height_at(x, z)
     # The wheelbarrow: a tray, a wheel in front, two handles.
@@ -389,6 +390,7 @@ def plants(L, layout, look, height_at):
 def marks(layout, out):
     """Where the flooded slots' "!" mark goes on the image (the game draws it over the slot)."""
     scene = bpy.context.scene
+    bpy.context.view_layer.update()
     cam = scene.camera
     pts = []
     for s in layout["slots"]:
