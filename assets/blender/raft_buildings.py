@@ -98,7 +98,7 @@ def smokehouse(level, age):
         p.append(rod((cx, top - 0.1, cz), (cx - 0.16, top - 0.1, cz), 0.008, "dark", 4))
         p += lantern((cx - 0.16, top - 0.18, cz), size=0.07)
         for i, (dx, dy) in enumerate(((-0.06, 0.035), (0.06, 0.035), (0.0, 0.095))):
-            p.append(cylinder(0.035, 0.3, (-0.3 + dx, dy, 0.32), "wood", sides=6, bevel=0, tilt=(0, math.radians(90))))
+            p.append(cylinder(0.035, 0.3, (-0.24 + dx, dy, 0.32), "wood", sides=6, bevel=0, tilt=(0, math.radians(90))))
     return p
 
 

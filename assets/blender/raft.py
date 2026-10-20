@@ -109,11 +109,11 @@ def variant_a(age):
     look = LOOK[age]
     x, z = BACK
     p = [cylinder(0.024, 0.78, (x, DECK + 0.39, z), look["post"], sides=6, bevel=0)]
-    p.append(rod((x - 0.34, DECK + 0.3, z + 0.08), (x + 0.34, DECK + 0.3, z + 0.08), 0.014, look["post"], 5))
-    p.append(cylinder(0.045, 0.6, (x, DECK + 0.34, z + 0.08), "cream", sides=8, bevel=0, tilt=(0, math.radians(90))))
-    for dx in (-0.18, 0.0, 0.18):
+    p.append(rod((x - 0.24, DECK + 0.3, z + 0.08), (x + 0.24, DECK + 0.3, z + 0.08), 0.014, look["post"], 5))
+    p.append(cylinder(0.045, 0.44, (x, DECK + 0.34, z + 0.08), "cream", sides=8, bevel=0, tilt=(0, math.radians(90))))
+    for dx in (-0.13, 0.0, 0.13):
         p.append(cylinder(0.05, 0.016, (x + dx, DECK + 0.34, z + 0.08), look["rope"], sides=8, bevel=0, tilt=(0, math.radians(90))))
-    p.append(rod((x, DECK + 0.76, z), (x + 0.34, DECK + 0.32, z + 0.08), 0.004, look["rope"], 3))
+    p.append(rod((x, DECK + 0.76, z), (x + 0.24, DECK + 0.32, z + 0.08), 0.004, look["rope"], 3))
     p.append(cone(0.03, 0.06, (x, DECK + 0.78, z), "gold" if age == 20 else look["post"], sides=6))
     p += [rope_coil((BACK_RIGHT[0], DECK, BACK_RIGHT[1]), radius=0.07, color=look["rope"])]
     if age >= 10:
@@ -178,8 +178,8 @@ def damaged(age):
     p = floats(age, skip_front=True) + deck(age, keep)
     p.append(box((0.5, 0.03, 0.3), (hx, DECK - 0.16, hz), "dark", bevel=0))
     # Two broken planks standing up at the hole's edge, a third adrift.
-    p.append(box((0.4, 0.04, 0.1), (hx - 0.16, DECK + 0.1, hz - 0.1), LOOK[age]["planks"][0], bevel=0.005, tilt=(0, math.radians(-38)), turn=0.3))
-    p.append(box((0.34, 0.04, 0.09), (hx + 0.16, DECK + 0.08, hz - 0.08), LOOK[age]["planks"][1], bevel=0.005, tilt=(0, math.radians(32)), turn=-0.35))
+    p.append(box((0.4, 0.04, 0.1), (hx - 0.16, DECK + 0.1, hz - 0.07), LOOK[age]["planks"][0], bevel=0.005, tilt=(0, math.radians(-38)), turn=0.12))
+    p.append(box((0.34, 0.04, 0.09), (hx + 0.16, DECK + 0.08, hz - 0.06), LOOK[age]["planks"][1], bevel=0.005, tilt=(0, math.radians(32)), turn=-0.14))
     p.append(box((0.36, 0.03, 0.09), (hx + 0.08, SEA + 0.01, hz + 0.14), LOOK[age]["planks"][2], bevel=0, turn=0.5))
     return p
 
