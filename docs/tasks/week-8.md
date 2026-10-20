@@ -140,13 +140,13 @@ Level 30 is the Modern era complete: the Modern building with all its details an
 - Electricity: an electric crane, lamps along the pier, a motor launch.
 - Modern: a concrete quay, a gantry crane, a modern boat, a radar mast. At 30: gold legs to the gantry, a gold stripe on the boat.
 
-**The Observatory** (round turret, verdigris dome, telescope)
+**The Observatory** (round turret, verdigris dome, telescope). Its turret at the back of its plot, its telescopes turned to the front right so the camera sees their length.
 - Salvage: a platform on stilts with a spyglass on a tripod.
 - Colony: a wooden round tower with a hand-turned roof.
 - Workshop: a brick turret with a copper dome and a brass telescope.
 - Industry: a riveted steel dome on rails, a large refractor, clockwork.
 - Electricity: an electric dome, a weather station with its anemometer, cables.
-- Modern: a white dome, a radio dish, solar panels, an antenna.
+- Modern: a white dome, a radio dish, solar panels, an antenna. At 30: a gold ring at the dome's foot.
 
 **The Infirmary** (low building, white cross on a cream canvas roof, awning with cots)
 - Salvage: a canvas tent with a white cross, cots under an awning.
