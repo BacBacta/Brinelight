@@ -11,6 +11,7 @@ import { RAFT_BUILDING_MAX_COPIES, RAFT_DAMAGED_BELOW, RAFT_SLOTS, raftCap, slot
 import { RAFT_BUILDING_IDS, bakeModel, hexX, hexZ, kitModel, type Kit, type RaftBuildingModels } from "../scene/index.js";
 import { RAFT_FILL } from "../scene/coast.js";
 import type { PlayerState } from "../state/index.js";
+import { VILLAGE_DECK, VILLAGE_SEA, villageAge, villageModels, villageNames, type Placed, type Village } from "./village.js";
 
 export type RaftSlotView = "raft" | "damaged" | "building" | "free";
 
@@ -189,10 +190,11 @@ export function walkwayGeometry(): THREE.BufferGeometry {
 
 /**
  * The rafts of the city. `models` are the raft's models, one per variant (raftVariant picks one per slot); until the
- * painted variants are made, there is one.
+ * painted variants are made, there is one. With `village` (the floating village made in Blender), it draws the rafts,
+ * their walkways and buildings, and the shipyard's raft instead, and `models` is empty.
  */
-export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THREE.Object3D[], add: (o: THREE.Object3D) => void, coastAt: (angle: number) => number = () => 0): CityRafts {
-  const variants = (Array.isArray(models) ? models : [models]).map(raftGeometry);
+export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THREE.Object3D[], add: (o: THREE.Object3D) => void, coastAt: (angle: number) => number = () => 0, village?: Village): CityRafts {
+  const variants = village ? [] : (Array.isArray(models) ? models : [models]).map(raftGeometry);
   // One InstancedMesh per variant: draw calls grow with the models, never with the rafts.
   const decks = variants.map((v) => {
     const mesh = new THREE.InstancedMesh(v.geometry, v.material, MAX);
@@ -216,7 +218,7 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
   const ring = new THREE.InstancedMesh(ringGeo, ringM, MAX);
   const hit = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1.4, 6), new THREE.MeshBasicMaterial({ visible: false }), MAX);
   const scaffold = new THREE.Group();
-  scaffold.add(kitModel(kit, "building_scaffolding"));
+  if (!village) scaffold.add(kitModel(kit, "building_scaffolding"));
   scaffold.scale.setScalar(0.8);
   scaffold.visible = false;
   const meshes = [...decks, ghost, ring, hit, walk];
@@ -354,8 +356,30 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
         slots.filter((x) => x.view === "raft" || x.view === "damaged").map((x) => x.key),
         coastAt,
       );
-      ways.forEach((w, i) => walk.setMatrixAt(i, m4.compose(p.set(w.x, RAFT_BOTTOM + deckHeight - 0.08, w.z), q.setFromAxisAngle(up, w.turn), sc.set(1, 1, w.length))));
-      walk.count = ways.length;
+      if (village) {
+        scaffold.visible = false;
+        const lighthouse = state.buildings.lighthouse;
+        const shown = villageModels(
+          slots.map((x) => ({ ...x, variant: raftVariant(x.key) })),
+          state.rafts,
+          lighthouse,
+        );
+        const items: Placed[] = [];
+        for (const s of slots) {
+          const { x, z } = slotPosition(s.key);
+          const bob = s.view === "free" ? undefined : afloat.find((r) => r.key === s.key)?.bob;
+          items.push({ name: shown.slots.get(s.key)!, x, z, y: s.view === "free" ? RAFT_BOTTOM + VILLAGE_SEA : RAFT_BOTTOM, bob });
+          const b = shown.buildings.get(s.key);
+          if (b) items.push({ name: b, x, z, y: RAFT_BOTTOM + VILLAGE_DECK, bob });
+        }
+        for (const w of ways) items.push({ name: shown.walk, x: w.x, z: w.z, y: RAFT_BOTTOM + VILLAGE_DECK - 0.01, turn: w.turn, length: w.length });
+        village.show(items);
+        // The next age's models, while the Lighthouse's upgrade toward it runs.
+        const next = villageAge(lighthouse + 1);
+        if (next !== villageAge(lighthouse) && state.queue.some((j) => j.id === "lighthouse")) village.prefetch(villageNames(next));
+      }
+      if (!village) ways.forEach((w, i) => walk.setMatrixAt(i, m4.compose(p.set(w.x, RAFT_BOTTOM + deckHeight - 0.08, w.z), q.setFromAxisAngle(up, w.turn), sc.set(1, 1, w.length))));
+      walk.count = village ? 0 : ways.length;
       walk.instanceMatrix.needsUpdate = true;
       ghost.count = free;
       ring.count = free;
@@ -370,6 +394,7 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
     },
     animate(now) {
       if (afloat.length) placeRafts(now);
+      village?.animate(now);
       ringM.opacity = 0.45 + Math.sin(now * 3) * 0.3;
     },
   };

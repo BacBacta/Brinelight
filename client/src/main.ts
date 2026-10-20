@@ -20,6 +20,8 @@ import { createProfile } from "./account/profile.js";
 import { watchWallets } from "./account/wallets.js";
 import { createCity, type City } from "./city/index.js";
 import { isStaged, loadStage, shownModels, tallestHeight } from "./city/staged.js";
+import { raftSlots, raftVariant } from "./city/rafts.js";
+import { hasVillage, villageShown } from "./city/village.js";
 import { blenderLook } from "./scene/cityLook.js";
 import { showRules } from "./rules.js";
 import { forcedQuality, startScene, type Kit, type Models, type View } from "./scene/index.js";
@@ -276,7 +278,11 @@ if (new URLSearchParams(location.search).has("rules")) {
   // The look made in Blender (?blender, week 8): the old models of the buildings remade are not fetched, and the city
   // shows once the models of their current era are there.
   const remade = blenderLook() ? Object.fromEntries(BUILDING_IDS.filter(isStaged).map((id) => [id, tallestHeight(id)])) : undefined;
-  const ready = blenderLook() ? Promise.all(shownModels(state).map(loadStage)) : undefined;
+  // The floating village made in Blender: its models of the Lighthouse's age that the city shows, also before its first image.
+  const village = blenderLook() && hasVillage();
+  const slots = raftSlots(state).map((s) => ({ ...s, variant: raftVariant(s.key) }));
+  const afloat = village ? villageShown(slots, state.rafts, state.buildings.lighthouse, slots.some((s) => s.view === "raft" || s.view === "damaged")) : [];
+  const ready = blenderLook() ? Promise.all([...shownModels(state), ...afloat].map(loadStage)) : undefined;
   const scene = startScene(canvas, {
     home: HOME,
     // The sheet open at the bottom (on a phone; on a wide screen it stands at the right): its height, not its slide-in.
@@ -286,6 +292,7 @@ if (new URLSearchParams(location.search).has("rules")) {
     },
     remade,
     ready,
+    village,
     seaLater,
     band: cityBand,
     quality: forcedQuality(location.search),

@@ -99,6 +99,8 @@ export type SceneOptions = {
   seaLater?: boolean;
   /** The buildings on rafts, loaded after the city shows. */
   onRaftBuildings?: (models: RaftBuildingModels) => void;
+  /** The floating village is made in Blender (city/village.ts): the old raft and buildings on rafts are not fetched. */
+  village?: boolean;
   onError?: (err: unknown) => void;
   /** The band of the screen the city's normal view must fit in, in CSS pixels: below the top panels, above the bottom ones. */
   band?: () => { top: number; bottom: number };
@@ -220,7 +222,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   Promise.all([
     later ? Promise.resolve({ scenes: [] as THREE.Group[] }) : loader.loadAsync(KIT_URL),
     loadBuildings(loader, options.remade),
-    loadModels(loader, [...(blender ? (["island"] as const) : []), ...(later ? seaOnly : [])]),
+    loadModels(loader, [...(blender ? (["island"] as const) : []), ...(options.village ? (["raft"] as const) : []), ...(later ? seaOnly : [])]),
     blender ? loader.loadAsync(cityModelUrl("island")) : null,
     options.ready,
   ]).then(
@@ -246,10 +248,11 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       lighthouse.useModel(buildings.lighthouse);
       sizeLighthouse();
       options.onLoaded?.(kit, buildings, models);
-      loadRaftBuildings(loader).then(
-        (m) => !disposed && options.onRaftBuildings?.(m),
-        (err: unknown) => console.error(err),
-      );
+      if (!options.village)
+        loadRaftBuildings(loader).then(
+          (m) => !disposed && options.onRaftBuildings?.(m),
+          (err: unknown) => console.error(err),
+        );
     },
     (err: unknown) => {
       console.error(err);

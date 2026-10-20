@@ -1,5 +1,5 @@
 import type * as THREE from "three";
-import { BUILDING_IDS, type BuildingId, type RaftBuildingId, type TechId, type TroopType } from "@brinelight/shared";
+import { BUILDING_IDS, RAFT_SLOTS, type BuildingId, type RaftBuildingId, type TechId, type TroopType } from "@brinelight/shared";
 import { lighthouseScale, type BuildingModels, type Kit, type Models, type RaftBuildingModels, type SceneHandle } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 import { coastAt } from "../scene/coast.js";
@@ -8,6 +8,7 @@ import { createLabels } from "./labels.js";
 import { createQueue } from "./queue.js";
 import { createRaftSheet } from "./raftSheet.js";
 import { RAFT_FILL, createCityRafts, raftSlots, slotPosition } from "./rafts.js";
+import { createVillage, hasVillage } from "./village.js";
 import { createSheet } from "./sheet.js";
 import { blenderLook } from "../scene/cityLook.js";
 import { groundName, hasGround, isStaged, lanternHeight, levelShape, loadStage, radarAt, showLevel, stageName } from "./staged.js";
@@ -61,9 +62,11 @@ export function createCity(
   },
 ): City {
   const buildings = createCityBuildings(kit, models, (o) => scene.add(o));
-  const rafts = createCityRafts(kit, others.raft, (o) => scene.add(o), coastAt);
+  // The floating village made in Blender draws the rafts, their walkways and buildings, and the shipyard's raft.
+  const village = blenderLook() && hasVillage() ? createVillage((o) => scene.add(o), RAFT_SLOTS.length) : undefined;
+  const rafts = createCityRafts(kit, village ? [] : others.raft, (o) => scene.add(o), coastAt, village);
   // With the look made in Blender, the prototype's kit is not there: the shipyard's scaffolding is the building sites'.
-  if (blenderLook()) void loadStage("site-frame").then((frame) => rafts.useScaffold(frame.clone()));
+  if (blenderLook() && !village) void loadStage("site-frame").then((frame) => rafts.useScaffold(frame.clone()));
   // Labels float just above each model at its full size (a smaller tier leaves them where they were, so they keep their
   // places among the others); the Lighthouse's grows with its level.
   const staged = (id: BuildingId) => blenderLook() && isStaged(id);
@@ -166,7 +169,7 @@ export function createCity(
 
   return {
     useRaftBuildings(m) {
-      rafts.useBuildings(m);
+      if (!village) rafts.useBuildings(m);
     },
     closeSheet() {
       sheet.close();
