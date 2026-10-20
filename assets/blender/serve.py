@@ -26,7 +26,7 @@ spec.loader.exec_module(mm)
 RAW = here / "out"
 SERVED = root / "client" / "public" / "city"
 MANIFEST = root / "client" / "src" / "scene" / "city-models.json"
-TEXTURE = {"island": 1024, **{f"ground-{e}": 768 for e in (1, 5, 10, 15, 20, 25)}}
+TEXTURE = {"island": 1024, **{f"ground-{e}": 768 for e in (1, 5, 10, 15, 20, 25)}, **{f"terrain-{k}": 1024 for k in ("wild", "garden", "modern")}}
 
 
 def hex_reach(x, z):

@@ -445,3 +445,32 @@ Time to the city's first image (10 Mbit/s, 40 ms, cache off, five runs, median) 
 
 - The first image waits for nothing more (10 kB: the code). The life's models (the survivor 16.5 kB, its seven tools 26 kB, six animals 57 kB, a look's plants 25 to 40 kB, the washing 6.5 kB) come once the city shows.
 
+
+### The style pass, step 2 (owner, 20 October)
+
+With `?blender`: one island in three looks (`terrain-wild`, `-garden`, `-modern`: 3,600 triangles, 89 to 92 kB each, in place of the island, 171 kB, and an era's ground, 57 to 174 kB), its groves in one model per look, the buildings 1.15 times larger, the survivors 1.5 times, the mix's light and water, the rafts rebaked, lighter walkways (128 triangles, 168 before) and moorings (96 to 116, 104 to 140 before), the smoke and the lanterns in one cloud of points, and at full quality the finish (a glow around the lamps and a color grade). Same cities before (a99060c) and after, at 412 × 915, quality 0, the life fully loaded; the counter leaves the shadow pass out, as before:
+
+| City | Before: draw calls, triangles | After: draw calls, triangles | After: the finish's own passes |
+| --- | --- | --- | --- |
+| Lighthouse 5, two building sites (the owner's capture) | 46, 38.5 k | 40, 36.3 k | 14 |
+| 3 rafts, Lighthouse 5 | 38, 35.0 k | 33, 32.9 k | 14 |
+| 15 rafts, Lighthouse 15, a building site, the shipyard at work | 49, 45.9 k | 43, 46.5 k | 14 |
+| 39 rafts, Lighthouse 30, a building site | 50, 68.8 k | 43, 66.0 k | 14 |
+| 39 rafts, Lighthouse 30, no building site | 49, 68.7 k (meeting 4) | 38, 64.8 k | 14 |
+| The same, quality 2 (no finish) | 50, 65.1 k (meeting 4) | 38, 62.5 k | 0 |
+
+- The worst city stays under the S22's 66.7 k (66.0 k with a site, the animals all out); its draw calls go from 50 to 43 (a building site's scaffolding, mast, arm and crate are four of them).
+- The finish draws 14 full-screen passes of its own (the glow at half the screen's size and its five blurs, then the output pass with the grade in it), and no triangle. Its cost, measured apart on the 39-raft city in the container (no graphics chip): 1.35 FPS without it, 0.85 with it. A phone's graphics chip must say the real cost; a phone that falls under 30 FPS drops it with quality step 1.
+- The finish starts 4 seconds after the city's first image, once the life has come: drawn from the first frames, it slowed the first image down by 5 seconds in the container.
+- The free slots' golden marks: 24 triangles each, in the same draw call as before.
+
+Time to the city's first image (10 Mbit/s, 40 ms, cache off, five runs, median), measured again before and after on the same machine:
+
+| City | Before: first image, before it | After: first image, before it |
+| --- | --- | --- |
+| New player | 6.40 s, 1,033 kB | 6.48 s, 903 kB |
+| Lighthouse 30 | 6.56 s, 1,482 kB | 6.62 s, 1,255 kB |
+| Lighthouse 30, 39 rafts | 7.45 s, 1,889 kB | 7.84 s, 1,665 kB |
+
+- 130 to 230 kB fewer before the first image (the terrain in place of the island and its ground); the times are within one run's spread for the new player and the Lighthouse 30, 0.4 s slower for the 39 rafts (its first frames cost more in the container).
+- After the first image, a look's groves weigh 245 to 347 kB (25 to 40 kB for the plants before): one model with its own baked texture.

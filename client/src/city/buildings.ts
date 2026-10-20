@@ -10,7 +10,7 @@ import { createSites, type SiteBox } from "./site.js";
 import { createModelSites } from "./modelSite.js";
 import { TIER_SCALE, createTierDetails, tierOf } from "./tiers.js";
 import { blenderLook } from "../scene/cityLook.js";
-import { extraName, groundName, hasGround, isStaged, levelShape, loadStage, showLevel, stageName } from "./staged.js";
+import { buildingScale, extraName, groundName, hasGround, isStaged, loadStage, shownShape, showLevel, stageName } from "./staged.js";
 
 type Plot = { group: THREE.Group; hit: THREE.Mesh; key: string };
 
@@ -88,7 +88,7 @@ export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: T
   const rebuild = (id: Exclude<BuildingId, "lighthouse">, level: number) => {
     const p = plots[id];
     if (staged(id)) {
-      const shape = levelShape(id, Math.max(1, level));
+      const shape = shownShape(id, Math.max(1, level));
       p.hit.scale.y = shape.height / (p.hit.geometry as THREE.CylinderGeometry).parameters.height;
       p.hit.position.y = shape.height / 2;
       if (level === 0) {
@@ -103,6 +103,8 @@ export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: T
         if (p.key !== key) return;
         p.group.children.filter((c) => c !== p.hit && c !== model && c !== more).forEach((c) => p.group.remove(c));
         showLevel(model, id, level);
+        // A little larger on its plot (the style pass); what is laid with it keeps its size.
+        model.scale.setScalar(buildingScale(id));
         p.group.add(model);
         if (more) p.group.add(more);
       });
@@ -141,7 +143,7 @@ export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: T
         // A building site around a building at work, at its size; around a building not built yet, at its first size.
         if (working || level === 0) {
           if (staged(id)) {
-            const { reach, height } = levelShape(id, Math.max(1, level));
+            const { reach, height } = shownShape(id, Math.max(1, level));
             shown.push({ ...plotPosition(id), box: { reach, height }, moving: working });
             // The model of the next level is fetched while the work runs.
             void loadStage(stageName(id, level + 1));
@@ -168,7 +170,7 @@ export function createCityBuildings(kit: Kit, models: BuildingModels, add: (o: T
       for (const id of BUILDING_IDS) {
         const level = Math.max(1, state.buildings[id]);
         const at = plotPosition(id);
-        if (staged(id)) out[id] = { ...at, ...levelShape(id, level) };
+        if (staged(id)) out[id] = { ...at, ...shownShape(id, level) };
         else if (id === "lighthouse") out[id] = { ...at, height: models.lighthouse.height * lighthouseScale(level), reach: 0.8 };
         else {
           const s = TIER_SCALE[tierOf(level)];

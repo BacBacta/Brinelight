@@ -12,9 +12,9 @@ import { hexX, hexZ } from "../src/scene/island.js";
 import { BUILDING_FIX, LIGHTHOUSE_FIT, TILE_FIT, normalizeBuilding } from "../src/scene/buildings.js";
 import { ERA_PLOTS } from "../src/city/plots.js";
 import { TIER_SCALE, tierOf } from "../src/city/tiers.js";
-import { STAGES, isStaged, levelShape, stageName } from "../src/city/staged.js";
+import { STAGES, buildingScale, isStaged, levelShape, stageName } from "../src/city/staged.js";
 import { readGlb } from "./glb.js";
-import { plantsFor } from "../src/city/life/plants.js";
+import { plantLook } from "../src/city/life/plants.js";
 
 /** The least share of a building the normal view must show. */
 const IN_SIGHT = 0.7;
@@ -45,6 +45,8 @@ function shown(id: BuildingId, level: number): THREE.Object3D {
       mesh.geometry = mesh.geometry.clone();
       mesh.geometry.setDrawRange(0, indices);
     });
+    // Drawn larger than made, the Lighthouse excepted (staged.ts, the style pass).
+    model.scale.setScalar(buildingScale(id));
     group.add(model);
   } else {
     const { object } = normalizeBuilding(once(`buildings/${id}`).clone(true), id === "lighthouse" ? LIGHTHOUSE_FIT : TILE_FIT, BUILDING_FIX[id]);
@@ -70,7 +72,7 @@ function tallest(id: BuildingId, cap: number): number {
 /** The normal view's camera with these rafts moored and the Lighthouse at this level. */
 function camera(rafts: number, lighthouse: number): THREE.PerspectiveCamera {
   const slots = RAFT_SLOTS.slice(0, rafts).map((s) => ({ x: hexX(s.q, s.r), z: hexZ(s.r) }));
-  const top = isStaged("lighthouse") ? [{ x: 0, y: levelShape("lighthouse", lighthouse).height, z: 0 }] : [];
+  const top = isStaged("lighthouse") ? [{ x: 0, y: levelShape("lighthouse", lighthouse).height * buildingScale("lighthouse"), z: 0 }] : [];
   const { distance, target } = cityFraming(VIEW, slots, top);
   const cam = new THREE.PerspectiveCamera(CITY_FOV, VIEW.width / VIEW.height, 0.1, 400);
   cam.position.copy(target).addScaledVector(CITY_ANGLE, distance);
@@ -147,17 +149,11 @@ describe("in the normal view, each building stays mostly in sight", () => {
   }
 });
 
-describe("the island's plants (meeting 4) never hide a building", () => {
-  /** The plants of a Lighthouse's look, as the game lays them. */
+describe("the island's plants (the style pass) never hide a building", () => {
+  /** The groves of a Lighthouse's look, as the game shows them: one model, laid where they stand (terrain.py). */
   const plants = (lighthouse: number) => {
     const group = new THREE.Group();
-    for (const p of plantsFor(lighthouse)) {
-      const model = once(`city/${p.name}`).clone(true);
-      model.position.set(p.x, 0, p.z);
-      model.rotation.y = p.turn;
-      model.scale.setScalar(p.scale);
-      group.add(model);
-    }
+    group.add(once(`city/groves-${plantLook(lighthouse)}`).clone(true));
     group.updateMatrixWorld(true);
     return group;
   };

@@ -65,6 +65,8 @@ describe("what each quality step keeps", () => {
     expect(s1).toMatchObject({ maxPixelRatio: 1, shadowMap: 1024, reflections: true, ripples: true, foamMoves: true });
     expect(s2).toMatchObject({ maxPixelRatio: 1, shadowMap: 0, reflections: false, ripples: false, foamMoves: false });
     expect(s2.waterSegments).toBeLessThan(s1.waterSegments);
+    // The city's finish (?blender: the lamps' glow, the color grade) at full quality only.
+    expect([s0.finish, s1.finish, s2.finish]).toEqual([true, false, false]);
   });
 
   it("set on the renderer, the sun and every water", () => {

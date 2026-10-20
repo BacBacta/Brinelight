@@ -19,10 +19,10 @@ export const blenderLook = (search: string = typeof location === "undefined" ? "
 export const cityModelUrl = (name: string): string => `${import.meta.env.BASE_URL}city/${name}.glb`;
 
 /** The island as made: already in the game's units, its meadow at y = 0 on the grid; nothing to fit or reshape. */
-export function gridIsland(model: THREE.Object3D): THREE.Object3D {
+export function gridIsland(model: THREE.Object3D, casts = true): THREE.Object3D {
   model.traverse((m) => {
     if ((m as THREE.Mesh).isMesh) {
-      m.castShadow = true;
+      m.castShadow = casts;
       m.receiveShadow = true;
     }
   });

@@ -29,9 +29,9 @@ SEA = 0.2
 
 AGES = (1, 10, 20)
 LOOK = {
-    1: {"planks": ("plank", "wood", "plank", "sand"), "beam": "wood", "float": "wood", "hoop": "navy", "rim": "wood", "post": "wood", "rope": "plank"},
-    10: {"planks": ("wood", "plank", "wood", "wood"), "beam": "dark", "float": "navy", "hoop": "steel", "rim": "dark", "post": "wood", "rope": "plank"},
-    20: {"planks": ("plank", "wood", "plank", "wood"), "beam": "steel", "float": "steel", "hoop": "steel", "rim": "steel", "post": "steel", "rope": "navy"},
+    1: {"planks": ("plank", "wood", "plank_grey", "sand", "plank_red", "plank", "plank_grey"), "beam": "wood", "float": "wood", "hoop": "navy", "rim": "wood", "post": "wood", "rope": "plank"},
+    10: {"planks": ("wood", "plank", "plank_red", "wood", "plank_grey", "plank", "wood"), "beam": "dark", "float": "navy", "hoop": "steel", "rim": "dark", "post": "wood", "rope": "plank"},
+    20: {"planks": ("plank", "wood", "plank_grey", "plank", "plank_red", "wood", "plank"), "beam": "steel", "float": "steel", "hoop": "steel", "rim": "steel", "post": "steel", "rope": "navy"},
 }
 # Making the light version of a deck, shown in the normal view (meeting 4, owner): fewer sides, no hoops, no beams under
 # the planks, the same look from afar. The full deck shows in the close view.
@@ -98,7 +98,9 @@ def deck(age, keep=lambda z, x0, x1: [(x0, x1)]):
         h0, h1 = (-h + 0.04 * (k % 3), h - 0.03 * ((k + 1) % 2)) if age == 1 else (-h, h)
         for x0, x1 in keep(z, h0, h1):
             turn = (0.014, -0.01, 0.0, 0.018)[k % 4] if age == 1 else 0.0
-            out.append(box((x1 - x0, 0.05, w), ((x0 + x1) / 2, DECK - 0.025 - 0.006 * (k % 2), z), look["planks"][k % 4], bevel=0, turn=turn))
+            # Planks of varied tones, in no repeating order (the style pass).
+            tone = look["planks"][(k * 5 + 2 * (k // 3)) % len(look["planks"])]
+            out.append(box((x1 - x0, 0.05, w), ((x0 + x1) / 2, DECK - 0.025 - 0.006 * (k % 2), z), tone, bevel=0, turn=turn))
     # The rim along the six sides: a light steel frame flush with the planks in the steel age, a rail before.
     corners = [(R * math.cos(math.radians(90 + 60 * i)), R * math.sin(math.radians(90 + 60 * i))) for i in range(6)]
     if age == 20:
@@ -233,16 +235,19 @@ def yard(age):
 
 
 def walkway(age):
-    """A walkway of length 1 along z, its middle at the origin, its deck's top at y = 0: the game stretches it."""
+    """
+    A walkway of length 1 along z, its middle at the origin, its deck's top at y = 0: the game stretches it. Light (the
+    style pass's budget): six planks, two rope rails on four thin posts.
+    """
     look = LOOK[age]
     p = []
-    for k in range(8):
-        z = -0.44 + k * (0.88 / 7)
-        p.append(box((0.28, 0.03, 0.07), (0.006 * (k % 2) if age == 1 else 0, -0.015, z), look["planks"][k % 4] if age < 20 else "steel", bevel=0))
+    for k in range(6):
+        z = -0.43 + k * (0.86 / 5)
+        p.append(box((0.28, 0.03, 0.1), (0.006 * (k % 2) if age == 1 else 0, -0.015, z), look["planks"][k % len(look["planks"])] if age < 20 else "steel", bevel=0))
     for x in (-0.15, 0.15):
         p.append(box((0.02, 0.02, 1.0), (x, 0.12, 0), look["rope"] if age < 20 else "navy", bevel=0))
         for z in (-0.47, 0.47):
-            p.append(box((0.03, 0.15, 0.03), (x, 0.06, z), look["post"], bevel=0))
+            p.append(cylinder(0.016, 0.15, (x, 0.06, z), look["post"], sides=3, bevel=0))
     return p
 
 
@@ -257,14 +262,14 @@ def mooring(age):
     end_z, end_y = MOOR_STAKE - A + 0.03, -(0.62 - DECK) + 0.02
     if age == 20:
         # A bollard of light steel.
-        p = [cylinder(0.05, 0.16, (0, 0.08, 0), "steel_light", sides=8, bevel=0), cylinder(0.065, 0.025, (0, 0.17, 0), "steel_light", sides=8, bevel=0)]
+        p = [cylinder(0.05, 0.16, (0, 0.08, 0), "steel_light", sides=6, bevel=0), cylinder(0.065, 0.025, (0, 0.17, 0), "steel_light", sides=6, bevel=0)]
         top = 0.12
     else:
         p = [cylinder(0.04, 0.26, (0, 0.13, 0), look["post"] if age == 1 else "dark", sides=6, bevel=0, top=0.034)]
         if age == 10:
             p.append(band(0.042, 0.03, (0, 0.2, 0), "steel", sides=6))
         top = 0.16
-    p.append(ring(0.04 if age < 20 else 0.05, 0.014, 0.03, (0, top, 0), look["rope"], sides=6))
+    p.append(ring(0.04 if age < 20 else 0.05, 0.014, 0.03, (0, top, 0), look["rope"], sides=5))
     # The rope sags a little between the stake and the cleat on the rim.
     a, b = (0.0, top, 0.03), (0.0, end_y + 0.02, end_z)
     mid = (0.0, (a[1] + b[1]) / 2 - 0.03, (a[2] + b[2]) / 2 + 0.02)
@@ -275,14 +280,17 @@ def mooring(age):
 
 
 def free():
-    """The free slot: buoys at the room's corners, a rope between them on the water (y = 0 is the sea)."""
+    """
+    The free slot: small buoys at the room's corners, a thin rope between them just under the water (y = 0 is the
+    sea), the color of the shallows' floor: from the city's height, no grid reads on the water (style pass, owner).
+    """
     p = []
     corners = [(R * math.cos(math.radians(90 + 60 * i)), R * math.sin(math.radians(90 + 60 * i))) for i in range(6)]
     for x, z in corners:
-        p.append(cylinder(0.05, 0.1, (x * 0.96, 0.02, z * 0.96), "white", sides=8, bevel=0))
-        p.append(cone(0.05, 0.08, (x * 0.96, 0.07, z * 0.96), "navy", sides=8))
+        p.append(cylinder(0.036, 0.08, (x * 0.96, 0.02, z * 0.96), "white", sides=6, bevel=0))
+        p.append(cone(0.036, 0.06, (x * 0.96, 0.06, z * 0.96), "navy", sides=6))
     for (ax, az), (bx, bz) in zip(corners, corners[1:] + corners[:1]):
-        p.append(rod((ax * 0.96, 0.03, az * 0.96), (bx * 0.96, 0.03, bz * 0.96), 0.008, "plank", 4))
+        p.append(rod((ax * 0.96, 0.0, az * 0.96), (bx * 0.96, 0.0, bz * 0.96), 0.003, "seabed", 3))
     return p
 
 

@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { RAFT_BUILD_TIME, RAFT_MAX, RAFT_MAX_HP, RAFT_SLOTS, applyAction, newPlayerState, raftCap, type PlayerState } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
 import { RAFT_TEXT, raftSheetHtml } from "../src/city/raftSheet.js";
-import { RAFT_FILL, RAFT_WIDTH, WALKWAY_GRIP, createCityRafts, raftGeometry, raftSlots, raftVariant, raftWalkways } from "../src/city/rafts.js";
+import { RAFT_FILL, RAFT_WIDTH, WALKWAY_GRIP, cornerMarks, createCityRafts, raftGeometry, raftSlots, raftVariant, raftWalkways } from "../src/city/rafts.js";
 import { hexX, hexZ } from "../src/scene/island.js";
 import { hexReach } from "../src/scene/buildings.js";
 import { SAVE_KEY, openSave, saveGame, type KeyValueStore } from "../src/state/save.js";
@@ -91,6 +91,22 @@ describe("the raft model", () => {
     const { geometry } = raftGeometry(two);
     expect(geometry.getAttribute("position").count).toBe(48);
     expect(geometry.boundingBox!.max.y).toBeGreaterThan(geometry.boundingBox!.max.x);
+  });
+});
+
+describe("a free slot's golden marks (the village, style pass)", () => {
+  it("only at its six corners, inside its room: no line around it that would read as a grid", () => {
+    const room = RAFT_FILL / Math.cos(Math.PI / 6);
+    const pos = cornerMarks(room, 0.16, 0.035).getAttribute("position");
+    expect(pos.count).toBe(6 * 2 * 6);
+    const corners = [0, 1, 2, 3, 4, 5].map((k) => ({ x: Math.cos(Math.PI / 2 + (k * Math.PI) / 3) * room, z: Math.sin(Math.PI / 2 + (k * Math.PI) / 3) * room }));
+    for (let i = 0; i < pos.count; i++) {
+      const [x, y, z] = [pos.getX(i), pos.getY(i), pos.getZ(i)];
+      expect(y).toBe(0);
+      expect(hexReach(x, z)).toBeLessThanOrEqual(RAFT_FILL + 1e-6);
+      // Each point lies near a corner: a stroke covers less than a fifth of a side.
+      expect(Math.min(...corners.map((c) => Math.hypot(x - c.x, z - c.z)))).toBeLessThan(0.2 * room + 0.04);
+    }
   });
 });
 

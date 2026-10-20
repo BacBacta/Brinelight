@@ -623,6 +623,42 @@
    }
   ]
  },
+ "groves-garden": {
+  "kB": 315.1,
+  "triangles": 4912,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 14736,
+    "height": 0.735,
+    "reach": 4.927
+   }
+  ]
+ },
+ "groves-modern": {
+  "kB": 239.0,
+  "triangles": 3526,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 10578,
+    "height": 0.688,
+    "reach": 4.993
+   }
+  ]
+ },
+ "groves-wild": {
+  "kB": 338.6,
+  "triangles": 5168,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 15504,
+    "height": 0.736,
+    "reach": 4.927
+   }
+  ]
+ },
  "harbor-1": {
   "kB": 55.3,
   "triangles": 736,
@@ -2147,7 +2183,7 @@
   ]
  },
  "raft-a-age1": {
-  "kB": 79.5,
+  "kB": 79.3,
   "triangles": 922,
   "levels": [
    {
@@ -2159,7 +2195,7 @@
   ]
  },
  "raft-a-age1-lite": {
-  "kB": 56.6,
+  "kB": 56.0,
   "triangles": 518,
   "levels": [
    {
@@ -2171,7 +2207,7 @@
   ]
  },
  "raft-a-age10": {
-  "kB": 79.8,
+  "kB": 80.9,
   "triangles": 998,
   "levels": [
    {
@@ -2183,7 +2219,7 @@
   ]
  },
  "raft-a-age10-lite": {
-  "kB": 58.6,
+  "kB": 59.9,
   "triangles": 594,
   "levels": [
    {
@@ -2195,7 +2231,7 @@
   ]
  },
  "raft-a-age20": {
-  "kB": 80.5,
+  "kB": 80.7,
   "triangles": 910,
   "levels": [
    {
@@ -2214,12 +2250,12 @@
   ]
  },
  "raft-a-age20-lite": {
-  "kB": 64.8,
-  "triangles": 610,
+  "kB": 64.9,
+  "triangles": 602,
   "levels": [
    {
     "level": 0,
-    "indices": 1830,
+    "indices": 1806,
     "height": 1.21,
     "reach": 0.8
    }
@@ -2233,7 +2269,7 @@
   ]
  },
  "raft-b-age1": {
-  "kB": 79.2,
+  "kB": 80.1,
   "triangles": 912,
   "levels": [
    {
@@ -2245,7 +2281,7 @@
   ]
  },
  "raft-b-age1-lite": {
-  "kB": 55.8,
+  "kB": 55.4,
   "triangles": 508,
   "levels": [
    {
@@ -2257,7 +2293,7 @@
   ]
  },
  "raft-b-age10": {
-  "kB": 79.6,
+  "kB": 80.7,
   "triangles": 988,
   "levels": [
    {
@@ -2269,7 +2305,7 @@
   ]
  },
  "raft-b-age10-lite": {
-  "kB": 57.3,
+  "kB": 58.5,
   "triangles": 584,
   "levels": [
    {
@@ -2281,7 +2317,7 @@
   ]
  },
  "raft-b-age20": {
-  "kB": 81.0,
+  "kB": 81.3,
   "triangles": 900,
   "levels": [
    {
@@ -2300,12 +2336,12 @@
   ]
  },
  "raft-b-age20-lite": {
-  "kB": 65.3,
-  "triangles": 600,
+  "kB": 62.4,
+  "triangles": 592,
   "levels": [
    {
     "level": 0,
-    "indices": 1800,
+    "indices": 1776,
     "height": 0.87,
     "reach": 0.8
    }
@@ -2319,7 +2355,7 @@
   ]
  },
  "raft-c-age1": {
-  "kB": 80.9,
+  "kB": 80.4,
   "triangles": 916,
   "levels": [
    {
@@ -2331,7 +2367,7 @@
   ]
  },
  "raft-c-age1-lite": {
-  "kB": 61.9,
+  "kB": 62.2,
   "triangles": 592,
   "levels": [
    {
@@ -2343,7 +2379,7 @@
   ]
  },
  "raft-c-age10": {
-  "kB": 78.0,
+  "kB": 79.3,
   "triangles": 952,
   "levels": [
    {
@@ -2355,7 +2391,7 @@
   ]
  },
  "raft-c-age10-lite": {
-  "kB": 60.7,
+  "kB": 61.8,
   "triangles": 628,
   "levels": [
    {
@@ -2367,7 +2403,7 @@
   ]
  },
  "raft-c-age20": {
-  "kB": 81.2,
+  "kB": 81.6,
   "triangles": 904,
   "levels": [
    {
@@ -2391,7 +2427,7 @@
   ]
  },
  "raft-c-age20-lite": {
-  "kB": 68.8,
+  "kB": 69.5,
   "triangles": 664,
   "levels": [
    {
@@ -2415,7 +2451,7 @@
   ]
  },
  "raft-damaged-age1": {
-  "kB": 67.8,
+  "kB": 67.6,
   "triangles": 736,
   "levels": [
    {
@@ -2427,7 +2463,7 @@
   ]
  },
  "raft-damaged-age1-lite": {
-  "kB": 52.8,
+  "kB": 52.9,
   "triangles": 484,
   "levels": [
    {
@@ -2439,7 +2475,7 @@
   ]
  },
  "raft-damaged-age10": {
-  "kB": 67.8,
+  "kB": 68.6,
   "triangles": 784,
   "levels": [
    {
@@ -2451,7 +2487,7 @@
   ]
  },
  "raft-damaged-age10-lite": {
-  "kB": 52.9,
+  "kB": 54.2,
   "triangles": 532,
   "levels": [
    {
@@ -2463,7 +2499,7 @@
   ]
  },
  "raft-damaged-age20": {
-  "kB": 64.7,
+  "kB": 65.3,
   "triangles": 628,
   "levels": [
    {
@@ -2475,7 +2511,7 @@
   ]
  },
  "raft-damaged-age20-lite": {
-  "kB": 56.0,
+  "kB": 56.3,
   "triangles": 496,
   "levels": [
    {
@@ -2487,91 +2523,91 @@
   ]
  },
  "raft-free": {
-  "kB": 35.2,
-  "triangles": 324,
+  "kB": 28.0,
+  "triangles": 228,
   "levels": [
    {
     "level": 0,
-    "indices": 972,
-    "height": 0.15,
-    "reach": 0.818
+    "indices": 684,
+    "height": 0.12,
+    "reach": 0.799
    }
   ]
  },
  "raft-moor-age1": {
-  "kB": 21.5,
-  "triangles": 104,
+  "kB": 20.8,
+  "triangles": 96,
   "levels": [
    {
     "level": 0,
-    "indices": 312,
+    "indices": 288,
     "height": 0.26,
     "reach": 0.232
    }
   ]
  },
  "raft-moor-age10": {
-  "kB": 19.5,
-  "triangles": 116,
+  "kB": 19.3,
+  "triangles": 108,
   "levels": [
    {
     "level": 0,
-    "indices": 348,
+    "indices": 324,
     "height": 0.26,
     "reach": 0.232
    }
   ]
  },
  "raft-moor-age20": {
-  "kB": 18.0,
-  "triangles": 140,
+  "kB": 18.4,
+  "triangles": 116,
   "levels": [
    {
     "level": 0,
-    "indices": 420,
+    "indices": 348,
     "height": 0.183,
     "reach": 0.232
    }
   ]
  },
  "raft-walk-age1": {
-  "kB": 23.0,
-  "triangles": 168,
+  "kB": 20.4,
+  "triangles": 128,
   "levels": [
    {
     "level": 0,
-    "indices": 504,
+    "indices": 384,
     "height": 0.135,
     "reach": 0.513
    }
   ]
  },
  "raft-walk-age10": {
-  "kB": 22.2,
-  "triangles": 168,
+  "kB": 20.2,
+  "triangles": 128,
   "levels": [
    {
     "level": 0,
-    "indices": 504,
+    "indices": 384,
     "height": 0.135,
     "reach": 0.513
    }
   ]
  },
  "raft-walk-age20": {
-  "kB": 16.8,
-  "triangles": 168,
+  "kB": 14.1,
+  "triangles": 128,
   "levels": [
    {
     "level": 0,
-    "indices": 504,
+    "indices": 384,
     "height": 0.135,
     "reach": 0.513
    }
   ]
  },
  "raft-yard-age1": {
-  "kB": 74.6,
+  "kB": 74.3,
   "triangles": 976,
   "levels": [
    {
@@ -2583,7 +2619,7 @@
   ]
  },
  "raft-yard-age10": {
-  "kB": 74.4,
+  "kB": 75.0,
   "triangles": 1012,
   "levels": [
    {
@@ -2595,7 +2631,7 @@
   ]
  },
  "raft-yard-age20": {
-  "kB": 69.8,
+  "kB": 70.0,
   "triangles": 908,
   "levels": [
    {
@@ -3206,6 +3242,42 @@
     "indices": 1548,
     "height": 1.305,
     "reach": 0.532
+   }
+  ]
+ },
+ "terrain-garden": {
+  "kB": 89.1,
+  "triangles": 3600,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 10800,
+    "height": 0.088,
+    "reach": 5.818
+   }
+  ]
+ },
+ "terrain-modern": {
+  "kB": 90.6,
+  "triangles": 3600,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 10800,
+    "height": 0.088,
+    "reach": 5.818
+   }
+  ]
+ },
+ "terrain-wild": {
+  "kB": 88.3,
+  "triangles": 3600,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 10800,
+    "height": 0.088,
+    "reach": 5.818
    }
   ]
  },

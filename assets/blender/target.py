@@ -321,17 +321,26 @@ def ground(layout, era):
 
 
 # --- The water -------------------------------------------------------------------------------------------------------
-def water(layout):
+def water(layout, direction):
     res, span = 1024, 14.0
     xs = np.linspace(-span, span, res)
     px, pz = np.meshgrid(xs, xs)
     d = -land_depth(px, pz)
+    near_raft = np.full(px.shape, 99.0)
     for r in layout["rafts"]:
-        d = np.minimum(d, hex_reach(px - r["x"], pz - r["z"]) - 0.8)
-    t1 = np.clip(d / 1.2, 0, 1)
+        near_raft = np.minimum(near_raft, hex_reach(px - r["x"], pz - r["z"]) - 0.8)
+    d = np.minimum(d, near_raft)
+    t1 = np.clip(d / (2.0 if direction == "M" else 1.2), 0, 1) ** (1.6 if direction == "M" else 1)
     t2 = np.clip((d - 1.2) / 5.0, 0, 1)
-    shallow, mid, deep = hexc("#4FDCCB"), hexc("#1C9DC2"), hexc("#0C3D6E")
+    if direction == "M":
+        # B's light turquoise along the coast and the rafts; offshore deeper, never night blue.
+        shallow, mid, deep = hexc("#6FE3D6"), hexc("#2DB3C9"), hexc("#1C76A8")
+    else:
+        shallow, mid, deep = hexc("#4FDCCB"), hexc("#1C9DC2"), hexc("#0C3D6E")
     col = mix(mix(shallow[None, None], mid[None, None], t1), deep[None, None], t2)
+    if direction == "M":
+        # The rafts' contact shade on the water, just off their edge.
+        col = col * (1 - 0.28 * np.clip(1 - near_raft / 0.12, 0, 1) * (near_raft > 0))[..., None]
     foam = np.clip(1 - d / 0.13, 0, 1) * np.clip(0.6 + 0.8 * vnoise(px * 9, pz * 9, 4.0), 0, 1)
     foam = np.where(d < -0.05, 0, foam)
     rgba = np.concatenate([col, foam[..., None]], axis=2)
@@ -401,9 +410,32 @@ def buildings(layout, height_at):
         kit.box((0.36, 0.015, 0.012), (x0 + side * 0.06, 0.05, b["z"] + 0.62), "plank", bevel=0)
 
 
-def village(layout):
-    for r in layout["rafts"]:
-        place(r["model"], r["x"], -0.62, r["z"])
+def weathered(obj, k):
+    """The rafts as the island: contact shadows in their corners (an occlusion term) and each raft's planks a shade apart."""
+    mat = obj.data.materials[0].copy()
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    link = bsdf.inputs["Base Color"].links[0]
+    ao, mul, hsv = nt.nodes.new("ShaderNodeAmbientOcclusion"), nt.nodes.new("ShaderNodeMix"), nt.nodes.new("ShaderNodeHueSaturation")
+    ao.inputs["Distance"].default_value = 0.12
+    mul.data_type = "RGBA"
+    mul.blend_type = "MULTIPLY"
+    mul.inputs["Factor"].default_value = 0.85
+    hsv.inputs["Saturation"].default_value = 1.15
+    hsv.inputs["Value"].default_value = 0.88 + 0.12 * ((k * 37) % 7) / 6
+    nt.links.new(link.from_socket, hsv.inputs["Color"])
+    nt.links.new(hsv.outputs["Color"], mul.inputs["A"])
+    nt.links.new(ao.outputs["AO"], mul.inputs["B"])
+    nt.links.new(mul.outputs["Result"], bsdf.inputs["Base Color"])
+    obj.data = obj.data.copy()
+    obj.data.materials[0] = mat
+
+
+def village(layout, direction):
+    for k, r in enumerate(layout["rafts"]):
+        raft = place(r["model"], r["x"], -0.62, r["z"])
+        if direction == "M" and raft:
+            weathered(raft, k)
         if r["building"]:
             place(r["building"], r["x"], -0.25, r["z"])
     for w in layout["walkways"]:
@@ -421,7 +453,8 @@ def free_slot(x, z):
         kit.sphere(0.045, (cx, WATER + 0.02, cz), "white", subdivisions=1, squash=0.9)
         kit.sphere(0.03, (cx, WATER + 0.06, cz), "brick", subdivisions=1, squash=0.8)
     for (ax, az), (bx, bz) in zip(corners, corners[1:] + corners[:1]):
-        kit.rod((ax, WATER + 0.005, az), (bx, WATER + 0.005, bz), 0.0035, "cream", 4)
+        # Barely there: a thin rope the color of the shallows, lying on the water.
+        kit.rod((ax, WATER + 0.001, az), (bx, WATER + 0.001, bz), 0.0012, "seabed", 3)
 
 
 SHIRTS = ["#C9A77A", "#5E9E8C", "#B9674A", "#8E979C", "#E0B06A", "#6F8FAF", "#A7B58A", "#C8C1B4"]
@@ -504,7 +537,7 @@ def plants(layout, height_at, trails_d, grid):
             if reach < br + room:
                 return False
             # Tall plants never stand just in front of a building (the camera looks from +z).
-            if tall and 0 < z - bz < 1.7 and abs(x - bx) < 0.9:
+            if tall and -0.2 < z - bz < 2.0 and abs(x - bx) < 1.1:
                 return False
         return all(math.dist((x, z), s) > 0.15 for s in spots)
 
@@ -523,10 +556,13 @@ def plants(layout, height_at, trails_d, grid):
             x, z = cx + math.cos(a) * r, cz + math.sin(a) * r
             tall = k < 3
             name = trees[k % len(trees)] if tall else bushes[int(rng.integers(0, len(bushes)))]
-            if not free(x, z, 0.12, tall):
+            # Trees keep a ring of grass and earth around each building; a third of them less than before.
+            if tall and rng.uniform() < 0.33:
+                tall, name = False, bushes[int(rng.integers(0, len(bushes)))]
+            if not free(x, z, 0.32 if tall else 0.2, tall):
                 if tall:
                     name = bushes[0]
-                    if not free(x, z, 0.08, False):
+                    if not free(x, z, 0.2, False):
                         continue
                 else:
                     continue
@@ -548,7 +584,11 @@ def light(direction):
     bg = world.node_tree.nodes["Background"]
     bpy.ops.object.light_add(type="SUN")
     sun = bpy.context.active_object
-    if direction == "A":
+    if direction == "M":
+        # The owner's mix: A's low sun, moved to the left and a little toward the camera so the fronts are lit; golden
+        # lights, bluish shadows (a cool sky fills them), A's contrast.
+        el, az, color, energy, angle, sky, sky_k = 24, 202, (1.0, 0.66, 0.36), 7.0, 2.5, (0.42, 0.56, 0.88, 1), 1.0
+    elif direction == "A":
         # Golden late afternoon from the back left: long soft shadows toward the camera, the sea glittering beyond.
         el, az, color, energy, angle, sky, sky_k = 27, 145, (1.0, 0.78, 0.55), 6.0, 2.5, (0.62, 0.68, 0.82, 1), 1.0
     else:
@@ -586,9 +626,9 @@ def main(city, direction, out, samples=64):
     kit.reset(style=False)
     era = STAGE_ERA[max(s for s in STAGE_ERA if s <= layout["lighthouse"])]
     height_at, trails_d, grid = ground(layout, era)
-    water(layout)
+    water(layout, direction)
     buildings(layout, height_at)
-    village(layout)
+    village(layout, direction)
     people(layout, height_at)
     plants(layout, height_at, trails_d, grid)
     light(direction)
@@ -599,7 +639,7 @@ def main(city, direction, out, samples=64):
     scene.cycles.samples = samples
     scene.cycles.use_denoising = True
     scene.view_settings.view_transform = "AgX"
-    for look in (("AgX - Punchy", "AgX - Medium High Contrast") if direction == "A" else ("AgX - Base Contrast",)):
+    for look in (("AgX - Punchy", "AgX - Medium High Contrast") if direction in ("A", "M") else ("AgX - Base Contrast",)):
         try:
             scene.view_settings.look = look
             break

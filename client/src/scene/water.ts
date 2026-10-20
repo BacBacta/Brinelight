@@ -17,6 +17,11 @@ export type WaterOptions = {
   sky: readonly [string, string, string];
   /** The most subdivisions of its grid, whatever the quality step (the city's water with ?blender, week 8, meeting 4). */
   maxSegments?: number;
+  /**
+   * The shallows' colors along the shore and around the rafts (the city's water with ?blender, the style pass): at the
+   * shore, and a meter out; past two meters, the water's own.
+   */
+  shallows?: readonly [shore: string, out: string];
   /** A ripple that laps against the shore and the rafts, coming and going (the city's water with ?blender, meeting 4). */
   lapping?: boolean;
 };
@@ -64,6 +69,9 @@ export function createWater(opts: WaterOptions): Water {
     uFoamColor: { value: new THREE.Color("#FFF6E6").multiplyScalar(1.05) },
     uLead: { value: 0 },
     uLeadColor: { value: new THREE.Color("#6A7382") },
+    uShallows: { value: opts.shallows ? 1 : 0 },
+    uShallow: { value: new THREE.Color(opts.shallows?.[0] ?? opts.near) },
+    uShallowOut: { value: new THREE.Color(opts.shallows?.[1] ?? opts.near) },
   };
   const ENV = 0.55;
   const material = new THREE.MeshStandardMaterial({ color: opts.far, roughness: 0.12, metalness: 0.05, envMapIntensity: ENV });
@@ -78,8 +86,8 @@ export function createWater(opts: WaterOptions): Water {
         .replace("#include <project_vertex>", "#include <project_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.)).xyz;");
     sh.fragmentShader =
       [
-        "uniform float uT, uRipples, uFoam, uFoamMoves, uLead, uLap;",
-        "uniform vec3 uNear, uFar, uSkyTint, uFoamColor, uShoreBox, uLeadColor;",
+        "uniform float uT, uRipples, uFoam, uFoamMoves, uLead, uLap, uShallows;",
+        "uniform vec3 uNear, uFar, uSkyTint, uFoamColor, uShoreBox, uLeadColor, uShallow, uShallowOut;",
         "uniform vec2 uRadii;",
         "uniform sampler2D uShore;",
         "varying vec3 vWPos;",
@@ -87,10 +95,19 @@ export function createWater(opts: WaterOptions): Water {
       ].join("\n") +
       "\n" +
       sh.fragmentShader
-        // Turquoise near the center, navy far away.
+        // Turquoise near the center, navy far away; with shallows, light turquoise along the shore and the rafts, a
+        // little darker right against them (their shade on the water).
         .replace(
           "vec4 diffuseColor = vec4( diffuse, opacity );",
-          "vec4 diffuseColor = vec4( mix(mix(uNear, uFar, smoothstep(uRadii.x, uRadii.y, length(vWPos.xz))), uLeadColor, uLead * .75), opacity );",
+          `vec3 water = mix(uNear, uFar, smoothstep(uRadii.x, uRadii.y, length(vWPos.xz)));
+if (uShallows > 0. && uFoam > 0.) {
+  vec2 suv = (vWPos.xz - uShoreBox.xy) / uShoreBox.z;
+  float sd = (suv.x > 0. && suv.y > 0. && suv.x < 1. && suv.y < 1.) ? texture2D(uShore, suv).r * SHORE_REACH : SHORE_REACH;
+  vec3 shallow = mix(uShallow, uShallowOut, smoothstep(0.05, 1., sd));
+  water = mix(shallow, water, smoothstep(.6, SHORE_REACH, sd));
+  water *= 1. - .22 * (1. - smoothstep(0., .14, sd));
+}
+vec4 diffuseColor = vec4( mix(water, uLeadColor, uLead * .75), opacity );`,
         )
         // Small ripples: a few crossing sines tilt the normal, pixel by pixel.
         .replace(

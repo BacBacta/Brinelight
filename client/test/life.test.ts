@@ -10,17 +10,17 @@ import { BUILDING_IDS, RAFT_SLOTS, newPlayerState, type BuildingId } from "@brin
 import type { PlayerState } from "../src/state/index.js";
 import { CITY_MANIFEST } from "../src/scene/cityLook.js";
 import { hexX, hexZ } from "../src/scene/island.js";
-import { PLOT_ROOM } from "../src/scene/buildings.js";
 import { ERA_PLOTS } from "../src/city/plots.js";
-import { STAGES, stageName } from "../src/city/staged.js";
+import { STAGES, buildingScale, shownShape, stageName } from "../src/city/staged.js";
 import { BODY, TOOLS, partOf } from "../src/city/life/body.js";
-import { FRONT, PATH_Y, PEOPLE_MAX, cast, pathSides, pathWay, peopleShown } from "../src/city/life/cast.js";
-import { placeOn } from "../src/city/life/people.js";
-import { LOOK_PLANTS, freePlots, plantLook, plantsFor } from "../src/city/life/plants.js";
+import { PEOPLE_MAX, cast, peopleShown, trailWay, trails } from "../src/city/life/cast.js";
+import { PERSON_SCALE, placeOn } from "../src/city/life/people.js";
+import { plantLook, plantsFor } from "../src/city/life/plants.js";
 import { beachSpots, beastsAt } from "../src/city/life/creatures.js";
 import { LAUNDRY, sources } from "../src/city/life/details.js";
 import { untappable } from "../src/city/life/index.js";
 import SPOTS from "../src/city/life/spots.json";
+import LAND from "../src/city/life/land.json";
 import { readGlb } from "./glb.js";
 
 const glb = (name: string) => {
@@ -39,6 +39,8 @@ const points = (name: string) => {
   });
   return out;
 };
+/** How far from a plot's middle the island's land always reaches (assets/blender/land.py): the life stands within it. */
+const ON_LAND = 1.04;
 const hexReach = (x: number, z: number) => Math.max(Math.abs(x), Math.abs(x / 2 + z * 0.866), Math.abs(-x / 2 + z * 0.866));
 const plot = (id: BuildingId) => ({ x: hexX(...ERA_PLOTS[id]), z: hexZ(ERA_PLOTS[id][1]) });
 
@@ -72,32 +74,44 @@ describe("the survivors shown", () => {
     expect(cast({ ...s, survivors: 8 }).map((f) => f.role)).toEqual(["trade", "trade", "trade", "trade", "trade"]);
   });
 
-  it("walk the paths between the plots, on their right, inside its curbs, and never through a corner (the Modern era's lamps)", () => {
-    const sides = pathSides();
-    // The paths: the 42 sides two plots of rings 0 to 2 share.
-    expect(sides).toHaveLength(42);
-    const near = (x: number, z: number) =>
-      Math.min(
-        ...sides.map(([a, b]) => {
-          const [dx, dz] = [b[0] - a[0], b[1] - a[1]];
-          const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz)));
-          return Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t);
-        }),
-      );
-    const corners = sides.flat();
+  it("walk the island's worn trails, on the ground, a little to the right of their middle", () => {
+    const lines = trails();
+    expect(lines.length).toBeGreaterThan(5);
+    /** How far a point is from the nearest trail, and the ground's height there. */
+    const near = (x: number, z: number) => {
+      let best = { d: Infinity, y: 0 };
+      for (const line of lines)
+        for (let i = 0; i + 1 < line.length; i++) {
+          const [[ax, ay, az], [bx, by, bz]] = [line[i]!, line[i + 1]!];
+          const [dx, dz] = [bx - ax, bz - az];
+          const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1)));
+          const d = Math.hypot(x - ax - dx * t, z - az - dz * t);
+          if (d < best.d) best = { d, y: ay + (by - ay) * t };
+        }
+      return best;
+    };
     for (let seed = 1; seed < 30; seed++) {
-      const way = pathWay(seed);
+      const way = trailWay(seed);
       for (let t = 0; t < 60; t += 0.7) {
         const { at } = placeOn({ role: "passer", anim: "walk", tool: null, way, turn: 0, speed: 0.16, phase: seed }, t);
-        expect(at.y).toBe(PATH_Y);
-        // The path is 0.16 wide, its curbs (the Modern era's) 0.08 off its middle.
-        expect(near(at.x, at.z), `${seed} at ${t}`).toBeLessThan(0.075);
-        expect(Math.min(...corners.map(([x, z]) => Math.hypot(at.x - x, at.z - z))), `${seed} at ${t}`).toBeGreaterThan(0.05);
+        const { d, y } = near(at.x, at.z);
+        expect(d, `${seed} at ${t}`).toBeLessThan(0.03);
+        expect(Math.abs(at.y - y), `${seed} at ${t}`).toBeLessThan(0.03);
       }
     }
   });
 
-  it("stand off the buildings' models, at every stage; the fisher on the Fishery's jetty", () => {
+  it("find the trails at every building's door: each building's front is on one, the Lighthouse's too", () => {
+    const ends = trails().flatMap((line) => line.map(([x, , z]) => ({ x, z })));
+    for (const id of BUILDING_IDS) {
+      const front = { x: plot(id).x, z: plot(id).z + 0.72 };
+      expect(Math.min(...ends.map((p) => Math.hypot(p.x - front.x, p.z - front.z))), id).toBeLessThan(0.1);
+    }
+    // The island the trails and the groves were laid on is the game's.
+    expect((LAND as unknown as { plots: Record<string, number[]> }).plots).toEqual(Object.fromEntries(Object.entries(ERA_PLOTS).map(([k, v]) => [k, [...v]])));
+  });
+
+  it("stand off the buildings' models (drawn ×1.15), at every stage; the fisher on the Fishery's jetty", () => {
     const ray = new THREE.Raycaster();
     for (const stage of STAGES) {
       const s = city(stage, { survivors: 200, queue: BUILDING_IDS.map((id) => ({ id, left: 1, duration: 2 })) as PlayerState["queue"] });
@@ -105,6 +119,9 @@ describe("the survivors shown", () => {
         const id = BUILDING_IDS.find((b) => Math.hypot(plot(b).x - f.way[0]!.x, plot(b).z - f.way[0]!.z) < 1)!;
         const c = plot(id);
         const model = glb(stageName(id, stage));
+        model.scale.setScalar(buildingScale(id));
+        model.updateMatrixWorld(true);
+        const k = buildingScale(id);
         for (const at of f.way) {
           const [x, z] = [at.x - c.x, at.z - c.z];
           if (f.tool === "rod") {
@@ -112,9 +129,9 @@ describe("the survivors shown", () => {
             expect(ray.intersectObject(model, true)[0]!.point.y, `fisher at ${stage}`).toBeCloseTo(at.y, 1);
             continue;
           }
-          const close = points(stageName(id, stage)).filter((v) => v.y > 0.03 && Math.hypot(v.x - x, v.z - z) < 0.045);
+          const close = points(stageName(id, stage)).filter((v) => v.y * k > 0.03 && Math.hypot(v.x * k - x, v.z * k - z) < 0.03 * PERSON_SCALE);
           expect(close.length, `${f.tool} by ${id}-${stage} at ${x.toFixed(2)},${z.toFixed(2)}`).toBe(0);
-          expect(hexReach(x, z), `${f.tool} by ${id}`).toBeLessThan(PLOT_ROOM);
+          expect(hexReach(x, z), `${f.tool} by ${id}`).toBeLessThan(ON_LAND);
         }
       }
     }
@@ -145,22 +162,35 @@ describe("the plants", () => {
     expect([1, 9, 10, 24, 25, 30].map(plantLook)).toEqual(["wild", "wild", "garden", "garden", "modern", "modern"]);
   });
 
-  it("keep the trees on the free plots, the low plants off the buildings' floors, all inside their plot; every model served", () => {
-    const free = freePlots().map(([q, r]) => ({ x: hexX(q, r), z: hexZ(r) }));
-    expect(free).toHaveLength(10);
+  it("keep grass and earth around each building, no tree in front of one, none on a trail; every model served", () => {
+    const lines = trails();
+    const offTrail = (x: number, z: number) =>
+      Math.min(
+        ...lines.flatMap((line) =>
+          line.slice(1).map(([bx, , bz], i) => {
+            const [ax, , az] = line[i]!;
+            const [dx, dz] = [bx - ax, bz - az];
+            const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1)));
+            return Math.hypot(x - ax - dx * t, z - az - dz * t);
+          }),
+        ),
+      );
     for (const lighthouse of [5, 15, 30]) {
-      const look = plantLook(lighthouse);
       const plants = plantsFor(lighthouse);
+      expect(plants.length).toBeGreaterThan(60);
+      expect(CITY_MANIFEST[`groves-${plantLook(lighthouse)}`], "groves").toBeDefined();
       for (const p of plants) {
-        expect(LOOK_PLANTS[look].map((n) => `life-plant-${n}`)).toContain(p.name);
         expect(CITY_MANIFEST[p.name], p.name).toBeDefined();
-        const home = [...free, ...BUILDING_IDS.map(plot)].reduce((a, b) => (Math.hypot(b.x - p.x, b.z - p.z) < Math.hypot(a.x - p.x, a.z - p.z) ? b : a));
-        const [x, z] = [p.x - home.x, p.z - home.z];
-        expect(hexReach(x, z), p.name).toBeLessThan(PLOT_ROOM);
-        if (!free.includes(home)) {
-          expect(p.name.endsWith("tree"), `${p.name} on a building's plot`).toBe(false);
-          expect(Math.abs(x) > 0.7 || Math.abs(z) > 0.6, `${p.name} on a floor`).toBe(true);
+        const tree = p.name.endsWith("tree");
+        for (const id of BUILDING_IDS) {
+          const [x, z] = [p.x - plot(id).x, p.z - plot(id).z];
+          // Its ring: 0.32 for a tree, 0.2 for a low plant, beyond the building at its widest of every era.
+          const widest = Math.max(...STAGES.map((st) => shownShape(id, st).reach));
+          expect(hexReach(x, z), `${p.name} by ${id}`).toBeGreaterThan(widest + (tree ? 0.32 : 0.2) - 1e-3);
+          // Nothing tall between a building and the camera (it looks from +z).
+          if (tree) expect(z > -0.2 && z < 2 && Math.abs(x) < 1.1, `${p.name} in front of ${id}`).toBe(false);
         }
+        expect(offTrail(p.x, p.z), p.name).toBeGreaterThan(0.12 - 1e-3);
         expect(Math.hypot(p.x - LAUNDRY.x, p.z - LAUNDRY.z)).toBeGreaterThan(0.38);
       }
       expect(plantsFor(lighthouse)).toEqual(plants);
@@ -180,14 +210,16 @@ describe("the animals", () => {
       for (const b of all.filter((x) => x.kind === "gull" && !x.resting)) expect(b.y).toBeGreaterThan(0.9);
       const hens = all.filter((b) => b.kind === "hen");
       expect(hens).toHaveLength(4);
-      for (const h of hens) expect(Math.hypot(h.x - plot("shelters").x, h.z - plot("shelters").z)).toBeLessThan(PLOT_ROOM);
+      for (const h of hens) expect(Math.hypot(h.x - plot("shelters").x, h.z - plot("shelters").z)).toBeLessThan(ON_LAND);
     }
     expect(landed).toBe(true);
-    // The crabs keep to the island's edge (island.py: its meadow reaches 1.1 from a plot's center).
+    // The crabs keep to the beaches the camera sees, off every building's plot, just above the sea (-0.42).
+    expect(beachSpots()).toHaveLength(6);
     for (const b of beachSpots()) {
-      const d = Math.min(...[...freePlots().map(([q, r]) => ({ x: hexX(q, r), z: hexZ(r) })), ...BUILDING_IDS.map(plot)].map((p) => hexReach(b.x - p.x, b.z - p.z)));
-      expect(d).toBeGreaterThan(1.0);
-      expect(d).toBeLessThan(1.1);
+      expect(Math.min(...BUILDING_IDS.map((id) => hexReach(b.x - plot(id).x, b.z - plot(id).z)))).toBeGreaterThan(1.0);
+      expect(b.z).toBeGreaterThan(0);
+      expect(b.y).toBeGreaterThan(-0.42);
+      expect(b.y).toBeLessThan(0);
     }
   });
 

@@ -23,6 +23,9 @@ PALETTE = {
     "cream": "#FFF4DA",
     "wood": "#8C6B4A",
     "plank": "#C9A77A",
+    # The rafts' planks after the style pass (owner): weathered grey and reddish ones among the others.
+    "plank_grey": "#A89C86",
+    "plank_red": "#B27E58",
     "copper": "#5E9E8C",
     "brick": "#E2572F",
     "stone": "#B9B2A6",
@@ -69,6 +72,8 @@ _style = {"on": False, "foot": (0.0, 0.3)}
 FINISH = {
     "wood": ("wood", 0.7),
     "plank": ("wood", 0.6),
+    "plank_grey": ("wood", 0.6),
+    "plank_red": ("wood", 0.6),
     "stone": ("stone", 0.7),
     "stone_dark": ("stone", 0.8),
     "brass": ("metal", 1.0),

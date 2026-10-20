@@ -37,8 +37,32 @@ export const groundName = (lighthouse: number): string => `ground-${Math.min(25,
 /** The island's ground is made for each era: shown with the look made in Blender. */
 export const hasGround = (): boolean => STAGES.every((s) => s === 30 || CITY_MANIFEST[`ground-${s}`]);
 
+/**
+ * The island after the style pass (owner, after meeting 4; assets/blender/terrain.py): one continuous land in the
+ * Lighthouse's look (wild to 9, gardens to 24, the Modern era's from 25), its ground painted on it. When it is made, it
+ * replaces the grid's island and the eras' grounds.
+ */
+export const terrainName = (lighthouse: number): string => `terrain-${lighthouse >= 25 ? "modern" : lighthouse >= 10 ? "garden" : "wild"}`;
+export const hasTerrain = (): boolean => ["wild", "garden", "modern"].every((l) => CITY_MANIFEST[`terrain-${l}`]);
+
+/**
+ * The buildings remade stand a little larger on their plots after the style pass (owner, after meeting 4), on the
+ * same places: all but the Lighthouse, already the tallest, and the Barracks and the Observatory, side by side: larger,
+ * the Workshop era's Barracks would hide half of a young Observatory behind them (client/test/visible.test.ts, 70 %).
+ */
+export const BUILDING_SCALE = 1.15;
+const KEEP_SIZE: readonly BuildingId[] = ["lighthouse", "barracks", "observatory"];
+export const buildingScale = (id: BuildingId): number => (KEEP_SIZE.includes(id) ? 1 : BUILDING_SCALE);
+
+/** A building's shape at a level as shown: its model's, at its size on its plot. */
+export function shownShape(id: BuildingId, level: number): { indices: number; height: number; reach: number } {
+  const shape = levelShape(id, level);
+  const k = buildingScale(id);
+  return { indices: shape.indices, height: shape.height * k, reach: shape.reach * k };
+}
+
 /** The tallest a building stands at any level: its height before its model is there. */
-export const tallestHeight = (id: BuildingId): number => Math.max(...STAGES.flatMap((s) => CITY_MANIFEST[`${id}-${s}`]!.levels.map((l) => l.height)));
+export const tallestHeight = (id: BuildingId): number => buildingScale(id) * Math.max(...STAGES.flatMap((s) => CITY_MANIFEST[`${id}-${s}`]!.levels.map((l) => l.height)));
 
 /** The parts of the building sites made in Blender. */
 export const SITE_PARTS = ["site-frame", "site-mast", "site-arm", "site-crate"] as const;
@@ -50,7 +74,8 @@ export const SITE_PARTS = ["site-frame", "site-mast", "site-arm", "site-crate"] 
  */
 export function shownModels(state: { buildings: Record<BuildingId, number>; queue: readonly { id: string }[] }): string[] {
   const out = BUILDING_IDS.filter((id) => isStaged(id) && state.buildings[id] > 0).flatMap((id) => [stageName(id, state.buildings[id]), extraName(id, state.buildings[id]) ?? []].flat());
-  if (hasGround()) out.push(groundName(state.buildings.lighthouse));
+  // The terrain, when made, is fetched with the island (scene/index.ts); the eras' grounds are not.
+  if (hasGround() && !hasTerrain()) out.push(groundName(state.buildings.lighthouse));
   if (isStaged("lighthouse") && radarAt(state.buildings.lighthouse)) out.push("lighthouse-radar");
   const sites = state.queue.some((j) => (BUILDING_IDS as readonly string[]).includes(j.id)) || BUILDING_IDS.some((id) => state.buildings[id] === 0);
   return sites ? [...out, ...SITE_PARTS] : out;

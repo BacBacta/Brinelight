@@ -11,7 +11,7 @@ import { PLOT_ROOM, hexReach } from "../src/scene/buildings.js";
 import { hexX, hexZ } from "../src/scene/island.js";
 import { RAFT_FILL } from "../src/scene/coast.js";
 import { PIER_SLOTS } from "../src/scene/framing.js";
-import { SITE_PARTS, STAGES, extraName, groundName, hasGround, isStaged, levelShape, radarAt, shownModels, stageName, stageOf } from "../src/city/staged.js";
+import { SITE_PARTS, STAGES, extraName, groundName, hasGround, isStaged, levelShape, radarAt, shownModels, stageName, stageOf, terrainName } from "../src/city/staged.js";
 import { ERA_PLOTS } from "../src/city/plots.js";
 import { readGlb } from "./glb.js";
 
@@ -90,12 +90,35 @@ describe("the buildings remade in Blender", () => {
   it("a city fetches only the models of its buildings' current era: for a new player, then at the Lighthouse 30", () => {
     const levels = (l: number) => Object.fromEntries(BUILDING_IDS.map((id) => [id, l])) as Record<BuildingId, number>;
     const fresh = { ...levels(0), lighthouse: 1 };
-    expect(shownModels({ buildings: fresh, queue: [] })).toEqual([...STAGED.filter((id) => id === "lighthouse").map((id) => `${id}-1`), "ground-1", ...SITE_PARTS]);
+    // The eras' grounds gave way to the island's terrain in three looks (the style pass), fetched with the island.
+    expect(shownModels({ buildings: fresh, queue: [] })).toEqual([...STAGED.filter((id) => id === "lighthouse").map((id) => `${id}-1`), ...SITE_PARTS]);
+    expect([1, 9, 10, 24, 25, 30].map(terrainName)).toEqual(["terrain-wild", "terrain-wild", "terrain-garden", "terrain-garden", "terrain-modern", "terrain-modern"]);
+    for (const look of ["wild", "garden", "modern"]) {
+      expect(CITY_MANIFEST[`terrain-${look}`]!.triangles).toBeLessThanOrEqual(3600);
+      // Its land faces the sky: lit by the sun, not only by the light from below.
+      const { scenes } = readGlb(new URL(`../public/city/terrain-${look}.glb`, import.meta.url).pathname);
+      let [up, all] = [0, 0];
+      Object.values(scenes)[0]!.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        const pos = mesh.geometry.getAttribute("position");
+        const index = mesh.geometry.index!;
+        const [a, b, c] = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+        for (let i = 0; i < index.count; i += 3) {
+          a.fromBufferAttribute(pos, index.getX(i));
+          b.fromBufferAttribute(pos, index.getX(i + 1));
+          c.fromBufferAttribute(pos, index.getX(i + 2));
+          all++;
+          if (b.sub(a).cross(c.sub(a)).y > 0) up++;
+        }
+      });
+      expect(up / all, look).toBeGreaterThan(0.95);
+    }
     const stagesAt = (l: number) => STAGED.flatMap((id) => [stageName(id, l), extraName(id, l) ?? []].flat());
-    expect(shownModels({ buildings: levels(30), queue: [] })).toEqual([...stagesAt(30), "ground-25", "lighthouse-radar"]);
-    expect(shownModels({ buildings: levels(17), queue: [] })).toEqual([...stagesAt(17), "ground-15"]);
+    expect(shownModels({ buildings: levels(30), queue: [] })).toEqual([...stagesAt(30), "lighthouse-radar"]);
+    expect(shownModels({ buildings: levels(17), queue: [] })).toEqual([...stagesAt(17)]);
     // An upgrade at work: its building site, never the next era (fetched in the background once the city shows).
-    expect(shownModels({ buildings: levels(19), queue: [{ id: "refinery" }] })).toEqual([...stagesAt(19), "ground-15", ...SITE_PARTS]);
+    expect(shownModels({ buildings: levels(19), queue: [{ id: "refinery" }] })).toEqual([...stagesAt(19), ...SITE_PARTS]);
   });
 
   it("the Modern Lighthouse's radar turns on its mast, within its plot and under its top; no other era has one", () => {

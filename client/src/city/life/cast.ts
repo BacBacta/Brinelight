@@ -6,16 +6,17 @@
  * where its building works (the fisher on the Fishery's jetty, the woodcutter at the Lumberyard, the barrel carrier at
  * the Refinery, the gardener at a Kelp Greenhouse, the stoker at a Smokehouse, the lookout at a Watchtower's foot, these
  * three on the frontmost raft with their building), then two builders at each building site (and at the shipyard's
- * work), then passers-by on the paths between the plots and on the walkways between the rafts.
+ * work), then passers-by on the island's trails and on the walkways between the rafts.
  */
 import { RAFT_SLOTS, type BuildingId } from "@brinelight/shared";
 import type { PlayerState } from "../../state/index.js";
 import { hexX, hexZ } from "../../scene/island.js";
 import { ERA_PLOTS } from "../plots.js";
-import { stageOf } from "../staged.js";
+import { BUILDING_SCALE, buildingScale, stageOf } from "../staged.js";
 import { raftSlots, raftWalkways, slotPosition } from "../rafts.js";
 import { VILLAGE_DECK } from "../village.js";
 import type { Anim, Tool } from "./body.js";
+import LAND from "./land.json";
 
 /** The most survivors shown at once, and how many show for a city of `survivors`. */
 export const PEOPLE_MAX = 24;
@@ -33,8 +34,6 @@ export type Figure = { role: "trade" | "builder" | "passer"; anim: Anim; tool: T
 /** The rafts' bottom under the sea (rafts.ts) and the deck's top over it: where a survivor on a raft stands. */
 export const RAFT_BOTTOM = -0.62;
 export const DECK_Y = RAFT_BOTTOM + VILLAGE_DECK;
-/** The paths between the plots are this high over the meadow (assets/blender/ground.py). */
-export const PATH_Y = 0.01;
 /** The floor each era lays under a building (assets/blender/parts.py, FLOOR): the Fishery's jetty stands on it. */
 const FLOOR: Record<number, number> = { 1: 0, 5: 0.16, 10: 0.14, 15: 0.1, 20: 0.1, 25: 0.08, 30: 0.08 };
 
@@ -60,63 +59,28 @@ const onRaft = (key: string, x: number, z: number, turn: number, above = 0) => {
   return { way: [{ x: c.x + x, y: DECK_Y + above, z: c.z + z, raft: key }], turn };
 };
 
-/** The front of a plot, where its builders and some trades stand: off the era's floor (z beyond 0.6), on the meadow. */
-export const FRONT = { x: 0.42, z: 0.74 } as const;
+/** The front of a plot, where its builders and some trades stand: off the era's floor (z beyond 0.6, buildings ×1.15), on the meadow. */
+export const FRONT = { x: 0.42 * BUILDING_SCALE, z: 0.74 * BUILDING_SCALE } as const;
+
+type TrailPoint = [number, number, number];
+const TRAILS = (LAND as unknown as { trails: TrailPoint[][] }).trails;
+
+/** The island's trails (land.json, made by assets/blender/terrain.py): polylines of the game's (x, y, z), y on the ground. */
+export const trails = (): readonly TrailPoint[][] => TRAILS;
 
 /**
- * The paths between the plots: the sides that two plots of rings 0 to 2 share. Each is [corner, corner], in the game's
- * (x, z); a plot's corners point to ±z, 1/cos 30° from its center.
+ * A passer-by's way: one of the island's worn trails, picked by `seed`, walked there and back a little to the right of
+ * its middle (facing along it).
  */
-export function pathSides(): [[number, number], [number, number]][] {
-  const R = 1 / Math.cos(Math.PI / 6);
-  const corner = (cx: number, cz: number, i: number): [number, number] => {
-    const a = ((90 + 60 * i) * Math.PI) / 180;
-    return [Math.round((cx + R * Math.cos(a)) * 1000) / 1000, Math.round((cz + R * Math.sin(a)) * 1000) / 1000];
-  };
-  const seen = new Map<string, { side: [[number, number], [number, number]]; n: number }>();
-  for (let q = -2; q <= 2; q++)
-    for (let r = -2; r <= 2; r++) {
-      if (Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)) > 2) continue;
-      for (let i = 0; i < 6; i++) {
-        const a = corner(hexX(q, r), hexZ(r), i);
-        const b = corner(hexX(q, r), hexZ(r), (i + 1) % 6);
-        const key = [a, b].map((p) => p.join(",")).sort().join("|");
-        const e = seen.get(key) ?? { side: [a, b], n: 0 };
-        e.n++;
-        seen.set(key, e);
-      }
-    }
-  return [...seen.values()].filter((e) => e.n === 2).map((e) => e.side);
-}
-
-/**
- * A passer-by's way on the paths: `steps` sides from a corner picked by `seed`, never straight back, walked on the
- * right of the path and cutting the corners (the Modern era's lamps stand on them). Walked there and back.
- */
-export function pathWay(seed: number, steps = 5): Point[] {
-  const sides = pathSides();
-  const key = (p: [number, number]) => p.join(",");
-  const next = new Map<string, [number, number][]>();
-  for (const [a, b] of sides) {
-    next.set(key(a), [...(next.get(key(a)) ?? []), b]);
-    next.set(key(b), [...(next.get(key(b)) ?? []), a]);
-  }
-  const corners = [...next.keys()].sort();
-  let at = corners[Math.floor(hash(seed) * corners.length)]!.split(",").map(Number) as [number, number];
-  let from: [number, number] | null = null;
-  const way: Point[] = [];
-  for (let s = 0; s < steps; s++) {
-    const options = next.get(key(at))!.filter((p) => !from || key(p) !== key(from));
-    const to = options[Math.floor(hash(seed * 7 + s) * options.length)] ?? next.get(key(at))![0]!;
-    const [dx, dz] = [to[0] - at[0], to[1] - at[1]];
-    const len = Math.hypot(dx, dz);
-    // On the right of the way it walks (facing +z, the right is -x).
-    const [ox, oz] = [(dz / len) * 0.015, (-dx / len) * 0.015];
-    for (const t of [0.12, 0.88]) way.push({ x: at[0] + dx * t + ox, y: PATH_Y, z: at[1] + dz * t + oz, raft: null });
-    from = at;
-    at = to;
-  }
-  return way;
+export function trailWay(seed: number): Point[] {
+  const line = TRAILS[seed % TRAILS.length]!;
+  const side = (seed % 2 ? 1 : -1) * 0.02;
+  return line.map(([x, y, z], i) => {
+    const [ax, , az] = line[Math.max(0, i - 1)]!;
+    const [bx, , bz] = line[Math.min(line.length - 1, i + 1)]!;
+    const len = Math.hypot(bx - ax, bz - az) || 1;
+    return { x: x + ((bz - az) / len) * side, y, z: z - ((bx - ax) / len) * side, raft: null };
+  });
 }
 
 /** A passer-by's way across a walkway: from the deck of a raft of ring 4 to the deck of the raft of ring 3 it joins. */
@@ -149,8 +113,10 @@ function trades(state: PlayerState): Omit<Figure, "phase" | "role">[] {
   const out: Omit<Figure, "phase" | "role">[] = [];
   if (built(state, "fishery")) {
     // On the end of the Fishery's jetty (fishery.py: jetty), its rod over the sea to the east.
-    const y = FLOOR[stageOf(state.buildings.fishery)]! + 0.08;
-    out.push({ anim: "fish", tool: "rod", speed: 0, ...onPlot("fishery", 0.84, -0.04, y, Math.PI / 2) });
+    // The jetty is the building's, drawn ×1.15 (staged.ts).
+    const k = buildingScale("fishery");
+    const y = (FLOOR[stageOf(state.buildings.fishery)]! + 0.08) * k;
+    out.push({ anim: "fish", tool: "rod", speed: 0, ...onPlot("fishery", 0.84 * k, -0.04 * k, y, Math.PI / 2) });
   }
   if (built(state, "lumberyard")) out.push({ anim: "chop", tool: "axe", speed: 0, ...onPlot("lumberyard", -FRONT.x, FRONT.z, 0, (3 * Math.PI) / 4) });
   if (built(state, "refinery")) {
@@ -201,7 +167,7 @@ export function cast(state: PlayerState): Figure[] {
   for (let i = 0; out.length < n; i++) {
     // One passer-by in three on the walkways, while there are some.
     const across = i % 3 === 2 ? walkwayWay(state, Math.floor(i / 3)) : null;
-    add("passer", { anim: "walk", tool: null, speed: 0.16, turn: 0, way: across ?? pathWay(i + 1) });
+    add("passer", { anim: "walk", tool: null, speed: 0.16, turn: 0, way: across ?? trailWay(i + 1) });
   }
   return out;
 }

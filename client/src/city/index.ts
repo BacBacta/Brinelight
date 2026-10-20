@@ -12,7 +12,7 @@ import { createVillage, hasVillage } from "./village.js";
 import { createLife } from "./life/index.js";
 import { createSheet } from "./sheet.js";
 import { blenderLook } from "../scene/cityLook.js";
-import { groundName, hasGround, isStaged, lanternHeight, levelShape, loadStage, radarAt, showLevel, stageName } from "./staged.js";
+import { groundName, hasGround, hasTerrain, terrainName, isStaged, shownShape, lanternHeight, levelShape, loadStage, radarAt, showLevel, stageName } from "./staged.js";
 
 export type City = {
   /** Shows the state: models, labels, queue and open sheet. */
@@ -75,7 +75,7 @@ export function createCity(
   const staged = (id: BuildingId) => blenderLook() && isStaged(id);
   const labels = createLabels(root, scene, (id, levels) =>
     staged(id)
-      ? levelShape(id, Math.max(1, levels[id])).height + LABEL_GAP
+      ? shownShape(id, Math.max(1, levels[id])).height + LABEL_GAP
       : id === "lighthouse"
         ? (models.lighthouse.height + LABEL_GAP) * lighthouseScale(levels.lighthouse)
         : models[id].height + LABEL_GAP,
@@ -84,6 +84,7 @@ export function createCity(
   // The island's ground follows the Lighthouse's era (with the look made in Blender).
   let ground: { name: string; object: THREE.Object3D | null } = { name: "", object: null };
   const showGround = (lighthouse: number) => {
+    if (blenderLook() && hasTerrain()) return scene.useTerrain(terrainName(lighthouse));
     if (!blenderLook() || !hasGround()) return;
     const name = groundName(lighthouse);
     if (name === ground.name) return;

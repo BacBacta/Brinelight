@@ -180,6 +180,12 @@ Level 30 is the Modern era complete: the Modern building with all its details an
 
 **After meeting 4 (owner, 20 October).** The water at 64 subdivisions is adopted. The rest waits: on the S22 (Lighthouse 5, two building sites) the city looks flat and plain, a board game more than an island. A style pass first, in two steps: target images rendered in Blender in two directions of light (`assets/blender/target.py`, the game's layout and camera in `assets/blender/targets/`), the current game beside them; then, once the owner picks one, the same look in the game behind `?blender`, within 66.7 k triangles and about 40 draw calls for the worst city.
 
+**The style pass, step 2 (owner, 20 October: "a mix").** A's warm, low sun, moved to the left and a little behind the camera so the faces turned to it are lit, golden in the lights and slightly blue in the shadows; B's light turquoise along the coasts and the rafts; a deep sea offshore, lighter than A's, no night blue; A's contrast, not B's veil. Retouches: a third fewer trees, grass and earth left around each building, no tree before a building's foot or door; the rafts as the island (occlusion and contact shadows baked, planks of varied tones, things on their decks, foam at their edge); the free slots' ropes all but gone. In the game, behind `?blender`:
+- one island: a terrain in three looks (wild to 9, gardens to 24, Modern from 25) with its trails, beaches, cliffs and baked occlusion, in place of the island and the eras' grounds; its groves in one model per look, swaying in the wind;
+- the buildings 1.15 times larger on the same plots (the Lighthouse, the Barracks and the Observatory keep their size: the 70 % rule), the survivors 1.5 times;
+- the mix's light and water; the free slots without their golden fill, a thin, dim line left over them;
+- at full quality only, a soft glow around the lamps and a color grade (three.js's own modules); quality steps 1 and 2 go without.
+
 ### The order
 
 1. The Refinery in its six eras: its band at levels 1, 5, 10, 15, 20, 25 and 30, in the normal view and the close view. The owner approves it first.

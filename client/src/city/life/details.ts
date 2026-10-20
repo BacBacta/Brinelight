@@ -2,14 +2,14 @@
  * The island's small living details (week 8, meeting 4): the chimneys' smoke, the lanterns that light up as the light
  * falls (the Mist), and washing drying by the Shelters. Where the chimneys and lanterns are on each model is read from
  * the scripts that make them (assets/blender/spots.py, spots.json). The smoke and the lanterns are points (one draw call
- * each, no triangle); with reduced motion the smoke stands still and the washing hangs, the lanterns still glow.
+ * for both, no triangle); with reduced motion the smoke stands still and the washing hangs, the lanterns still glow.
  */
 import * as THREE from "three";
 import { BUILDING_IDS } from "@brinelight/shared";
 import type { PlayerState } from "../../state/index.js";
 import { bakeModel } from "../../scene/models.js";
 import { hexX, hexZ } from "../../scene/island.js";
-import { loadStage, stageName, stageOf } from "../staged.js";
+import { buildingScale, loadStage, stageName, stageOf } from "../staged.js";
 import { ERA_PLOTS } from "../plots.js";
 import { slotPosition } from "../rafts.js";
 import { raftBuildingName, villageAge } from "../village.js";
@@ -25,14 +25,15 @@ export type Source = { x: number; y: number; z: number; raft: string | null };
 /** The chimneys that smoke and the lanterns that light in a city: its buildings' at their level, its rafts' buildings'. */
 export function sources(state: PlayerState): { smoke: Source[]; lamps: Source[] } {
   const out = { smoke: [] as Source[], lamps: [] as Source[] };
-  const put = (entry: { smoke?: Spot[]; lamps?: Spot[] } | undefined, level: number, at: { x: number; y: number; z: number }, raft: string | null) => {
-    for (const kind of ["smoke", "lamps"] as const) for (const [x, y, z, from] of entry?.[kind] ?? []) if (from <= level) out[kind].push({ x: at.x + x, y: at.y + y, z: at.z + z, raft });
+  const put = (entry: { smoke?: Spot[]; lamps?: Spot[] } | undefined, level: number, at: { x: number; y: number; z: number }, raft: string | null, k = 1) => {
+    for (const kind of ["smoke", "lamps"] as const) for (const [x, y, z, from] of entry?.[kind] ?? []) if (from <= level) out[kind].push({ x: at.x + x * k, y: at.y + y * k, z: at.z + z * k, raft });
   };
   for (const id of BUILDING_IDS) {
     const level = state.buildings[id];
     if (level < 1) continue;
     const [q, r] = ERA_PLOTS[id];
-    put(spots[stageName(id, level)], level, { x: hexX(q, r), y: 0, z: hexZ(r) }, null);
+    // The buildings are drawn larger than made (staged.ts), their chimneys and lanterns with them.
+    put(spots[stageName(id, level)], level, { x: hexX(q, r), y: 0, z: hexZ(r) }, null, buildingScale(id));
   }
   for (const [key, raft] of Object.entries(state.rafts)) {
     if (!raft.building || raft.level < 1) continue;
@@ -51,42 +52,42 @@ const PUFFS = 6;
 const POINTS_VERTEX = /* glsl */ `
 attribute float aSize;
 attribute float aAlpha;
+attribute float aGlow;
 varying float vAlpha;
+varying float vGlow;
 uniform float uScale;
 void main() {
   vAlpha = aAlpha;
+  vGlow = aGlow;
   vec4 mv = modelViewMatrix * vec4(position, 1.);
   gl_PointSize = aSize * uScale / -mv.z;
   gl_Position = projectionMatrix * mv;
 }`;
 
-const SMOKE_FRAGMENT = /* glsl */ `
+/** A puff of smoke (aGlow 0) or a lantern's glow (aGlow 1): both in one cloud of points, one draw call. */
+const POINTS_FRAGMENT = /* glsl */ `
 varying float vAlpha;
-uniform vec3 uColor;
-void main() {
-  float d = length(gl_PointCoord - .5) * 2.;
-  float a = (1. - smoothstep(.55, 1., d)) * vAlpha;
-  if (a < .01) discard;
-  gl_FragColor = vec4(uColor, a);
-}`;
-
-const GLOW_FRAGMENT = /* glsl */ `
-varying float vAlpha;
+varying float vGlow;
+uniform vec3 uSmoke;
 void main() {
   float d = length(gl_PointCoord - .5) * 2.;
   float heart = 1. - smoothstep(0., .45, d);
-  float a = pow(max(0., 1. - d), 1.6) * 1.5 * vAlpha;
+  float smoke = (1. - smoothstep(.55, 1., d)) * vAlpha;
+  float glow = min(1., pow(max(0., 1. - d), 1.6) * 1.5 * vAlpha);
+  float a = mix(smoke, glow, vGlow);
   if (a < .01) discard;
-  gl_FragColor = vec4(mix(vec3(1., .7, .27), vec3(1., .98, .94), heart), min(1., a));
+  gl_FragColor = vec4(mix(uSmoke, mix(vec3(1., .7, .27), vec3(1., .98, .94), heart), vGlow), a);
 }`;
 
-function pointCloud(max: number, fragment: string, uniforms: Record<string, THREE.IUniform>) {
+function pointCloud(max: number) {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(max * 3), 3));
   geometry.setAttribute("aSize", new THREE.BufferAttribute(new Float32Array(max), 1));
   geometry.setAttribute("aAlpha", new THREE.BufferAttribute(new Float32Array(max), 1));
+  geometry.setAttribute("aGlow", new THREE.BufferAttribute(new Float32Array(max), 1));
   geometry.setDrawRange(0, 0);
-  const material = new THREE.ShaderMaterial({ vertexShader: POINTS_VERTEX, fragmentShader: fragment, uniforms: { uScale: { value: 400 }, ...uniforms }, transparent: true, depthWrite: false });
+  const uniforms = { uScale: { value: 400 }, uSmoke: { value: new THREE.Color("#F4F1EA") } };
+  const material = new THREE.ShaderMaterial({ vertexShader: POINTS_VERTEX, fragmentShader: POINTS_FRAGMENT, uniforms, transparent: true, depthWrite: false });
   const points = new THREE.Points(geometry, material);
   points.frustumCulled = false;
   return points;
@@ -98,26 +99,25 @@ uniform float uTime;
 
 export function createDetails(add: (o: THREE.Object3D) => void) {
   let found = { smoke: [] as Source[], lamps: [] as Source[] };
-  const smoke = pointCloud(64 * PUFFS, SMOKE_FRAGMENT, { uColor: { value: new THREE.Color("#F4F1EA") } });
-  const glow = pointCloud(64, GLOW_FRAGMENT, {});
-  smoke.name = "smoke";
-  glow.name = "lanterns";
-  add(smoke);
-  add(glow);
+  // The smoke and the lanterns: one cloud of points (the style pass: fewer draw calls).
+  const cloud = pointCloud(64 * PUFFS + 64);
+  cloud.name = "smoke-lanterns";
+  add(cloud);
   const time = { value: 0 };
   let laundry: THREE.Mesh | null = null;
   let laundryAt: { x: number; z: number } | null = null;
-  const drawn: THREE.Object3D[] = [smoke, glow];
+  const drawn: THREE.Object3D[] = [cloud];
 
-  const set = (points: THREE.Points, i: number, x: number, y: number, z: number, size: number, alpha: number) => {
-    (points.geometry.getAttribute("position") as THREE.BufferAttribute).setXYZ(i, x, y, z);
-    (points.geometry.getAttribute("aSize") as THREE.BufferAttribute).setX(i, size);
-    (points.geometry.getAttribute("aAlpha") as THREE.BufferAttribute).setX(i, alpha);
+  const set = (i: number, x: number, y: number, z: number, size: number, alpha: number, glow: number) => {
+    (cloud.geometry.getAttribute("position") as THREE.BufferAttribute).setXYZ(i, x, y, z);
+    (cloud.geometry.getAttribute("aSize") as THREE.BufferAttribute).setX(i, size);
+    (cloud.geometry.getAttribute("aAlpha") as THREE.BufferAttribute).setX(i, alpha);
+    (cloud.geometry.getAttribute("aGlow") as THREE.BufferAttribute).setX(i, glow);
   };
-  const done = (points: THREE.Points, n: number) => {
-    points.geometry.setDrawRange(0, n);
-    for (const name of ["position", "aSize", "aAlpha"]) points.geometry.getAttribute(name).needsUpdate = true;
-    points.visible = n > 0;
+  const done = (n: number) => {
+    cloud.geometry.setDrawRange(0, n);
+    for (const name of ["position", "aSize", "aAlpha", "aGlow"]) cloud.geometry.getAttribute(name).needsUpdate = true;
+    cloud.visible = n > 0;
   };
 
   return {
@@ -160,21 +160,19 @@ transformed.x += sin(uTime * 3. + position.z * 9.) * .018 * hang;`,
       time.value = t;
       // A point's size is in the game's units: its pixels follow the camera's lens and the screen's height.
       const scale = (camera.projectionMatrix.elements[5]! * innerHeight * Math.min(2, devicePixelRatio || 1)) / 2;
-      for (const p of [smoke, glow]) (p.material as THREE.ShaderMaterial).uniforms.uScale!.value = scale;
+      (cloud.material as THREE.ShaderMaterial).uniforms.uScale!.value = scale;
       let n = 0;
       found.smoke.forEach((s, k) => {
         const lift = s.raft ? bob(s.raft) : 0;
         for (let i = 0; i < PUFFS; i++) {
           const u = (t * 0.22 + i / PUFFS + k * 0.37) % 1;
-          set(smoke, n++, s.x + u * 0.22 + Math.sin(u * 5 + k) * 0.03, s.y + lift + u * 0.6, s.z - u * 0.06, 0.08 + u * 0.2, 0.85 * Math.sin(Math.PI * Math.min(1, u * 1.4)) * (1 - u));
+          set(n++, s.x + u * 0.22 + Math.sin(u * 5 + k) * 0.03, s.y + lift + u * 0.6, s.z - u * 0.06, 0.08 + u * 0.2, 0.85 * Math.sin(Math.PI * Math.min(1, u * 1.4)) * (1 - u), 0);
         }
       });
-      done(smoke, n);
-      let m = 0;
       // Barely there in the late afternoon; lit in the Mist.
       const lit = 0.12 + 0.88 * dimness;
-      for (const s of found.lamps) set(glow, m++, s.x, s.y + (s.raft ? bob(s.raft) : 0), s.z, 0.28, lit);
-      done(glow, m);
+      for (const s of found.lamps.slice(0, 64)) set(n++, s.x, s.y + (s.raft ? bob(s.raft) : 0), s.z, 0.28, lit, 1);
+      done(n);
       if (laundry) {
         laundry.visible = laundryAt !== null;
         if (laundryAt) laundry.position.set(laundryAt.x, 0, laundryAt.z);

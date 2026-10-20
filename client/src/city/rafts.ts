@@ -196,6 +196,32 @@ export function walkwayGeometry(): THREE.BufferGeometry {
 }
 
 /**
+ * A free slot's golden marks: at each corner of its room's hexagon (pointing along z, as the buoys: raft.py), two short
+ * strokes along its sides, `length` long and `width` wide, flat on the water.
+ */
+export function cornerMarks(room: number, length: number, width: number): THREE.BufferGeometry {
+  const corner = (k: number) => new THREE.Vector2(Math.cos(Math.PI / 2 + (k * Math.PI) / 3), Math.sin(Math.PI / 2 + (k * Math.PI) / 3)).multiplyScalar(room);
+  const points: number[] = [];
+  for (let k = 0; k < 6; k++) {
+    const c = corner(k);
+    for (const n of [corner(k + 1), corner(k + 5)]) {
+      const along = n.clone().sub(c).normalize();
+      // Inward, toward the slot's middle.
+      const inward = c.clone().multiplyScalar(-1).normalize();
+      const side = new THREE.Vector2(-along.y, along.x);
+      if (side.dot(inward) < 0) side.negate();
+      const [a, b] = [c, c.clone().addScaledVector(along, length)];
+      const [a2, b2] = [a.clone().addScaledVector(side, width), b.clone().addScaledVector(side, width)];
+      for (const p of [a, b, b2, a, b2, a2]) points.push(p.x, 0, p.y);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(points, 3));
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+/**
  * The rafts of the city. `models` are the raft's models, one per variant (raftVariant picks one per slot); until the
  * painted variants are made, there is one. With `village` (the floating village made in Blender), it draws the rafts,
  * their walkways and buildings, and the shipyard's raft instead, and `models` is empty.
@@ -218,10 +244,14 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
   ghostGeo.rotateX(-Math.PI / 2);
   ghostGeo.rotateY(Math.PI / 6);
   const ghost = new THREE.InstancedMesh(ghostGeo, new THREE.MeshBasicMaterial({ color: "#FFE27A", transparent: true, opacity: 0.16, depthWrite: false }), MAX);
-  const ringGeo = new THREE.RingGeometry(room - 0.11, room, 6, 1);
-  ringGeo.rotateX(-Math.PI / 2);
-  ringGeo.rotateY(Math.PI / 6);
-  const ringM = new THREE.MeshBasicMaterial({ color: "#FFE27A", transparent: true, opacity: 0.75, depthWrite: false });
+  // With the village made in Blender, the free slots are its buoys and a thin rope, golden marks at their corners and no
+  // fill: from the city's height, no grid reads on the water (style pass, owner).
+  const ringGeo = village ? cornerMarks(room, 0.16, 0.035) : new THREE.RingGeometry(room - 0.11, room, 6, 1);
+  if (!village) {
+    ringGeo.rotateX(-Math.PI / 2);
+    ringGeo.rotateY(Math.PI / 6);
+  }
+  const ringM = new THREE.MeshBasicMaterial({ color: "#FFE27A", transparent: true, opacity: village ? 0.6 : 0.75, depthWrite: false, side: THREE.DoubleSide });
   const ring = new THREE.InstancedMesh(ringGeo, ringM, MAX);
   const hit = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1.4, 6), new THREE.MeshBasicMaterial({ visible: false }), MAX);
   const scaffold = new THREE.Group();
@@ -235,6 +265,7 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
     add(m);
   }
   add(scaffold);
+  ghost.visible = !village;
 
   // Multiplies the raft's texture: a damaged raft looks darker.
   const sound = new THREE.Color("#FFFFFF");
@@ -389,7 +420,7 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
       if (!village) ways.forEach((w, i) => walk.setMatrixAt(i, m4.compose(p.set(w.x, RAFT_BOTTOM + deckHeight - 0.08, w.z), q.setFromAxisAngle(up, w.turn), sc.set(1, 1, w.length))));
       walk.count = village ? 0 : ways.length;
       walk.instanceMatrix.needsUpdate = true;
-      ghost.count = free;
+      ghost.count = village ? 0 : free;
       ring.count = free;
       hit.count = hitSlots.length;
       for (const m of [ghost, ring, hit]) m.instanceMatrix.needsUpdate = true;
@@ -403,7 +434,7 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
     animate(now) {
       if (afloat.length) placeRafts(now);
       village?.animate(now);
-      ringM.opacity = 0.45 + Math.sin(now * 3) * 0.3;
+      ringM.opacity = village ? 0.5 + Math.sin(now * 3) * 0.2 : 0.45 + Math.sin(now * 3) * 0.3;
     },
   };
 }

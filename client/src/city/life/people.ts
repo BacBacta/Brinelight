@@ -9,6 +9,9 @@ import { loadStage } from "../staged.js";
 import { ANIM, PANTS, SHIRTS, SKINS, TOOLS, bodyMaterial, type Tool } from "./body.js";
 import { PEOPLE_MAX, type Figure, type Point } from "./cast.js";
 
+/** The survivors' size on the island: 1.5 times as made (style pass, owner: they read at the normal view's distance). */
+export const PERSON_SCALE = 1.5;
+
 const hash = (n: number) => {
   const s = Math.sin(n * 91.7 + 17.3) * 43758.5453;
   return s - Math.floor(s);
@@ -41,7 +44,7 @@ export function createPeople(add: (o: THREE.Object3D) => void) {
   const m4 = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
-  const one = new THREE.Vector3(1, 1, 1);
+  const size = new THREE.Vector3(PERSON_SCALE, PERSON_SCALE, PERSON_SCALE);
   const p = new THREE.Vector3();
   const frustum = new THREE.Frustum();
   const sphere = new THREE.Sphere(new THREE.Vector3(), 0.2);
@@ -105,7 +108,7 @@ export function createPeople(add: (o: THREE.Object3D) => void) {
         const lift = (from.raft ? bob(from.raft) : 0) * (1 - k) + (to.raft ? bob(to.raft) : 0) * k;
         p.set(at.x, at.y + lift, at.z);
         if (near && !frustum.intersectsSphere(sphere.set(p, 0.2))) return;
-        m4.compose(p, q.setFromAxisAngle(up, turn), one);
+        m4.compose(p, q.setFromAxisAngle(up, turn), size);
         const anim = f.speed > 0 && f.anim !== "carry" ? ANIM.walk : ANIM[f.anim];
         body!.setMatrixAt(n, m4);
         (body!.geometry.getAttribute("aAnim") as THREE.BufferAttribute).setX(n, anim);

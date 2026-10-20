@@ -41,6 +41,21 @@ export const CITY_CALM: Look = {
   lead: 0,
 };
 
+/**
+ * The city after the style pass (owner, after meeting 4: "a mix", with ?blender): the warm, low sun of direction A,
+ * golden, from the left and a little behind the camera, its shadows long and a little blue (a cool, weaker light from
+ * the sky), A's contrast (less haze: no pastel veil), the sea's far side deeper but never night blue.
+ */
+export const CITY_STYLE: Look = {
+  sky: ["#4FAFC4", "#A9DCD6", "#FFE2B4"],
+  fog: { color: "#BFE0DA", near: 40, far: 110 },
+  sun: { color: "#FFB062", intensity: 4.6 },
+  hemi: { sky: "#9DB9E6", ground: "#55603A", intensity: 0.62 },
+  veil: 0,
+  beams: 0,
+  lead: 0,
+};
+
 /** The city in the Mist: a uniform grey-violet sky, fog eating the far sea, a dim, cold sun (art direction). */
 export const CITY_MIST: Look = {
   sky: ["#8E86B0", "#B3ADCB", "#C9C2DC"],
@@ -92,6 +107,12 @@ export function mixLook(a: Look, b: Look, t: number): Look {
 
 /** The city's water: turquoise around the island and its rafts, navy from 30 m out, reflecting the calm sky. */
 export const CITY_WATER: WaterOptions = { size: 160, near: "#17A7CF", far: "#16508C", radii: [9, 30], sky: CITY_CALM.sky };
+
+/**
+ * The city's water after the style pass (with ?blender): B's light turquoise in the shallows along the shore and around
+ * the rafts, turning to a clear blue, and a deep blue offshore, lighter than before (no night blue).
+ */
+export const CITY_WATER_STYLE: WaterOptions = { ...CITY_WATER, near: "#2398C4", far: "#2380B0", radii: [9, 34], shallows: ["#73E2D3", "#30B5C8"] };
 
 /** The sea map's water: one deep blue (its islands are small and many), reflecting the same sky. */
 export const SEA_WATER: WaterOptions = { size: 400, near: "#1E7DBE", far: "#1E7DBE", radii: [0, 1], sky: SEA_CALM.sky };

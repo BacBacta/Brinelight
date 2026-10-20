@@ -9,9 +9,10 @@ import { BUILDING_IDS, type BuildingId } from "@brinelight/shared";
 import type { PlayerState } from "../../state/index.js";
 import { bakeModel } from "../../scene/models.js";
 import { hexX, hexZ } from "../../scene/island.js";
-import { loadStage, stageName, stageOf } from "../staged.js";
+import { buildingScale, loadStage, stageName, stageOf } from "../staged.js";
 import { ERA_PLOTS } from "../plots.js";
 import { FRONT } from "./cast.js";
+import LAND from "./land.json";
 
 export const KINDS = ["gull", "cat", "hen", "crab", "dolphin", "fish"] as const;
 export type Kind = (typeof KINDS)[number];
@@ -34,30 +35,8 @@ const plot = (id: BuildingId) => {
   return { x: hexX(q, r), z: hexZ(r) };
 };
 
-/** The beach's spots for the crabs: the middles of the island's sides that face the camera (+z), just inside its rim. */
-export function beachSpots(): { x: number; z: number; along: [number, number] }[] {
-  const out: { x: number; z: number; along: [number, number] }[] = [];
-  const dirs = [
-    [1, 0],
-    [-1, 0],
-    [0, 1],
-    [0, -1],
-    [1, -1],
-    [-1, 1],
-  ] as const;
-  const inside = (q: number, r: number) => Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)) <= 2;
-  for (let q = -2; q <= 2; q++)
-    for (let r = -2; r <= 2; r++) {
-      if (!inside(q, r)) continue;
-      for (const [dq, dr] of dirs) {
-        if (inside(q + dq, r + dr)) continue;
-        const [nx, nz] = [hexX(dq, dr) / 2, hexZ(dr) / 2];
-        if (nz < 0.3) continue;
-        out.push({ x: hexX(q, r) + nx * 1.04, z: hexZ(r) + nz * 1.04, along: [-nz, nx] });
-      }
-    }
-  return out.sort((a, b) => a.x - b.x);
-}
+/** The beach's spots for the crabs (land.json, made by assets/blender/terrain.py): on the sand the camera sees. */
+export const beachSpots = (): { x: number; y: number; z: number }[] => (LAND as unknown as { beach: [number, number, number][] }).beach.map(([x, y, z]) => ({ x, y, z }));
 
 /** The animals at `t`; `perches` are the roofs a gull may land on. With `still`, nothing moves and nothing leaps. */
 export function beastsAt(state: PlayerState, t: number, perches: readonly { x: number; y: number; z: number }[], still: boolean): Beast[] {
@@ -90,8 +69,8 @@ export function beastsAt(state: PlayerState, t: number, perches: readonly { x: n
   }
   // The cat sits on the Fishery's jetty, by its fisher (cast.ts), watching the line.
   if (state.buildings.fishery >= 1) {
-    const c = plot("fishery");
-    out.push({ kind: "cat", x: c.x + 0.68, y: FLOOR[stageOf(state.buildings.fishery)]! + 0.08, z: c.z + 0.08, turn: Math.PI * 0.6, resting: true, phase: 3 });
+    const [c, k] = [plot("fishery"), buildingScale("fishery")];
+    out.push({ kind: "cat", x: c.x + 0.68 * k, y: (FLOOR[stageOf(state.buildings.fishery)]! + 0.08) * k, z: c.z + 0.08 * k, turn: Math.PI * 0.6, resting: true, phase: 3 });
   }
   // Four hens peck about in front of the Shelters.
   if (state.buildings.shelters >= 1) {
@@ -102,13 +81,13 @@ export function beastsAt(state: PlayerState, t: number, perches: readonly { x: n
       out.push({ kind: "hen", x: c.x + x + dx, y: 0, z: c.z + FRONT.z - 0.02 + (k % 2) * 0.1 + dz, turn: s + Math.PI / 2, resting: false, phase: k });
     });
   }
-  // Five crabs scuttle to and fro along the beach.
-  const beach = beachSpots();
-  for (let k = 0; k < 5 && beach.length; k++) {
-    const b = beach[Math.floor(hash(k + 20) * beach.length)]!;
-    const s = Math.sin(t * 0.6 + k * 2) * 0.1;
-    out.push({ kind: "crab", x: b.x + b.along[0] * s, y: 0, z: b.z + b.along[1] * s, turn: Math.atan2(b.along[0], b.along[1]) + Math.PI / 2, resting: false, phase: k });
-  }
+  // Five crabs scuttle to and fro along the beach, sideways.
+  beachSpots()
+    .slice(0, 5)
+    .forEach((b, k) => {
+      const s = Math.sin(t * 0.6 + k * 2) * 0.08;
+      out.push({ kind: "crab", x: b.x + s, y: b.y, z: b.z, turn: Math.PI / 2, resting: false, phase: k });
+    });
   if (still) return out;
   // Far off in front, a dolphin leaps every 11 s, and three small fish every 5 s.
   const leap = (kind: Kind, every: number, length: number, height: number, span: number, radius: [number, number], n: number) => {
@@ -229,6 +208,7 @@ export function createAnimals(add: (o: THREE.Object3D) => void) {
           // The model shown stands in its plot's group: a copy of it (sharing its geometry) stands at the origin.
           const model = shown.clone();
           model.position.set(0, 0, 0);
+          model.scale.setScalar(buildingScale(id));
           model.updateMatrixWorld(true);
           const c = plot(id);
           let best: THREE.Vector3 | null = null;

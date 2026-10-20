@@ -19,7 +19,7 @@ import { apiUrl, createApi } from "./account/api.js";
 import { createProfile } from "./account/profile.js";
 import { watchWallets } from "./account/wallets.js";
 import { createCity, type City } from "./city/index.js";
-import { isStaged, loadStage, shownModels, tallestHeight } from "./city/staged.js";
+import { hasTerrain, isStaged, loadStage, shownModels, tallestHeight, terrainName } from "./city/staged.js";
 import { raftSlots, raftVariant } from "./city/rafts.js";
 import { hasVillage, villageShown } from "./city/village.js";
 import { blenderLook } from "./scene/cityLook.js";
@@ -293,6 +293,7 @@ if (new URLSearchParams(location.search).has("rules")) {
     remade,
     ready,
     village,
+    terrain: blenderLook() && hasTerrain() ? terrainName(state.buildings.lighthouse) : undefined,
     seaLater,
     band: cityBand,
     quality: forcedQuality(location.search),
