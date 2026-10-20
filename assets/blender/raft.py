@@ -4,12 +4,14 @@ the Lighthouse's age. The village was always built by hand from what the sea bri
 
 - Driftwood (Lighthouse 1–9): mismatched driftwood planks on barrel floats, rope lashings, a cream sail;
 - Tarred (10–19): tarred planks on drums, iron corner plates, a lantern;
-- Steel (20–30): planks on a steel frame and steel pontoons, a lamp on a post and a small solar panel.
+- Steel (20–30): planks in a frame of light steel, steel pontoons, a lamp on a post that the game lights, a small solar
+  panel. The age reads by its colors and its light, not its shapes (owner, meeting 3): the deck stays of planks.
 
 Each age has three decks that tell neighbors apart at a glance (A: a short mast and its furled sail; B: nets drying on two
 poles and a crate; C: planters of kelp and herbs, two lanterns), a damaged deck (planks torn up and a dark hole at its
 front corner, a float gone), the raft the shipyard builds (half its deck laid, scaffolding, a stack of planks) and a
-walkway. The free slot's buoys are the same in every age.
+walkway, and the mooring of a raft of ring 3, too close to the shore for a walkway: a rope to a stake on the beach. The
+free slot's buoys are the same in every age.
 
 The rafts are drawn in the game's units: a slot's hexagon has its flat sides at 1 from its center (±x), its corners
 toward the camera and away (±z); a raft fills its room, the hexagon shrunk to 0.82 (client/src/scene/coast.ts,
@@ -18,7 +20,7 @@ the middles of the six sides are where the walkways land, and the deck's middle 
 """
 import math
 
-from kit import box, cone, crate, cylinder, rod, rope_coil, sphere
+from kit import band, box, cone, crate, cylinder, ring, rod, rope_coil, sphere
 
 A = 0.8  # the deck's flat-to-center distance (inside the room's 0.82)
 R = A / math.cos(math.pi / 6)  # its center-to-corner distance
@@ -86,10 +88,15 @@ def deck(age, keep=lambda z, x0, x1: [(x0, x1)]):
         for x0, x1 in keep(z, h0, h1):
             turn = (0.014, -0.01, 0.0, 0.018)[k % 4] if age == 1 else 0.0
             out.append(box((x1 - x0, 0.05, w), ((x0 + x1) / 2, DECK - 0.025 - 0.006 * (k % 2), z), look["planks"][k % 4], bevel=0, turn=turn))
-    # The rim along the six sides.
+    # The rim along the six sides: a light steel frame flush with the planks in the steel age, a rail before.
     corners = [(R * math.cos(math.radians(90 + 60 * i)), R * math.sin(math.radians(90 + 60 * i))) for i in range(6)]
-    for (ax, az), (bx, bz) in zip(corners, corners[1:] + corners[:1]):
-        out.append(rod((ax * 0.97, DECK - 0.01, az * 0.97), (bx * 0.97, DECK - 0.01, bz * 0.97), 0.02, look["rim"], 4))
+    if age == 20:
+        for i in range(6):
+            a = math.radians(60 * i)
+            out.append(box((0.07, 0.05, R), (0.765 * math.cos(a), DECK - 0.013, 0.765 * math.sin(a)), "steel_light", bevel=0, turn=-a))
+    else:
+        for (ax, az), (bx, bz) in zip(corners, corners[1:] + corners[:1]):
+            out.append(rod((ax * 0.97, DECK - 0.01, az * 0.97), (bx * 0.97, DECK - 0.01, bz * 0.97), 0.02, look["rim"], 4))
     if age == 10:
         # Iron plates at the corners the camera sees.
         for ax, az in [c for c in corners if c[1] > -0.1]:
@@ -97,10 +104,19 @@ def deck(age, keep=lambda z, x0, x1: [(x0, x1)]):
     return out
 
 
+# The lamps of the model being made, where the game lights them (extra_meta).
+_lamps = []
+
+
 def lamp(x, z, age, h=0.42):
-    """A lamp on a post: a lantern on wood, a lamp on steel."""
+    """A lamp on a post: a lantern on wood; on steel, a lamp under a cap, which the game lights."""
     if age == 20:
-        return [cylinder(0.014, h, (x, DECK + h / 2, z), "steel", sides=5, bevel=0), sphere(0.035, (x, DECK + h + 0.02, z), "gold", subdivisions=1)]
+        _lamps.append([round(x, 3), round(DECK + h + 0.02, 3), round(z, 3)])
+        return [
+            cylinder(0.014, h, (x, DECK + h / 2, z), "steel_light", sides=5, bevel=0),
+            sphere(0.045, (x, DECK + h + 0.02, z), "gold", subdivisions=1),
+            cylinder(0.06, 0.016, (x, DECK + h + 0.072, z), "steel_light", sides=6, bevel=0, top=0.03),
+        ]
     return [cylinder(0.016, h, (x, DECK + h / 2, z), "wood", sides=5, bevel=0), box((0.07, 0.09, 0.07), (x, DECK + h - 0.02, z), "gold", bevel=0), box((0.09, 0.016, 0.09), (x, DECK + h + 0.035, z), "navy", bevel=0)]
 
 
@@ -216,6 +232,34 @@ def walkway(age):
     return p
 
 
+# A raft of ring 3 lies 0.08 off the shore across its side facing the island (island.py: LAND; client/src/scene/coast.ts:
+# RAFT_FILL): its mooring's stake stands on the beach MOOR_STAKE from the raft's center, its rope ends on the deck's rim.
+MOOR_STAKE = 1.0
+
+
+def mooring(age):
+    """A stake on the beach at the origin (y = 0 the meadow) and its rope down to a raft's deck rim, toward +z."""
+    look = LOOK[age]
+    end_z, end_y = MOOR_STAKE - A + 0.03, -(0.62 - DECK) + 0.02
+    if age == 20:
+        # A bollard of light steel.
+        p = [cylinder(0.05, 0.16, (0, 0.08, 0), "steel_light", sides=8, bevel=0), cylinder(0.065, 0.025, (0, 0.17, 0), "steel_light", sides=8, bevel=0)]
+        top = 0.12
+    else:
+        p = [cylinder(0.04, 0.26, (0, 0.13, 0), look["post"] if age == 1 else "dark", sides=6, bevel=0, top=0.034)]
+        if age == 10:
+            p.append(band(0.042, 0.03, (0, 0.2, 0), "steel", sides=6))
+        top = 0.16
+    p.append(ring(0.04 if age < 20 else 0.05, 0.014, 0.03, (0, top, 0), look["rope"], sides=6))
+    # The rope sags a little between the stake and the cleat on the rim.
+    a, b = (0.0, top, 0.03), (0.0, end_y + 0.02, end_z)
+    mid = (0.0, (a[1] + b[1]) / 2 - 0.03, (a[2] + b[2]) / 2 + 0.02)
+    p.append(rod(a, mid, 0.011, look["rope"], 4))
+    p.append(rod(mid, b, 0.011, look["rope"], 4))
+    p.append(box((0.08, 0.025, 0.03), (0.0, end_y, end_z), "steel_light" if age == 20 else "dark", bevel=0))
+    return p
+
+
 def free():
     """The free slot: buoys at the room's corners, a rope between them on the water (y = 0 is the sea)."""
     p = []
@@ -235,3 +279,11 @@ for _age in AGES:
     EXTRAS[f"raft-damaged-age{_age}"] = (lambda a: lambda: damaged(a))(_age)
     EXTRAS[f"raft-yard-age{_age}"] = (lambda a: lambda: yard(a))(_age)
     EXTRAS[f"raft-walk-age{_age}"] = (lambda a: lambda: walkway(a))(_age)
+    EXTRAS[f"raft-moor-age{_age}"] = (lambda a: lambda: mooring(a))(_age)
+
+
+def extra_meta(name):
+    """The sidecar of a model just made: where its lamps are lit, if it has any."""
+    lamps = list(_lamps)
+    _lamps.clear()
+    return {"lamps": lamps} if lamps else None

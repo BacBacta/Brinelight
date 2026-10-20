@@ -11,7 +11,7 @@ import { RAFT_BUILDING_MAX_COPIES, RAFT_DAMAGED_BELOW, RAFT_SLOTS, raftCap, slot
 import { RAFT_BUILDING_IDS, bakeModel, hexX, hexZ, kitModel, type Kit, type RaftBuildingModels } from "../scene/index.js";
 import { RAFT_FILL } from "../scene/coast.js";
 import type { PlayerState } from "../state/index.js";
-import { VILLAGE_DECK, VILLAGE_SEA, villageAge, villageModels, villageNames, type Placed, type Village } from "./village.js";
+import { VILLAGE_DECK, VILLAGE_SEA, raftMoorings, villageAge, villageModels, villageNames, type Placed, type Village } from "./village.js";
 
 export type RaftSlotView = "raft" | "damaged" | "building" | "free";
 
@@ -68,8 +68,11 @@ const NEIGHBORS = [
   [-1, 1],
 ] as const;
 
-/** A walkway: its middle on the water, its direction (turn around the vertical, its length along +z turned), its length. */
-export type Walkway = { x: number; z: number; turn: number; length: number };
+/**
+ * A walkway: its middle on the water, its direction (turn around the vertical, its length along +z turned), its length;
+ * `shore` when it runs from a raft of ring 3 to the island.
+ */
+export type Walkway = { x: number; z: number; turn: number; length: number; shore?: boolean };
 
 /** How far a walkway reaches onto a raft's deck, or onto the island's shore. */
 export const WALKWAY_GRIP = 0.12;
@@ -93,7 +96,7 @@ export function raftWalkways(moored: readonly string[], coastAt: (angle: number)
       const to = coastAt(Math.atan2(z, x)) - WALKWAY_GRIP;
       if (from > to) {
         const mid = (from + to) / 2;
-        out.push({ x: (x / d) * mid, z: (z / d) * mid, turn: Math.atan2(-x, -z), length: from - to });
+        out.push({ x: (x / d) * mid, z: (z / d) * mid, turn: Math.atan2(-x, -z), length: from - to, shore: true });
       }
       continue;
     }
@@ -353,10 +356,8 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
       }
       decks.forEach((d, i) => (d.count = counts[i]!));
       // The walkways, between rafts moored side by side and from the first ring to the shore.
-      const ways = raftWalkways(
-        slots.filter((x) => x.view === "raft" || x.view === "damaged").map((x) => x.key),
-        coastAt,
-      );
+      const moored = slots.filter((x) => x.view === "raft" || x.view === "damaged").map((x) => x.key);
+      const ways = raftWalkways(moored, coastAt);
       if (village) {
         scaffold.visible = false;
         const lighthouse = state.buildings.lighthouse;
@@ -373,7 +374,9 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
           const b = shown.buildings.get(s.key);
           if (b) items.push({ name: b, x, z, y: RAFT_BOTTOM + VILLAGE_DECK, bob });
         }
-        for (const w of ways) items.push({ name: shown.walk, x: w.x, z: w.z, y: RAFT_BOTTOM + VILLAGE_DECK - 0.01, turn: w.turn, length: w.length });
+        // A raft of ring 3 lies too close to the shore for a walkway: it is moored to a stake on the beach instead.
+        for (const w of ways) if (!w.shore) items.push({ name: shown.walk, x: w.x, z: w.z, y: RAFT_BOTTOM + VILLAGE_DECK - 0.01, turn: w.turn, length: w.length });
+        for (const m of raftMoorings(moored)) items.push({ name: shown.moor, x: m.x, z: m.z, y: 0, turn: m.turn });
         village.show(items);
         // The next age's models, while the Lighthouse's upgrade toward it runs.
         const next = villageAge(lighthouse + 1);

@@ -10,7 +10,9 @@ import { RAFT_BUILDING_MAX_LEVEL, RAFT_SLOTS } from "@brinelight/shared";
 import { CITY_MANIFEST } from "../src/scene/cityLook.js";
 import { hexReach } from "../src/scene/buildings.js";
 import { RAFT_FILL } from "../src/scene/coast.js";
-import { VILLAGE_AGES, VILLAGE_DECK, hasVillage, raftBuildingName, villageAge, villageModels, villageNames, villageShown } from "../src/city/village.js";
+import { MOOR_ASIDE, MOOR_STAKE, VILLAGE_AGES, VILLAGE_DECK, hasVillage, raftBuildingName, raftMoorings, villageAge, villageModels, villageNames, villageShown } from "../src/city/village.js";
+import { hexX, hexZ } from "../src/scene/island.js";
+import { PLOT_ROOM } from "../src/scene/buildings.js";
 import { raftVariant } from "../src/city/rafts.js";
 import { readGlb } from "./glb.js";
 
@@ -52,7 +54,10 @@ describe("the ages of the floating village", () => {
   });
 
   it("each slot shows its deck's variant, the damaged raft, the shipyard's raft or the free slot's buoys; a building its level", () => {
-    const [a, b, c, d] = RAFT_SLOTS.slice(0, 4).map((s) => s.key) as [string, string, string, string];
+    // A raft of ring 3 (moored to the shore), one of ring 4 (a walkway to its neighbor), the others anywhere.
+    const a = RAFT_SLOTS.find((s) => s.ring === 3)!.key;
+    const b = RAFT_SLOTS.find((s) => s.ring === 4)!.key;
+    const [c, d] = RAFT_SLOTS.filter((s) => s.key !== a && s.key !== b).map((s) => s.key) as [string, string];
     const slots = [
       { key: a, view: "raft" as const, variant: raftVariant(a) },
       { key: b, view: "damaged" as const, variant: raftVariant(b) },
@@ -67,10 +72,42 @@ describe("the ages of the floating village", () => {
       [a, "smokehouse-2-age10"],
       [b, "watchtower-3-age10"],
     ]);
-    expect(m.walk).toBe("raft-walk-age10");
+    expect([m.walk, m.moor]).toEqual(["raft-walk-age10", "raft-moor-age10"]);
     // What the first image waits for: only what shows, once each.
-    expect(villageShown(slots, rafts, 15, true).sort()).toEqual([m.slots.get(a)!, "raft-damaged-age10", "raft-free", "raft-walk-age10", "raft-yard-age10", "smokehouse-2-age10", "watchtower-3-age10"].sort());
+    expect(villageShown(slots, rafts, 15).sort()).toEqual([m.slots.get(a)!, "raft-damaged-age10", "raft-free", "raft-moor-age10", "raft-walk-age10", "raft-yard-age10", "smokehouse-2-age10", "watchtower-3-age10"].sort());
+    // Without a raft of ring 3, no mooring; without one of ring 4, no walkway.
+    expect(villageShown([slots[0]!], rafts, 15)).not.toContain("raft-walk-age10");
+    expect(villageShown([slots[1]!], rafts, 15)).not.toContain("raft-moor-age10");
     expect(raftBuildingName("greenhouse", 9, 1)).toBe(`greenhouse-${RAFT_BUILDING_MAX_LEVEL}-age1`);
+  });
+});
+
+describe("the moorings of the rafts of ring 3", () => {
+  const ring3 = RAFT_SLOTS.filter((s) => s.ring === 3);
+  const plots: { x: number; z: number }[] = [];
+  for (let q = -2; q <= 2; q++) for (let r = -2; r <= 2; r++) if (Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)) <= 2) plots.push({ x: hexX(q, r), z: hexZ(r) });
+
+  it("tie every raft of ring 3, and only those, to a stake on the beach, clear of every plot's room and every raft's", () => {
+    const moorings = raftMoorings(RAFT_SLOTS.map((s) => s.key));
+    expect(moorings.map((m) => m.key)).toEqual(ring3.map((s) => s.key));
+    for (const m of moorings) {
+      // On the land (the meadow reaches 1.1 from a plot's center, island.py: LAND), past where a building stands.
+      const plot = Math.min(...plots.map((p) => hexReach(m.x - p.x, m.z - p.z)));
+      expect(plot, m.key).toBeLessThan(1.1 - 0.05);
+      expect(plot, m.key).toBeGreaterThan(PLOT_ROOM);
+      for (const s of RAFT_SLOTS) expect(hexReach(m.x - hexX(s.q, s.r), m.z - hexZ(s.r)), `${m.key} by ${s.key}`).toBeGreaterThan(RAFT_FILL);
+    }
+  });
+
+  it("run their rope onto their raft's rim, aside from where a walkway would land", () => {
+    for (const m of raftMoorings(ring3.map((s) => s.key))) {
+      const s = ring3.find((x) => x.key === m.key)!;
+      const length = MOOR_STAKE - 0.8 + 0.03;
+      const [ex, ez] = [m.x + Math.sin(m.turn) * length - hexX(s.q, s.r), m.z + Math.cos(m.turn) * length - hexZ(s.r)];
+      expect(hexReach(ex, ez), m.key).toBeGreaterThan(0.7);
+      expect(hexReach(ex, ez), m.key).toBeLessThan(0.8);
+      expect(Math.hypot(ex, ez), m.key).toBeGreaterThan(Math.hypot(0.8, MOOR_ASIDE) - 0.1);
+    }
   });
 });
 
@@ -124,10 +161,31 @@ describe.runIf(hasVillage())("the floating village's models", () => {
       }
     });
 
-    it(`age ${age}: a walkway at most 200 triangles, the free slot's buoys at most 400; all its models are served`, () => {
+    it(`age ${age}: a walkway and a mooring at most 200 triangles, the free slot's buoys at most 400; all its models are served`, () => {
       expect(CITY_MANIFEST[`raft-walk-age${age}`]!.triangles).toBeLessThanOrEqual(200);
+      expect(CITY_MANIFEST[`raft-moor-age${age}`]!.triangles).toBeLessThanOrEqual(200);
+      // The mooring's rope ends on the deck's rim, under the beach.
+      const end = points(`raft-moor-age${age}`).reduce((a, v) => (v.z > a.z ? v : a));
+      expect(end.z).toBeCloseTo(MOOR_STAKE - 0.8 + 0.03 + 0.015, 1);
+      expect(end.y).toBeCloseTo(-(0.62 - VILLAGE_DECK) + 0.02, 1);
       expect(CITY_MANIFEST["raft-free"]!.triangles).toBeLessThanOrEqual(400);
       for (const name of villageNames(age)) expect(CITY_MANIFEST[name], name).toBeDefined();
+    });
+
+    it(`age ${age}: ${age === 20 ? "the decks' lamps are lit, on their corners above the deck" : "no lamp is lit: the steel age's light"}`, () => {
+      for (const name of DECKS(age)) {
+        const lamps = CITY_MANIFEST[name]!.lamps ?? [];
+        if (age !== 20 || name.includes("damaged")) {
+          expect(lamps, name).toEqual([]);
+          continue;
+        }
+        expect(lamps.length, name).toBeGreaterThan(0);
+        for (const [x, y, z] of lamps) {
+          expect(hexReach(x!, z!), name).toBeLessThan(RAFT_FILL);
+          expect(y!, name).toBeGreaterThan(VILLAGE_DECK + 0.2);
+          expect(Math.abs(x!) < CORE.x && z! > CORE.back && z! < CORE.front, name).toBe(false);
+        }
+      }
     });
   }
 });

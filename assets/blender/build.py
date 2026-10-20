@@ -43,7 +43,7 @@ def main(args):
             stages.build(name, module.base, module.DETAILS, OUT, fast=fast, only=only, meta=getattr(module, "meta", None))
         for extra, make in getattr(module, "EXTRAS", {}).items():
             if extra.startswith(prefix):
-                stages.build_one(extra, make, OUT, fast=fast)
+                stages.build_one(extra, make, OUT, fast=fast, meta=getattr(module, "extra_meta", None))
         # Models of their own for each stage (the Harbor's pier and boat), laid by the game with the stage's.
         for extra, make in getattr(module, "STAGE_EXTRAS", {}).items():
             for stage in only or stages.STAGES:

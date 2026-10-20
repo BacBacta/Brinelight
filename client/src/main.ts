@@ -281,7 +281,7 @@ if (new URLSearchParams(location.search).has("rules")) {
   // The floating village made in Blender: its models of the Lighthouse's age that the city shows, also before its first image.
   const village = blenderLook() && hasVillage();
   const slots = raftSlots(state).map((s) => ({ ...s, variant: raftVariant(s.key) }));
-  const afloat = village ? villageShown(slots, state.rafts, state.buildings.lighthouse, slots.some((s) => s.view === "raft" || s.view === "damaged")) : [];
+  const afloat = village ? villageShown(slots, state.rafts, state.buildings.lighthouse) : [];
   const ready = blenderLook() ? Promise.all([...shownModels(state), ...afloat].map(loadStage)) : undefined;
   const scene = startScene(canvas, {
     home: HOME,

@@ -38,6 +38,8 @@ PALETTE = {
     "seabed": "#3F6F6B",
     # The eras' materials (week 8): neutral, not accent colors.
     "steel": "#8E979C",
+    # The floating village's steel age (meeting 3, owner): its frame, painted light so the age reads at a glance.
+    "steel_light": "#C4CCCF",
     "glass": "#A9DCD8",
     "brick": "#B9674A",
     "concrete": "#C8C1B4",
@@ -79,6 +81,7 @@ FINISH = {
     "sand": ("grass", 0.0),
     "seabed": ("stone", 0.0),
     "steel": ("metal", 0.6),
+    "steel_light": ("metal", 0.7),
     "glass": ("glass", 0.8),
     "brick": ("brick", 0.3),
     "concrete": ("stone", 0.35),

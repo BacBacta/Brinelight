@@ -6,8 +6,11 @@
 import * as THREE from "three";
 import CITY_MODELS from "./city-models.json";
 
-/** A model's measures, written by serve.py: for each level where something appears, the indices to draw, and the height and reach (hex distance on its plot) of what is drawn. */
-export type CityModel = { kB: number; triangles: number; levels: { level: number; indices: number; height: number; reach: number }[]; lantern?: number; radar?: number[] };
+/**
+ * A model's measures, written by serve.py: for each level where something appears, the indices to draw, and the height and
+ * reach (hex distance on its plot) of what is drawn; the Lighthouse's lantern and radar; the lamps the game lights.
+ */
+export type CityModel = { kB: number; triangles: number; levels: { level: number; indices: number; height: number; reach: number }[]; lantern?: number; radar?: number[]; lamps?: number[][] };
 export const CITY_MANIFEST = CITY_MODELS as Record<string, CityModel>;
 
 /** The new look is on (?blender), until it replaces the old one. */

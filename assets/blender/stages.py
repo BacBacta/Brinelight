@@ -36,13 +36,16 @@ def flag_color(stage):
     return FLAG[max(t for t in FLAG if t <= stage)]
 
 
-def build_one(name, make, out, fast=False):
-    """One model of its own (a part the game turns or moves), made by `make()`: its own name, no levels."""
+def build_one(name, make, out, fast=False, meta=None):
+    """
+    One model of its own (a part the game turns or moves), made by `make()`: its own name, no levels. `meta(name)`, if
+    given, is asked after `make()` and goes in the model's sidecar (the floating village's lamps).
+    """
     out = Path(out)
     kit.reset(style=True)
     obj = kit.join(list(make()), name)
     path = out / f"{name}.glb"
-    tris = kit.bake_and_export(obj, path, size=128 if fast else 512, samples=4 if fast else 48)
+    tris = kit.bake_and_export(obj, path, size=128 if fast else 512, samples=4 if fast else 48, meta=meta(name) if meta else None)
     print(f"{name:<16} {tris:5d} triangles  {path.stat().st_size / 1024:6.0f} kB", flush=True)
 
 

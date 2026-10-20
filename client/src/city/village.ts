@@ -1,14 +1,15 @@
 /**
  * The floating village made in Blender (week 8, meeting 3; assets/blender/raft.py and raft_buildings.py), with ?blender:
- * the rafts, their walkways, the raft the shipyard builds, the free slots' buoys and the buildings on rafts at their
- * level, in the Lighthouse's age (driftwood, tarred, steel). Each model shown is one InstancedMesh: the draw calls grow
- * with the kinds of things afloat, never with the rafts. Only the current age's models are fetched, and the next age's
- * while the Lighthouse's upgrade toward it runs.
+ * the rafts, their walkways, the moorings of the rafts of ring 3, the raft the shipyard builds, the free slots' buoys and
+ * the buildings on rafts at their level, in the Lighthouse's age (driftwood, tarred, steel). Each model shown is one
+ * InstancedMesh, and the lit lamps one more: the draw calls grow with the kinds of things afloat, never with the rafts.
+ * Only the current age's models are fetched, and the next age's while the Lighthouse's upgrade toward it runs.
  */
 import * as THREE from "three";
-import { RAFT_BUILDING_MAX_LEVEL, type RaftBuildingId } from "@brinelight/shared";
+import { RAFT_BUILDING_MAX_LEVEL, RAFT_SLOTS, type RaftBuildingId } from "@brinelight/shared";
 import { bakeModel } from "../scene/models.js";
 import { CITY_MANIFEST } from "../scene/cityLook.js";
+import { hexX, hexZ } from "../scene/island.js";
 import type { PlayerState } from "../state/index.js";
 import { loadStage } from "./staged.js";
 
@@ -26,7 +27,7 @@ const DECKS = ["a", "b", "c"] as const;
 
 /** Every model of the village in an age (and the free slot's, the same in all). */
 export function villageNames(age: number): string[] {
-  const out = [...DECKS.map((v) => `raft-${v}-age${age}`), `raft-damaged-age${age}`, `raft-yard-age${age}`, `raft-walk-age${age}`];
+  const out = [...DECKS.map((v) => `raft-${v}-age${age}`), `raft-damaged-age${age}`, `raft-yard-age${age}`, `raft-walk-age${age}`, `raft-moor-age${age}`];
   for (const id of BUILDING_IDS) for (let level = 1; level <= RAFT_BUILDING_MAX_LEVEL; level++) out.push(`${id}-${level}-age${age}`);
   return out;
 }
@@ -40,8 +41,8 @@ export const raftBuildingName = (id: RaftBuildingId, level: number, age: number)
 /** What a slot shows (rafts.ts, raftSlots), with its deck's variant. */
 export type VillageSlot = { key: string; view: "raft" | "damaged" | "building" | "free"; variant: number };
 
-/** The model each slot and each building on a raft shows, in the Lighthouse's age; and the walkway's. */
-export function villageModels(slots: readonly VillageSlot[], rafts: PlayerState["rafts"], lighthouse: number): { slots: Map<string, string>; buildings: Map<string, string>; walk: string } {
+/** The model each slot and each building on a raft shows, in the Lighthouse's age; and the walkway's and the mooring's. */
+export function villageModels(slots: readonly VillageSlot[], rafts: PlayerState["rafts"], lighthouse: number): { slots: Map<string, string>; buildings: Map<string, string>; walk: string; moor: string } {
   const age = villageAge(lighthouse);
   const out = new Map<string, string>();
   const buildings = new Map<string, string>();
@@ -50,16 +51,81 @@ export function villageModels(slots: readonly VillageSlot[], rafts: PlayerState[
     const raft = rafts[s.key];
     if (raft?.building && s.view !== "free" && s.view !== "building") buildings.set(s.key, raftBuildingName(raft.building, raft.level, age));
   }
-  return { slots: out, buildings, walk: `raft-walk-age${age}` };
+  return { slots: out, buildings, walk: `raft-walk-age${age}`, moor: `raft-moor-age${age}` };
 }
+
+const ringOf = (key: string): number => RAFT_SLOTS.find((s) => s.key === key)?.ring ?? 0;
+const afloat = (s: VillageSlot) => s.view === "raft" || s.view === "damaged";
 
 /** The models a city's village shows at once: what its first image waits for. */
-export function villageShown(slots: readonly VillageSlot[], rafts: PlayerState["rafts"], lighthouse: number, walkways: boolean): string[] {
+export function villageShown(slots: readonly VillageSlot[], rafts: PlayerState["rafts"], lighthouse: number): string[] {
   const m = villageModels(slots, rafts, lighthouse);
-  return [...new Set([...m.slots.values(), ...m.buildings.values(), ...(walkways ? [m.walk] : [])])];
+  const moored = slots.filter(afloat).map((s) => ringOf(s.key));
+  return [...new Set([...m.slots.values(), ...m.buildings.values(), ...(moored.includes(4) ? [m.walk] : []), ...(moored.includes(3) ? [m.moor] : [])])];
 }
 
+/** How far from a raft's center of ring 3 its mooring's stake stands on the beach (raft.py, MOOR_STAKE). */
+export const MOOR_STAKE = 1.0;
+/** How far beside the middle of the raft's side its mooring runs, clear of where a walkway would land. */
+export const MOOR_ASIDE = 0.24;
+
+/** A mooring: its stake on the beach (the meadow's height), turned so its rope runs toward its raft. */
+export type Mooring = { key: string; x: number; z: number; turn: number };
+
+/**
+ * The moorings of the rafts of ring 3: too close to the shore for a walkway (0.08 of water across their side facing the
+ * island), each is tied to a stake on the beach of the plot beside it (the first of rings 0 to 2 in the slots' order of
+ * neighbors, a fixed rule). Pure: the same rafts always get the same moorings.
+ */
+export function raftMoorings(moored: readonly string[]): Mooring[] {
+  const out: Mooring[] = [];
+  for (const key of moored) {
+    const s = RAFT_SLOTS.find((x) => x.key === key);
+    if (!s || s.ring !== 3) continue;
+    const plot = NEIGHBORS.map(([dq, dr]) => [s.q + dq, s.r + dr] as const).find(([q, r]) => Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)) <= 2);
+    if (!plot) continue;
+    const [x, z] = [hexX(s.q, s.r), hexZ(s.r)];
+    const [dx, dz] = [(hexX(plot[0], plot[1]) - x) / 2, (hexZ(plot[1]) - z) / 2];
+    // Toward the plot, then aside along the raft's side (a quarter turn of that direction).
+    const sx = x + dx * MOOR_STAKE - dz * MOOR_ASIDE;
+    const sz = z + dz * MOOR_STAKE + dx * MOOR_ASIDE;
+    out.push({ key, x: sx, z: sz, turn: Math.atan2(-dx, -dz) });
+  }
+  return out;
+}
+
+/** The six slots around a slot, in axial coordinates (the order of rafts.ts). */
+const NEIGHBORS = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+  [1, -1],
+  [-1, 1],
+] as const;
+
 export type Placed = { name: string; x: number; z: number; y: number; bob?: number; turn?: number; length?: number };
+
+/**
+ * The warm light of a lit lamp: a soft round glow, white at its heart and amber at its rim, so it shows on the beach's
+ * sand as on the sea (no real light: too costly on a phone).
+ */
+function glowTexture(): THREE.DataTexture {
+  const n = 32;
+  const data = new Uint8Array(n * n * 4);
+  for (let i = 0; i < n; i++)
+    for (let j = 0; j < n; j++) {
+      const d = Math.min(1, Math.hypot(i - (n - 1) / 2, j - (n - 1) / 2) / (n / 2));
+      const heart = Math.max(0, 1 - d * 2);
+      data.set([255, Math.round(178 + 72 * heart), Math.round(70 + 170 * heart), Math.round(Math.min(1, (1 - d) ** 1.6 * 1.5) * 255)], (i * n + j) * 4);
+    }
+  const t = new THREE.DataTexture(data, n, n);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.magFilter = THREE.LinearFilter;
+  t.minFilter = THREE.LinearFilter;
+  t.needsUpdate = true;
+  return t;
+}
 
 /**
  * The village's meshes: one InstancedMesh per model, made when its model comes. `show` lays every instance; `bob`
@@ -74,10 +140,19 @@ export function createVillage(add: (o: THREE.Object3D) => void, max: number) {
   const up = new THREE.Vector3(0, 1, 0);
   const p = new THREE.Vector3();
   const sc = new THREE.Vector3();
-  const drawn: THREE.Object3D[] = [];
+  // The lit lamps (the steel age's): one point each, all in one draw call, moving with their rafts.
+  const lampsAt = new Float32Array(max * 4 * 3);
+  const glowGeometry = new THREE.BufferGeometry();
+  glowGeometry.setAttribute("position", new THREE.BufferAttribute(lampsAt, 3));
+  const glow = new THREE.Points(glowGeometry, new THREE.PointsMaterial({ size: 2.4, map: glowTexture(), transparent: true, depthWrite: false, toneMapped: false, fog: false }));
+  glow.name = "lamps";
+  glow.frustumCulled = false;
+  add(glow);
+  const drawn: THREE.Object3D[] = [glow];
 
   const lay = (now: number) => {
     const counts = new Map<string, number>();
+    let lamps = 0;
     for (const it of placed) {
       const mesh = meshes.get(it.name);
       if (!mesh) continue;
@@ -85,7 +160,12 @@ export function createVillage(add: (o: THREE.Object3D) => void, max: number) {
       counts.set(it.name, i + 1);
       const y = it.y + (it.bob === undefined ? 0 : Math.sin(now * 1.3 + it.bob) * 0.04);
       mesh.setMatrixAt(i, m4.compose(p.set(it.x, y, it.z), q.setFromAxisAngle(up, it.turn ?? 0), sc.set(1, 1, it.length ?? 1)));
+      // A raft is never turned: its lamps are where the model says, moved to it.
+      for (const [lx, ly, lz] of CITY_MANIFEST[it.name]?.lamps ?? []) if (lamps < lampsAt.length / 3) lampsAt.set([it.x + lx!, y + ly!, it.z + lz!], 3 * lamps++);
     }
+    glowGeometry.setDrawRange(0, lamps);
+    glowGeometry.getAttribute("position").needsUpdate = true;
+    glow.visible = lamps > 0;
     for (const [name, mesh] of meshes) {
       mesh.count = counts.get(name) ?? 0;
       mesh.visible = mesh.count > 0;

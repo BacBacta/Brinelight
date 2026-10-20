@@ -168,6 +168,7 @@ Level 30 is the Modern era complete: the Modern building with all its details an
 **The floating village** (meeting 3; `assets/blender/raft.py`, `raft_buildings.py`). It ages with the Lighthouse in three steps: driftwood (Lighthouse 1–9), tarred (10–19), steel (20–30).
 - Three decks that tell neighbors apart: A, a short mast and its furled sail; B, nets drying on two poles and a crate; C, planters of kelp and herbs and two lanterns. A damaged deck: planks torn up and a dark hole at its front corner, a float gone. The shipyard's raft: half its deck laid, scaffolding, a stack of planks. A walkway; the free slot's buoys.
 - The raft buildings (Greenhouse, Smokehouse, Watchtower) at their levels 1 to 3, in the same three ages: a detail at 2, the transformation at 3 (below, "The buildings of the rafts").
+- After meeting 3 (owner): the steel age reads by its colors and its light, not its shapes: a frame of light steel around the deck, which stays of planks, and lamps under a cap that the game lights (a warm glow, one draw call for all, no real light). The rafts of ring 3 lie 0.08 off the shore, too close for a walkway: each is moored instead, a rope from its deck's rim to a stake on the beach (a bollard in the steel age), aside from where a walkway would land.
 
 ### The order
 

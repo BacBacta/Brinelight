@@ -1883,15 +1883,22 @@
   ]
  },
  "raft-a-age20": {
-  "kB": 75.8,
-  "triangles": 890,
+  "kB": 80.5,
+  "triangles": 910,
   "levels": [
    {
     "level": 0,
-    "indices": 2670,
+    "indices": 2730,
     "height": 1.21,
-    "reach": 0.796
+    "reach": 0.8
    }
+  ],
+  "lamps": [
+   [
+    -0.56,
+    0.81,
+    -0.33
+   ]
   ]
  },
  "raft-b-age1": {
@@ -1919,15 +1926,22 @@
   ]
  },
  "raft-b-age20": {
-  "kB": 76.7,
-  "triangles": 880,
+  "kB": 81.0,
+  "triangles": 900,
   "levels": [
    {
     "level": 0,
-    "indices": 2640,
+    "indices": 2700,
     "height": 0.87,
-    "reach": 0.796
+    "reach": 0.8
    }
+  ],
+  "lamps": [
+   [
+    0.51,
+    0.75,
+    -0.47
+   ]
   ]
  },
  "raft-c-age1": {
@@ -1955,15 +1969,27 @@
   ]
  },
  "raft-c-age20": {
-  "kB": 76.7,
-  "triangles": 864,
+  "kB": 81.2,
+  "triangles": 904,
   "levels": [
    {
     "level": 0,
-    "indices": 2592,
-    "height": 0.825,
-    "reach": 0.796
+    "indices": 2712,
+    "height": 0.85,
+    "reach": 0.8
    }
+  ],
+  "lamps": [
+   [
+    -0.2,
+    0.79,
+    -0.6
+   ],
+   [
+    0.2,
+    0.79,
+    -0.6
+   ]
   ]
  },
  "raft-damaged-age1": {
@@ -1991,14 +2017,14 @@
   ]
  },
  "raft-damaged-age20": {
-  "kB": 62.3,
+  "kB": 64.7,
   "triangles": 628,
   "levels": [
    {
     "level": 0,
     "indices": 1884,
     "height": 0.606,
-    "reach": 0.796
+    "reach": 0.8
    }
   ]
  },
@@ -2011,6 +2037,42 @@
     "indices": 972,
     "height": 0.15,
     "reach": 0.818
+   }
+  ]
+ },
+ "raft-moor-age1": {
+  "kB": 21.5,
+  "triangles": 104,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 312,
+    "height": 0.26,
+    "reach": 0.232
+   }
+  ]
+ },
+ "raft-moor-age10": {
+  "kB": 19.5,
+  "triangles": 116,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 348,
+    "height": 0.26,
+    "reach": 0.232
+   }
+  ]
+ },
+ "raft-moor-age20": {
+  "kB": 18.0,
+  "triangles": 140,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 420,
+    "height": 0.183,
+    "reach": 0.232
    }
   ]
  },
@@ -2075,14 +2137,14 @@
   ]
  },
  "raft-yard-age20": {
-  "kB": 69.5,
+  "kB": 69.8,
   "triangles": 908,
   "levels": [
    {
     "level": 0,
     "indices": 2724,
     "height": 1.05,
-    "reach": 0.796
+    "reach": 0.8
    }
   ]
  },
