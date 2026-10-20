@@ -3,7 +3,9 @@
  * the rafts, their walkways, the moorings of the rafts of ring 3, the raft the shipyard builds, the free slots' buoys and
  * the buildings on rafts at their level, in the Lighthouse's age (driftwood, tarred, steel). Each model shown is one
  * InstancedMesh, and the lit lamps one more: the draw calls grow with the kinds of things afloat, never with the rafts.
- * Only the current age's models are fetched, and the next age's while the Lighthouse's upgrade toward it runs.
+ * Only the current age's models are fetched, and the next age's while the Lighthouse's upgrade toward it runs. The
+ * decks show in a light version (fewer sides, no hoops) in the normal view, and in full once the camera comes near: the
+ * full ones are fetched the first time it does, never before (meeting 4, owner).
  */
 import * as THREE from "three";
 import { RAFT_BUILDING_MAX_LEVEL, RAFT_SLOTS, type RaftBuildingId } from "@brinelight/shared";
@@ -25,17 +27,28 @@ export const VILLAGE_SEA = 0.2;
 const BUILDING_IDS: readonly RaftBuildingId[] = ["greenhouse", "smokehouse", "watchtower"];
 const DECKS = ["a", "b", "c"] as const;
 
+/** The decks that have a light version for the normal view. */
+const LIGHT = [...DECKS, "damaged"] as const;
+/** The light version of a deck, shown in the normal view. */
+export const LITE = "-lite";
+/** The full model of a deck's light version (other models are their own). */
+export const fullName = (name: string): string => (name.endsWith(LITE) ? name.slice(0, -LITE.length) : name);
+
 /** Every model of the village in an age (and the free slot's, the same in all). */
 export function villageNames(age: number): string[] {
-  const out = [...DECKS.map((v) => `raft-${v}-age${age}`), `raft-damaged-age${age}`, `raft-yard-age${age}`, `raft-walk-age${age}`, `raft-moor-age${age}`];
+  const out = [...LIGHT.flatMap((v) => [`raft-${v}-age${age}`, `raft-${v}-age${age}${LITE}`]), `raft-yard-age${age}`, `raft-walk-age${age}`, `raft-moor-age${age}`];
   for (const id of BUILDING_IDS) for (let level = 1; level <= RAFT_BUILDING_MAX_LEVEL; level++) out.push(`${id}-${level}-age${age}`);
   return out;
 }
 
+/** The models of an age the normal view shows: all but the decks' full models. */
+export const villageNormalNames = (age: number): string[] => villageNames(age).filter((n) => !LIGHT.some((v) => n === `raft-${v}-age${age}`));
+
 /** The village is made: every age's models are in the manifest. */
 export const hasVillage = (): boolean => [...VILLAGE_AGES.flatMap(villageNames), "raft-free"].every((n) => CITY_MANIFEST[n]);
 
-export const deckName = (variant: number, age: number): string => `raft-${DECKS[variant % 3]}-age${age}`;
+/** A deck's light version, as the normal view shows it. */
+export const deckName = (variant: number, age: number): string => `raft-${DECKS[variant % 3]}-age${age}${LITE}`;
 export const raftBuildingName = (id: RaftBuildingId, level: number, age: number): string => `${id}-${Math.min(RAFT_BUILDING_MAX_LEVEL, Math.max(1, level))}-age${age}`;
 
 /** What a slot shows (rafts.ts, raftSlots), with its deck's variant. */
@@ -47,7 +60,7 @@ export function villageModels(slots: readonly VillageSlot[], rafts: PlayerState[
   const out = new Map<string, string>();
   const buildings = new Map<string, string>();
   for (const s of slots) {
-    out.set(s.key, s.view === "free" ? "raft-free" : s.view === "damaged" ? `raft-damaged-age${age}` : s.view === "building" ? `raft-yard-age${age}` : deckName(s.variant, age));
+    out.set(s.key, s.view === "free" ? "raft-free" : s.view === "damaged" ? `raft-damaged-age${age}${LITE}` : s.view === "building" ? `raft-yard-age${age}` : deckName(s.variant, age));
     const raft = rafts[s.key];
     if (raft?.building && s.view !== "free" && s.view !== "building") buildings.set(s.key, raftBuildingName(raft.building, raft.level, age));
   }
@@ -150,18 +163,22 @@ export function createVillage(add: (o: THREE.Object3D) => void, max: number) {
   add(glow);
   const drawn: THREE.Object3D[] = [glow];
 
+  // Near (zoomed in or in the close view): the decks' full models, once they are there.
+  let near = false;
+  const shownAs = (name: string) => (near && meshes.has(fullName(name)) ? fullName(name) : name);
   const lay = (now: number) => {
     const counts = new Map<string, number>();
     let lamps = 0;
     for (const it of placed) {
-      const mesh = meshes.get(it.name);
+      const name = shownAs(it.name);
+      const mesh = meshes.get(name);
       if (!mesh) continue;
-      const i = counts.get(it.name) ?? 0;
-      counts.set(it.name, i + 1);
+      const i = counts.get(name) ?? 0;
+      counts.set(name, i + 1);
       const y = it.y + (it.bob === undefined ? 0 : Math.sin(now * 1.3 + it.bob) * 0.04);
       mesh.setMatrixAt(i, m4.compose(p.set(it.x, y, it.z), q.setFromAxisAngle(up, it.turn ?? 0), sc.set(1, 1, it.length ?? 1)));
       // A raft is never turned: its lamps are where the model says, moved to it.
-      for (const [lx, ly, lz] of CITY_MANIFEST[it.name]?.lamps ?? []) if (lamps < lampsAt.length / 3) lampsAt.set([it.x + lx!, y + ly!, it.z + lz!], 3 * lamps++);
+      for (const [lx, ly, lz] of CITY_MANIFEST[name]?.lamps ?? []) if (lamps < lampsAt.length / 3) lampsAt.set([it.x + lx!, y + ly!, it.z + lz!], 3 * lamps++);
     }
     glowGeometry.setDrawRange(0, lamps);
     glowGeometry.getAttribute("position").needsUpdate = true;
@@ -196,7 +213,18 @@ export function createVillage(add: (o: THREE.Object3D) => void, max: number) {
     /** Lays these instances, fetching the models not there yet. */
     show(items: Placed[]) {
       placed = items;
-      for (const it of items) fetch(it.name);
+      for (const it of items) fetch(near ? fullName(it.name) : it.name);
+      lay(0);
+    },
+    /**
+     * How much nearer the camera is than in the normal view (SceneHandle.closeness): from 1.15 the decks show in full
+     * (fetched the first time), back under 1.05 in their light version.
+     */
+    setCloseness(closeness: number) {
+      const next = near ? closeness > 1.05 : closeness > 1.15;
+      if (next === near) return;
+      near = next;
+      if (near) for (const it of placed) fetch(fullName(it.name));
       lay(0);
     },
     /** Fetches models ahead (the next age while the Lighthouse's upgrade runs). */

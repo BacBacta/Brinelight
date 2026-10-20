@@ -131,6 +131,7 @@ export function createCity(
 
   scene.onFrame((now, view) => {
     if (view !== "city") return;
+    village?.setCloseness(scene.closeness());
     rafts.animate(now);
     buildings.animate(now);
     labels.place(sheet.current);

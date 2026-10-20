@@ -499,10 +499,10 @@ def lamp_post(at, height=0.5, color="navy"):
     return [cylinder(0.02, height, (x, y + height / 2, z), color, sides=6, bevel=0), *lantern((x, y + height + 0.05, z), size=0.08)]
 
 
-def rope_coil(at, radius=0.08, color="plank"):
+def rope_coil(at, radius=0.08, color="plank", sides=8):
     """A coil of rope lying on the ground."""
     x, y, z = at
-    return [ring(radius, 0.024, 0.045, (x, y + 0.022, z), color, sides=8)]
+    return [ring(radius, 0.024, 0.045, (x, y + 0.022, z), color, sides=sides)]
 
 
 def drum(at, color="navy", radius=0.09, height=0.22):

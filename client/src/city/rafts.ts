@@ -11,7 +11,7 @@ import { RAFT_BUILDING_MAX_COPIES, RAFT_DAMAGED_BELOW, RAFT_SLOTS, raftCap, slot
 import { RAFT_BUILDING_IDS, bakeModel, hexX, hexZ, kitModel, type Kit, type RaftBuildingModels } from "../scene/index.js";
 import { RAFT_FILL } from "../scene/coast.js";
 import type { PlayerState } from "../state/index.js";
-import { VILLAGE_DECK, VILLAGE_SEA, raftMoorings, villageAge, villageModels, villageNames, type Placed, type Village } from "./village.js";
+import { VILLAGE_DECK, VILLAGE_SEA, raftMoorings, villageAge, villageModels, villageNormalNames, type Placed, type Village } from "./village.js";
 
 export type RaftSlotView = "raft" | "damaged" | "building" | "free";
 
@@ -380,7 +380,7 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
         village.show(items);
         // The next age's models, while the Lighthouse's upgrade toward it runs.
         const next = villageAge(lighthouse + 1);
-        if (next !== villageAge(lighthouse) && state.queue.some((j) => j.id === "lighthouse")) village.prefetch(villageNames(next));
+        if (next !== villageAge(lighthouse) && state.queue.some((j) => j.id === "lighthouse")) village.prefetch(villageNormalNames(next));
       }
       if (!village) ways.forEach((w, i) => walk.setMatrixAt(i, m4.compose(p.set(w.x, RAFT_BOTTOM + deckHeight - 0.08, w.z), q.setFromAxisAngle(up, w.turn), sc.set(1, 1, w.length))));
       walk.count = village ? 0 : ways.length;

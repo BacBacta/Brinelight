@@ -1870,6 +1870,18 @@
    }
   ]
  },
+ "raft-a-age1-lite": {
+  "kB": 56.6,
+  "triangles": 518,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1554,
+    "height": 1.21,
+    "reach": 0.796
+   }
+  ]
+ },
  "raft-a-age10": {
   "kB": 79.8,
   "triangles": 998,
@@ -1877,6 +1889,18 @@
    {
     "level": 0,
     "indices": 2994,
+    "height": 1.21,
+    "reach": 0.796
+   }
+  ]
+ },
+ "raft-a-age10-lite": {
+  "kB": 58.6,
+  "triangles": 594,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1782,
     "height": 1.21,
     "reach": 0.796
    }
@@ -1901,6 +1925,25 @@
    ]
   ]
  },
+ "raft-a-age20-lite": {
+  "kB": 64.8,
+  "triangles": 610,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1830,
+    "height": 1.21,
+    "reach": 0.8
+   }
+  ],
+  "lamps": [
+   [
+    -0.56,
+    0.81,
+    -0.33
+   ]
+  ]
+ },
  "raft-b-age1": {
   "kB": 79.2,
   "triangles": 912,
@@ -1913,6 +1956,18 @@
    }
   ]
  },
+ "raft-b-age1-lite": {
+  "kB": 55.8,
+  "triangles": 508,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1524,
+    "height": 0.87,
+    "reach": 0.796
+   }
+  ]
+ },
  "raft-b-age10": {
   "kB": 79.6,
   "triangles": 988,
@@ -1920,6 +1975,18 @@
    {
     "level": 0,
     "indices": 2964,
+    "height": 0.87,
+    "reach": 0.796
+   }
+  ]
+ },
+ "raft-b-age10-lite": {
+  "kB": 57.3,
+  "triangles": 584,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1752,
     "height": 0.87,
     "reach": 0.796
    }
@@ -1944,6 +2011,25 @@
    ]
   ]
  },
+ "raft-b-age20-lite": {
+  "kB": 65.3,
+  "triangles": 600,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1800,
+    "height": 0.87,
+    "reach": 0.8
+   }
+  ],
+  "lamps": [
+   [
+    0.51,
+    0.75,
+    -0.47
+   ]
+  ]
+ },
  "raft-c-age1": {
   "kB": 80.9,
   "triangles": 916,
@@ -1956,6 +2042,18 @@
    }
   ]
  },
+ "raft-c-age1-lite": {
+  "kB": 61.9,
+  "triangles": 592,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1776,
+    "height": 0.813,
+    "reach": 0.796
+   }
+  ]
+ },
  "raft-c-age10": {
   "kB": 78.0,
   "triangles": 952,
@@ -1963,6 +2061,18 @@
    {
     "level": 0,
     "indices": 2856,
+    "height": 0.813,
+    "reach": 0.796
+   }
+  ]
+ },
+ "raft-c-age10-lite": {
+  "kB": 60.7,
+  "triangles": 628,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1884,
     "height": 0.813,
     "reach": 0.796
    }
@@ -1992,6 +2102,30 @@
    ]
   ]
  },
+ "raft-c-age20-lite": {
+  "kB": 68.8,
+  "triangles": 664,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1992,
+    "height": 0.85,
+    "reach": 0.8
+   }
+  ],
+  "lamps": [
+   [
+    -0.2,
+    0.79,
+    -0.6
+   ],
+   [
+    0.2,
+    0.79,
+    -0.6
+   ]
+  ]
+ },
  "raft-damaged-age1": {
   "kB": 67.8,
   "triangles": 736,
@@ -1999,6 +2133,18 @@
    {
     "level": 0,
     "indices": 2208,
+    "height": 0.606,
+    "reach": 0.796
+   }
+  ]
+ },
+ "raft-damaged-age1-lite": {
+  "kB": 52.8,
+  "triangles": 484,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1452,
     "height": 0.606,
     "reach": 0.796
    }
@@ -2016,6 +2162,18 @@
    }
   ]
  },
+ "raft-damaged-age10-lite": {
+  "kB": 52.9,
+  "triangles": 532,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1596,
+    "height": 0.606,
+    "reach": 0.796
+   }
+  ]
+ },
  "raft-damaged-age20": {
   "kB": 64.7,
   "triangles": 628,
@@ -2023,6 +2181,18 @@
    {
     "level": 0,
     "indices": 1884,
+    "height": 0.606,
+    "reach": 0.8
+   }
+  ]
+ },
+ "raft-damaged-age20-lite": {
+  "kB": 56.0,
+  "triangles": 496,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1488,
     "height": 0.606,
     "reach": 0.8
    }

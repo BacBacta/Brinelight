@@ -15,6 +15,8 @@ export type WaterOptions = {
   radii: readonly [number, number];
   /** The sky it reflects: top, middle, horizon (as the scene's sky). */
   sky: readonly [string, string, string];
+  /** The most subdivisions of its grid, whatever the quality step (the city's water with ?blender, week 8, meeting 4). */
+  maxSegments?: number;
 };
 
 export type Water = {
@@ -121,10 +123,11 @@ if (uFoam > 0.) {
         );
   };
   const grid = (segments: number) => new THREE.PlaneGeometry(opts.size, opts.size, segments, segments);
-  const mesh = new THREE.Mesh(grid(96), material);
+  const capped = (segments: number) => Math.min(segments, opts.maxSegments ?? segments);
+  let segments = capped(96);
+  const mesh = new THREE.Mesh(grid(segments), material);
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.y = SHORE.waterY;
-  let segments = 96;
 
   let reflection: THREE.Texture | null = null;
   let reflections = true;
@@ -144,8 +147,8 @@ if (uFoam > 0.) {
       uniforms.uFoamMoves.value = step.foamMoves ? 1 : 0;
       reflections = step.reflections;
       setEnv();
-      if (step.waterSegments !== segments) {
-        segments = step.waterSegments;
+      if (capped(step.waterSegments) !== segments) {
+        segments = capped(step.waterSegments);
         mesh.geometry.dispose();
         mesh.geometry = grid(segments);
       }
