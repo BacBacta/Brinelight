@@ -178,6 +178,8 @@ Level 30 is the Modern era complete: the Modern building with all its details an
 - Reduced motion: everything stands still, nothing leaps; the smoke and the lanterns stay. Nothing of the life answers a tap.
 - To make room: the city's water at 64 subdivisions (96), the rafts in a light version in the normal view (full once the camera comes near). Measures in docs/perf.md.
 
+**After meeting 4 (owner, 20 October).** The water at 64 subdivisions is adopted. The rest waits: on the S22 (Lighthouse 5, two building sites) the city looks flat and plain, a board game more than an island. A style pass first, in two steps: target images rendered in Blender in two directions of light (`assets/blender/target.py`, the game's layout and camera in `assets/blender/targets/`), the current game beside them; then, once the owner picks one, the same look in the game behind `?blender`, within 66.7 k triangles and about 40 draw calls for the worst city.
+
 ### The order
 
 1. The Refinery in its six eras: its band at levels 1, 5, 10, 15, 20, 25 and 30, in the normal view and the close view. The owner approves it first.

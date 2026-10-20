@@ -1,0 +1,835 @@
+{
+ "camera": {
+  "position": [
+   0,
+   39.95403142715542,
+   38.55316725164343
+  ],
+  "target": [
+   0,
+   0,
+   0.2638871339528192
+  ],
+  "fov": 40,
+  "aspect": 0.45027322404371584
+ },
+ "lighthouse": 30,
+ "buildings": [
+  {
+   "id": "lighthouse",
+   "level": 30,
+   "model": "lighthouse-30",
+   "extra": null,
+   "x": 0,
+   "z": 0,
+   "reach": 0.877,
+   "height": 4.35,
+   "indices": 5190,
+   "site": false
+  },
+  {
+   "id": "refinery",
+   "level": 30,
+   "model": "refinery-30",
+   "extra": null,
+   "x": 2,
+   "z": -3.464,
+   "reach": 0.906,
+   "height": 3.255,
+   "indices": 4668,
+   "site": false
+  },
+  {
+   "id": "fishery",
+   "level": 30,
+   "model": "fishery-30",
+   "extra": null,
+   "x": 4,
+   "z": 0,
+   "reach": 0.91,
+   "height": 0.87,
+   "indices": 2664,
+   "site": false
+  },
+  {
+   "id": "lumberyard",
+   "level": 30,
+   "model": "lumberyard-30",
+   "extra": null,
+   "x": 1,
+   "z": 1.732,
+   "reach": 0.86,
+   "height": 0.86,
+   "indices": 2868,
+   "site": true
+  },
+  {
+   "id": "shelters",
+   "level": 30,
+   "model": "shelters-30",
+   "extra": null,
+   "x": 3,
+   "z": -1.732,
+   "reach": 0.86,
+   "height": 1.84,
+   "indices": 3612,
+   "site": false
+  },
+  {
+   "id": "barracks",
+   "level": 30,
+   "model": "barracks-30",
+   "extra": null,
+   "x": -2,
+   "z": 0,
+   "reach": 0.86,
+   "height": 1.475,
+   "indices": 2868,
+   "site": false
+  },
+  {
+   "id": "harbor",
+   "level": 30,
+   "model": "harbor-30",
+   "extra": "harbor-pier-30",
+   "x": -2,
+   "z": -3.464,
+   "reach": 0.914,
+   "height": 1.475,
+   "indices": 2496,
+   "site": false
+  },
+  {
+   "id": "observatory",
+   "level": 30,
+   "model": "observatory-30",
+   "extra": null,
+   "x": -3,
+   "z": -1.732,
+   "reach": 0.86,
+   "height": 1.234,
+   "indices": 2676,
+   "site": false
+  },
+  {
+   "id": "infirmary",
+   "level": 30,
+   "model": "infirmary-30",
+   "extra": null,
+   "x": -1,
+   "z": 1.732,
+   "reach": 0.86,
+   "height": 1.132,
+   "indices": 2400,
+   "site": false
+  }
+ ],
+ "rafts": [
+  {
+   "model": "raft-a-age20",
+   "x": -6,
+   "z": 0,
+   "building": null
+  },
+  {
+   "model": "raft-c-age20",
+   "x": -5,
+   "z": 1.732,
+   "building": null
+  },
+  {
+   "model": "raft-b-age20",
+   "x": -4,
+   "z": 3.464,
+   "building": "smokehouse-3-age20"
+  },
+  {
+   "model": "raft-a-age20",
+   "x": -3,
+   "z": 5.196,
+   "building": "watchtower-3-age20"
+  },
+  {
+   "model": "raft-c-age20",
+   "x": -5,
+   "z": -1.732,
+   "building": null
+  },
+  {
+   "model": "raft-b-age20",
+   "x": -1,
+   "z": 5.196,
+   "building": "greenhouse-3-age20"
+  },
+  {
+   "model": "raft-b-age20",
+   "x": -4,
+   "z": -3.464,
+   "building": null
+  },
+  {
+   "model": "raft-c-age20",
+   "x": 1,
+   "z": 5.196,
+   "building": "smokehouse-3-age20"
+  },
+  {
+   "model": "raft-a-age20",
+   "x": -3,
+   "z": -5.196,
+   "building": null
+  },
+  {
+   "model": "raft-a-age20",
+   "x": 3,
+   "z": 5.196,
+   "building": "greenhouse-3-age20"
+  },
+  {
+   "model": "raft-c-age20",
+   "x": 4,
+   "z": 3.464,
+   "building": "watchtower-3-age20"
+  },
+  {
+   "model": "raft-c-age20",
+   "x": 1,
+   "z": -5.196,
+   "building": null
+  },
+  {
+   "model": "raft-damaged-age20",
+   "x": 5,
+   "z": 1.732,
+   "building": null
+  },
+  {
+   "model": "raft-a-age20",
+   "x": 3,
+   "z": -5.196,
+   "building": null
+  },
+  {
+   "model": "raft-c-age20",
+   "x": 4,
+   "z": -3.464,
+   "building": null
+  },
+  {
+   "model": "raft-b-age20",
+   "x": 5,
+   "z": -1.732,
+   "building": null
+  },
+  {
+   "model": "raft-a-age20",
+   "x": 6,
+   "z": 0,
+   "building": null
+  },
+  {
+   "model": "raft-c-age20",
+   "x": -8,
+   "z": 0,
+   "building": null
+  },
+  {
+   "model": "raft-b-age20",
+   "x": -7,
+   "z": 1.732,
+   "building": null
+  },
+  {
+   "model": "raft-a-age20",
+   "x": -6,
+   "z": 3.464,
+   "building": null
+  },
+  {
+   "model": "raft-c-age20",
+   "x": -5,
+   "z": 5.196,
+   "building": null
+  },
+  {
+   "model": "raft-damaged-age20",
+   "x": -4,
+   "z": 6.928,
+   "building": null
+  },
+  {
+   "model": "raft-b-age20",
+   "x": -7,
+   "z": -1.732,
+   "building": null
+  },
+  {
+   "model": "raft-c-age20",
+   "x": -2,
+   "z": 6.928,
+   "building": null
+  },
+  {
+   "model": "raft-a-age20",
+   "x": -6,
+   "z": -3.464,
+   "building": null
+  },
+  {
+   "model": "raft-a-age20",
+   "x": 0,
+   "z": 6.928,
+   "building": null
+  },
+  {
+   "model": "raft-c-age20",
+   "x": -5,
+   "z": -5.196,
+   "building": null
+  },
+  {
+   "model": "raft-b-age20",
+   "x": 2,
+   "z": 6.928,
+   "building": null
+  },
+  {
+   "model": "raft-b-age20",
+   "x": -4,
+   "z": -6.928,
+   "building": null
+  },
+  {
+   "model": "raft-c-age20",
+   "x": 4,
+   "z": 6.928,
+   "building": null
+  },
+  {
+   "model": "raft-b-age20",
+   "x": 5,
+   "z": 5.196,
+   "building": null
+  },
+  {
+   "model": "raft-a-age20",
+   "x": 6,
+   "z": 3.464,
+   "building": null
+  },
+  {
+   "model": "raft-b-age20",
+   "x": 2,
+   "z": -6.928,
+   "building": null
+  },
+  {
+   "model": "raft-c-age20",
+   "x": 7,
+   "z": 1.732,
+   "building": null
+  },
+  {
+   "model": "raft-c-age20",
+   "x": 4,
+   "z": -6.928,
+   "building": null
+  },
+  {
+   "model": "raft-b-age20",
+   "x": 5,
+   "z": -5.196,
+   "building": null
+  },
+  {
+   "model": "raft-a-age20",
+   "x": 6,
+   "z": -3.464,
+   "building": null
+  },
+  {
+   "model": "raft-c-age20",
+   "x": 7,
+   "z": -1.732,
+   "building": null
+  },
+  {
+   "model": "raft-b-age20",
+   "x": 8,
+   "z": 0,
+   "building": null
+  }
+ ],
+ "walkways": [
+  {
+   "model": "raft-walk-age20",
+   "x": -7,
+   "z": 0,
+   "turn": 1.5707963267948966,
+   "length": 0.6000000000000001
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": -6,
+   "z": 1.732,
+   "turn": 1.5707963267948966,
+   "length": 0.6000000000000001
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": -5,
+   "z": 3.464,
+   "turn": 1.5707963267948966,
+   "length": 0.6000000000000001
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": -4,
+   "z": 5.196,
+   "turn": 1.5707963267948966,
+   "length": 0.6000000000000001
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": -3.5,
+   "z": 6.061999999999999,
+   "turn": 2.617981175819824,
+   "length": 0.5999559995159898
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": -6,
+   "z": -1.732,
+   "turn": 1.5707963267948966,
+   "length": 0.6000000000000001
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": -2.5,
+   "z": 6.061999999999999,
+   "turn": -2.617981175819824,
+   "length": 0.5999559995159898
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": -5,
+   "z": -3.464,
+   "turn": 1.5707963267948966,
+   "length": 0.6000000000000001
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": -0.5,
+   "z": 6.061999999999999,
+   "turn": -2.617981175819824,
+   "length": 0.5999559995159898
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": -4,
+   "z": -5.196,
+   "turn": 1.5707963267948966,
+   "length": 0.6000000000000001
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": 1.5,
+   "z": 6.061999999999999,
+   "turn": -2.617981175819824,
+   "length": 0.5999559995159898
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": -3.5,
+   "z": -6.061999999999999,
+   "turn": 0.5236114777699694,
+   "length": 0.5999559995159898
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": 3.5,
+   "z": 6.061999999999999,
+   "turn": -2.617981175819824,
+   "length": 0.5999559995159898
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": 4,
+   "z": 5.196,
+   "turn": -1.5707963267948966,
+   "length": 0.6000000000000001
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": 5,
+   "z": 3.464,
+   "turn": -1.5707963267948966,
+   "length": 0.6000000000000001
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": 2.5,
+   "z": -6.061999999999999,
+   "turn": 0.5236114777699694,
+   "length": 0.5999559995159898
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": 6,
+   "z": 1.732,
+   "turn": -1.5707963267948966,
+   "length": 0.6000000000000001
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": 3.5,
+   "z": -6.061999999999999,
+   "turn": -0.5236114777699694,
+   "length": 0.5999559995159898
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": 4,
+   "z": -5.196,
+   "turn": -1.5707963267948966,
+   "length": 0.6000000000000001
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": 5,
+   "z": -3.464,
+   "turn": -1.5707963267948966,
+   "length": 0.6000000000000001
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": 6,
+   "z": -1.732,
+   "turn": -1.5707963267948966,
+   "length": 0.6000000000000001
+  },
+  {
+   "model": "raft-walk-age20",
+   "x": 7,
+   "z": 0,
+   "turn": -1.5707963267948966,
+   "length": 0.6000000000000001
+  }
+ ],
+ "moorings": [
+  {
+   "model": "raft-moor-age20",
+   "key": "-3,0",
+   "x": -5,
+   "z": 0.24,
+   "turn": -1.5707963267948966
+  },
+  {
+   "model": "raft-moor-age20",
+   "key": "-3,1",
+   "x": -4,
+   "z": 1.972,
+   "turn": -1.5707963267948966
+  },
+  {
+   "model": "raft-moor-age20",
+   "key": "-3,2",
+   "x": -3,
+   "z": 3.7039999999999997,
+   "turn": -1.5707963267948966
+  },
+  {
+   "model": "raft-moor-age20",
+   "key": "-3,3",
+   "x": -2.29216,
+   "z": 4.45,
+   "turn": -0.5236114777699694
+  },
+  {
+   "model": "raft-moor-age20",
+   "key": "-2,-1",
+   "x": -4,
+   "z": -1.492,
+   "turn": -1.5707963267948966
+  },
+  {
+   "model": "raft-moor-age20",
+   "key": "-2,3",
+   "x": -1.29216,
+   "z": 4.21,
+   "turn": 0.5236114777699694
+  },
+  {
+   "model": "raft-moor-age20",
+   "key": "-1,-2",
+   "x": -3,
+   "z": -3.224,
+   "turn": -1.5707963267948966
+  },
+  {
+   "model": "raft-moor-age20",
+   "key": "-1,3",
+   "x": 0.70784,
+   "z": 4.21,
+   "turn": 0.5236114777699694
+  },
+  {
+   "model": "raft-moor-age20",
+   "key": "0,-3",
+   "x": -2.70784,
+   "z": -4.21,
+   "turn": -2.617981175819824
+  },
+  {
+   "model": "raft-moor-age20",
+   "key": "0,3",
+   "x": 2.70784,
+   "z": 4.21,
+   "turn": 0.5236114777699694
+  },
+  {
+   "model": "raft-moor-age20",
+   "key": "1,2",
+   "x": 3,
+   "z": 3.224,
+   "turn": 1.5707963267948966
+  },
+  {
+   "model": "raft-moor-age20",
+   "key": "2,-3",
+   "x": 1.29216,
+   "z": -4.21,
+   "turn": -2.617981175819824
+  },
+  {
+   "model": "raft-moor-age20",
+   "key": "2,1",
+   "x": 4,
+   "z": 1.492,
+   "turn": 1.5707963267948966
+  },
+  {
+   "model": "raft-moor-age20",
+   "key": "3,-3",
+   "x": 2.29216,
+   "z": -4.45,
+   "turn": 2.617981175819824
+  },
+  {
+   "model": "raft-moor-age20",
+   "key": "3,-2",
+   "x": 3,
+   "z": -3.7039999999999997,
+   "turn": 1.5707963267948966
+  },
+  {
+   "model": "raft-moor-age20",
+   "key": "3,-1",
+   "x": 4,
+   "z": -1.972,
+   "turn": 1.5707963267948966
+  },
+  {
+   "model": "raft-moor-age20",
+   "key": "3,0",
+   "x": 5,
+   "z": -0.24,
+   "turn": 1.5707963267948966
+  }
+ ],
+ "free": [],
+ "figures": [
+  {
+   "x": 4.84,
+   "y": 0.16,
+   "z": -0.04,
+   "turn": 1.5707963267948966,
+   "anim": "fish",
+   "tool": "rod"
+  },
+  {
+   "x": 0.5800000000000001,
+   "y": 0,
+   "z": 2.472,
+   "turn": 2.356194490192345,
+   "anim": "chop",
+   "tool": "axe"
+  },
+  {
+   "x": 2.145956505826909,
+   "y": 0,
+   "z": -2.724,
+   "turn": 4.71238898038469,
+   "anim": "carry",
+   "tool": "barrel"
+  },
+  {
+   "x": -0.43999999999999995,
+   "y": -0.25,
+   "z": 5.396,
+   "turn": -1.5707963267948966,
+   "anim": "water",
+   "tool": "can"
+  },
+  {
+   "x": 1.05,
+   "y": -0.25,
+   "z": 5.4959999999999996,
+   "turn": 3.141592653589793,
+   "anim": "stoke",
+   "tool": "poker"
+  },
+  {
+   "x": -2.68,
+   "y": -0.25,
+   "z": 5.576,
+   "turn": 0,
+   "anim": "watch",
+   "tool": "spyglass"
+  },
+  {
+   "x": 0.5800000000000001,
+   "y": 0,
+   "z": 2.472,
+   "turn": 2.641592653589793,
+   "anim": "hammer",
+   "tool": "hammer"
+  },
+  {
+   "x": 1.42,
+   "y": 0,
+   "z": 2.472,
+   "turn": 3.641592653589793,
+   "anim": "hammer",
+   "tool": "hammer"
+  },
+  {
+   "x": 0.8382901546402993,
+   "y": 0.01,
+   "z": 0.6531429075052597,
+   "turn": 5.236474916993516,
+   "anim": "walk",
+   "tool": null
+  },
+  {
+   "x": -0.7000998574539148,
+   "y": 0.01,
+   "z": -0.7676676655042843,
+   "turn": 2.094882263403723,
+   "anim": "walk",
+   "tool": null
+  },
+  {
+   "x": -6.670629258201815,
+   "y": -0.25,
+   "z": 2.016814123379682e-17,
+   "turn": 4.71238898038469,
+   "anim": "walk",
+   "tool": null
+  },
+  {
+   "x": -1.2346532152254506,
+   "y": 0.01,
+   "z": -0.6953041752876632,
+   "turn": -2.0948822634037234,
+   "anim": "walk",
+   "tool": null
+  },
+  {
+   "x": -1.1982475615560777,
+   "y": 0.01,
+   "z": -0.6742617074667657,
+   "turn": 1.0467103901860697,
+   "anim": "walk",
+   "tool": null
+  },
+  {
+   "x": -6.10681557344971,
+   "y": -0.25,
+   "z": 1.732,
+   "turn": 1.5707963267948966,
+   "anim": "walk",
+   "tool": null
+  },
+  {
+   "x": 0.9558252345716169,
+   "y": 0.01,
+   "z": -0.4890487008559785,
+   "turn": 0.5236285559931533,
+   "anim": "walk",
+   "tool": null
+  },
+  {
+   "x": 1.614147124861602,
+   "y": 0.01,
+   "z": -0.9493024212826532,
+   "turn": 2.0948822634037234,
+   "anim": "walk",
+   "tool": null
+  },
+  {
+   "x": -5.026233503818441,
+   "y": -0.25,
+   "z": 3.464,
+   "turn": 4.71238898038469,
+   "anim": "walk",
+   "tool": null
+  },
+  {
+   "x": 3.2216263908572405,
+   "y": 0.01,
+   "z": -0.722425437028132,
+   "turn": 5.236474916993517,
+   "anim": "walk",
+   "tool": null
+  },
+  {
+   "x": 2.700865075806576,
+   "y": 0.01,
+   "z": 0.7672253692964462,
+   "turn": -1.04671039018607,
+   "anim": "walk",
+   "tool": null
+  },
+  {
+   "x": -3.9565222237538507,
+   "y": -0.25,
+   "z": 5.196,
+   "turn": 1.5707963267948966,
+   "anim": "walk",
+   "tool": null
+  },
+  {
+   "x": 2.4172431781049957,
+   "y": 0.01,
+   "z": 0.8965080599426655,
+   "turn": 2.094882263403723,
+   "anim": "walk",
+   "tool": null
+  },
+  {
+   "x": -0.9301744340144301,
+   "y": 0.01,
+   "z": 2.878557006595127,
+   "turn": 5.759588899186432,
+   "anim": "walk",
+   "tool": null
+  },
+  {
+   "x": -3.4509442285141407,
+   "y": -0.25,
+   "z": 5.977035403786491,
+   "turn": 2.617981175819823,
+   "anim": "walk",
+   "tool": null
+  },
+  {
+   "x": -1.7703614591134889,
+   "y": 0.01,
+   "z": -2.4244056935197564,
+   "turn": -1.0467103901860706,
+   "anim": "walk",
+   "tool": null
+  }
+ ]
+}
