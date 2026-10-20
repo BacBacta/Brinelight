@@ -19,6 +19,7 @@ import { apiUrl, createApi } from "./account/api.js";
 import { createProfile } from "./account/profile.js";
 import { watchWallets } from "./account/wallets.js";
 import { createCity, type City } from "./city/index.js";
+import { demoAllowed, demoCity, demoWanted, memoryStore } from "./demo.js";
 import { hasTerrain, isStaged, loadStage, shownModels, tallestHeight, terrainName } from "./city/staged.js";
 import { raftSlots, raftVariant } from "./city/rafts.js";
 import { hasVillage, villageShown } from "./city/village.js";
@@ -56,14 +57,17 @@ if (new URLSearchParams(location.search).has("rules")) {
   const status = app.querySelector<HTMLParagraphElement>(".loading")!;
   const canvas = app.querySelector<HTMLCanvasElement>("#cv")!;
 
-  const store = browserStore();
+  // ?demo=phare30 or phare15 (development and branch previews only): a demonstration city, kept in memory.
+  // In production the condition is false when the game is built: the demos are not even in its files.
+  const demo = import.meta.env.DEV || import.meta.env.VITE_BRANCH_PREVIEW === "1" ? demoWanted(location.search, demoAllowed(import.meta.env, location.hostname)) : null;
+  const store = demo ? memoryStore() : browserStore();
   // The last city seen on this device, read before anything writes it: at launch, what ended since is told once.
   const seen = readSeen(store);
   // Sounds: none before your first tap, and none when turned off on this device.
   const sound = createSound(store);
 
   // The account: only with a server address. Without one, or without signing in, nothing goes on the network.
-  const server = apiUrl();
+  const server = demo ? null : apiUrl();
   const accountStore = (() => {
     try {
       return window.localStorage;
@@ -84,7 +88,7 @@ if (new URLSearchParams(location.search).has("rules")) {
 
   /** Signed in, the account's city is played (the server's); otherwise the city of this device, saved here. */
   let onAccount = !!account?.signedIn;
-  const opened = onAccount ? null : openSave(store, Date.now());
+  const opened = onAccount ? null : demo ? { state: demoCity(demo, Date.now() / 1000), rejected: false } : openSave(store, Date.now());
   let state: PlayerState = onAccount ? account!.city()! : opened!.state;
   /** Only the city of this device is saved under its key: the account's city has its own copy (account/actions.ts). */
   const save = () => {
@@ -150,6 +154,7 @@ if (new URLSearchParams(location.search).has("rules")) {
   );
   ui.update(state);
   if (opened?.rejected) ui.toast("Your saved city could not be read. A copy was kept.", "bad", "!");
+  if (demo) ui.toast("Demo city: nothing is saved", "", "i");
   const celebrations = createCelebrations(app, (c) => sound.play(c.sound));
   /** The city has arrived: what ended since the last city seen on this device, if it is the same owner's, is told. */
   const arrive = () => {

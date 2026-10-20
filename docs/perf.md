@@ -17,7 +17,8 @@ Goal of week 2 (task 6): **30 FPS or more on the low-end Android test phone**, i
   - `2`: pixel ratio 1, no shadows, and the water without its sky reflection, small ripples and moving foam, on a coarser grid (week 6, task 4).
 - Without `?quality`, the game starts at step 0 and lowers the step by itself when it stays under 30 FPS for 3 seconds, as the prototype did.
 - `?mist` shows the Mist's look (its mood only, no rule): the banner says "Mist", and the counter adds "Mist" after the view.
-- They can be combined: `?fps&quality=1`, `?fps&mist&quality=2`.
+- `?demo=phare30` shows a demonstration city for measuring the worst case: Lighthouse 30, the other buildings at 30, 39 rafts (each raft building type on two rafts at level 3), the Refinery's building site, 106 survivors. `?demo=phare15`: Lighthouse 15, 15 rafts, the same site, 46 survivors. It lives in memory only: nothing is sent to the server, nothing is written on the device, and your own city stays as it was. Only in development and on the branch previews (`*.brinelight.pages.dev` built from a branch other than `main`); the production build does not even contain it (`client/test/demo.test.ts`).
+- They can be combined: `?fps&quality=1`, `?fps&mist&quality=2`, `?blender&demo=phare30&fps`.
 
 ## Protocol (5 steps)
 
