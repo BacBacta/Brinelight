@@ -17,6 +17,8 @@ export type WaterOptions = {
   sky: readonly [string, string, string];
   /** The most subdivisions of its grid, whatever the quality step (the city's water with ?blender, week 8, meeting 4). */
   maxSegments?: number;
+  /** A ripple that laps against the shore and the rafts, coming and going (the city's water with ?blender, meeting 4). */
+  lapping?: boolean;
 };
 
 export type Water = {
@@ -58,6 +60,7 @@ export function createWater(opts: WaterOptions): Water {
     uShoreBox: { value: new THREE.Vector3(-SHORE.extent, -SHORE.extent, 2 * SHORE.extent) },
     uFoam: { value: 0 },
     uFoamMoves: { value: 1 },
+    uLap: { value: opts.lapping ? 1 : 0 },
     uFoamColor: { value: new THREE.Color("#FFF6E6").multiplyScalar(1.05) },
     uLead: { value: 0 },
     uLeadColor: { value: new THREE.Color("#6A7382") },
@@ -75,7 +78,7 @@ export function createWater(opts: WaterOptions): Water {
         .replace("#include <project_vertex>", "#include <project_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.)).xyz;");
     sh.fragmentShader =
       [
-        "uniform float uT, uRipples, uFoam, uFoamMoves, uLead;",
+        "uniform float uT, uRipples, uFoam, uFoamMoves, uLead, uLap;",
         "uniform vec3 uNear, uFar, uSkyTint, uFoamColor, uShoreBox, uLeadColor;",
         "uniform vec2 uRadii;",
         "uniform sampler2D uShore;",
@@ -116,6 +119,8 @@ if (uFoam > 0.) {
     float swell = .5 + .5 * sin(d * 9. - t * 2.2);
     float grain = sin(vWPos.x * 7.3 + sin(vWPos.z * 5.1)) * sin(vWPos.z * 6.7 + sin(vWPos.x * 4.3 + t * .4));
     float f = (1. - smoothstep(.03, .28 + .1 * swell, d)) * smoothstep(-.5, .5, grain + swell * .8 - d * 2.);
+    // The lapping: a thin line of foam that comes and goes against what floats and the shore.
+    f = max(f, uLap * (1. - smoothstep(0., .022, abs(d - .07 - .04 * sin(t * 2.6 + vWPos.x * 2.3 + vWPos.z * 1.7)))) * .85);
     outgoingLight = mix(outgoingLight, uFoamColor * (1. - uLead * .35), clamp(f, 0., 1.) * .7);
   }
 }

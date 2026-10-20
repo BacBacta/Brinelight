@@ -9,6 +9,7 @@ import { createQueue } from "./queue.js";
 import { createRaftSheet } from "./raftSheet.js";
 import { RAFT_FILL, createCityRafts, raftSlots, slotPosition } from "./rafts.js";
 import { createVillage, hasVillage } from "./village.js";
+import { createLife } from "./life/index.js";
 import { createSheet } from "./sheet.js";
 import { blenderLook } from "../scene/cityLook.js";
 import { groundName, hasGround, isStaged, lanternHeight, levelShape, loadStage, radarAt, showLevel, stageName } from "./staged.js";
@@ -65,6 +66,8 @@ export function createCity(
   // The floating village made in Blender draws the rafts, their walkways and buildings, and the shipyard's raft.
   const village = blenderLook() && hasVillage() ? createVillage((o) => scene.add(o), RAFT_SLOTS.length) : undefined;
   const rafts = createCityRafts(kit, village ? [] : others.raft, (o) => scene.add(o), coastAt, village);
+  // The island's life (meeting 4): with the floating village, its survivors, animals and plants.
+  const life = village ? createLife((o) => scene.add(o)) : undefined;
   // With the look made in Blender, the prototype's kit is not there: the shipyard's scaffolding is the building sites'.
   if (blenderLook() && !village) void loadStage("site-frame").then((frame) => rafts.useScaffold(frame.clone()));
   // Labels float just above each model at its full size (a smaller tier leaves them where they were, so they keep their
@@ -133,6 +136,7 @@ export function createCity(
     if (view !== "city") return;
     village?.setCloseness(scene.closeness());
     rafts.animate(now);
+    life?.animate(now, scene.closeness(), scene.cityCamera, scene.dimness());
     buildings.animate(now);
     labels.place(sheet.current);
   });
@@ -182,6 +186,7 @@ export function createCity(
       showLighthouse(state.buildings.lighthouse);
       buildings.refresh(state);
       rafts.refresh(state);
+      life?.update(state);
       // The foam goes around the rafts afloat and the shipyard at work.
       // The foam hugs the raft (inside its room), so the water between two rafts shows.
       scene.setMoored(raftSlots(state).filter((s) => s.view !== "free").map((s) => ({ ...slotPosition(s.key), r: RAFT_FILL * 0.8 })));

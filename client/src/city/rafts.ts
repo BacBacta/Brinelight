@@ -135,6 +135,10 @@ export { RAFT_FILL };
 /** The widest a raft can be: its room's hexagon, corner to corner. */
 export const RAFT_WIDTH = (2 * RAFT_FILL) / Math.cos(Math.PI / 6);
 const RAFT_BOTTOM = -0.62;
+/** Where a raft is in its bob (`sin(now × 1.3 + phase) × 0.04`): a hash of its place, never randomness. */
+export const bobPhase = (x: number, z: number): number => Math.abs(x * 7.3 + z * 3.1) % 6.28;
+/** How high a raft at (x, z) rides on the water at `now`. */
+export const bobAt = (x: number, z: number, now: number): number => Math.sin(now * 1.3 + bobPhase(x, z)) * 0.04;
 /** The room a building takes on its raft: its widest side, and its height (the Watchtower is the tallest). */
 export const RAFT_BUILDING_FIT = { width: 1.1, height: 1.5 };
 
@@ -336,7 +340,7 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
       for (const s of slots) {
         const { x, z } = slotPosition(s.key);
         // Hash of the slot, never randomness: the same raft looks the same on every device.
-        const bob = (Math.abs(x * 7.3 + z * 3.1) % 6.28) as number;
+        const bob = bobPhase(x, z);
         if (s.view === "free") {
           ghost.setMatrixAt(free, m4.makeTranslation(x, -0.2, z));
           ring.setMatrixAt(free, m4.makeTranslation(x, -0.19, z));

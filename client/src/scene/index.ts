@@ -68,6 +68,8 @@ export type SceneHandle = {
   closeness(): number;
   /** The city's camera, to tell what is on screen. */
   readonly cityCamera: THREE.Camera;
+  /** How far the light has fallen: 0 in the calm's late afternoon, 1 in the Mist (as its look fades). */
+  dimness(): number;
   /**
    * The sea's mood, calm or the Mist (its look only): the light, the fog, the water, the veil and the Lighthouses' beams
    * fade to it in 1.5 s, or at once (`now`, or with reduced motion on the device).
@@ -123,7 +125,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   const veil = createVeil();
   scene.add(veil.mesh);
   // With ?blender, the city's water has 64 subdivisions at most (meeting 4: room for the island's life).
-  const water = createWater(blenderLook() ? { ...CITY_WATER, maxSegments: 64 } : CITY_WATER);
+  const water = createWater(blenderLook() ? { ...CITY_WATER, maxSegments: 64, lapping: true } : CITY_WATER);
   scene.add(water.mesh);
   water.useRenderer(renderer);
   // The foam goes along the island's shore and around the rafts moored there (setMoored).
@@ -417,6 +419,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     },
     closeness: () => normal.distance / Math.max(0.001, camera.position.distanceTo(controls.target)),
     cityCamera: camera,
+    dimness: () => moodAt,
     onFrame(cb) {
       frameCallbacks.push(cb);
     },

@@ -14,6 +14,7 @@ import { CITY_MANIFEST } from "../scene/cityLook.js";
 import { hexX, hexZ } from "../scene/island.js";
 import type { PlayerState } from "../state/index.js";
 import { loadStage } from "./staged.js";
+import { reducedMotion } from "../scene/motion.js";
 
 /** The village's three ages, by the Lighthouse's level: driftwood from 1, tarred from 10, steel from 20. */
 export const VILLAGE_AGES = [1, 10, 20] as const;
@@ -231,8 +232,9 @@ export function createVillage(add: (o: THREE.Object3D) => void, max: number) {
     prefetch(names: readonly string[]) {
       for (const n of names) void loadStage(n);
     },
+    /** With reduced motion, the rafts ride still (as the island's life stands). */
     animate(now: number) {
-      if (placed.some((it) => it.bob !== undefined)) lay(now);
+      if (placed.some((it) => it.bob !== undefined)) lay(reducedMotion() ? 0 : now);
     },
   };
 }

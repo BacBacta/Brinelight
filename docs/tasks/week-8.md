@@ -170,6 +170,14 @@ Level 30 is the Modern era complete: the Modern building with all its details an
 - The raft buildings (Greenhouse, Smokehouse, Watchtower) at their levels 1 to 3, in the same three ages: a detail at 2, the transformation at 3 (below, "The buildings of the rafts").
 - After meeting 3 (owner): the steel age reads by its colors and its light, not its shapes: a frame of light steel around the deck, which stays of planks, and lamps under a cap that the game lights (a warm glow, one draw call for all, no real light). The rafts of ring 3 lie 0.08 off the shore, too close for a walkway: each is moored instead, a rope from its deck's rim to a stake on the beach (a bollard in the steel age), aside from where a walkway would land.
 
+**The island's life** (meeting 4; `assets/blender/life.py`, `client/src/city/life/`), with `?blender`. Display only: no rule, no city data, nothing sent to the server.
+- Survivors: one model (188 triangles) for all, tinted per instance (shirt, trousers, skin) and moved in the shader (walk, hammer, carry, fish, chop, water, watch, stoke): one draw call, and one per tool in hand. As many show as min(24, 4 + survivors ÷ 5): the trades first (the fisher on the Fishery's jetty, the woodcutter at the Lumberyard, the barrel carrier at the Refinery, the gardener, the stoker and the lookout on the frontmost raft with their building; the lookout stands at the tower's foot, its roof would hide it on the platform), then two builders at each building site and at the shipyard's work, then passers-by on the paths (cutting the corners, where the Modern era's lamps stand) and on the walkways.
+- Animals: eight gulls over the coast, half of them landing on a roof in each of their rounds; a cat on the Fishery's jetty; four hens by the Shelters; five crabs on the beach; a dolphin every 11 s and three small fish every 5 s, leaping beyond the rafts.
+- Plants, swaying in the wind, in three looks after the Lighthouse: wild (1–9), gardens (10–24), vegetable plots and trees in rows (25–30). Trees only on the ten free plots, low plants at the sides of the buildings' plots; with them, every building stays at least 70 % in sight (client/test/visible.test.ts).
+- Details: smoke from the chimneys (found on the models by `assets/blender/spots.py`), washing by the Shelters, lanterns that light as the Mist comes, a line of foam lapping against the rafts and the shore.
+- Reduced motion: everything stands still, nothing leaps; the smoke and the lanterns stay. Nothing of the life answers a tap.
+- To make room: the city's water at 64 subdivisions (96), the rafts in a light version in the normal view (full once the camera comes near). Measures in docs/perf.md.
+
 ### The order
 
 1. The Refinery in its six eras: its band at levels 1, 5, 10, 15, 20, 25 and 30, in the normal view and the close view. The owner approves it first.

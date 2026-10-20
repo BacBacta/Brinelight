@@ -75,7 +75,8 @@ def serve(name):
     view = doc["bufferViews"][image["bufferView"]]
     src = binary[view.get("byteOffset", 0) : view.get("byteOffset", 0) + view["byteLength"]]
     webp = io.BytesIO()
-    size = TEXTURE.get(name, 512)
+    # The island's life is small on screen: its textures are too.
+    size = TEXTURE.get(name, 256 if name.startswith("life-") else 512)
     Image.open(io.BytesIO(src)).convert("RGB").resize((size, size), Image.LANCZOS).save(webp, "WEBP", quality=mm.QUALITY, method=6)
     glb = mm.quantized_glb(name, order, flat, center, half, webp.getvalue(), doc["materials"][0], doc.get("samplers", [{}]))
     SERVED.mkdir(parents=True, exist_ok=True)

@@ -14,6 +14,7 @@ import { ERA_PLOTS } from "../src/city/plots.js";
 import { TIER_SCALE, tierOf } from "../src/city/tiers.js";
 import { STAGES, isStaged, levelShape, stageName } from "../src/city/staged.js";
 import { readGlb } from "./glb.js";
+import { plantsFor } from "../src/city/life/plants.js";
 
 /** The least share of a building the normal view must show. */
 const IN_SIGHT = 0.7;
@@ -142,6 +143,38 @@ describe("in the normal view, each building stays mostly in sight", () => {
         }
       }
       console.log(id, worst.join(", "));
+    }, 120_000);
+  }
+});
+
+describe("the island's plants (meeting 4) never hide a building", () => {
+  /** The plants of a Lighthouse's look, as the game lays them. */
+  const plants = (lighthouse: number) => {
+    const group = new THREE.Group();
+    for (const p of plantsFor(lighthouse)) {
+      const model = once(`city/${p.name}`).clone(true);
+      model.position.set(p.x, 0, p.z);
+      model.rotation.y = p.turn;
+      model.scale.setScalar(p.scale);
+      group.add(model);
+    }
+    group.updateMatrixWorld(true);
+    return group;
+  };
+
+  for (const lighthouse of [5, 15, 30]) {
+    it(`Lighthouse ${lighthouse}: each building at least ${IN_SIGHT * 100} % in sight, the plants among its neighbors`, () => {
+      const green = plants(lighthouse);
+      const all = BUILDING_IDS.map((id) => [id, shown(id, lighthouse)] as const);
+      const worst: string[] = [];
+      for (const [id, target] of all) {
+        if (!isStaged(id)) continue;
+        const others = [...all.filter(([o]) => o !== id).map(([, o]) => o), green];
+        const share = inSight(target, others, camera(RAFT_SLOTS.length, lighthouse));
+        worst.push(`${id} ${(share * 100).toFixed(0)} %`);
+        expect(share, `${id} at ${lighthouse}`).toBeGreaterThanOrEqual(IN_SIGHT);
+      }
+      console.log(lighthouse, worst.join(", "));
     }, 120_000);
   }
 });

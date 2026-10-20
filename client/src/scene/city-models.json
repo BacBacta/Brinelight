@@ -1163,6 +1163,294 @@
    }
   ]
  },
+ "life-cat": {
+  "kB": 9.8,
+  "triangles": 68,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 204,
+    "height": 0.085,
+    "reach": 0.069
+   }
+  ]
+ },
+ "life-crab": {
+  "kB": 11.1,
+  "triangles": 92,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 276,
+    "height": 0.02,
+    "reach": 0.038
+   }
+  ]
+ },
+ "life-dolphin": {
+  "kB": 7.8,
+  "triangles": 66,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 198,
+    "height": 0.06,
+    "reach": 0.205
+   }
+  ]
+ },
+ "life-fish": {
+  "kB": 7.3,
+  "triangles": 32,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 96,
+    "height": 0.012,
+    "reach": 0.028
+   }
+  ]
+ },
+ "life-gull": {
+  "kB": 10.1,
+  "triangles": 98,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 294,
+    "height": 0.046,
+    "reach": 0.088
+   }
+  ]
+ },
+ "life-hen": {
+  "kB": 10.3,
+  "triangles": 66,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 198,
+    "height": 0.071,
+    "reach": 0.043
+   }
+  ]
+ },
+ "life-laundry": {
+  "kB": 6.5,
+  "triangles": 80,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 240,
+    "height": 0.21,
+    "reach": 0.249
+   }
+  ]
+ },
+ "life-plant-flowerbed": {
+  "kB": 8.7,
+  "triangles": 48,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 144,
+    "height": 0.07,
+    "reach": 0.13
+   }
+  ]
+ },
+ "life-plant-garden-tree": {
+  "kB": 7.6,
+  "triangles": 36,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 108,
+    "height": 0.495,
+    "reach": 0.134
+   }
+  ]
+ },
+ "life-plant-grass": {
+  "kB": 6.4,
+  "triangles": 12,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 36,
+    "height": 0.1,
+    "reach": 0.025
+   }
+  ]
+ },
+ "life-plant-hedge": {
+  "kB": 2.9,
+  "triangles": 12,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 36,
+    "height": 0.1,
+    "reach": 0.15
+   }
+  ]
+ },
+ "life-plant-modern-tree": {
+  "kB": 5.5,
+  "triangles": 22,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 66,
+    "height": 0.46,
+    "reach": 0.078
+   }
+  ]
+ },
+ "life-plant-veg": {
+  "kB": 6.2,
+  "triangles": 48,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 144,
+    "height": 0.065,
+    "reach": 0.226
+   }
+  ]
+ },
+ "life-plant-wild-bush": {
+  "kB": 8.3,
+  "triangles": 40,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 120,
+    "height": 0.103,
+    "reach": 0.109
+   }
+  ]
+ },
+ "life-plant-wild-flowers": {
+  "kB": 8.1,
+  "triangles": 18,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 54,
+    "height": 0.055,
+    "reach": 0.03
+   }
+  ]
+ },
+ "life-plant-wild-tree": {
+  "kB": 13.1,
+  "triangles": 92,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 276,
+    "height": 0.496,
+    "reach": 0.162
+   }
+  ]
+ },
+ "life-survivor": {
+  "kB": 16.5,
+  "triangles": 188,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 564,
+    "height": 0.218,
+    "reach": 0.047
+   }
+  ]
+ },
+ "life-tool-axe": {
+  "kB": 3.9,
+  "triangles": 24,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 72,
+    "height": 0.102,
+    "reach": 0.065
+   }
+  ]
+ },
+ "life-tool-barrel": {
+  "kB": 6.4,
+  "triangles": 56,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 168,
+    "height": 0.114,
+    "reach": 0.035
+   }
+  ]
+ },
+ "life-tool-can": {
+  "kB": 3.8,
+  "triangles": 24,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 72,
+    "height": 0.086,
+    "reach": 0.064
+   }
+  ]
+ },
+ "life-tool-hammer": {
+  "kB": 3.7,
+  "triangles": 24,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 72,
+    "height": 0.092,
+    "reach": 0.055
+   }
+  ]
+ },
+ "life-tool-poker": {
+  "kB": 2.4,
+  "triangles": 12,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 36,
+    "height": 0.093,
+    "reach": 0.082
+   }
+  ]
+ },
+ "life-tool-rod": {
+  "kB": 2.9,
+  "triangles": 20,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 60,
+    "height": 0.093,
+    "reach": 0.274
+   }
+  ]
+ },
+ "life-tool-spyglass": {
+  "kB": 3.5,
+  "triangles": 20,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 60,
+    "height": 0.117,
+    "reach": 0.042
+   }
+  ]
+ },
  "lighthouse-1": {
   "kB": 97.5,
   "triangles": 1418,

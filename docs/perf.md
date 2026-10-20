@@ -416,3 +416,32 @@ Same measure (10 Mbit/s, 40 ms, cache off, three runs, median), with `?blender`;
 | The Watchtower, levels 1 to 3 | 322 to 566 | 31 to 52 kB |
 
 **Next:** an entry-level phone must still be measured before players are invited.
+
+### The island's life (meeting 4, owner, 20 October)
+
+With `?blender`: survivors at work and on their ways, animals, plants that follow the Lighthouse, smoke, washing, lanterns that light in the Mist, lapping against the rafts. To make room, the city's water keeps 64 subdivisions at most (96 before) and the rafts show a light version in the normal view (their full models are fetched the first time the camera comes near). Same cities before (12e11a2) and after, each with one building site, at 412 × 915, the life fully loaded; the counter is `?fps`'s (the shadow pass is never in it):
+
+| City | Quality | Before: draw calls, triangles | After: draw calls, triangles |
+| --- | --- | --- | --- |
+| New player (8 survivors: 5 shown) | full | 19, 29.7 k | 35, 27.2 k |
+| New player | 2 | 19, 15.9 k | 35, 23.6 k |
+| 15 rafts, Lighthouse 15, 80 survivors | full | 30, 61.7 k | 49, 54.7 k |
+| 15 rafts, Lighthouse 15 | 2 | 30, 47.9 k | 50, 51.1 k |
+| 39 rafts, Lighthouse 30, 150 survivors (24 shown) | full | 30, 79.7 k | 49, 68.7 k |
+| 39 rafts, Lighthouse 30 | 2 | 30, 65.9 k | 50, 65.1 k |
+
+- The life's share in the 39-raft city: the survivors 4.5 k (24 × 188), their tools 0.2 k, the plants 3.9 k (the Modern era's vegetable plots and trees in rows), the animals 1.6 k, the washing 0.1 k; the smoke and the lanterns are points (no triangle). About 10 k in all, 19 draw calls more.
+- The light rafts save 3 to 4 hundred triangles each (484 to 664 instead of 628 to 1,012): about 10.5 k for 39 rafts, less than the 17 k foreseen. The water's 64 subdivisions save 10.2 k (quality 2 keeps its 48).
+- At full quality the 39-raft city drops from 79.7 k to 68.7 k, between the S22's city (66.7 k) and its sea (73.3 k), both at 60 FPS. At quality 2, the life about makes up for what was saved.
+- Frame rate here (no graphics chip, quality 2, 8 s): new player 13.0 → 10.9 FPS, 39 rafts 6.4 → 6.5. The S22 and an entry-level phone must say what is left.
+
+Time to the city's first image (10 Mbit/s, 40 ms, cache off, five runs, median) and what is fetched before it; the life comes after it:
+
+| City | Before: first image, before it | After: first image, before it | All fetched in the first 6 s after, then |
+| --- | --- | --- | --- |
+| New player | 6.00 s, 1,022 kB | 5.94 s, 1,033 kB | 1,334 → 1,477 kB |
+| Lighthouse 30 | 6.42 s, 1,472 kB | 6.60 s, 1,482 kB | 1,566 → 1,694 kB |
+| Lighthouse 30, 39 rafts | 7.46 s, 1,931 kB | 6.97 s, 1,889 kB | 2,025 → 2,107 kB |
+
+- The first image waits for nothing more (10 kB: the code). The life's models (the survivor 16.5 kB, its seven tools 26 kB, six animals 57 kB, a look's plants 25 to 40 kB, the washing 6.5 kB) come once the city shows.
+
