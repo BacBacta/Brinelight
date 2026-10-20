@@ -379,4 +379,40 @@ With `?blender`, the prototype's kit (`phare.glb`, 2.9 MB) and the wreck, the ca
 - **The goal of about 3 MB holds; the goal of 5 s cannot be judged here.** With no network limit at all, the first image still takes 7.2 s with `?blender` and 7.5 s with the old look: this container draws without a graphics chip (software WebGL), and decoding the textures, compiling the shaders and building the scene take that time. The network now costs about 1 s of the 7.5. A real phone must say what is left.
 - **What weighs the most before the first image** (new player): the old models of the seven buildings not remade yet (1.07 MB; each building remade takes its old model off), the island (171 kB), three.js (145 kB), the raft (101 kB), the Lighthouse (98 kB), the Refinery (86 kB), the building site's parts (95 kB), the ground (57 kB), the game's code (59 kB), the fonts (76 kB).
 
+### All nine buildings remade, then the floating village (owner, 20 October)
+
+Same measure (10 Mbit/s, 40 ms, cache off, three runs, median), with `?blender`; "before the first image" leaves out what comes after it (the raft buildings' old models, while the floating village was not made yet):
+
+| City | First image | Before the first image | Without any network limit |
+| --- | --- | --- | --- |
+| New player | 6.0 s | 1.1 MB | 5.9 s |
+| Lighthouse 30 city | 6.4 s | 1.5 MB | 5.7 s |
+| Lighthouse 30 city, 39 rafts and six buildings on rafts (the floating village made in Blender) | 7.1 s | 2.0 MB | |
+| The same, old look | 10.2 s | 5.4 MB | |
+
+- **About 3 MB: held.** **5 s: not reached here**, and the network is not what is missing: with no limit at all, the first image takes the same 5.7 to 5.9 s. This container draws without a graphics chip; a real phone must say what is left.
+
+**The floating village** (`?blender`), at 412 × 915 (container, quality 2):
+
+| City | Draw calls | Triangles |
+| --- | --- | --- |
+| 3 rafts, Lighthouse 5 (free slots shown) | 24 | 24.7 k |
+| 15 rafts, Lighthouse 15, the shipyard at work | 26 | 39.2 k |
+| 39 rafts, Lighthouse 30, six buildings on rafts, two damaged | 27 | 63.7 k |
+| The same 39 rafts, old look | 23 | 103.5 k |
+
+- Each model of the village shown is one InstancedMesh: the draw calls grow with the kinds of things afloat (three decks, a damaged one, the shipyard's, the walkways, the buoys, each building at its level), never with the rafts.
+- Its files (served: 512 px WebP, quantized), one set for each of its three ages:
+
+| Model | Triangles | File |
+| --- | --- | --- |
+| A deck (three variants) | 864 to 998 | 76 to 81 kB |
+| The damaged deck | 628 to 784 | 61 to 68 kB |
+| The shipyard's raft | 908 to 1,012 | 70 to 75 kB |
+| A walkway | 168 | 17 to 23 kB |
+| The free slot's buoys (one for all ages) | 324 | 35 kB |
+| The Kelp Greenhouse, levels 1 to 3 | 364 to 832 | 31 to 66 kB |
+| The Smokehouse, levels 1 to 3 | 272 to 540 | 24 to 45 kB |
+| The Watchtower, levels 1 to 3 | 322 to 566 | 31 to 52 kB |
+
 **Next:** an entry-level phone must still be measured before players are invited.

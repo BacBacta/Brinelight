@@ -30,6 +30,15 @@ function points(name: string): THREE.Vector3[] {
   return out;
 }
 
+/** Where a ray down the middle of a model first meets it. */
+function deckTop(name: string): number {
+  const { scenes } = readGlb(file(name));
+  const scene = Object.values(scenes)[0]!;
+  scene.updateMatrixWorld(true);
+  const ray = new THREE.Raycaster(new THREE.Vector3(0.02, 10, 0.03), new THREE.Vector3(0, -1, 0));
+  return ray.intersectObject(scene, true)[0]?.point.y ?? -1;
+}
+
 const IDS = ["greenhouse", "smokehouse", "watchtower"] as const;
 const DECKS = (age: number) => ["a", "b", "c", "damaged"].map((v) => `raft-${v}-age${age}`);
 /** What a building on a raft may take of its deck: its middle, clear of the front's damage mark. */
@@ -76,9 +85,8 @@ describe.runIf(hasVillage())("the floating village's models", () => {
         expect(Math.min(...p.map((v) => v.y)), name).toBeGreaterThan(-0.02);
         // Nothing taller than a mast: a raft never looks bigger than a building of the island.
         expect(Math.max(...p.map((v) => v.y)), name).toBeLessThan(1.3);
-        // The deck's top, in its middle.
-        const middle = p.filter((v) => Math.hypot(v.x, v.z) < 0.15);
-        expect(Math.abs(Math.max(...middle.map((v) => v.y)) - VILLAGE_DECK), name).toBeLessThan(name.includes("yard") ? 0.4 : 0.02);
+        // The deck's top, in its middle (the shipyard's raft has only its back half laid).
+        if (!name.includes("yard")) expect(Math.abs(deckTop(name) - VILLAGE_DECK), name).toBeLessThan(0.015);
         expect(CITY_MANIFEST[name]!.triangles, name).toBeLessThanOrEqual(name.includes("yard") ? 1100 : 1000);
         expect(CITY_MANIFEST[name]!.kB, name).toBeLessThanOrEqual(100);
       }
@@ -91,9 +99,8 @@ describe.runIf(hasVillage())("the floating village's models", () => {
         expect(inFoot.length, `${name}: ${inFoot.slice(0, 3).map((v) => `${v.x.toFixed(2)},${v.z.toFixed(2)}`)}`).toBe(0);
         for (let k = 0; k < 6; k++) {
           const a = (k * Math.PI) / 3;
-          const mx = Math.cos(a) * 0.8;
-          const mz = Math.sin(a) * 0.8;
-          expect(above.filter((v) => Math.hypot(v.x - mx, v.z - mz) < 0.16).length, `${name} side ${k}`).toBe(0);
+          const near = above.filter((v) => Math.hypot(v.x - Math.cos(a) * 0.8, v.z - Math.sin(a) * 0.8) < 0.16);
+          expect(near.length, `${name} side ${k}: ${near.slice(0, 2).map((v) => `${v.x.toFixed(2)},${v.y.toFixed(2)},${v.z.toFixed(2)}`)}`).toBe(0);
         }
       }
     });

@@ -165,7 +165,9 @@ Level 30 is the Modern era complete: the Modern building with all its details an
 - Electricity: paved paths, lamp posts at the crossings, the bollards.
 - Modern: paved walks, white lamp posts with a warm light, concrete quays all along the coast.
 
-**The raft buildings** (Greenhouse, Smokehouse, Watchtower) have three levels: they follow the floating village's look, not the eras (meeting 3).
+**The floating village** (meeting 3; `assets/blender/raft.py`, `raft_buildings.py`). It ages with the Lighthouse in three steps: driftwood (Lighthouse 1–9), tarred (10–19), steel (20–30).
+- Three decks that tell neighbors apart: A, a short mast and its furled sail; B, nets drying on two poles and a crate; C, planters of kelp and herbs and two lanterns. A damaged deck: planks torn up and a dark hole at its front corner, a float gone. The shipyard's raft: half its deck laid, scaffolding, a stack of planks. A walkway; the free slot's buoys.
+- The raft buildings (Greenhouse, Smokehouse, Watchtower) at their levels 1 to 3, in the same three ages: a detail at 2, the transformation at 3 (below, "The buildings of the rafts").
 
 ### The order
 

@@ -443,6 +443,114 @@
    }
   ]
  },
+ "greenhouse-1-age1": {
+  "kB": 32.1,
+  "triangles": 364,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1092,
+    "height": 0.479,
+    "reach": 0.518
+   }
+  ]
+ },
+ "greenhouse-1-age10": {
+  "kB": 31.9,
+  "triangles": 364,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1092,
+    "height": 0.479,
+    "reach": 0.518
+   }
+  ]
+ },
+ "greenhouse-1-age20": {
+  "kB": 30.9,
+  "triangles": 364,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1092,
+    "height": 0.479,
+    "reach": 0.518
+   }
+  ]
+ },
+ "greenhouse-2-age1": {
+  "kB": 46.8,
+  "triangles": 604,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1812,
+    "height": 0.479,
+    "reach": 0.557
+   }
+  ]
+ },
+ "greenhouse-2-age10": {
+  "kB": 46.3,
+  "triangles": 604,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1812,
+    "height": 0.479,
+    "reach": 0.557
+   }
+  ]
+ },
+ "greenhouse-2-age20": {
+  "kB": 44.6,
+  "triangles": 604,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1812,
+    "height": 0.479,
+    "reach": 0.557
+   }
+  ]
+ },
+ "greenhouse-3-age1": {
+  "kB": 66.0,
+  "triangles": 832,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2496,
+    "height": 0.584,
+    "reach": 0.565
+   }
+  ]
+ },
+ "greenhouse-3-age10": {
+  "kB": 64.6,
+  "triangles": 832,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2496,
+    "height": 0.584,
+    "reach": 0.565
+   }
+  ]
+ },
+ "greenhouse-3-age20": {
+  "kB": 64.6,
+  "triangles": 832,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2496,
+    "height": 0.584,
+    "reach": 0.565
+   }
+  ]
+ },
  "ground-1": {
   "kB": 56.3,
   "triangles": 510,
@@ -1750,6 +1858,234 @@
    }
   ]
  },
+ "raft-a-age1": {
+  "kB": 79.5,
+  "triangles": 922,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2766,
+    "height": 1.21,
+    "reach": 0.796
+   }
+  ]
+ },
+ "raft-a-age10": {
+  "kB": 79.8,
+  "triangles": 998,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2994,
+    "height": 1.21,
+    "reach": 0.796
+   }
+  ]
+ },
+ "raft-a-age20": {
+  "kB": 75.8,
+  "triangles": 890,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2670,
+    "height": 1.21,
+    "reach": 0.796
+   }
+  ]
+ },
+ "raft-b-age1": {
+  "kB": 79.2,
+  "triangles": 912,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2736,
+    "height": 0.87,
+    "reach": 0.796
+   }
+  ]
+ },
+ "raft-b-age10": {
+  "kB": 79.6,
+  "triangles": 988,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2964,
+    "height": 0.87,
+    "reach": 0.796
+   }
+  ]
+ },
+ "raft-b-age20": {
+  "kB": 76.7,
+  "triangles": 880,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2640,
+    "height": 0.87,
+    "reach": 0.796
+   }
+  ]
+ },
+ "raft-c-age1": {
+  "kB": 80.9,
+  "triangles": 916,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2748,
+    "height": 0.813,
+    "reach": 0.796
+   }
+  ]
+ },
+ "raft-c-age10": {
+  "kB": 78.0,
+  "triangles": 952,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2856,
+    "height": 0.813,
+    "reach": 0.796
+   }
+  ]
+ },
+ "raft-c-age20": {
+  "kB": 76.7,
+  "triangles": 864,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2592,
+    "height": 0.825,
+    "reach": 0.796
+   }
+  ]
+ },
+ "raft-damaged-age1": {
+  "kB": 67.8,
+  "triangles": 736,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2208,
+    "height": 0.606,
+    "reach": 0.796
+   }
+  ]
+ },
+ "raft-damaged-age10": {
+  "kB": 67.8,
+  "triangles": 784,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2352,
+    "height": 0.606,
+    "reach": 0.796
+   }
+  ]
+ },
+ "raft-damaged-age20": {
+  "kB": 62.3,
+  "triangles": 628,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1884,
+    "height": 0.606,
+    "reach": 0.796
+   }
+  ]
+ },
+ "raft-free": {
+  "kB": 35.2,
+  "triangles": 324,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 972,
+    "height": 0.15,
+    "reach": 0.818
+   }
+  ]
+ },
+ "raft-walk-age1": {
+  "kB": 23.0,
+  "triangles": 168,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 504,
+    "height": 0.135,
+    "reach": 0.513
+   }
+  ]
+ },
+ "raft-walk-age10": {
+  "kB": 22.2,
+  "triangles": 168,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 504,
+    "height": 0.135,
+    "reach": 0.513
+   }
+  ]
+ },
+ "raft-walk-age20": {
+  "kB": 16.8,
+  "triangles": 168,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 504,
+    "height": 0.135,
+    "reach": 0.513
+   }
+  ]
+ },
+ "raft-yard-age1": {
+  "kB": 74.6,
+  "triangles": 976,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2928,
+    "height": 1.05,
+    "reach": 0.796
+   }
+  ]
+ },
+ "raft-yard-age10": {
+  "kB": 74.4,
+  "triangles": 1012,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 3036,
+    "height": 1.05,
+    "reach": 0.796
+   }
+  ]
+ },
+ "raft-yard-age20": {
+  "kB": 69.5,
+  "triangles": 908,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 2724,
+    "height": 1.05,
+    "reach": 0.796
+   }
+  ]
+ },
  "refinery-1": {
   "kB": 85.6,
   "triangles": 1314,
@@ -2242,6 +2578,222 @@
     "indices": 348,
     "height": 1.57,
     "reach": 0.104
+   }
+  ]
+ },
+ "smokehouse-1-age1": {
+  "kB": 29.0,
+  "triangles": 272,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 816,
+    "height": 1.005,
+    "reach": 0.516
+   }
+  ]
+ },
+ "smokehouse-1-age10": {
+  "kB": 27.9,
+  "triangles": 296,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 888,
+    "height": 1.005,
+    "reach": 0.516
+   }
+  ]
+ },
+ "smokehouse-1-age20": {
+  "kB": 24.4,
+  "triangles": 272,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 816,
+    "height": 1.005,
+    "reach": 0.516
+   }
+  ]
+ },
+ "smokehouse-2-age1": {
+  "kB": 34.4,
+  "triangles": 356,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1068,
+    "height": 1.005,
+    "reach": 0.516
+   }
+  ]
+ },
+ "smokehouse-2-age10": {
+  "kB": 34.0,
+  "triangles": 380,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1140,
+    "height": 1.005,
+    "reach": 0.516
+   }
+  ]
+ },
+ "smokehouse-2-age20": {
+  "kB": 30.6,
+  "triangles": 356,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1068,
+    "height": 1.005,
+    "reach": 0.516
+   }
+  ]
+ },
+ "smokehouse-3-age1": {
+  "kB": 44.4,
+  "triangles": 516,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1548,
+    "height": 1.305,
+    "reach": 0.532
+   }
+  ]
+ },
+ "smokehouse-3-age10": {
+  "kB": 44.7,
+  "triangles": 540,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1620,
+    "height": 1.305,
+    "reach": 0.532
+   }
+  ]
+ },
+ "smokehouse-3-age20": {
+  "kB": 39.9,
+  "triangles": 516,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1548,
+    "height": 1.305,
+    "reach": 0.532
+   }
+  ]
+ },
+ "watchtower-1-age1": {
+  "kB": 35.7,
+  "triangles": 338,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1014,
+    "height": 1.2,
+    "reach": 0.406
+   }
+  ]
+ },
+ "watchtower-1-age10": {
+  "kB": 32.2,
+  "triangles": 338,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1014,
+    "height": 1.2,
+    "reach": 0.406
+   }
+  ]
+ },
+ "watchtower-1-age20": {
+  "kB": 31.2,
+  "triangles": 322,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 966,
+    "height": 1.2,
+    "reach": 0.406
+   }
+  ]
+ },
+ "watchtower-2-age1": {
+  "kB": 42.6,
+  "triangles": 430,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1290,
+    "height": 1.2,
+    "reach": 0.406
+   }
+  ]
+ },
+ "watchtower-2-age10": {
+  "kB": 38.7,
+  "triangles": 430,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1290,
+    "height": 1.2,
+    "reach": 0.406
+   }
+  ]
+ },
+ "watchtower-2-age20": {
+  "kB": 36.7,
+  "triangles": 414,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1242,
+    "height": 1.2,
+    "reach": 0.406
+   }
+  ]
+ },
+ "watchtower-3-age1": {
+  "kB": 52.4,
+  "triangles": 566,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1698,
+    "height": 1.74,
+    "reach": 0.407
+   }
+  ]
+ },
+ "watchtower-3-age10": {
+  "kB": 48.9,
+  "triangles": 566,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1698,
+    "height": 1.74,
+    "reach": 0.407
+   }
+  ]
+ },
+ "watchtower-3-age20": {
+  "kB": 45.5,
+  "triangles": 550,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 1650,
+    "height": 1.74,
+    "reach": 0.407
    }
   ]
  }

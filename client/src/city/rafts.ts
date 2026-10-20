@@ -254,7 +254,8 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
     for (const r of afloat) {
       const y = Math.sin(now * 1.3 + r.bob) * 0.04;
       height.set(r.key, y);
-      decks[r.variant]!.setMatrixAt(r.index, m4.compose(p.set(r.x, RAFT_BOTTOM + y, r.z), q.identity(), one));
+      // With the village made in Blender, it draws the decks itself.
+      decks[r.variant]?.setMatrixAt(r.index, m4.compose(p.set(r.x, RAFT_BOTTOM + y, r.z), q.identity(), one));
     }
     for (const d of decks) d.instanceMatrix.needsUpdate = true;
     for (const id of RAFT_BUILDING_IDS) {
@@ -338,10 +339,10 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
           ring.setMatrixAt(free, m4.makeTranslation(x, -0.19, z));
           free++;
         } else {
-          const variant = raftVariant(s.key, decks.length);
-          const index = counts[variant]!++;
+          const variant = raftVariant(s.key, Math.max(1, decks.length));
+          const index = village ? 0 : counts[variant]!++;
           afloat.push({ key: s.key, x, z, variant, index, bob });
-          decks[variant]!.setColorAt(index, s.view === "damaged" ? damaged : sound);
+          decks[variant]?.setColorAt(index, s.view === "damaged" ? damaged : sound);
           if (s.view === "building") {
             scaffold.position.set(x, 0, z);
             scaffold.visible = true;
