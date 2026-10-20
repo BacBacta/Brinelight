@@ -142,6 +142,15 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   let posted = false;
   let shownAt: number | null = null;
   const FINISH_AFTER = 4;
+  /** The finish fades in over this many seconds: it never pops in. */
+  const FINISH_FADE = 1;
+  /**
+   * With ?blender, until the city's first image, the sea behind "Loading your city…" is drawn twice a second at most:
+   * drawn at every frame at full quality, it slowed the models' loading down by seconds (week 8, the first image).
+   */
+  const LOADING_FRAME = 0.5;
+  let loadingDrawn = -Infinity;
+
   const scene = new THREE.Scene();
   // With ?blender, the city's light after the style pass (look.ts), a little brighter (owner, on the S22).
   const calm = blenderLook() ? CITY_STYLE : CITY_CALM;
@@ -288,6 +297,10 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       water.setShore(shore.distances(moored));
       lighthouse.useModel(buildings.lighthouse);
       sizeLighthouse();
+      if (blenderLook()) {
+        renderer.setPixelRatio(Math.min(QUALITY_STEPS[step].maxPixelRatio, devicePixelRatio || 1));
+        layout();
+      }
       options.onLoaded?.(kit, buildings, models);
       shownAt = clock.elapsedTime;
       if (!options.village)
@@ -358,12 +371,22 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     }
     v.controls.update();
     for (const cb of frameCallbacks) cb(now, view);
+    if (blenderLook() && shownAt === null) {
+      if (now - loadingDrawn < LOADING_FRAME) return;
+      loadingDrawn = now;
+      // Under "Loading your city…", at one pixel per CSS pixel too; the city's first image has its step's pixels.
+      if (renderer.getPixelRatio() !== 1) {
+        renderer.setPixelRatio(1);
+        layout();
+      }
+    }
     posted = blenderLook() && QUALITY_STEPS[step].finish && view === "city" && shownAt !== null && now - shownAt > FINISH_AFTER;
     if (posted) {
       if (!post) {
         post = createPost(renderer);
         post.setSize(innerWidth, innerHeight, renderer.getPixelRatio());
       }
+      post.setStrength(Math.min(1, (now - shownAt! - FINISH_AFTER) / FINISH_FADE));
       post.render(v.scene, v.camera);
     } else renderer.render(v.scene, v.camera);
   };

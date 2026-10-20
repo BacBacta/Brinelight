@@ -24,10 +24,15 @@ describe("the city's finish", () => {
 
   it("grades in the output pass, after the tone mapping and the screen's colors", () => {
     const shader = gradedOutput().material.fragmentShader;
-    expect(shader).toContain("uniform float uContrast, uSaturation;");
+    expect(shader).toContain("uniform float uContrast, uSaturation, uAmount;");
     const srgb = shader.indexOf("sRGBTransferOETF( gl_FragColor )");
     const grade = shader.indexOf("uContrast + .5");
     expect(srgb).toBeGreaterThan(0);
     expect(grade).toBeGreaterThan(srgb);
+  });
+
+  it("fades in: at 0, the screen's colors untouched by the grade", () => {
+    const shader = gradedOutput().material.fragmentShader;
+    expect(shader).toContain("mix(gl_FragColor.rgb, clamp(c, 0., 1.), uAmount)");
   });
 });

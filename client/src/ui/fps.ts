@@ -1,9 +1,13 @@
 import type { SceneHandle } from "../scene/index.js";
-import { fpsFrame, fpsMin, modelsLoaded, newFpsMeter } from "./fpsMeter.js";
+import { MIN_WINDOW, fpsAvg, fpsFrame, fpsMin, modelsLoaded, newFpsMeter, screenLine } from "./fpsMeter.js";
 
 const VIEW_NAMES = { city: "City", sea: "Sea" } as const;
 
-/** The ?fps counter: a small box in the bottom left corner, just above the bottom menu, refreshed every second. It catches no tap. */
+/**
+ * The ?fps counter: a small box in the bottom left corner, just above the bottom menu, refreshed every second. It catches no tap.
+ * One capture of it tells everything (owner, before the S22's test): the frame rate now, the minimum and the mean of the
+ * last 10 seconds, the quality step, the screen's size and pixel ratio, the draw calls and triangles.
+ */
 export function createFpsCounter(root: HTMLElement, scene: SceneHandle) {
   const el = document.createElement("div");
   el.className = "fps";
@@ -20,9 +24,10 @@ export function createFpsCounter(root: HTMLElement, scene: SceneHandle) {
     shownAt = t;
     const s = scene.stats();
     el.textContent =
-      `${round(meter.avg)} FPS · min ${round(fpsMin(meter))}\n` +
+      `${round(meter.avg)} FPS · ${MIN_WINDOW} s: min ${round(fpsMin(meter))} · mean ${round(fpsAvg(meter))}\n` +
       `Quality ${s.step} ${s.forced ? "forced" : "auto"} · ${VIEW_NAMES[view]}${s.mood === "mist" ? " · Mist" : ""}\n` +
-      `${s.calls} calls · ${(s.triangles / 1000).toFixed(1)} k tris`;
+      `${screenLine(innerWidth, innerHeight, devicePixelRatio || 1)}\n` +
+      `${s.calls} calls · ${(s.triangles / 1000).toFixed(1)} k tris${s.post ? ` · finish +${s.post}` : ""}`;
   });
 
   return {

@@ -500,3 +500,26 @@ Time to the first image (10 Mbit/s, 40 ms, cache off, five runs, median):
 | Lighthouse 30, 39 rafts | 7.18 s, then 7.63 s | 7.96 s, then 7.52 s | 4.11 s | 4.25 s |
 
 - The 39-raft city was measured twice at quality 0: the runs' spread is wider than the gap.
+
+### The first image at full quality (owner, 20 October)
+
+With `?blender`, quality 0 showed the city about 3.5 s later than quality 1. Each step of the load, measured in the container (a new player, 10 Mbit/s):
+
+| Step | Quality 0 | Quality 1 |
+| --- | --- | --- |
+| The models fetched and read | 6.9 s | 2.4 s |
+| The island, its shore and the city made | +0.06 s | +0.05 s |
+| "Loading your city…" gone, as the page sees it | 7.6 s | 3.1 s |
+
+- The draw calls took 0.24 s in all while loading, and only 11 frames came in 6 s. The cost was the screen's raster at full quality (pixel ratio 2): in the container the processor draws, so the sea behind "Loading your city…" took it from the models' decoding. It was not the shadows, the shaders or the finish: the finish starts 4 s after the first image.
+- Now, until the city shows, that sea is drawn twice a second at most, at one pixel per CSS pixel. The city's first image and everything after it are as before: its step's pixels and shadows, and the finish 4 s later, now fading in over 1 s.
+
+Time to the first image (10 Mbit/s, 40 ms, cache off, five runs, median), before (036efbc) and after:
+
+| City | Quality 0 before | Quality 0 after | Quality 1 before | Quality 1 after |
+| --- | --- | --- | --- | --- |
+| New player | 6.05 s | 2.85 s | 2.91 s | 2.16 s |
+| Lighthouse 30 | 6.39 s | 3.38 s | 3.50 s | 2.50 s |
+| Lighthouse 30, 39 rafts | 7.07 s | 3.95 s | 4.09 s | 3.17 s |
+
+- All under 5 s. Quality 0 still trails quality 1 by 0.7 to 0.9 s here: its first image itself (4 times the pixels, 2048 shadows) takes the processor that long in the container.

@@ -48,5 +48,14 @@ export function fpsMin(m: FpsMeter): number | null {
   return counted.length ? Math.min(...counted.map((s) => s.fps)) : null;
 }
 
+/** The mean frame rate of the last MIN_WINDOW seconds (the same one-second measures as the minimum); null when there is none yet. */
+export function fpsAvg(m: FpsMeter): number | null {
+  const counted = m.seconds.filter((s) => s.start >= m.countFrom);
+  return counted.length ? counted.reduce((a, s) => a + s.fps, 0) / counted.length : null;
+}
+
+/** What the counter tells of the screen: its size in CSS pixels and its pixel ratio. */
+export const screenLine = (w: number, h: number, ratio: number): string => `${w} × ${h} px · ×${Number(ratio.toFixed(2))}`;
+
 /** Reads ?fps in the URL. */
 export const fpsWanted = (search: string): boolean => new URLSearchParams(search).has("fps");

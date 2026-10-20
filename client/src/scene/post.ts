@@ -24,7 +24,7 @@ const GRADE_GLSL = /* glsl */ `
   c = mix(vec3(l), c, uSaturation);
   c = (c - .5) * uContrast + .5;
   c += uLights * smoothstep(.35, 1., l) + uShadows * (1. - smoothstep(0., .5, l));
-  gl_FragColor.rgb = clamp(c, 0., 1.);
+  gl_FragColor.rgb = mix(gl_FragColor.rgb, clamp(c, 0., 1.), uAmount);
 }`;
 
 /** three.js's OutputPass (tone mapping, the screen's colors) with the grade at its end: one full-screen pass for both. */
@@ -35,9 +35,10 @@ export function gradedOutput(): OutputPass {
     uSaturation: { value: GRADE.saturation },
     uLights: { value: new THREE.Vector3(...GRADE.lights) },
     uShadows: { value: new THREE.Vector3(...GRADE.shadows) },
+    uAmount: { value: 1 },
   });
   output.material.fragmentShader = output.material.fragmentShader
-    .replace("uniform sampler2D tDiffuse;", "uniform sampler2D tDiffuse;\nuniform float uContrast, uSaturation;\nuniform vec3 uLights, uShadows;")
+    .replace("uniform sampler2D tDiffuse;", "uniform sampler2D tDiffuse;\nuniform float uContrast, uSaturation, uAmount;\nuniform vec3 uLights, uShadows;")
     .replace(/(#ifdef SRGB_TRANSFER[\s\S]*?#endif)/, `$1\n${GRADE_GLSL}`);
   return output;
 }
@@ -64,6 +65,8 @@ class CountPass extends Pass {
 export type Post = {
   render(scene: THREE.Scene, camera: THREE.Camera): void;
   setSize(width: number, height: number, pixelRatio: number): void;
+  /** How much of the finish shows, 0 to 1: it fades in when it starts, never popping in. */
+  setStrength(amount: number): void;
   /** The scene's own draw calls and triangles at the last frame, without the finish's passes. */
   readonly scene: { calls: number; triangles: number };
   /** The finish's passes' draw calls at the last frame. */
@@ -84,7 +87,8 @@ export function createPost(renderer: THREE.WebGLRenderer): Post {
   composer.addPass(scenePass);
   composer.addPass(count);
   composer.addPass(bloom);
-  composer.addPass(gradedOutput());
+  const output = gradedOutput();
+  composer.addPass(output);
   let passes = 0;
   return {
     render(scene, camera) {
@@ -93,6 +97,11 @@ export function createPost(renderer: THREE.WebGLRenderer): Post {
       composer.render();
       passes = renderer.info.render.calls;
       renderer.info.autoReset = true;
+    },
+    setStrength(amount) {
+      const t = Math.min(1, Math.max(0, amount));
+      bloom.strength = BLOOM.strength * t;
+      (output.uniforms as Record<string, THREE.IUniform>).uAmount!.value = t;
     },
     setSize(width, height, pixelRatio) {
       composer.setPixelRatio(pixelRatio);

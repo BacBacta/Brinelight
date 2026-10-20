@@ -140,4 +140,6 @@ One line per decision, most recent first.
   - **Sea and coast:** the city's sea stands 0.2 higher, with the rafts, so the cliffs are half as high. The coast alternates low cliffs and gentle beaches and follows the raft rooms' joined edge.
   - **Look:** grass fresher, the image a little brighter, the veil lighter.
 - **The normal view never shows the city under three quarters of the screen's width (owner, style pass cleanup; `?blender`).** The whole-city framing already shows it at 80 to 96 % on a 360 or 412 px screen. When the band is too short for the whole city (works under way over the top), the camera comes closer and keeps only the buildings between the panels.
+- **With `?blender`, the sea behind "Loading your city…" is drawn twice a second at most until the city shows (week 8, the first image).** At full quality, drawing it at every frame slowed the models' loading by about 4 s in the container (the screen's raster took the processor from the decoding). Nothing changes once the city shows. The finish starts 4 s later and fades in over 1 s.
+- **The `?fps` counter shows what a phone's test needs in one capture**: the frame rate now, the minimum and mean of the last 10 seconds, the quality step, the screen's size in CSS pixels and its pixel ratio, the draw calls and triangles (and the finish's own passes).
 
