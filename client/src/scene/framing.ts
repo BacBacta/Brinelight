@@ -20,6 +20,8 @@ export const CITY_FOV = 40;
 export const SIDE_MARGIN = 4;
 /** How far a raft reaches from its slot's center (its hexagon). */
 export const RAFT_REACH = 1;
+/** How far a raft's deck reaches from its slot's center (its room, RAFT_FILL in coast.ts). */
+const RAFT_DECK = 0.82;
 /** Where every raft slot open at this Lighthouse level lies. */
 export const openSlots = (lighthouseLevel: number) => RAFT_SLOTS.filter((s) => slotOpen(s.ring, lighthouseLevel)).map((s) => ({ x: hexX(s.q, s.r), z: hexZ(s.r) }));
 
@@ -50,6 +52,34 @@ export function cityPoints(rafts: readonly { x: number; z: number }[], tops: rea
       points.push(new THREE.Vector3(x + Math.cos(a) * RAFT_REACH, 0, z + Math.sin(a) * RAFT_REACH));
     }
   }
+  return points;
+}
+
+/** How much of the screen's width the city spans in a framing (its coast and its rafts' decks), from 0 to 1. */
+export function cityWidthShare(view: View, rafts: readonly { x: number; z: number }[], framing: { distance: number; target: THREE.Vector3 }, coast: Coast = coastAt): number {
+  const b = bounds(view, cityExtent(rafts, coast), framing.distance, framing.target);
+  return (b.right - b.left) / view.width;
+}
+
+/** How far the land reaches from the island's center in a direction (x = cos, z = sin). */
+export type Coast = (angle: number) => number;
+
+/** The middles of the 19 plots of rings 0 to 2: the buildings stand there. */
+const PLOT_CENTERS: THREE.Vector3[] = [];
+for (let q = -2; q <= 2; q++) for (let r = -2; r <= 2; r++) if (Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)) <= 2) PLOT_CENTERS.push(new THREE.Vector3(hexX(q, r), 0, hexZ(r)));
+
+/** What the city shows across the screen: its coast and its rafts' decks (no foam, no pier). */
+export function cityExtent(rafts: readonly { x: number; z: number }[], coast: Coast = coastAt): THREE.Vector3[] {
+  const points: THREE.Vector3[] = [];
+  for (let i = 0; i < 36; i++) {
+    const a = (i / 36) * Math.PI * 2;
+    points.push(new THREE.Vector3(Math.cos(a) * coast(a), 0, Math.sin(a) * coast(a)));
+  }
+  for (const { x, z } of rafts)
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
+      points.push(new THREE.Vector3(x + Math.cos(a) * RAFT_DECK, 0, z + Math.sin(a) * RAFT_DECK));
+    }
   return points;
 }
 
@@ -99,14 +129,30 @@ function centered(view: View, points: readonly THREE.Vector3[], distance: number
   return at(s1);
 }
 
+/** With ?blender (owner, after the style pass): the city never spans less of the screen's width in the normal view. */
+export const CITY_FILL = 0.75;
+
+/** A framing by the city's width (?blender): the share of the screen's width its coast and rafts span, and its coast. */
+export type Fill = { share: number; coast: Coast };
+
 /**
  * The city's normal view on this screen: the shortest distance at which the island, the pier and the rafts fit in the band (to a hundredth), and the point it looks at, which centers them in it.
+ * With `fill` (owner, after the style pass), the city's coast and rafts never span less than that share of the screen's
+ * width: when the band is too short for the whole city (works under way over the screen's top), the camera comes closer,
+ * only the buildings (their plots' middles and the tallest tops) still in the band; the shore, a raft or the pier may
+ * then pass under a panel. Otherwise the framing is the one above.
  */
-export function cityFraming(view: View, rafts: readonly { x: number; z: number }[], tops: readonly { x: number; y: number; z: number }[] = []): { distance: number; target: THREE.Vector3 } {
-  const points = cityPoints(rafts, tops);
+export function cityFraming(view: View, rafts: readonly { x: number; z: number }[], tops: readonly { x: number; y: number; z: number }[] = [], fill?: Fill): { distance: number; target: THREE.Vector3 } {
+  const extent = fill ? cityExtent(rafts, fill.coast) : [];
+  const plots = fill ? [...PLOT_CENTERS, ...tops.map((t) => new THREE.Vector3(t.x, t.y, t.z))] : [];
+  const points = fill ? plots : cityPoints(rafts, tops);
   const fits = (distance: number) => {
-    const b = bounds(view, points, distance, centered(view, points, distance));
-    return b.left >= SIDE_MARGIN && b.right <= view.width - SIDE_MARGIN && b.top >= view.top && b.bottom <= view.bottom;
+    const target = centered(view, points, distance);
+    const b = bounds(view, points, distance, target);
+    if (b.top < view.top || b.bottom > view.bottom) return false;
+    if (!fill) return b.left >= SIDE_MARGIN && b.right <= view.width - SIDE_MARGIN;
+    const e = bounds(view, extent, distance, target);
+    return e.right - e.left <= fill.share * view.width;
   };
   let [near, far] = [5, 200];
   while (far - near > 0.01) {
@@ -114,7 +160,10 @@ export function cityFraming(view: View, rafts: readonly { x: number; z: number }
     if (fits(mid)) far = mid;
     else near = mid;
   }
-  return { distance: far, target: centered(view, points, far) };
+  if (!fill) return { distance: far, target: centered(view, points, far) };
+  // The whole city's framing, unless it shows the city smaller than `fill`.
+  const whole = cityFraming(view, rafts, tops);
+  return whole.distance <= far ? whole : { distance: far, target: centered(view, points, far) };
 }
 
 /** The pinch zoom's closest distance: the close view never goes nearer. */

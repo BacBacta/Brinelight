@@ -42,7 +42,7 @@ function deckTop(name: string): number {
 }
 
 const IDS = ["greenhouse", "smokehouse", "watchtower"] as const;
-const DECKS = (age: number) => ["a", "b", "c", "damaged"].flatMap((v) => [`raft-${v}-age${age}`, `raft-${v}-age${age}-lite`]);
+const DECKS = (age: number) => ["a", "b", "c", "d", "damaged"].flatMap((v) => [`raft-${v}-age${age}`, `raft-${v}-age${age}-lite`]);
 /** What a building on a raft may take of its deck: its middle, clear of the front's damage mark. */
 const FOOT = { x: 0.46, back: -0.47, front: 0.44 };
 /** The middle a raft keeps free of its own things, for the body of a building. */
@@ -67,7 +67,7 @@ describe("the ages of the floating village", () => {
     const rafts = { [a]: { hp: 100, building: "smokehouse" as const, level: 2 }, [b]: { hp: 20, building: "watchtower" as const, level: 3 } };
     const m = villageModels(slots, rafts, 15);
     // The normal view shows the decks' light versions.
-    expect(m.slots.get(a)).toBe(`raft-${"abc"[raftVariant(a)]}-age10-lite`);
+    expect(m.slots.get(a)).toBe(`raft-${"abcd"[raftVariant(a)]}-age10-lite`);
     expect([m.slots.get(b), m.slots.get(c), m.slots.get(d)]).toEqual(["raft-damaged-age10-lite", "raft-yard-age10", "raft-free"]);
     expect([...m.buildings.entries()]).toEqual([
       [a, "smokehouse-2-age10"],
@@ -169,7 +169,7 @@ describe.runIf(hasVillage())("the floating village's models", () => {
       expect(CITY_MANIFEST[`raft-walk-age${age}`]!.triangles).toBeLessThanOrEqual(200);
       expect(CITY_MANIFEST[`raft-moor-age${age}`]!.triangles).toBeLessThanOrEqual(200);
       // A deck's light version: at most 720 triangles, at least a fifth fewer than its full model, its lamps where its full model's are.
-      for (const v of ["a", "b", "c", "damaged"]) {
+      for (const v of ["a", "b", "c", "d", "damaged"]) {
         const [full, light] = [CITY_MANIFEST[`raft-${v}-age${age}`]!, CITY_MANIFEST[`raft-${v}-age${age}-lite`]!];
         expect(light.triangles, v).toBeLessThanOrEqual(720);
         expect(light.triangles, v).toBeLessThan(full.triangles * 0.8);
@@ -178,7 +178,8 @@ describe.runIf(hasVillage())("the floating village's models", () => {
       // The mooring's rope ends on the deck's rim, under the beach.
       const end = points(`raft-moor-age${age}`).reduce((a, v) => (v.z > a.z ? v : a));
       expect(end.z).toBeCloseTo(MOOR_STAKE - 0.8 + 0.03 + 0.015, 1);
-      expect(end.y).toBeCloseTo(-(0.62 - VILLAGE_DECK) + 0.02, 1);
+      // The rafts ride 0.2 higher with the island's sea since the style pass's cleanup (raft.py, SEA_RISE).
+      expect(end.y).toBeCloseTo(-(0.62 - 0.2 - VILLAGE_DECK) + 0.02, 1);
       expect(CITY_MANIFEST["raft-free"]!.triangles).toBeLessThanOrEqual(400);
       for (const name of villageNames(age)) expect(CITY_MANIFEST[name], name).toBeDefined();
     });

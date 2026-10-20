@@ -7,11 +7,12 @@
  */
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { RAFT_BUILDING_MAX_COPIES, RAFT_DAMAGED_BELOW, RAFT_SLOTS, raftCap, slotOpen, yardSlot, type RaftBuildingId } from "@brinelight/shared";
+import { RAFT_BUILDING_MAX_COPIES, RAFT_DAMAGED_BELOW, RAFT_SLOTS, canAddRaft, raftCap, slotOpen, yardSlot, type RaftBuildingId } from "@brinelight/shared";
 import { RAFT_BUILDING_IDS, bakeModel, hexX, hexZ, kitModel, type Kit, type RaftBuildingModels } from "../scene/index.js";
 import { RAFT_FILL } from "../scene/coast.js";
 import type { PlayerState } from "../state/index.js";
 import { VILLAGE_DECK, VILLAGE_SEA, raftMoorings, villageAge, villageModels, villageNormalNames, type Placed, type Village } from "./village.js";
+import { SEA_RISE } from "../scene/cityLook.js";
 
 export type RaftSlotView = "raft" | "damaged" | "building" | "free";
 
@@ -49,11 +50,33 @@ export function raftBuildingsShown(state: PlayerState): Record<RaftBuildingId, s
 /** A building's turn on its raft: every one faces the camera, as the island's do (week 8: no raft turned at random). */
 export const raftBuildingTurn = (_key: string): number => 0;
 
+/** The village's decks (raft.py: a mast, nets, planters, a deck garden). */
+export const DECK_VARIANTS = 4;
+
 /**
- * Which of the raft models a slot shows: (q − r) mod 3, a fixed rule that gives two rafts side by side two different
- * models (every neighbor of a slot is 1 or 2 away from it, mod 3). With fewer models, the rule wraps around them.
+ * With the four decks (style pass, owner: no monotonous ring), each slot's: a hash of the slot, the next one up when
+ * a neighbor already has it, in the slots' order. Fixed, never random: the same raft looks the same everywhere, and
+ * two rafts side by side never look alike.
  */
-export const raftVariant = (key: string, models = 3): number => {
+const VARIED = (() => {
+  const out = new Map<string, number>();
+  const near = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, -1], [-1, 1]] as const;
+  for (const s of RAFT_SLOTS) {
+    const taken = new Set(near.map(([dq, dr]) => RAFT_SLOTS.find((o) => o.q === s.q + dq && o.r === s.r + dr)?.key).map((k) => (k ? out.get(k) : undefined)));
+    const h = (Math.imul(s.q + 17, 73856093) ^ Math.imul(s.r + 31, 19349663)) >>> 0;
+    let v = h % DECK_VARIANTS;
+    while (taken.has(v)) v = (v + 1) % DECK_VARIANTS;
+    out.set(s.key, v);
+  }
+  return out;
+})();
+
+/**
+ * Which of the raft models a slot shows. With the village's four decks, as above; with fewer models (the old look),
+ * (q − r) mod 3, wrapped around them: every neighbor of a slot is 1 or 2 away from it, mod 3.
+ */
+export const raftVariant = (key: string, models = DECK_VARIANTS): number => {
+  if (models >= DECK_VARIANTS) return VARIED.get(key)!;
   const s = RAFT_SLOTS.find((x) => x.key === key)!;
   return ((((s.q - s.r) % 3) + 3) % 3) % models;
 };
@@ -124,7 +147,21 @@ export type CityRafts = {
   useBuildings(models: RaftBuildingModels): void;
   /** The scaffolding over a raft the shipyard builds, in place of the prototype kit's (the look made in Blender). */
   useScaffold(model: THREE.Object3D): void;
+  /** While a free slot's sheet is open (placing a raft): with the village, every free slot shows its marks. */
+  setPlacing(on: boolean): void;
 };
+
+/**
+ * With the village made in Blender (style pass, owner), the free slots that show their buoys and golden marks: those a
+ * raft can be moored on now (the shipyard free, the resources there), or all of them while placing one. Nothing on
+ * the water otherwise; every free slot still answers a tap.
+ */
+export function markedSlots(state: PlayerState, placing: boolean): Set<string> {
+  const free = raftSlots(state).filter((s) => s.view === "free").map((s) => s.key);
+  if (placing) return new Set(free);
+  const ctx = { rafts: state.rafts, lighthouse: state.buildings.lighthouse, stock: state.stock, yardBusy: state.yard !== null };
+  return new Set(free.filter((slot) => canAddRaft({ ...ctx, slot }).ok));
+}
 
 const MAX = RAFT_SLOTS.length;
 /**
@@ -134,7 +171,7 @@ const MAX = RAFT_SLOTS.length;
 export { RAFT_FILL };
 /** The widest a raft can be: its room's hexagon, corner to corner. */
 export const RAFT_WIDTH = (2 * RAFT_FILL) / Math.cos(Math.PI / 6);
-const RAFT_BOTTOM = -0.62;
+const RAFT_BOTTOM = -0.62 + SEA_RISE;
 /** Where a raft is in its bob (`sin(now × 1.3 + phase) × 0.04`): a hash of its place, never randomness. */
 export const bobPhase = (x: number, z: number): number => Math.abs(x * 7.3 + z * 3.1) % 6.28;
 /** How high a raft at (x, z) rides on the water at `now`. */
@@ -279,6 +316,7 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
   let afloat: { key: string; x: number; z: number; variant: number; index: number; bob: number }[] = [];
   let hitSlots: string[] = [];
   let key = "";
+  let placing = false;
   // The buildings on rafts: one InstancedMesh per type once loaded, and the slots each one stands on.
   const hits: THREE.Object3D[] = [hit];
   let onRafts: Partial<Record<RaftBuildingId, THREE.InstancedMesh>> = {};
@@ -356,10 +394,16 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
         for (const id of RAFT_BUILDING_IDS) onRafts[id]!.computeBoundingSphere();
       }
     },
+    setPlacing(on) {
+      if (on === placing) return;
+      placing = on;
+      if (last) this.refresh(last);
+    },
     refresh(state) {
       last = state;
       const slots = raftSlots(state);
-      const k = JSON.stringify([slots, raftBuildingsShown(state)]);
+      const marked = village ? markedSlots(state, placing) : new Set(slots.filter((x) => x.view === "free").map((x) => x.key));
+      const k = JSON.stringify([slots, raftBuildingsShown(state), [...marked]]);
       if (k === key) return;
       key = k;
       standBuildings(state);
@@ -373,6 +417,11 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
         // Hash of the slot, never randomness: the same raft looks the same on every device.
         const bob = bobPhase(x, z);
         if (s.view === "free") {
+          if (!marked.has(s.key)) {
+            hit.setMatrixAt(hitSlots.length, m4.makeTranslation(x, 0.5, z));
+            hitSlots.push(s.key);
+            continue;
+          }
           ghost.setMatrixAt(free, m4.makeTranslation(x, -0.2, z));
           ring.setMatrixAt(free, m4.makeTranslation(x, -0.19, z));
           free++;
@@ -403,6 +452,8 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
         );
         const items: Placed[] = [];
         for (const s of slots) {
+          // A free slot nobody can fill now shows nothing on the water.
+          if (s.view === "free" && !marked.has(s.key)) continue;
           const { x, z } = slotPosition(s.key);
           const bob = s.view === "free" ? undefined : afloat.find((r) => r.key === s.key)?.bob;
           items.push({ name: shown.slots.get(s.key)!, x, z, y: s.view === "free" ? RAFT_BOTTOM + VILLAGE_SEA : RAFT_BOTTOM, bob });

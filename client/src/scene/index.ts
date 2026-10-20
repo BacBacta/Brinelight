@@ -5,19 +5,20 @@ import { loadBuildings, tierOf, type BuildingModels } from "./buildings.js";
 import { ISLAND_ANISOTROPY, filterTexture, fitIsland, loadModels, loadRaftBuildings, type Models, type RaftBuildingModels } from "./models.js";
 import { createCamera, createControls, frameCity } from "./camera.js";
 import { shapeCoast } from "./coast.js";
-import { CITY_MANIFEST, blenderLook, cityModelUrl, gridIsland } from "./cityLook.js";
-import { CITY_ANGLE, cityFraming, clearView, type Volume } from "./framing.js";
+import { CITY_MANIFEST, SEA_RISE, blenderLook, cityModelUrl, gridIsland } from "./cityLook.js";
+import { CITY_ANGLE, CITY_FILL, cityFraming, clearView, type Volume } from "./framing.js";
 import { createIsland, type Kit } from "./island.js";
 import { createLighthouse, lighthouseScale } from "./lighthouse.js";
 import { QUALITY_STEPS, applyQualityStep, createQualityMonitor, type QualityStep } from "./quality.js";
 import { createPost, type Post } from "./post.js";
 import { createRenderer } from "./renderer.js";
 import { createSky } from "./sky.js";
-import { CITY_CALM, CITY_MIST, CITY_STYLE, CITY_WATER, CITY_WATER_STYLE, SEA_CALM, SEA_MIST, addLook, applyLook, mixLook, type SeaMood } from "./look.js";
+import { CITY_CALM, CITY_MIST, CITY_STYLE, STYLE_EXPOSURE, CITY_WATER, CITY_WATER_STYLE, SEA_CALM, SEA_MIST, addLook, applyLook, mixLook, type SeaMood } from "./look.js";
 import { createVeil } from "./veil.js";
 import { createSeaView } from "./sea.js";
 import { createWater } from "./water.js";
-import { createShore, type Disc } from "./shore.js";
+import { SHORE, createShore, type Disc } from "./shore.js";
+import { terrainCoast } from "./terrainCoast.js";
 
 export type { Kit } from "./island.js";
 export { BUILDING_FIX, buildingUrl, normalizeBuilding, type BuildingModel, type BuildingModels } from "./buildings.js";
@@ -142,14 +143,15 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   let shownAt: number | null = null;
   const FINISH_AFTER = 4;
   const scene = new THREE.Scene();
-  // With ?blender, the city's light after the style pass (look.ts).
+  // With ?blender, the city's light after the style pass (look.ts), a little brighter (owner, on the S22).
   const calm = blenderLook() ? CITY_STYLE : CITY_CALM;
+  if (blenderLook()) renderer.toneMappingExposure = STYLE_EXPOSURE;
   const look = addLook(scene, createSky(calm.sky), calm, true);
   const { sun } = look;
   const veil = createVeil();
   scene.add(veil.mesh);
   // With ?blender, the city's water has 64 subdivisions at most (meeting 4: room for the island's life).
-  const water = createWater(blenderLook() ? { ...CITY_WATER_STYLE, maxSegments: 64, lapping: true } : CITY_WATER);
+  const water = createWater(blenderLook() ? { ...CITY_WATER_STYLE, maxSegments: 64, lapping: true, y: SHORE.waterY + SEA_RISE } : CITY_WATER);
   scene.add(water.mesh);
   water.useRenderer(renderer);
   // The foam goes along the island's shore and around the rafts moored there (setMoored).
@@ -200,7 +202,8 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     const band = options.band?.() ?? { top: 0, bottom: innerHeight };
     // The Lighthouse made in Blender is taller: its top stays on screen too.
     const tops = lighthouseStaged ? [{ x: 0, y: lighthouseTop, z: 0 }] : [];
-    const framing = cityFraming({ width: innerWidth, height: innerHeight, ...band }, moored, tops);
+    // With ?blender, the city spans three quarters of the screen's width (owner, after the style pass).
+    const framing = cityFraming({ width: innerWidth, height: innerHeight, ...band }, moored, tops, blenderLook() ? { share: CITY_FILL, coast: terrainCoast } : undefined);
     normal = framing;
     if (focused) {
       camera.aspect = innerWidth / innerHeight;
@@ -281,7 +284,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       // The island after the style pass has no plot outlines: the grid shows only where you tap.
       land = terrain ? island : createIsland(island);
       scene.add(land);
-      shore = createShore(island);
+      shore = createShore(island, SHORE.waterY + SEA_RISE);
       water.setShore(shore.distances(moored));
       lighthouse.useModel(buildings.lighthouse);
       sizeLighthouse();
@@ -471,7 +474,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
         if (land) scene.remove(land);
         land = next;
         scene.add(next);
-        shore = createShore(next);
+        shore = createShore(next, SHORE.waterY + SEA_RISE);
         water.setShore(shore.distances(moored));
       });
     },

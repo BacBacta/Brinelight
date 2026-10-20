@@ -26,7 +26,7 @@ export const VILLAGE_DECK = 0.37;
 export const VILLAGE_SEA = 0.2;
 
 const BUILDING_IDS: readonly RaftBuildingId[] = ["greenhouse", "smokehouse", "watchtower"];
-const DECKS = ["a", "b", "c"] as const;
+const DECKS = ["a", "b", "c", "d"] as const;
 
 /** The decks that have a light version for the normal view. */
 const LIGHT = [...DECKS, "damaged"] as const;
@@ -49,7 +49,7 @@ export const villageNormalNames = (age: number): string[] => villageNames(age).f
 export const hasVillage = (): boolean => [...VILLAGE_AGES.flatMap(villageNames), "raft-free"].every((n) => CITY_MANIFEST[n]);
 
 /** A deck's light version, as the normal view shows it. */
-export const deckName = (variant: number, age: number): string => `raft-${DECKS[variant % 3]}-age${age}${LITE}`;
+export const deckName = (variant: number, age: number): string => `raft-${DECKS[variant % DECKS.length]}-age${age}${LITE}`;
 export const raftBuildingName = (id: RaftBuildingId, level: number, age: number): string => `${id}-${Math.min(RAFT_BUILDING_MAX_LEVEL, Math.max(1, level))}-age${age}`;
 
 /** What a slot shows (rafts.ts, raftSlots), with its deck's variant. */
@@ -158,7 +158,12 @@ export function createVillage(add: (o: THREE.Object3D) => void, max: number) {
   const lampsAt = new Float32Array(max * 4 * 3);
   const glowGeometry = new THREE.BufferGeometry();
   glowGeometry.setAttribute("position", new THREE.BufferAttribute(lampsAt, 3));
-  const glow = new THREE.Points(glowGeometry, new THREE.PointsMaterial({ size: 2.4, map: glowTexture(), transparent: true, depthWrite: false, toneMapped: false, fog: false }));
+  // Brighter than white: at full quality, only the lit lamps are bright enough to glow (post.ts, BLOOM); at the other
+  // steps, the screen just shows them white and amber, as before.
+  const glowMaterial = new THREE.PointsMaterial({ size: 2.4, color: new THREE.Color(2.6, 2.3, 1.8), map: glowTexture(), transparent: true, opacity: 0, depthWrite: false, toneMapped: false, fog: false });
+  const glow = new THREE.Points(glowGeometry, glowMaterial);
+  // Out by day (style pass, owner): lit as the light falls, in the Mist.
+  let lit = 0;
   glow.name = "lamps";
   glow.frustumCulled = false;
   add(glow);
@@ -183,7 +188,7 @@ export function createVillage(add: (o: THREE.Object3D) => void, max: number) {
     }
     glowGeometry.setDrawRange(0, lamps);
     glowGeometry.getAttribute("position").needsUpdate = true;
-    glow.visible = lamps > 0;
+    glow.visible = lamps > 0 && lit > 0.02;
     for (const [name, mesh] of meshes) {
       mesh.count = counts.get(name) ?? 0;
       mesh.visible = mesh.count > 0;
@@ -221,6 +226,13 @@ export function createVillage(add: (o: THREE.Object3D) => void, max: number) {
      * How much nearer the camera is than in the normal view (SceneHandle.closeness): from 1.15 the decks show in full
      * (fetched the first time), back under 1.05 in their light version.
      */
+    /** How far the light has fallen (0 the late afternoon, 1 the Mist): the lamps glow as much. */
+    setDimness(dimness: number) {
+      if (Math.abs(dimness - lit) < 0.01) return;
+      lit = dimness;
+      glowMaterial.opacity = lit;
+      glow.visible = glowGeometry.drawRange.count > 0 && lit > 0.02;
+    },
     setCloseness(closeness: number) {
       const next = near ? closeness > 1.05 : closeness > 1.15;
       if (next === near) return;

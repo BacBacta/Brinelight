@@ -474,3 +474,29 @@ Time to the city's first image (10 Mbit/s, 40 ms, cache off, five runs, median),
 
 - 130 to 230 kB fewer before the first image (the terrain in place of the island and its ground); the times are within one run's spread for the new player and the Lighthouse 30, 0.4 s slower for the 39 rafts (its first frames cost more in the container).
 - After the first image, a look's groves weigh 245 to 347 kB (25 to 40 kB for the plants before): one model with its own baked texture.
+
+### The style pass's cleanup (owner, 20 October)
+
+Behind `?blender`: labels only where something is to say, lamps out by day, a glow only around lit lamps, four raft decks in calmer wood, free slots shown only when a raft can be moored, the sea 0.2 higher (half-height cliffs, beaches), a fresher, brighter look. Same cities before (f35faa9) and after, 412 × 915 unless noted, the life loaded; the counter leaves the shadow pass out:
+
+| City | Quality 0 before | Quality 0 after | Quality 1 before | Quality 1 after |
+| --- | --- | --- | --- | --- |
+| Lighthouse 5, two building sites (the owner's) | 40, 36.3 k | 37, 32.2 k | 40, 36.3 k | 37, 32.2 k |
+| Lighthouse 5, 3 rafts | 34, 33.0 k | 30, 28.8 k | 34, 33.0 k | 31, 28.9 k |
+| Lighthouse 15, 15 rafts, a site, the shipyard at work | 42, 46.4 k | 43, 46.4 k | 42, 46.4 k | 43, 46.4 k |
+| Lighthouse 30, 39 rafts, a site | 43, 66.0 k | 43, 65.9 k | 43, 66.0 k | 43, 65.9 k |
+| Lighthouse 15 in the Mist | 47, 46.6 k | 48, 46.6 k | 47, 46.6 k | 48, 46.6 k |
+
+- The finish keeps its 14 passes of its own at quality 0. The worst city stays under 66.7 k.
+- The free slots nobody can fill now are no longer drawn: about 4 k triangles fewer in the small cities. The fourth deck adds one draw call when it floats.
+- The light decks stay within the light budget: 514 to 644 triangles (664 at most before).
+
+Time to the first image (10 Mbit/s, 40 ms, cache off, five runs, median):
+
+| City | Quality 0 before | Quality 0 after | Quality 1 before | Quality 1 after |
+| --- | --- | --- | --- | --- |
+| New player | 6.19 s, 903 kB | 6.39 s, 903 kB | 2.98 s | 2.93 s |
+| Lighthouse 30 | 6.45 s, 1,255 kB | 6.60 s, 1,252 kB | 3.48 s | 3.58 s |
+| Lighthouse 30, 39 rafts | 7.18 s, then 7.63 s | 7.96 s, then 7.52 s | 4.11 s | 4.25 s |
+
+- The 39-raft city was measured twice at quality 0: the runs' spread is wider than the gap.

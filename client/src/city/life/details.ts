@@ -76,7 +76,8 @@ void main() {
   float glow = min(1., pow(max(0., 1. - d), 1.6) * 1.5 * vAlpha);
   float a = mix(smoke, glow, vGlow);
   if (a < .01) discard;
-  gl_FragColor = vec4(mix(uSmoke, mix(vec3(1., .7, .27), vec3(1., .98, .94), heart), vGlow), a);
+  // A lit lantern's heart is brighter than white: only it glows at full quality (post.ts).
+  gl_FragColor = vec4(mix(uSmoke, mix(vec3(1., .7, .27), vec3(1., .98, .94), heart) * (1. + 1.6 * heart), vGlow), a);
 }`;
 
 function pointCloud(max: number) {
@@ -169,9 +170,9 @@ transformed.x += sin(uTime * 3. + position.z * 9.) * .018 * hang;`,
           set(n++, s.x + u * 0.22 + Math.sin(u * 5 + k) * 0.03, s.y + lift + u * 0.6, s.z - u * 0.06, 0.08 + u * 0.2, 0.85 * Math.sin(Math.PI * Math.min(1, u * 1.4)) * (1 - u), 0);
         }
       });
-      // Barely there in the late afternoon; lit in the Mist.
-      const lit = 0.12 + 0.88 * dimness;
-      for (const s of found.lamps.slice(0, 64)) set(n++, s.x, s.y + (s.raft ? bob(s.raft) : 0), s.z, 0.28, lit, 1);
+      // Out in the late afternoon (style pass, owner); lit as the light falls, in the Mist.
+      const lit = dimness;
+      if (lit > 0.02) for (const s of found.lamps.slice(0, 64)) set(n++, s.x, s.y + (s.raft ? bob(s.raft) : 0), s.z, 0.28, lit, 1);
       done(n);
       if (laundry) {
         laundry.visible = laundryAt !== null;

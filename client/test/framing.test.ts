@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
-import { CITY_ANGLE, CITY_FOV, CLOSE_MIN, PIER_SLOTS, SIDE_MARGIN, cityFraming, cityPoints, clearView, closeFraming, hiddenShare, openSlots, type View } from "../src/scene/framing.js";
+import { CITY_ANGLE, CITY_FILL, CITY_FOV, CLOSE_MIN, PIER_SLOTS, SIDE_MARGIN, cityExtent, cityFraming, cityPoints, cityWidthShare, clearView, closeFraming, hiddenShare, openSlots, type View } from "../src/scene/framing.js";
+import { terrainCoast } from "../src/scene/terrainCoast.js";
 import { hexX, hexZ } from "../src/scene/island.js";
 
 // The band between the panels, as measured on these screens (the top bar and the Mist above, the tab bar below).
@@ -63,6 +64,43 @@ describe("the city's normal view", () => {
       const width = Math.max(...shore.map((p) => p.x)) - Math.min(...shore.map((p) => p.x));
       expect(width / view.width, `${view.width}`).toBeGreaterThan(0.6);
       expect(near.distance).toBeLessThan(far.distance);
+    }
+  });
+});
+
+describe("with ?blender, the city never spans less than three quarters of the screen's width (owner, after the style pass)", () => {
+  const fill = { share: CITY_FILL, coast: terrainCoast };
+  const sizes = [
+    { name: "a new city", rafts: [] },
+    { name: "3 rafts", rafts: openSlots(1).slice(0, 3) },
+    { name: "15 rafts", rafts: openSlots(10).slice(0, 15) },
+    { name: "39 rafts", rafts: openSlots(30) },
+  ];
+  const plots: THREE.Vector3[] = [];
+  for (let q = -2; q <= 2; q++) for (let r = -2; r <= 2; r++) if (Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)) <= 2) plots.push(new THREE.Vector3(hexX(q, r), 0, hexZ(r)));
+  // A band so short (sheets, cards and the tab bar) that the whole city would show under 75 %.
+  const busy = PHONES.map((v) => ({ ...v, top: 470, bottom: v.bottom - 60 }));
+
+  it("at 360 and 412 px, whatever the number of rafts and the panels: 75 % or more, every building in the band", () => {
+    for (const view of [...PHONES, ...busy])
+      for (const c of sizes) {
+        const f = cityFraming(view, c.rafts, [], fill);
+        expect(cityWidthShare(view, c.rafts, f, terrainCoast), `${view.width} ${view.top} ${c.name}`).toBeGreaterThanOrEqual(CITY_FILL - 0.01);
+        for (const p of onScreen(view, plots, f)) {
+          expect(p.y, `${view.width} ${c.name}`).toBeGreaterThanOrEqual(view.top - 0.01);
+          expect(p.y, `${view.width} ${c.name}`).toBeLessThanOrEqual(view.bottom + 0.01);
+        }
+      }
+  });
+
+  it("the whole city's framing when it is that large already; closer when the panels would make it smaller; back as rafts are moored", () => {
+    for (const view of PHONES) for (const c of sizes) expect(cityFraming(view, c.rafts, [], fill)).toEqual(cityFraming(view, c.rafts));
+    for (const view of busy) {
+      const before = cityFraming(view, []);
+      expect(cityWidthShare(view, [], before, terrainCoast)).toBeLessThan(CITY_FILL);
+      expect(cityFraming(view, [], [], fill).distance).toBeLessThan(before.distance);
+      const d = sizes.map((c) => cityFraming(view, c.rafts, [], fill).distance);
+      for (let i = 1; i < d.length; i++) expect(d[i]!, `${view.width} ${sizes[i]!.name}`).toBeGreaterThanOrEqual(d[i - 1]! - 0.01);
     }
   });
 });

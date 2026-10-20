@@ -17,6 +17,7 @@ import { raftSlots, raftWalkways, slotPosition } from "../rafts.js";
 import { VILLAGE_DECK } from "../village.js";
 import type { Anim, Tool } from "./body.js";
 import LAND from "./land.json";
+import { SEA_RISE } from "../../scene/cityLook.js";
 
 /** The most survivors shown at once, and how many show for a city of `survivors`. */
 export const PEOPLE_MAX = 24;
@@ -32,7 +33,7 @@ export type Point = { x: number; y: number; z: number; raft: string | null };
 export type Figure = { role: "trade" | "builder" | "passer"; anim: Anim; tool: Tool | null; way: Point[]; turn: number; speed: number; phase: number };
 
 /** The rafts' bottom under the sea (rafts.ts) and the deck's top over it: where a survivor on a raft stands. */
-export const RAFT_BOTTOM = -0.62;
+export const RAFT_BOTTOM = -0.62 + SEA_RISE;
 export const DECK_Y = RAFT_BOTTOM + VILLAGE_DECK;
 /** The floor each era lays under a building (assets/blender/parts.py, FLOOR): the Fishery's jetty stands on it. */
 const FLOOR: Record<number, number> = { 1: 0, 5: 0.16, 10: 0.14, 15: 0.1, 20: 0.1, 25: 0.08, 30: 0.08 };

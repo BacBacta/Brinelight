@@ -186,6 +186,16 @@ Level 30 is the Modern era complete: the Modern building with all its details an
 - the mix's light and water; the free slots without their golden fill, a thin, dim line left over them;
 - at full quality only, a soft glow around the lamps and a color grade (three.js's own modules); quality steps 1 and 2 go without.
 
+**The style pass's cleanup (owner, 20 October), behind `?blender`, within today's budgets:**
+1. The level badges show only when you touch a building, when its upgrade can start or while it is at work (with its timer).
+2. The glow is soft, and only around lit lamps. The lamps are out by day and light up in the Mist.
+3. The rafts are in calmer wood. Four decks are mixed around the ring: a mast and its open sail, nets on three poles, planters, and a deck garden.
+4. A free slot shows its buoys and golden marks only when a raft can be moored now, and all free slots do while you place one.
+5. and 8. The island's cliffs are half as high (the sea stands 0.2 higher, with the rafts). Low cliffs alternate with gentle beaches, more of them on the side the camera sees. The coast follows the raft rooms' joined edge, with no point of land between two rooms.
+6. The city never spans less than three quarters of the screen's width. It already does on a 360 or 412 px screen: the camera only comes closer when the panels leave too little room.
+7. The survivors are checked in the normal view.
+9. The grass is fresher, the image a little brighter, and the veil over the far sea lighter.
+
 ### The order
 
 1. The Refinery in its six eras: its band at levels 1, 5, 10, 15, 20, 25 and 30, in the normal view and the close view. The owner approves it first.

@@ -10,8 +10,8 @@ import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPa
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { Pass } from "three/examples/jsm/postprocessing/Pass.js";
 
-/** Only what shines brighter than the sunlit walls blooms (linear light, before tone mapping). */
-export const BLOOM = { strength: 0.35, radius: 0.45, threshold: 1.6 } as const;
+/** Only the lit lamps, brighter than white (village.ts, details.ts), glow: never the sunlit walls, the foam or the sea. */
+export const BLOOM = { strength: 0.2, radius: 0.35, threshold: 2.2 } as const;
 
 /** The grade, on the screen's colors: contrast, saturation, and the tint of the lights and of the shadows. */
 export const GRADE = { contrast: 1.07, saturation: 1.08, lights: [0.035, 0.012, -0.03], shadows: [-0.012, 0.0, 0.03] } as const;

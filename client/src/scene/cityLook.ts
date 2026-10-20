@@ -16,6 +16,12 @@ export const CITY_MANIFEST = CITY_MODELS as Record<string, CityModel>;
 /** The new look is on (?blender), until it replaces the old one. */
 export const blenderLook = (search: string = typeof location === "undefined" ? "" : location.search): boolean => new URLSearchParams(search).has("blender");
 
+/**
+ * How much higher the city's sea stands with ?blender (owner, after the style pass: the island's cliffs half as high),
+ * the rafts with it; the sea map's water stays where it is. Every model keeps its own height: the island at y = 0.
+ */
+export const SEA_RISE = blenderLook() ? 0.2 : 0;
+
 export const cityModelUrl = (name: string): string => `${import.meta.env.BASE_URL}city/${name}.glb`;
 
 /** The island as made: already in the game's units, its meadow at y = 0 on the grid; nothing to fit or reshape. */

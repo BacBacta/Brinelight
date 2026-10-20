@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { RAFT_BUILD_TIME, RAFT_MAX, RAFT_MAX_HP, RAFT_SLOTS, applyAction, newPlayerState, raftCap, type PlayerState } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
 import { RAFT_TEXT, raftSheetHtml } from "../src/city/raftSheet.js";
-import { RAFT_FILL, RAFT_WIDTH, WALKWAY_GRIP, cornerMarks, createCityRafts, raftGeometry, raftSlots, raftVariant, raftWalkways } from "../src/city/rafts.js";
+import { DECK_VARIANTS, RAFT_FILL, RAFT_WIDTH, WALKWAY_GRIP, cornerMarks, createCityRafts, markedSlots, raftGeometry, raftSlots, raftVariant, raftWalkways } from "../src/city/rafts.js";
 import { hexX, hexZ } from "../src/scene/island.js";
 import { hexReach } from "../src/scene/buildings.js";
 import { SAVE_KEY, openSave, saveGame, type KeyValueStore } from "../src/state/save.js";
@@ -161,14 +161,38 @@ describe("the floating village", () => {
     return { x: hexX(s.q, s.r), z: hexZ(s.r), ring: s.ring };
   };
 
-  it("two rafts side by side never show the same model: the variant is (q − r) mod 3", () => {
-    for (const a of RAFT_SLOTS)
-      for (const b of RAFT_SLOTS) {
-        if (Math.hypot(hexX(a.q, a.r) - hexX(b.q, b.r), hexZ(a.r) - hexZ(b.r)) > 2.01 || a.key === b.key) continue;
-        expect(raftVariant(a.key), `${a.key} ${b.key}`).not.toBe(raftVariant(b.key));
-      }
+  it("two rafts side by side never show the same deck, the four decks mixed around the ring (no stripes)", () => {
+    for (const models of [DECK_VARIANTS, 3])
+      for (const a of RAFT_SLOTS)
+        for (const b of RAFT_SLOTS) {
+          if (Math.hypot(hexX(a.q, a.r) - hexX(b.q, b.r), hexZ(a.r) - hexZ(b.r)) > 2.01 || a.key === b.key) continue;
+          expect(raftVariant(a.key, models), `${a.key} ${b.key}`).not.toBe(raftVariant(b.key, models));
+        }
+    // Each deck on at least six of the 39 slots, on both rings.
+    for (let v = 0; v < DECK_VARIANTS; v++) {
+      expect(all.filter((k) => raftVariant(k) === v).length, `deck ${v}`).toBeGreaterThanOrEqual(6);
+      for (const ring of [3, 4]) expect(RAFT_SLOTS.some((s) => s.ring === ring && raftVariant(s.key) === v), `deck ${v} ring ${ring}`).toBe(true);
+    }
+    // Not the old rule's diagonal stripes: (q − r) mod 3 no longer tells a slot's deck.
+    const stripes = RAFT_SLOTS.filter((s) => raftVariant(s.key) === ((((s.q - s.r) % 3) + 3) % 3)).length;
+    expect(stripes).toBeLessThan(RAFT_SLOTS.length * 0.6);
     // With one model, every raft shows it.
     expect(new Set(all.map((k) => raftVariant(k, 1)))).toEqual(new Set([0]));
+  });
+
+  it("with the village, the free slots show their marks only when a raft can be moored now, all of them while placing one", () => {
+    const start = newPlayerState() as PlayerState;
+    const base = { ...start, buildings: { ...start.buildings, lighthouse: 5 } } as PlayerState;
+    const rich = { ...base, stock: { ...base.stock, oil: 1e6, fish: 1e6, wood: 1e6 } } as PlayerState;
+    const poor = { ...base, stock: { ...base.stock, oil: 0, fish: 0, wood: 0 } } as PlayerState;
+    const free = raftSlots(rich).filter((s) => s.view === "free").map((s) => s.key);
+    expect(free.length).toBeGreaterThan(0);
+    expect([...markedSlots(rich, false)].sort()).toEqual([...free].sort());
+    expect(markedSlots(poor, false).size).toBe(0);
+    expect([...markedSlots(poor, true)].sort()).toEqual([...raftSlots(poor).filter((s) => s.view === "free").map((s) => s.key)].sort());
+    // The shipyard at work: no slot to fill, none shown.
+    const busy = { ...rich, yard: { slot: free[0]!, kind: "raft", left: 10, duration: 20 } } as unknown as PlayerState;
+    expect(markedSlots(busy, false).size).toBe(0);
   });
 
   it("one walkway per raft toward the island: ring 3 to the shore, ring 4 to a raft of ring 3 beside it", () => {

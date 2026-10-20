@@ -22,6 +22,8 @@ export type WaterOptions = {
    * shore, and a meter out; past two meters, the water's own.
    */
   shallows?: readonly [shore: string, out: string];
+  /** Where the water rests (the city's sea with ?blender stands higher: cityLook.ts, SEA_RISE). */
+  y?: number;
   /** A ripple that laps against the shore and the rafts, coming and going (the city's water with ?blender, meeting 4). */
   lapping?: boolean;
 };
@@ -135,10 +137,12 @@ if (uFoam > 0.) {
     float t = uT * uFoamMoves;
     float swell = .5 + .5 * sin(d * 9. - t * 2.2);
     float grain = sin(vWPos.x * 7.3 + sin(vWPos.z * 5.1)) * sin(vWPos.z * 6.7 + sin(vWPos.x * 4.3 + t * .4));
-    float f = (1. - smoothstep(.03, .28 + .1 * swell, d)) * smoothstep(-.5, .5, grain + swell * .8 - d * 2.);
+    // With the shallows (?blender), a thinner foam: the coast and the rafts never bathe in a pale glow (owner).
+    float reach = mix(.28 + .1 * swell, .12 + .05 * swell, uShallows);
+    float f = (1. - smoothstep(.03, reach, d)) * smoothstep(-.5, .5, grain + swell * .8 - d * 2.) * (1. - .35 * uShallows);
     // The lapping: a thin line of foam that comes and goes against what floats and the shore.
     f = max(f, uLap * (1. - smoothstep(0., .022, abs(d - .07 - .04 * sin(t * 2.6 + vWPos.x * 2.3 + vWPos.z * 1.7)))) * .85);
-    outgoingLight = mix(outgoingLight, uFoamColor * (1. - uLead * .35), clamp(f, 0., 1.) * .7);
+    outgoingLight = mix(outgoingLight, mix(uFoamColor, vec3(.86, .95, .97), uShallows) * (1. - uLead * .35), clamp(f, 0., 1.) * .7);
   }
 }
 #include <opaque_fragment>`,
@@ -149,7 +153,7 @@ if (uFoam > 0.) {
   let segments = capped(96);
   const mesh = new THREE.Mesh(grid(segments), material);
   mesh.rotation.x = -Math.PI / 2;
-  mesh.position.y = SHORE.waterY;
+  mesh.position.y = opts.y ?? SHORE.waterY;
 
   let reflection: THREE.Texture | null = null;
   let reflections = true;

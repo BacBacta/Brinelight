@@ -1,5 +1,5 @@
 import type * as THREE from "three";
-import { BUILDING_IDS, RAFT_SLOTS, type BuildingId, type RaftBuildingId, type TechId, type TroopType } from "@brinelight/shared";
+import { BUILDING_IDS, RAFT_SLOTS, yardSlot, type BuildingId, type RaftBuildingId, type TechId, type TroopType } from "@brinelight/shared";
 import { lighthouseScale, type BuildingModels, type Kit, type Models, type RaftBuildingModels, type SceneHandle } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 import { coastAt } from "../scene/coast.js";
@@ -136,6 +136,10 @@ export function createCity(
   scene.onFrame((now, view) => {
     if (view !== "city") return;
     village?.setCloseness(scene.closeness());
+    village?.setDimness(scene.dimness());
+    // Placing a raft: a free slot's sheet is open.
+    const open = raftSheet.current;
+    rafts.setPlacing(open !== null && !game.state().rafts[open] && yardSlot(game.state().yard) !== open);
     rafts.animate(now);
     life?.animate(now, scene.closeness(), scene.cityCamera, scene.dimness());
     buildings.animate(now);

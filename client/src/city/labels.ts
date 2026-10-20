@@ -4,7 +4,7 @@ import type { PlayerState } from "../state/index.js";
 import { plotPosition } from "./buildings.js";
 import { layoutLabels, type LabelBox, type Rect } from "./overlap.js";
 import { formatTimeLeft } from "./format.js";
-import { progress, suggestedUpgrades } from "./suggest.js";
+import { possibleUpgrades, progress, suggestedUpgrades } from "./suggest.js";
 
 /** Level labels above the buildings, as in the prototype. */
 /** `heightOf` gives the height of a building's label above the ground, from its model and the levels (its tier, the Lighthouse's growth). */
@@ -12,10 +12,20 @@ import { progress, suggestedUpgrades } from "./suggest.js";
 export const JUST_UPGRADED_MS = 6000;
 
 /**
- * `badges` (week 8): a building shows only its level badge, and its full label when you touched it, when it is at
- * work, when its upgrade is suggested, and for a few seconds after an upgrade ends; no label ever goes under one of
+ * `badges` (week 8, with ?blender): a building shows nothing over it, unless you touched it (its full label), it is at
+ * work (its full label and its timer), its upgrade can start (its level badge, with its arrow; in full when it is one
+ * of the two suggested) or it was just upgraded (its full label for a few seconds); no label ever goes under one of
  * the `panels` (read four times a second).
  */
+/**
+ * What a building's label shows with badges, when not touched: its full label at work, suggested or just upgraded,
+ * its level badge when its upgrade can start, nothing otherwise. Touched, it shows in full.
+ */
+export function badgeShown(o: { touched: boolean; atWork: boolean; suggested: boolean; justUpgraded: boolean; possible: boolean }): "none" | "badge" | "full" {
+  if (o.touched || o.atWork || o.suggested || o.justUpgraded) return "full";
+  return o.possible ? "badge" : "none";
+}
+
 export function createLabels(
   root: HTMLElement,
   scene: SceneHandle,
@@ -52,6 +62,8 @@ export function createLabels(
   let levels: Buildings | null = null;
   // The buildings that may show their full label now, and when the ones just upgraded go back to their badge.
   const wantFull = new Set<BuildingId>();
+  // With badges, the buildings that show anything at all when not touched.
+  const shown = new Set<BuildingId>();
   const justUpgraded = new Map<BuildingId, number>();
   let panelRects: Rect[] = [];
   let panelsAt = -Infinity;
@@ -63,13 +75,17 @@ export function createLabels(
       for (const id of BUILDING_IDS) if (levels && state.buildings[id] > levels[id]) justUpgraded.set(id, now + JUST_UPGRADED_MS);
       levels = state.buildings;
       const suggested = suggestedUpgrades(state);
+      const possible = options.badges ? possibleUpgrades(state) : suggested;
       for (const id of BUILDING_IDS) {
         const L = els[id];
         const level = state.buildings[id];
         const job = state.queue.find((j) => j.id === id);
-        const up = suggested.includes(id);
-        if (job || up || (justUpgraded.get(id) ?? 0) > now) wantFull.add(id);
+        const up = possible.includes(id);
+        const show = badgeShown({ touched: false, atWork: !!job, suggested: suggested.includes(id), justUpgraded: (justUpgraded.get(id) ?? 0) > now, possible: up });
+        if (show === "full") wantFull.add(id);
         else wantFull.delete(id);
+        if (show !== "none") shown.add(id);
+        else shown.delete(id);
         const key = `${level}|${!!job}|${up}`;
         if (L.key !== key) {
           L.key = key;
@@ -99,8 +115,10 @@ export function createLabels(
         const { x, z } = plotPosition(id);
         const p = scene.project(x, levels ? heightOf(id, levels) : 0, z);
         const L = els[id];
-        L.el.style.display = p.visible ? "" : "none";
-        if (!p.visible) continue;
+        // With badges, a building with nothing to say shows nothing, until you touch it.
+        const quiet = options.badges && !shown.has(id) && id !== selected;
+        L.el.style.display = p.visible && !quiet ? "" : "none";
+        if (!p.visible || quiet) continue;
         if (L.w === 0) measure(L);
         boxes.push({ id, x: p.x, y: p.y, w: L.w, h: L.h, depth: p.depth, compactW: L.compactW, compactH: L.compactH });
       }

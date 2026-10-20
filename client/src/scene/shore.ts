@@ -25,7 +25,7 @@ const cell = (2 * SHORE.extent) / SHORE.size;
  * The cells of the grid where the island stands above the water: 1, else 0. A cell is land when some triangle of the
  * island, seen from above, covers its center at or above the water's level.
  */
-export function landOf(island: THREE.Object3D): Uint8Array {
+export function landOf(island: THREE.Object3D, waterY: number = SHORE.waterY): Uint8Array {
   const n = SHORE.size;
   const land = new Uint8Array(n * n);
   island.updateMatrixWorld(true);
@@ -38,7 +38,7 @@ export function landOf(island: THREE.Object3D): Uint8Array {
     const count = index ? index.count : pos.count;
     for (let t = 0; t < count; t += 3) {
       [a, b, c].forEach((v, k) => v.fromBufferAttribute(pos, index ? index.getX(t + k) : t + k).applyMatrix4(mesh.matrixWorld));
-      if (Math.max(a.y, b.y, c.y) < SHORE.waterY) continue;
+      if (Math.max(a.y, b.y, c.y) < waterY) continue;
       const area = (b.x - a.x) * (c.z - a.z) - (c.x - a.x) * (b.z - a.z);
       if (Math.abs(area) < 1e-12) continue;
       const i0 = Math.max(0, Math.floor((Math.min(a.x, b.x, c.x) + SHORE.extent) / cell));
@@ -55,7 +55,7 @@ export function landOf(island: THREE.Object3D): Uint8Array {
           const wc = ((b.x - a.x) * (z - a.z) - (x - a.x) * (b.z - a.z)) / area;
           const wa = 1 - wb - wc;
           if (wa < 0 || wb < 0 || wc < 0) continue;
-          if (wa * a.y + wb * b.y + wc * c.y >= SHORE.waterY) land[j * n + i] = 1;
+          if (wa * a.y + wb * b.y + wc * c.y >= waterY) land[j * n + i] = 1;
         }
     }
   });
@@ -98,8 +98,8 @@ export function shoreDistances(land: Uint8Array, discs: readonly Disc[]): Uint8A
 }
 
 /** The shore of an island: its land once, then its distances again whenever the discs around it change. */
-export function createShore(island: THREE.Object3D) {
-  const land = landOf(island);
+export function createShore(island: THREE.Object3D, waterY: number = SHORE.waterY) {
+  const land = landOf(island, waterY);
   let key: string | null = null;
   let last = new Uint8Array(0);
   let built = 0;

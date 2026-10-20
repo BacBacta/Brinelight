@@ -15,7 +15,8 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 MANIFEST = HERE.parent.parent / "client" / "src" / "scene" / "city-models.json"
-SEA = -0.42
+# The city's sea after the style pass (owner: cliffs half as high): 0.2 higher than the first village's -0.42.
+SEA = -0.22
 BUILDING_SCALE = 1.15
 
 # Where each building stands (client/src/city/plots.ts, ERA_PLOTS; client/test/life.test.ts checks they agree).
@@ -91,22 +92,32 @@ def plot_reach(x, z):
 def land_depth(x, z):
     """
     How far inside the land a point is (negative: in the sea): round lands softly joined around the plots, a coast pushed
-    in and out by noise, always holding under every plot (to 1.04 of its center) and never reaching into the rooms of
-    the rafts of ring 3.
+    in and out by noise, always holding round every plot (1.12 from its center: no plot's hexagon shows in the coast,
+    owner) and never reaching into the rooms of the rafts of ring 3.
     """
     base = None
     for cx, cz in PLOTS:
         d = np.hypot(x - cx, z - cz) - 1.12
         base = d if base is None else smin(base, d, 0.6)
     coast = -base + 0.16 * fbm(x * 0.55, z * 0.55, 3.0) + 0.05 * fbm(x * 2.2, z * 2.2, 4.0)
-    coast = np.maximum(coast, 1.04 - plot_reach(x, z))
-    rooms = np.min([np.hypot(x - cx, z - cz) for cx, cz in RING3], axis=0) - 0.98
+    near = np.min([np.hypot(x - cx, z - cz) for cx, cz in PLOTS], axis=0)
+    coast = -smin(-coast, -(1.12 - near), 0.12)
+    # The rafts' rooms joined softly into one band: the coast follows its round edge, with no point of land between two
+    # rooms (owner: no hexagon shows); every room stays clear.
+    rooms = None
+    for cx, cz in RING3:
+        r = np.hypot(x - cx, z - cz) - 0.98
+        rooms = r if rooms is None else smin(rooms, r, 0.6)
     return np.minimum(coast, rooms)
 
 
 def cliffs(x, z):
-    """Where the coast is a short cliff (1) rather than a beach (0)."""
-    return np.clip((fbm(x * 0.45, z * 0.45, 9.0) - 0.05) * 5, 0, 1)
+    """
+    Where the coast is a low cliff (1) rather than a beach in a gentle slope (0): the two in turn all around, more
+    beaches on the side the camera sees (+z).
+    """
+    c = np.clip((fbm(x * 0.8, z * 0.8, 9.0) + 0.05) * 4, 0, 1)
+    return c * np.clip(1.1 - 0.25 * z, 0.35, 1)
 
 
 def flat_weight(x, z):
@@ -117,17 +128,25 @@ def flat_weight(x, z):
 
 
 def heights(x, z):
-    """The ground's height: gentle hills, flat on the buildings' plots and plots' rims, down to the sea by a beach or a cliff."""
+    """
+    The ground's height: gentle hills, flat on the buildings' plots and plots' rims, down to the sea (SEA) by a beach in a
+    gentle slope that goes on under the water, or by a low cliff (owner: half as high as the first island's).
+    """
     d = land_depth(x, z)
     hills = (0.05 + 0.07 * fbm(x * 0.6, z * 0.6, 1.0)) * flat_weight(x, z)
     c = cliffs(x, z)
-    beach = np.clip(d / 0.32, 0, 1)
+    # A beach: from the meadow down to the water's edge over 0.35; a cliff: straight down at the coast.
+    beach = np.clip(d / 0.35, 0, 1)
     beach = beach * beach * (3 - 2 * beach)
-    cliff = np.clip(d / 0.05, 0, 1)
+    cliff = np.clip(d / 0.04, 0, 1)
     shore = beach * (1 - c) + cliff * c
     # The plots' land keeps its height to their rims; the shore drops beyond them.
     shore = np.where(plot_reach(x, z) <= 1.02, np.maximum(shore, 1.0), shore)
-    return np.where(d > 0, -0.46 + (hills + 0.46) * shore, -0.46 + np.maximum(d, -0.8) * 0.9)
+    edge = SEA - 0.03
+    land = edge + (hills - edge) * shore
+    # Under the water: the beach's sand goes on gently, the cliff's foot drops to the deep.
+    floor = (SEA - 0.03 + np.maximum(d, -0.9) * 0.45) * (1 - c) + (SEA - 0.12 + np.maximum(d, -0.7) * 0.9) * c
+    return np.where(d > 0, land, floor)
 
 
 def trails():
@@ -181,9 +200,10 @@ def mix(a, b, t):
 
 # The three looks of the island, after the Lighthouse (as its plants: wild 1-9, gardens 10-24, the Modern era 25-30).
 LOOKS = {
-    "wild": {"greens": ("#7FA36B", "#5E8A4F", "#9BB86F", "#A9A869"), "trail": ("#9A7448", "#7E5E3B")},
-    "garden": {"greens": ("#82A86C", "#5E8A4F", "#A0BE74", "#A4AA6A"), "trail": ("#A5835A", "#87694A")},
-    "modern": {"greens": ("#86AC6E", "#5E8A4F", "#A3C178", "#9DAA6A"), "trail": ("#B9AB92", "#958A76")},
+    # Fresh greens (owner, on the S22: no khaki), yellower and lighter than the first island's.
+    "wild": {"greens": ("#93BE5E", "#6FA448", "#AECF6A", "#B9BE62"), "trail": ("#9A7448", "#7E5E3B")},
+    "garden": {"greens": ("#96C162", "#6FA448", "#B1D16E", "#B4BC64"), "trail": ("#A5835A", "#87694A")},
+    "modern": {"greens": ("#99C466", "#72A64B", "#B4D472", "#AFBC66"), "trail": ("#B9AB92", "#958A76")},
 }
 
 
@@ -292,6 +312,21 @@ def beach_spots(n=6):
         x, z = rng.uniform(-5, 5), rng.uniform(0.5, 5.5)
         p = (np.array([x]), np.array([z]))
         d, c = float(land_depth(*p)[0]), float(cliffs(*p)[0])
-        if 0.04 < d < 0.2 and c < 0.3 and float(plot_reach(*p)[0]) > 1.02:
-            out.append((float(x), float(heights(*p)[0]), float(z)))
+        y = float(heights(*p)[0])
+        apart = all(math.dist((x, z), (o[0], o[2])) > 0.6 for o in out)
+        if 0.04 < d < 0.3 and c < 0.3 and float(plot_reach(*p)[0]) > 1.02 and y > SEA + 0.02 and apart:
+            out.append((float(x), y, float(z)))
     return out
+
+
+def coast_radii(n=72):
+    """How far from the island's center its land reaches, in n directions (x = cos, z = sin): the game frames by it."""
+    out = []
+    rs = np.linspace(2.0, 7.0, 1001)
+    for k in range(n):
+        a = 2 * math.pi * k / n
+        h = heights(np.cos(a) * rs, np.sin(a) * rs)
+        above = np.nonzero(h >= SEA)[0]
+        out.append(round(float(rs[above.max()]) if len(above) else 0.0, 3))
+    return out
+

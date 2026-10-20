@@ -132,3 +132,12 @@ One line per decision, most recent first.
 - **The Barracks and the Observatory keep their size when the other buildings grow 1.15 times (style pass).** Side by side, a Workshop-era Barracks 1.05 times larger already hides half of a young Observatory behind it; the 70 % rule wins over the size.
 - **The finish (a glow around the lamps, a color grade) is drawn at full quality only (style pass).** With three.js's example modules (`EffectComposer`, `UnrealBloomPass`, `OutputPass`), no new dependency; the grade is done in the output pass itself. Quality steps 1 and 2 go without it, so a phone that falls under 30 FPS drops it first.
 - **With `?blender`, a free slot is its buoys and a thin, dim golden line (owner, style pass)**: no golden fill and no rope that reads as a grid on the water. It still answers a tap as before.
+- **The style pass's cleanup (owner, 20 October), all with `?blender`.**
+  - **Labels:** a building shows nothing over it unless you touch it, its upgrade can start (its level badge) or it is at work (its label and timer).
+  - **Lamps:** out by day, lit in the Mist; only a lit lamp is bright enough to glow.
+  - **Rafts:** four decks (a garden added), spread by a fixed hash so that no two neighbours match and no stripes show, in calmer, sea-bleached wood.
+  - **Free slots:** they show their buoys and marks only when a raft can be moored now, and all of them while one is being placed (a free slot's sheet open).
+  - **Sea and coast:** the city's sea stands 0.2 higher, with the rafts, so the cliffs are half as high. The coast alternates low cliffs and gentle beaches and follows the raft rooms' joined edge.
+  - **Look:** grass fresher, the image a little brighter, the veil lighter.
+- **The normal view never shows the city under three quarters of the screen's width (owner, style pass cleanup; `?blender`).** The whole-city framing already shows it at 80 to 96 % on a 360 or 412 px screen. When the band is too short for the whole city (works under way over the top), the camera comes closer and keeps only the buildings between the panels.
+

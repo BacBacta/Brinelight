@@ -7,7 +7,8 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import * as THREE from "three";
 import { BUILDING_IDS, RAFT_SLOTS, type BuildingId } from "@brinelight/shared";
-import { CITY_ANGLE, CITY_FOV, cityFraming } from "../src/scene/framing.js";
+import { CITY_ANGLE, CITY_FILL, CITY_FOV, cityFraming } from "../src/scene/framing.js";
+import { terrainCoast } from "../src/scene/terrainCoast.js";
 import { hexX, hexZ } from "../src/scene/island.js";
 import { BUILDING_FIX, LIGHTHOUSE_FIT, TILE_FIT, normalizeBuilding } from "../src/scene/buildings.js";
 import { ERA_PLOTS } from "../src/city/plots.js";
@@ -73,7 +74,8 @@ function tallest(id: BuildingId, cap: number): number {
 function camera(rafts: number, lighthouse: number): THREE.PerspectiveCamera {
   const slots = RAFT_SLOTS.slice(0, rafts).map((s) => ({ x: hexX(s.q, s.r), z: hexZ(s.r) }));
   const top = isStaged("lighthouse") ? [{ x: 0, y: levelShape("lighthouse", lighthouse).height * buildingScale("lighthouse"), z: 0 }] : [];
-  const { distance, target } = cityFraming(VIEW, slots, top);
+  // The normal view with ?blender: the city across three quarters of the screen's width (owner, after the style pass).
+  const { distance, target } = cityFraming(VIEW, slots, top, { share: CITY_FILL, coast: terrainCoast });
   const cam = new THREE.PerspectiveCamera(CITY_FOV, VIEW.width / VIEW.height, 0.1, 400);
   cam.position.copy(target).addScaledVector(CITY_ANGLE, distance);
   cam.lookAt(target);

@@ -13,13 +13,14 @@ import { buildingScale, loadStage, stageName, stageOf } from "../staged.js";
 import { ERA_PLOTS } from "../plots.js";
 import { FRONT } from "./cast.js";
 import LAND from "./land.json";
+import { SEA_RISE } from "../../scene/cityLook.js";
 
 export const KINDS = ["gull", "cat", "hen", "crab", "dolphin", "fish"] as const;
 export type Kind = (typeof KINDS)[number];
 /** Where the parts are (life.py): a gull's wings, a cat's tail and head, a hen's head, a crab's legs, a tail. */
 const PARTS = { WING_X: 0.014, TAIL_Z: -0.045, HEAD_Z: 0.03, LEGS_X: 0.025 } as const;
 /** The sea at rest (shore.ts): the dolphin and the fish leap from it. */
-const SEA_Y = -0.42;
+const SEA_Y = -0.42 + SEA_RISE;
 const FLOOR: Record<number, number> = { 1: 0, 5: 0.16, 10: 0.14, 15: 0.1, 20: 0.1, 25: 0.08, 30: 0.08 };
 
 const hash = (n: number) => {

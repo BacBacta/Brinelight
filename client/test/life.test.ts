@@ -17,7 +17,7 @@ import { PEOPLE_MAX, cast, peopleShown, trailWay, trails } from "../src/city/lif
 import { PERSON_SCALE, placeOn } from "../src/city/life/people.js";
 import { plantLook, plantsFor } from "../src/city/life/plants.js";
 import { beachSpots, beastsAt } from "../src/city/life/creatures.js";
-import { LAUNDRY, sources } from "../src/city/life/details.js";
+import { LAUNDRY, createDetails, sources } from "../src/city/life/details.js";
 import { untappable } from "../src/city/life/index.js";
 import SPOTS from "../src/city/life/spots.json";
 import LAND from "../src/city/life/land.json";
@@ -239,6 +239,29 @@ describe("the small details", () => {
     expect(found.smoke.length).toBeGreaterThan(0);
     // The Workshop era's terraced Shelters smoke from their three chimneys.
     expect(found.smoke.filter((p) => Math.hypot(p.x - plot("shelters").x, p.z - plot("shelters").z) < 1)).toHaveLength(3);
+  });
+
+  it("the lanterns are out in the late afternoon and lit as the light falls, in the Mist (style pass, owner)", () => {
+    Object.assign(globalThis, { innerHeight: 915, devicePixelRatio: 1 });
+    const added: THREE.Object3D[] = [];
+    const details = createDetails((o) => added.push(o));
+    // No Shelters: no washing to fetch.
+    const s = city(12, { buildings: { ...city(12).buildings, shelters: 0 } });
+    details.update(s);
+    const found = sources(s);
+    expect(found.lamps.length).toBeGreaterThan(0);
+    const cloud = added.find((o) => o.name === "smoke-lanterns") as THREE.Points;
+    const glow = () => {
+      const a = cloud.geometry.getAttribute("aGlow");
+      let n = 0;
+      for (let i = 0; i < cloud.geometry.drawRange.count; i++) if (a.getX(i) === 1) n++;
+      return n;
+    };
+    const camera = new THREE.PerspectiveCamera();
+    details.animate(1, false, 0, () => 0, camera);
+    expect(glow()).toBe(0);
+    details.animate(1, false, 1, () => 0, camera);
+    expect(glow()).toBe(Math.min(64, found.lamps.length));
   });
 
   it("no part of the life answers a tap", () => {

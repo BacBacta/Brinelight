@@ -67,7 +67,8 @@ def terrain(look, fast):
     uv = mesh.uv_layers.new(name="UVMap")
     for loop in mesh.loops:
         co = mesh.vertices[loop.vertex_index].co
-        uv.data[loop.index].uv = ((co.x + SPAN) / (2 * SPAN), (co.y + SPAN) / (2 * SPAN))
+        # The decimation may move an edge's vertex a hair past the grid: kept on the map.
+        uv.data[loop.index].uv = (min(1.0, max(0.0, (co.x + SPAN) / (2 * SPAN))), min(1.0, max(0.0, (co.y + SPAN) / (2 * SPAN))))
 
     size = 256 if fast else 1024
     col, _, _ = land.colors(look, size, SPAN)
@@ -143,6 +144,8 @@ def main(args):
     # The trails, with the ground's height along them (the passers-by walk them).
     data["trails"] = [[[round(x, 3), round(float(land.heights(np.array([x]), np.array([z]))[0]) + 0.005, 3), round(z, 3)] for x, z in line] for line in land.trails()]
     data["beach"] = [[round(c, 3) for c in p] for p in land.beach_spots()]
+    # How far the land reaches in 72 directions: the game's normal view frames the city by it.
+    data["coast"] = land.coast_radii()
     data.setdefault("groves", {})
     for look in looks:
         plants = land.groves(look)

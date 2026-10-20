@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { GAP, layoutLabels, type LabelBox, type LabelPlace } from "../src/city/overlap.js";
+import { badgeShown } from "../src/city/labels.js";
+import { possibleUpgrades, suggestedUpgrades } from "../src/city/suggest.js";
+import { newPlayerState } from "@brinelight/shared";
+import type { PlayerState } from "../src/state/index.js";
 
 /** A label 80 × 20, whose badge is 24 × 20. */
 const box = (id: string, x: number, y: number, depth: number, extra: Partial<LabelBox> = {}): LabelBox => ({
@@ -147,5 +151,23 @@ describe("city labels layout", () => {
       expect(r.a).toEqual({ dy: 700 - GAP - 710, compact: true, hidden: false });
     });
   });
-});
 
+  describe("after the style pass (owner): nothing over a building with nothing to say", () => {
+    const quiet = { touched: false, atWork: false, suggested: false, justUpgraded: false, possible: false };
+    it("touched, at work (with its timer), suggested or just upgraded: its full label", () => {
+      for (const k of ["touched", "atWork", "suggested", "justUpgraded"] as const) expect(badgeShown({ ...quiet, [k]: true }), k).toBe("full");
+    });
+    it("its upgrade can start: its level badge; else nothing", () => {
+      expect(badgeShown({ ...quiet, possible: true })).toBe("badge");
+      expect(badgeShown(quiet)).toBe("none");
+    });
+    it("the upgrades that can start: every one the rules allow now, the two suggested among them", () => {
+      const rich = { ...newPlayerState(), stock: { oil: 1e9, fish: 1e9, wood: 1e9 } } as unknown as PlayerState;
+      const possible = possibleUpgrades(rich);
+      expect(possible.length).toBeGreaterThan(2);
+      for (const id of suggestedUpgrades(rich)) expect(possible).toContain(id);
+      const poor = { ...newPlayerState(), stock: { oil: 0, fish: 0, wood: 0 } } as unknown as PlayerState;
+      expect(possibleUpgrades(poor)).toEqual([]);
+    });
+  });
+});

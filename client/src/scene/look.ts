@@ -48,13 +48,17 @@ export const CITY_CALM: Look = {
  */
 export const CITY_STYLE: Look = {
   sky: ["#4FAFC4", "#A9DCD6", "#FFE2B4"],
-  fog: { color: "#BFE0DA", near: 40, far: 110 },
+  // A lighter, farther veil (owner, on the S22: it darkened the sea).
+  fog: { color: "#CFEAE4", near: 60, far: 160 },
   sun: { color: "#FFB062", intensity: 4.6 },
-  hemi: { sky: "#9DB9E6", ground: "#55603A", intensity: 0.62 },
+  hemi: { sky: "#A6C2EC", ground: "#66733F", intensity: 0.74 },
   veil: 0,
   beams: 0,
   lead: 0,
 };
+
+/** The screen's exposure with CITY_STYLE (1.05 before, renderer.ts). */
+export const STYLE_EXPOSURE = 1.15;
 
 /** The city in the Mist: a uniform grey-violet sky, fog eating the far sea, a dim, cold sun (art direction). */
 export const CITY_MIST: Look = {
@@ -112,7 +116,7 @@ export const CITY_WATER: WaterOptions = { size: 160, near: "#17A7CF", far: "#165
  * The city's water after the style pass (with ?blender): B's light turquoise in the shallows along the shore and around
  * the rafts, turning to a clear blue, and a deep blue offshore, lighter than before (no night blue).
  */
-export const CITY_WATER_STYLE: WaterOptions = { ...CITY_WATER, near: "#2398C4", far: "#2380B0", radii: [9, 34], shallows: ["#73E2D3", "#30B5C8"] };
+export const CITY_WATER_STYLE: WaterOptions = { ...CITY_WATER, near: "#2AA3CB", far: "#2A8DBC", radii: [9, 34], shallows: ["#73E2D3", "#30B5C8"] };
 
 /** The sea map's water: one deep blue (its islands are small and many), reflecting the same sky. */
 export const SEA_WATER: WaterOptions = { size: 400, near: "#1E7DBE", far: "#1E7DBE", radii: [0, 1], sky: SEA_CALM.sky };

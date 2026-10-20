@@ -29,9 +29,9 @@ SEA = 0.2
 
 AGES = (1, 10, 20)
 LOOK = {
-    1: {"planks": ("plank", "wood", "plank_grey", "sand", "plank_red", "plank", "plank_grey"), "beam": "wood", "float": "wood", "hoop": "navy", "rim": "wood", "post": "wood", "rope": "plank"},
-    10: {"planks": ("wood", "plank", "plank_red", "wood", "plank_grey", "plank", "wood"), "beam": "dark", "float": "navy", "hoop": "steel", "rim": "dark", "post": "wood", "rope": "plank"},
-    20: {"planks": ("plank", "wood", "plank_grey", "plank", "plank_red", "wood", "plank"), "beam": "steel", "float": "steel", "hoop": "steel", "rim": "steel", "post": "steel", "rope": "navy"},
+    1: {"planks": ("drift_light", "drift", "drift_grey", "sand", "drift", "drift_light", "drift_grey"), "beam": "wood", "float": "wood", "hoop": "navy", "rim": "wood", "post": "wood", "rope": "plank"},
+    10: {"planks": ("drift", "tar_light", "drift_grey", "drift", "drift_light", "tar_light", "drift"), "beam": "dark", "float": "navy", "hoop": "steel", "rim": "dark", "post": "wood", "rope": "plank"},
+    20: {"planks": ("drift_light", "drift", "drift_grey", "drift_light", "drift", "drift_grey", "drift_light"), "beam": "steel", "float": "steel", "hoop": "steel", "rim": "steel", "post": "steel", "rope": "navy"},
 }
 # Making the light version of a deck, shown in the normal view (meeting 4, owner): fewer sides, no hoops, no beams under
 # the planks, the same look from afar. The full deck shows in the close view.
@@ -134,16 +134,15 @@ def lamp(x, z, age, h=0.42):
 
 
 def variant_a(age):
-    # A short mast at the back corner, its boom and its furled sail.
+    # A short mast at the back corner, its sail open to the wind (it reads from the normal view), a coil of rope.
     look = LOOK[age]
     x, z = BACK
-    p = [cylinder(0.024, 0.78, (x, DECK + 0.39, z), look["post"], sides=6, bevel=0)]
-    p.append(rod((x - 0.24, DECK + 0.3, z + 0.08), (x + 0.24, DECK + 0.3, z + 0.08), 0.014, look["post"], 5))
-    p.append(cylinder(0.045, 0.44, (x, DECK + 0.34, z + 0.08), "cream", sides=6 if lite() else 8, bevel=0, tilt=(0, math.radians(90))))
-    for dx in () if lite() else (-0.13, 0.0, 0.13):
-        p.append(cylinder(0.05, 0.016, (x + dx, DECK + 0.34, z + 0.08), look["rope"], sides=8, bevel=0, tilt=(0, math.radians(90))))
-    p.append(rod((x, DECK + 0.76, z), (x + 0.24, DECK + 0.32, z + 0.08), 0.004, look["rope"], 3))
-    p.append(cone(0.03, 0.06, (x, DECK + 0.78, z), "gold" if age == 20 else look["post"], sides=6))
+    p = [cylinder(0.024, 0.86, (x, DECK + 0.43, z), look["post"], sides=6, bevel=0)]
+    p.append(rod((x - 0.26, DECK + 0.22, z + 0.06), (x + 0.26, DECK + 0.22, z + 0.06), 0.014, look["post"], 5))
+    # The sail: a cream square between the boom and the mast's top, a little bellied (two panels).
+    for side in (-1, 1):
+        p.append(box((0.25, 0.56, 0.012), (x + side * 0.125, DECK + 0.52, z + 0.07 + 0.012), "cream", bevel=0, turn=side * 0.12))
+    p.append(cone(0.03, 0.06, (x, DECK + 0.86, z), "gold" if age == 20 else look["post"], sides=6))
     p += [rope_coil((BACK_RIGHT[0], DECK, BACK_RIGHT[1]), radius=0.07, color=look["rope"], sides=5 if lite() else 8)]
     if age >= 10:
         p += lamp(*BACK_LEFT, age)
@@ -151,31 +150,35 @@ def variant_a(age):
 
 
 def variant_b(age):
-    # Nets drying on two poles at the back, a crate in the corner.
+    # Nets drying on three poles across the back, a crate in the corner.
     look = LOOK[age]
     p = []
-    a, b = BACK_LEFT, BACK
-    for x, z in (a, b):
-        p.append(cylinder(0.018, 0.5, (x, DECK + 0.25, z), look["post"], sides=5, bevel=0))
-    p.append(rod((a[0], DECK + 0.47, a[1]), (b[0], DECK + 0.47, b[1]), 0.006, look["rope"], 3))
-    turn = math.atan2(b[1] - a[1], b[0] - a[0])
-    length = math.hypot(b[0] - a[0], b[1] - a[1])
-    p.append(box((length * 0.9, 0.3, 0.012), ((a[0] + b[0]) / 2, DECK + 0.3, (a[1] + b[1]) / 2), "navy", bevel=0, turn=-turn))
-    for t in (0.3, 0.7) if lite() else (0.2, 0.4, 0.6, 0.8):
-        p.append(sphere(0.022, (a[0] + (b[0] - a[0]) * t, DECK + 0.46, a[1] + (b[1] - a[1]) * t), "gold" if age == 1 else "cream", subdivisions=1))
+    poles = (BACK_LEFT, BACK, BACK_RIGHT)
+    for x, z in poles:
+        p.append(cylinder(0.018, 0.5, (x, DECK + 0.25, z), look["post"], sides=4 if lite() else 5, bevel=0))
+    for a, b in zip(poles, poles[1:]):
+        turn = math.atan2(b[1] - a[1], b[0] - a[0])
+        length = math.hypot(b[0] - a[0], b[1] - a[1])
+        p.append(rod((a[0], DECK + 0.47, a[1]), (b[0], DECK + 0.47, b[1]), 0.006, look["rope"], 3))
+        p.append(box((length * 0.92, 0.34, 0.014), ((a[0] + b[0]) / 2, DECK + 0.29, (a[1] + b[1]) / 2), "net", bevel=0, turn=-turn))
+        p.append(sphere(0.024, ((a[0] + b[0]) / 2, DECK + 0.46, (a[1] + b[1]) / 2), "gold" if age == 1 else "cream", subdivisions=1))
+    # Beside the deck's middle (a building's), clear of the walkways' landings.
     if lite():
-        p.append(box((0.15, 0.15, 0.15), (BACK_RIGHT[0], DECK + 0.075, BACK_RIGHT[1]), "plank" if age < 20 else "navy", bevel=0, turn=0.3))
+        p.append(box((0.15, 0.15, 0.15), (0.52, DECK + 0.075, -0.17), "drift", bevel=0, turn=0.3))
     else:
-        p += crate((BACK_RIGHT[0], DECK, BACK_RIGHT[1]), size=0.15, color="plank" if age < 20 else "navy", turn=0.3)
+        p += crate((0.52, DECK, -0.17), size=0.15, color="drift" if age < 20 else "navy", turn=0.3)
     if age >= 10:
-        p += lamp(BACK_RIGHT[0] - 0.05, BACK_RIGHT[1] - 0.14, age, h=0.36)
+        p += lamp(-0.56, -0.17, age, h=0.36)
     return p
 
 
-def planter(x, z, age):
-    out = [box((0.24, 0.1, 0.16), (x, DECK + 0.05, z), "wood" if age < 20 else "steel", bevel=0)]
+def planter(x, z, age, tall=False, size=(0.26, 0.18)):
+    """A box of earth with kelp and herbs: green tufts that read from the normal view."""
+    w, d = size
+    out = [box((w, 0.1, d), (x, DECK + 0.05, z), "wood" if age < 20 else "steel", bevel=0)]
+    step = w * 0.3
     for k in (0, 2) if lite() else range(3):
-        out.append(box((0.024, 0.16 + 0.03 * (k % 2), 0.024), (x - 0.07 + 0.07 * k, DECK + 0.16, z), "copper" if k % 2 else "meadow_dark", bevel=0, tilt=(0.15 * (k - 1), 0)))
+        out.append(cone(min(0.07, w * 0.27) if k != 1 else min(0.06, w * 0.23), 0.2 + (0.12 if tall else 0) + 0.04 * (k % 2), (x - step + step * k, DECK + 0.1, z), "leaf" if k != 1 else "meadow_dark", sides=5))
     return out
 
 
@@ -190,8 +193,24 @@ def variant_c(age):
     return p
 
 
+def variant_d(age):
+    # A deck garden (owner, after the style pass): planters across the back, a small tree in a tub and a water barrel
+    # at the back corners; the deck's middle stays free for a building.
+    # Small planters, behind the middle and clear of the back walkways' landings.
+    small = (0.18, 0.14)
+    p = planter(-0.17, -0.5, age, size=small) + planter(0.0, -0.68, age, tall=True, size=small) + planter(0.17, -0.5, age, size=small)
+    tx, tz = BACK_LEFT
+    p.append(cylinder(0.09, 0.12, (tx, DECK + 0.06, tz), "wood" if age < 20 else "steel", sides=6, bevel=0))
+    p.append(cylinder(0.018, 0.22, (tx, DECK + 0.23, tz), "wood", sides=4, bevel=0))
+    p.append(sphere(0.13, (tx, DECK + 0.42, tz), "leaf", subdivisions=1, squash=0.85))
+    p.append(cylinder(0.08, 0.18, (BACK_RIGHT[0], DECK + 0.09, BACK_RIGHT[1]), "tar_light" if age < 20 else "steel", sides=6 if lite() else 8, bevel=0))
+    if age >= 10:
+        p += lamp(0.6, -0.14, age, h=0.36)
+    return p
+
+
 def raft(age, variant):
-    return floats(age) + deck(age) + {"a": variant_a, "b": variant_b, "c": variant_c}[variant](age)
+    return floats(age) + deck(age) + {"a": variant_a, "b": variant_b, "c": variant_c, "d": variant_d}[variant](age)
 
 
 # The damage at the front corner, kept free of everything a raft carries.
@@ -254,12 +273,15 @@ def walkway(age):
 # A raft of ring 3 lies 0.08 off the shore across its side facing the island (island.py: LAND; client/src/scene/coast.ts:
 # RAFT_FILL): its mooring's stake stands on the beach MOOR_STAKE from the raft's center, its rope ends on the deck's rim.
 MOOR_STAKE = 1.0
+# The city's sea stands this much higher with the island after the style pass (client: cityLook.ts, SEA_RISE), the
+# rafts with it: their bottom 0.42 under the meadow, not 0.62.
+SEA_RISE = 0.2
 
 
 def mooring(age):
     """A stake on the beach at the origin (y = 0 the meadow) and its rope down to a raft's deck rim, toward +z."""
     look = LOOK[age]
-    end_z, end_y = MOOR_STAKE - A + 0.03, -(0.62 - DECK) + 0.02
+    end_z, end_y = MOOR_STAKE - A + 0.03, -(0.62 - SEA_RISE - DECK) + 0.02
     if age == 20:
         # A bollard of light steel.
         p = [cylinder(0.05, 0.16, (0, 0.08, 0), "steel_light", sides=6, bevel=0), cylinder(0.065, 0.025, (0, 0.17, 0), "steel_light", sides=6, bevel=0)]
@@ -296,10 +318,10 @@ def free():
 
 EXTRAS = {"raft-free": free}
 for _age in AGES:
-    for _v in "abc":
+    for _v in "abcd":
         EXTRAS[f"raft-{_v}-age{_age}"] = (lambda a, v: lambda: raft(a, v))(_age, _v)
     EXTRAS[f"raft-damaged-age{_age}"] = (lambda a: lambda: damaged(a))(_age)
-    for _v in ("a", "b", "c", "damaged"):
+    for _v in ("a", "b", "c", "d", "damaged"):
         EXTRAS[f"raft-{_v}-age{_age}-lite"] = (lambda a, v: lambda: _lite_of(a, v))(_age, _v)
     EXTRAS[f"raft-yard-age{_age}"] = (lambda a: lambda: yard(a))(_age)
     EXTRAS[f"raft-walk-age{_age}"] = (lambda a: lambda: walkway(a))(_age)
