@@ -63,7 +63,9 @@ for (const c of CITIES) {
   const free = RAFT_SLOTS.filter((s) => !taken.has(s.key) && s.key !== c.filling && slotOpen(s.ring, c.lighthouse)).map((s) => ({ key: s.key, ...at(s.key) }));
   const filling = c.filling ? { key: c.filling, ...at(c.filling) } : null;
   // The game's normal view: the land (as the rafts did) across three quarters of the width at least, every building whole.
-  const tops = buildings.flatMap((b) => buildingPoints({ x: b.x, z: b.z, height: b.height, reach: b.reach }));
+  // The land reaches a little past a raft's hexagon (reclaim.py: 1.12 around its center, joined softly): its edge stays on screen too.
+  const edges = [...slots, ...(c.filling ? [at(c.filling)] : [])].flatMap(({ x, z }) => Array.from({ length: 12 }, (_, i) => ({ x: x + Math.cos((i * Math.PI) / 6) * 1.25, y: 0, z: z + Math.sin((i * Math.PI) / 6) * 1.25 })));
+  const tops = [...buildings.flatMap((b) => buildingPoints({ x: b.x, z: b.z, height: b.height, reach: b.reach })), ...edges];
   const framed = [...slots, ...(filling ? [filling] : [])].map(({ x, z }) => ({ x, z }));
   let { distance, target } = cityFraming(VIEW, framed, tops, { share: CITY_FILL, coast: terrainCoast });
   if (c.close) {

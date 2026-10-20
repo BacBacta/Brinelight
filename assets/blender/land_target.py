@@ -372,7 +372,7 @@ def plants(L, layout, look, height_at):
     for s in layout["slots"]:
         if s["flooded"]:
             continue
-        for k in range(int(rng.integers(4, 9))):
+        for k in range(int(rng.integers(6, 12))):
             a, r = rng.uniform(0, 6.28), rng.uniform(0.15, 0.85)
             x, z = s["x"] + math.cos(a) * r, s["z"] + math.sin(a) * r
             p = (np.array([x]), np.array([z]))
@@ -380,7 +380,7 @@ def plants(L, layout, look, height_at):
                 continue
             if s["building"] and r < 0.62:
                 continue
-            tall = rng.uniform() < 0.3 and not s["building"]
+            tall = rng.uniform() < 0.45 and not s["building"]
             name = trees[k % len(trees)] if tall else low[int(rng.integers(0, len(low)))]
             sc = float(rng.uniform(0.8, 1.2))
             target.place(f"life-plant-{name}", x, height_at(x, z) - 0.01, z, turn=rng.uniform(0, 6.28), scale=(sc, sc, sc))

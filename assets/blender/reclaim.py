@@ -94,7 +94,7 @@ class Land:
             a = np.arctan2(z - s["z"], x - s["x"])
             da = np.abs((a - a0 + math.pi) % (2 * math.pi) - math.pi)
             r = np.hypot(x - s["x"], z - s["z"])
-            out = np.maximum(out, np.clip((0.45 - da) / 0.15, 0, 1) * np.clip((r - 0.55) / 0.2, 0, 1))
+            out = np.maximum(out, np.clip((0.45 - da) / 0.15, 0, 1) * np.clip((r - 0.55) / 0.2, 0, 1) * np.clip((1.45 - r) / 0.15, 0, 1))
         return out
 
     def heights(self, x, z):
