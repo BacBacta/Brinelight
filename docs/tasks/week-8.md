@@ -884,6 +884,15 @@ What it does not do: no change to the Lighthouse, the storage or the research.
 
 How it is tested: the measures in a table, before anything is applied. Once you have chosen, the new test, the test of the milestones, and `npm run check`.
 
+### What the study of the island's depletion showed (owner, 21 October): an input of this task
+
+The study (pull request #12, a draft not merged: `docs/studies/depletion.md` on the branch `study-depletion`) was not adopted, but it measured the late game as it is today. No rule and no value change now; these are for this task to weigh:
+
+- **The wall is the other buildings, not the Lighthouse.** The eight other buildings take 9 to 12 years from level 29 to 30 (3,196 to 4,261 days); the Lighthouse takes 43 days from 29 to 30.
+- **The producers stall while the Lighthouse's costs keep growing.** The active player's Refinery is at level 15 at Lighthouse 30, while the Lighthouse costs up to 1.1 million wood (1,102,550 wood and 735,040 oil from 29 to 30).
+- **From Lighthouse 25 to Lighthouse 30: 195 days today** (an active player, 4 sessions a day, with the sea).
+- **The Fish Shoals and Wooded Isles are on the map but fleets cannot reach them yet.** Their amounts today (360 to 600) weigh too little in the late game. Making them harvestable, with amounts that follow the Lighthouse, is to be studied in this task as the main source of fish and wood in the middle and late game (the owner's choice: a richer sea rather than a poorer island).
+
 ---
 
 ## Not this week
