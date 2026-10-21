@@ -43,7 +43,9 @@ Read this whole file before every task. When in doubt, ask rather than guess.
 
 - Never paid randomness. The only random draw, the daily recruitment, is free and verifiable.
 - Never a token, an airdrop, or land sold as NFTs.
-- Never for sale: troops, recruitments, fragments, Pearls, rafts, protections, alliance seats.
+- Never for sale: troops, recruitments, fragments, Pearls, rafts, protections, alliance seats, Tides attacks.
+- A city can never be attacked: no player can attack, loot or damage another player's city, its storage, buildings, plots or captains. Conflict between players happens only at sea, in Tides.
+- No cash prizes: no tournament or event pays out money or tokens.
 - USDC payment is reserved for adults; the convenience cap is counted per game account, not per wallet.
 - The Alliance Treasury holds only Pearls and can never pay a chosen player.
 - No personal data on chain.
