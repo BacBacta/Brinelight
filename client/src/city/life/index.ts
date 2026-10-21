@@ -40,6 +40,11 @@ export function createLife(scene: (o: THREE.Object3D) => void) {
     get meshes() {
       return [...people.meshes, ...animals.meshes, ...plants.meshes, ...details.meshes];
     },
+    /** The city fabric (city/fabric): the plots it takes, where the groves give way, and its chimneys' smoke. */
+    useFabric(taken: readonly { x: number; z: number }[], smoke: readonly { x: number; y: number; z: number }[]) {
+      plants.giveWay(taken);
+      details.smokeFrom(smoke);
+    },
     update(next: PlayerState) {
       state = next;
       animals.update(next);

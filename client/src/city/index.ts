@@ -9,7 +9,9 @@ import { createRaftSheet } from "./raftSheet.js";
 import { RAFT_FILL, createCityRafts, raftSlots, slotPosition } from "./rafts.js";
 import { createVillage } from "./village.js";
 import { createLife } from "./life/index.js";
-import { createLand } from "./land/index.js";
+import { createFabric } from "./fabric/index.js";
+import { createLand, landSlotsOf } from "./land/index.js";
+import type { LandSlots } from "./land/field.js";
 import { landShown } from "./words.js";
 import { createSheet } from "./sheet.js";
 import { terrainName, shownShape, lanternHeight, levelShape, loadStage, radarAt, showLevel, stageName } from "./staged.js";
@@ -36,6 +38,9 @@ function panelRects() {
 const LABEL_GAP = 0.25;
 
 /** The 9 buildings on their plots, the raft slots around the island, their labels, their sheets and the queue. */
+/** Before the Lighthouse 5, no land is won: the island alone. */
+const NO_LAND: LandSlots = { won: [], flooded: [], filling: null, free: [] };
+
 export function createCity(
   scene: SceneHandle,
   canvas: HTMLCanvasElement,
@@ -89,6 +94,12 @@ export function createCity(
   };
   // The island's life (meeting 4): its survivors, animals and plants.
   const life = createLife((o) => scene.add(o));
+  // The city fabric (owner, 21 October): houses, streets, squares, equipment, fields and the port, decor only.
+  const fabric = createFabric((o) => scene.add(o));
+  fabric.onPlan = (plan) => {
+    life.useFabric(plan.taken, plan.smoke);
+    land.setFabric(plan.taken, plan.trees);
+  };
   // Labels float just above each model at its level.
   const labels = createLabels(root, scene, (id, levels) => shownShape(id, Math.max(1, levels[id])).height + LABEL_GAP, { badges: true, panels: () => panelRects() });
   // The island's look follows the Lighthouse's era.
@@ -134,6 +145,8 @@ export function createCity(
     if (view !== "city") return;
     village.setCloseness(scene.closeness());
     village.setDimness(scene.dimness());
+    fabric.setDimness(scene.dimness());
+    fabric.animate(now);
     // Placing a raft: a free slot's sheet is open.
     const open = raftSheet.current;
     rafts.setPlacing(open !== null && !game.state().rafts[open] && yardSlot(game.state().yard) !== open);
@@ -199,6 +212,7 @@ export function createCity(
       if (toggled && !builtNow) showLand();
       showMarks(on ? raftSlots(state).filter((x) => x.view === "damaged").map((x) => x.key) : []);
       life.update(state);
+      fabric.update(state, on ? landSlotsOf(state) : NO_LAND);
       // The foam goes around the rafts afloat and the shipyard at work.
       // The foam hugs the raft (inside its room), so the water between two rafts shows.
       // On the land won, a flooded plot is still water (no foam over it); the land itself is the shore.

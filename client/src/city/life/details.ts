@@ -102,6 +102,8 @@ uniform float uTime;
 
 export function createDetails(add: (o: THREE.Object3D) => void) {
   let found = { smoke: [] as Source[], lamps: [] as Source[] };
+  // The city fabric's chimneys (city/fabric): the forge's and the workshops'.
+  let more: Source[] = [];
   // The smoke and the lanterns: one cloud of points (the style pass: fewer draw calls).
   const cloud = pointCloud(64 * PUFFS + 64);
   cloud.name = "smoke-lanterns";
@@ -157,6 +159,10 @@ transformed.x += sin(uTime * 3. + position.z * 9.) * .018 * hang;`,
           });
       } else laundryAt = null;
     },
+    /** The city fabric's chimneys, which smoke too. */
+    smokeFrom(points: readonly { x: number; y: number; z: number }[]) {
+      more = points.map((p) => ({ ...p, raft: null }));
+    },
     /** Each frame: the smoke rises (still with reduced motion), the lanterns glow as the light falls. */
     animate(now: number, still: boolean, dimness: number, bob: (raft: string) => number, camera: THREE.Camera) {
       const t = still ? 0 : now;
@@ -165,7 +171,7 @@ transformed.x += sin(uTime * 3. + position.z * 9.) * .018 * hang;`,
       const scale = (camera.projectionMatrix.elements[5]! * innerHeight * Math.min(2, devicePixelRatio || 1)) / 2;
       (cloud.material as THREE.ShaderMaterial).uniforms.uScale!.value = scale;
       let n = 0;
-      found.smoke.forEach((s, k) => {
+      [...found.smoke, ...more].slice(0, 64).forEach((s, k) => {
         const lift = s.raft ? bob(s.raft) : 0;
         for (let i = 0; i < PUFFS; i++) {
           const u = (t * 0.22 + i / PUFFS + k * 0.37) % 1;

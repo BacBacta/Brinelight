@@ -221,6 +221,134 @@
    }
   ]
  },
+ "fabric-0": {
+  "kB": 19.6,
+  "triangles": 660,
+  "levels": [],
+  "models": {
+   "tent": 32,
+   "hut": 44,
+   "well": 120,
+   "jetty": 24,
+   "sail-boat": 40,
+   "campfire": 128,
+   "drying-rack": 96,
+   "laundry-line": 84,
+   "barrels": 60,
+   "rowboat": 32
+  }
+ },
+ "fabric-1": {
+  "kB": 25.0,
+  "triangles": 842,
+  "levels": [],
+  "models": {
+   "hut": 44,
+   "wooden": 68,
+   "well": 120,
+   "windmill": 90,
+   "scarecrow": 36,
+   "barrel": 20,
+   "jetty": 24,
+   "sail-boat": 40,
+   "campfire": 128,
+   "drying-rack": 96,
+   "laundry-line": 84,
+   "barrels": 60,
+   "rowboat": 32
+  }
+ },
+ "fabric-2": {
+  "kB": 19.5,
+  "triangles": 670,
+  "levels": [],
+  "models": {
+   "wooden": 68,
+   "brick": 68,
+   "well": 120,
+   "windmill": 90,
+   "chimneys": 180,
+   "lamp": 24,
+   "scarecrow": 36,
+   "barrel": 20,
+   "quay": 24,
+   "sail-boat": 40
+  }
+ },
+ "fabric-3": {
+  "kB": 33.4,
+  "triangles": 1136,
+  "levels": [],
+  "models": {
+   "wooden": 68,
+   "brick": 68,
+   "row": 180,
+   "workshop": 104,
+   "well": 120,
+   "windmill": 90,
+   "chimneys": 180,
+   "water-tower": 102,
+   "lamp": 24,
+   "kelp-rack": 48,
+   "scarecrow": 36,
+   "barrel": 20,
+   "quay": 24,
+   "sail-boat": 40,
+   "motor-boat": 32
+  }
+ },
+ "fabric-4": {
+  "kB": 38.4,
+  "triangles": 1300,
+  "levels": [],
+  "models": {
+   "brick": 68,
+   "row": 180,
+   "workshop": 104,
+   "lit-house": 80,
+   "well": 120,
+   "windmill": 90,
+   "chimneys": 180,
+   "water-tower": 102,
+   "turbine-mast": 32,
+   "turbine-rotor": 48,
+   "lamp": 24,
+   "pole": 24,
+   "kelp-rack": 48,
+   "bench": 48,
+   "scarecrow": 36,
+   "barrel": 20,
+   "quay": 24,
+   "sail-boat": 40,
+   "motor-boat": 32
+  }
+ },
+ "fabric-5": {
+  "kB": 38.5,
+  "triangles": 1308,
+  "levels": [],
+  "models": {
+   "lit-house": 80,
+   "solar-house": 84,
+   "apartments": 180,
+   "well": 120,
+   "windmill": 90,
+   "chimneys": 180,
+   "water-tower": 102,
+   "turbine-mast": 32,
+   "turbine-rotor": 48,
+   "solar-field": 96,
+   "lamp": 24,
+   "pole": 24,
+   "kelp-rack": 48,
+   "bench": 48,
+   "scarecrow": 36,
+   "barrel": 20,
+   "quay": 24,
+   "sail-boat": 40,
+   "motor-boat": 32
+  }
+ },
  "fishery-1": {
   "kB": 51.6,
   "triangles": 646,

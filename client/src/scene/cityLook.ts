@@ -5,6 +5,7 @@
  */
 import * as THREE from "three";
 import CITY_MODELS from "./city-models.json";
+import { paintGround } from "../city/fabric/paint.js";
 
 /**
  * A model's measures, written by serve.py: for each level where something appears, the indices to draw, and the height and
@@ -24,9 +25,12 @@ export const cityModelUrl = (name: string): string => `${import.meta.env.BASE_UR
 /** The island as made: already in the game's units, its meadow at y = 0 on the grid; nothing to fit or reshape. */
 export function gridIsland(model: THREE.Object3D, casts = true): THREE.Object3D {
   model.traverse((m) => {
-    if ((m as THREE.Mesh).isMesh) {
+    const mesh = m as THREE.Mesh;
+    if (mesh.isMesh) {
       m.castShadow = casts;
       m.receiveShadow = true;
+      // The city fabric's streets, yards, square and fields, painted on it (city/fabric/paint.ts).
+      for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) paintGround(material);
     }
   });
   return model;

@@ -17,10 +17,11 @@ import { loadStage } from "../staged.js";
 import { plantLook, type Look } from "../life/plants.js";
 import { raftBuildingName, villageAge } from "../village.js";
 import { raftSlots } from "../rafts.js";
-import { SEA, type At, type LandSlots } from "./field.js";
+import { SEA, ground as groundAt, hexReach, type At, type LandSlots } from "./field.js";
 import { landGeometry, type CoastSegment } from "./mesh.js";
 import { landJob, landJobNow } from "./jobs.js";
 import type { LandDone } from "./job.js";
+import { paintGround } from "../fabric/paint.js";
 
 /**
  * The land's last rebuild (the ?fps counter shows it, owner on the S22): `aside`, ms in the worker (the display goes
@@ -143,6 +144,63 @@ const merge = (parts: THREE.BufferGeometry[]): THREE.BufferGeometry => {
   geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
   return geo;
 };
+/** An InstancedMesh's copies as one geometry (positions, normals, colors), its matrices applied. */
+function baked(mesh: THREE.InstancedMesh): THREE.BufferGeometry {
+  const g = mesh.geometry;
+  const pos = g.getAttribute("position").array as Float32Array;
+  const nor = g.getAttribute("normal").array as Float32Array;
+  const col = g.getAttribute("color").array as Float32Array;
+  const n = pos.length / 3;
+  const out = { pos: new Float32Array(n * 3 * mesh.count), nor: new Float32Array(n * 3 * mesh.count), col: new Float32Array(n * 3 * mesh.count) };
+  const m = new THREE.Matrix4();
+  const nm = new THREE.Matrix3();
+  for (let k = 0; k < mesh.count; k++) {
+    mesh.getMatrixAt(k, m);
+    nm.getNormalMatrix(m);
+    const e = m.elements;
+    const f = nm.elements;
+    for (let i = 0; i < n; i++) {
+      const [x, y, z] = [pos[i * 3]!, pos[i * 3 + 1]!, pos[i * 3 + 2]!];
+      const o = (k * n + i) * 3;
+      out.pos[o] = e[0]! * x + e[4]! * y + e[8]! * z + e[12]!;
+      out.pos[o + 1] = e[1]! * x + e[5]! * y + e[9]! * z + e[13]!;
+      out.pos[o + 2] = e[2]! * x + e[6]! * y + e[10]! * z + e[14]!;
+      const [a, b, c] = [nor[i * 3]!, nor[i * 3 + 1]!, nor[i * 3 + 2]!];
+      const [u, v, w] = [f[0]! * a + f[3]! * b + f[6]! * c, f[1]! * a + f[4]! * b + f[7]! * c, f[2]! * a + f[5]! * b + f[8]! * c];
+      const l = Math.hypot(u, v, w) || 1;
+      out.nor[o] = u / l;
+      out.nor[o + 1] = v / l;
+      out.nor[o + 2] = w / l;
+      out.col[o] = col[i * 3]!;
+      out.col[o + 1] = col[i * 3 + 1]!;
+      out.col[o + 2] = col[i * 3 + 2]!;
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(out.pos, 3));
+  geo.setAttribute("normal", new THREE.BufferAttribute(out.nor, 3));
+  geo.setAttribute("color", new THREE.BufferAttribute(out.col, 3));
+  return geo;
+}
+
+/** Non-indexed geometries (positions, normals, colors) as one. */
+function mergeStill(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  const kept = parts.filter((g) => g.getAttribute("position")?.count);
+  const total = kept.reduce((n, g) => n + g.getAttribute("position").count, 0);
+  const geo = new THREE.BufferGeometry();
+  for (const name of ["position", "normal", "color"]) {
+    const out = new Float32Array(total * 3);
+    let at = 0;
+    for (const g of kept) {
+      const a = g.getAttribute(name).array as Float32Array;
+      out.set(a, at);
+      at += a.length;
+    }
+    geo.setAttribute(name, new THREE.BufferAttribute(out, 3));
+  }
+  for (const g of parts) g.dispose();
+  return geo;
+}
 const at = (g: THREE.BufferGeometry, x: number, y: number, z: number, rx = 0, ry = 0, rz = 0, s: [number, number, number] = [1, 1, 1]) =>
   g.clone().applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new THREE.Vector3(...s)));
 
@@ -209,12 +267,15 @@ export function createLand(add: (o: THREE.Object3D) => void) {
     shader.fragmentShader = (GROUND_FRAGMENT + shader.fragmentShader).replace("#include <map_fragment>", `#include <map_fragment>\n${GROUND_PAINT}`);
   };
   material.customProgramCacheKey = () => "brinelight-land";
+  // The city fabric's streets, yards, square and fields, painted over it too (city/fabric/paint.ts).
+  paintGround(material);
   const ground_ = new THREE.Mesh(new THREE.BufferGeometry(), material);
   ground_.name = "land-ground";
   ground_.receiveShadow = true;
   group.add(ground_);
+  // The dike's pieces are laid as instances, then merged with the props: one draw call for all (owner: the fabric's
+  // still parts merged, to stay near 45 calls).
   const p = pieces();
-  for (const m of p.all) group.add(m);
   const props = new THREE.Mesh(new THREE.BufferGeometry(), PIECE);
   props.castShadow = true;
   props.receiveShadow = true;
@@ -393,9 +454,13 @@ export function createLand(add: (o: THREE.Object3D) => void) {
     return out;
   };
 
+  /** The city fabric (city/fabric): the plots it takes, where the land's own plants give way, and its trees. */
+  let fabric: { taken: readonly At[]; trees: readonly { name: string; x: number; z: number; turn: number; scale: number }[] } = { taken: [], trees: [] };
   const layPlants = () => {
     const counts = new Map<string, number>();
-    for (const it of plantSpots) {
+    const free = plantSpots.filter((it) => fabric.taken.every((t) => hexReach(it.x - t.x, it.z - t.z) > 0.95));
+    const trees = slots ? fabric.trees.map((t) => ({ ...t, y: groundAt(t.x, t.z, slots!).y - 0.01 })) : [];
+    for (const it of [...free, ...trees]) {
       const mesh = plantMeshes.get(it.name);
       if (!mesh) {
         if (!plantMeshes.has(it.name)) fetchPlant(it.name);
@@ -461,7 +526,7 @@ export function createLand(add: (o: THREE.Object3D) => void) {
     }
     dike(coast, done.fillStakes, L, l);
     props.geometry.dispose();
-    props.geometry = propsOf(L, plan, done.heights);
+    props.geometry = mergeStill([propsOf(L, plan, done.heights), ...p.all.map(baked)]);
     plantSpots = plantsOf(plan, done.heights);
     layPlants();
     slots = L;
@@ -476,7 +541,7 @@ export function createLand(add: (o: THREE.Object3D) => void) {
     group,
     /** The meshes drawn (draw calls). */
     get meshes(): THREE.Object3D[] {
-      return [ground_, props, ...p.all, ...plantMeshes.values()];
+      return [ground_, props, ...plantMeshes.values()];
     },
     /** The slots shown now, for the framing (their land's edge stays on screen). */
     get slots(): LandSlots | null {
@@ -524,6 +589,11 @@ export function createLand(add: (o: THREE.Object3D) => void) {
     /** The shore's grid of the land shown: where it stands above the water. */
     get grid(): Uint8Array | null {
       return grid;
+    },
+    /** The city fabric's plots and trees (city/fabric/plan.ts): laid with the land's plants. */
+    setFabric(taken: readonly At[], trees: readonly { name: string; x: number; z: number; turn: number; scale: number }[]) {
+      fabric = { taken, trees };
+      layPlants();
     },
     /** The triangles of the land's ground (tests, measures). */
     get triangles(): number {
