@@ -594,3 +594,29 @@ Time to the first image (10 Mbit/s, 40 ms, cache off, five runs, median; quality
 | Lighthouse 30, 39 plots | 4.62 s, 5.10 s | 5.27 s, 5.34 s | 4.44 s | 4.46 s | 1,957 → 2,013 kB |
 
 - The era's fabric file is 20 to 39 kB. At quality 1 the first image hardly moves; at quality 0 it comes 0.2 to 0.45 s later in the container, which draws without a graphics chip at twice the pixels (the ground's shader and the fabric's three new programs). The S22 must say whether a phone feels it.
+
+### The final measure of the city's visual work (owner, 21 October, step F)
+
+With the gardens in rows, the Mist's windows, the camp 1.3 times larger, the Harbor's pier from the shore and the `?fps` counter's "First image in X.X s" (from the page's start to the city's first frame on screen). Draw calls and triangles at 384 × 699, quality 1, the life loaded:
+
+| City | Draw calls, triangles |
+| --- | --- |
+| Lighthouse 4, 3 rafts (no land yet) | 30, 30.3 k |
+| Lighthouse 5, 3 plots | 27, 33.7 k |
+| Lighthouse 15, 15 plots (one flooded), a landfill | 38, 49.6 k |
+| Lighthouse 30, 38 plots (one flooded), a landfill | 40, 56.4 k |
+| `?demo=phare30` | 45, 57.4 k |
+
+- The gardens' and the kelp's rows stand in the fabric's mesh: no draw call more. The fabric's worst city is 11.8 k triangles (39 gardens at the Lighthouse 9), under the 14 k of its test.
+- The Harbor's pier: 692 to 768 triangles a model, 50 to 60 kB (it was 460 to 780, 43 to 59 kB). Its boats floated under the sea since the style pass raised it by 0.2; they float on it now.
+
+Time to the first image (10 Mbit/s, 40 ms, cache off, five runs, median; quality 0 measured twice). "The game's count" is what `?fps` shows; "the page" is when the test sees the loading screen go, which in the container comes later (it draws without a graphics chip: a frame at quality 0 takes about a second to reach the screen):
+
+| City | Quality 0: the game's count | Quality 0: the page | Quality 1: the game's count | Quality 1: the page | Downloaded |
+| --- | --- | --- | --- | --- | --- |
+| New player | 2.8 s, 3.1 s | 3.47 s, 3.69 s | 2.4 s | 2.66 s | 1,682 kB |
+| Lighthouse 30 | 3.6 s, 3.3 s | 4.91 s, 4.12 s | 3.0 s | 3.27 s | 1,870 kB |
+| Lighthouse 30, 39 plots | 3.9 s, 3.8 s | 4.83 s, 5.04 s | 3.3 s | 4.03 s | 2,019 kB |
+
+- The worst city at quality 0 is at the 5 s aimed at, by the page's measure (4.83 and 5.04 s, the two series within each other's spread), and at 3.8 to 3.9 s by the game's count. The S22 reads the game's count on `?fps`: it should be lower there, with a graphics chip.
+- Since the city fabric's first measure (`docs/perf.md`, "The city fabric"): the Harbor's coast found in fewer steps (about 80 ms less at the start), and the fields read in one texel a pixel instead of a loop over every field.
