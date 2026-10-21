@@ -10,7 +10,7 @@ import { createRaftSheet } from "./raftSheet.js";
 import { RAFT_FILL, createCityRafts, raftSlots, slotPosition } from "./rafts.js";
 import { createVillage, hasVillage } from "./village.js";
 import { createLife } from "./life/index.js";
-import { createLand, hasLand, landClock } from "./land/index.js";
+import { createLand, hasLand } from "./land/index.js";
 import { landShown } from "./words.js";
 import { createSheet } from "./sheet.js";
 import { blenderLook } from "../scene/cityLook.js";
@@ -71,6 +71,13 @@ export function createCity(
   // From the Lighthouse 5, the rafts are land won on the sea, welded to the island (owner): one mesh, built in the game.
   const land = village && hasLand() ? createLand((o) => scene.add(o)) : undefined;
   let landOn = false;
+  /** The land shown (or the island given back): its outline stays on screen in the normal view, as the rafts did. */
+  const showLand = () => {
+    if (!land) return;
+    const edge = (land.slots?.won ?? []).flatMap((c) => Array.from({ length: 8 }, (_, i) => ({ x: c.x + Math.cos((i * Math.PI) / 4) * 1.25, z: c.z + Math.sin((i * Math.PI) / 4) * 1.25 })));
+    scene.useLand(landOn ? land.object : null, edge, landOn ? land.grid : null);
+  };
+  if (land) land.onBuilt = showLand;
   // The "!" over each flooded plot (owner): it says the plot needs draining, as the raft's sheet does.
   const marks = document.createElement("div");
   marks.className = "labels city flood-marks";
@@ -223,16 +230,11 @@ export function createCity(
       rafts.refresh(state);
       if (land) {
         const on = landShown(state.buildings.lighthouse);
-        const t = performance.now();
-        const built = land.update(state, on);
-        if (built || on !== landOn) {
-          landOn = on;
-          // Its outline stays on screen in the normal view, as the rafts did.
-          const edge = (land.slots?.won ?? []).flatMap((c) => Array.from({ length: 8 }, (_, i) => ({ x: c.x + Math.cos((i * Math.PI) / 4) * 1.25, z: c.z + Math.sin((i * Math.PI) / 4) * 1.25 })));
-          scene.useLand(on ? land.object : null, edge);
-          // The whole of it: the land, its dike and plants, and the shore's foam measured again.
-          if (built) landClock.last = performance.now() - t;
-        }
+        const toggled = on !== landOn;
+        landOn = on;
+        // A land built again shows once ready (land.onBuilt): the one shown stays until then.
+        const builtNow = land.update(state, on);
+        if (toggled && !builtNow) showLand();
         showMarks(on ? raftSlots(state).filter((x) => x.view === "damaged").map((x) => x.key) : []);
       }
       life?.update(state);

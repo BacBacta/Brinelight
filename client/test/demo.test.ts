@@ -5,7 +5,7 @@ import { build } from "vite";
 import { describe, expect, it } from "vitest";
 import { RAFT_BUILDING_MAX_COPIES, RAFT_SLOTS, parseState, survivorCap } from "@brinelight/shared";
 import { formatTimeLeft } from "../src/city/format.js";
-import { DEMOS, demoAllowed, demoCity, demoWanted, memoryStore } from "../src/demo.js";
+import { DEMOS, demoAllowed, demoCity, demoCycle, demoCycles, demoWanted, memoryStore } from "../src/demo.js";
 import { previewBuild, previewHost } from "../src/preview.js";
 
 describe("?demo, the demonstration cities for measuring on a phone", () => {
@@ -87,5 +87,16 @@ describe("?demo, the demonstration cities for measuring on a phone", () => {
     m.setItem("k", "v");
     expect(m.getItem("k")).toBe("v");
     expect(memoryStore().getItem("k")).toBe(null);
+  });
+
+  it("&cycle floods and mends the demo's flooded plot in turn, to measure the land's rebuild on a phone", () => {
+    expect(demoCycles("?demo=phare30&cycle&fps")).toBe(true);
+    expect(demoCycles("?demo=phare30")).toBe(false);
+    const a = demoCity("phare30", 0);
+    const flooded = Object.values(a.rafts).filter((r) => r.hp < 60).length;
+    const b = demoCycle(a);
+    expect(Object.values(b.rafts).filter((r) => r.hp < 60).length).toBe(flooded - 1);
+    expect(demoCycle(b)).toEqual(a);
+    expect(parseState(JSON.parse(JSON.stringify(b)))).not.toBeNull();
   });
 });

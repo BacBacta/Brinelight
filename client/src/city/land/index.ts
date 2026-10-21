@@ -9,18 +9,24 @@
 import * as THREE from "three";
 import { RAFT_DAMAGED_BELOW, RAFT_SLOTS, yardSlot } from "@brinelight/shared";
 import type { PlayerState } from "../../state/index.js";
-import { CITY_MANIFEST } from "../../scene/cityLook.js";
+import { CITY_MANIFEST, SEA_RISE } from "../../scene/cityLook.js";
+import { SHORE as GRID } from "../../scene/shoreGrid.js";
 import { bakeModel } from "../../scene/models.js";
 import { hexX, hexZ } from "../../scene/island.js";
 import { loadStage } from "../staged.js";
 import { plantLook, type Look } from "../life/plants.js";
 import { raftBuildingName, villageAge } from "../village.js";
 import { raftSlots } from "../rafts.js";
-import { SEA, ground, landDepth, type At, type LandSlots } from "./field.js";
-import { buildLand, type CoastSegment } from "./mesh.js";
+import { SEA, type At, type LandSlots } from "./field.js";
+import { landGeometry, type CoastSegment } from "./mesh.js";
+import { landJob, landJobNow } from "./jobs.js";
+import type { LandDone } from "./job.js";
 
-/** How long the land took to build the last time (ms): the ?fps counter shows it. */
-export const landClock: { last: number | null } = { last: null };
+/**
+ * The land's last rebuild (the ?fps counter shows it, owner on the S22): `aside`, ms in the worker (the display goes
+ * on meanwhile, the old land shown); `shown`, ms on the display's thread to put the new one in place.
+ */
+export const landClock: { last: { aside: number; shown: number } | null } = { last: null };
 
 /** The land's models are served (land-<look>, the ground's texture of each look). */
 export const hasLand = (): boolean => (["wild", "garden", "modern"] as const).every((l) => CITY_MANIFEST[`land-${l}`]);
@@ -58,6 +64,9 @@ export function landModels(state: PlayerState): string[] {
   const free = raftSlots(state).some((s) => s.view === "free");
   return [...new Set([`land-${plantLook(state.buildings.lighthouse)}`, ...buildings, ...(free ? ["raft-free"] : [])])];
 }
+
+/** The water's rest level in the city, which the shore's grid is measured from. */
+const SHORE_WATER = GRID.waterY + SEA_RISE;
 
 const key = (L: LandSlots) => JSON.stringify([L.won, L.flooded, L.filling]);
 
@@ -226,8 +235,8 @@ export function createLand(add: (o: THREE.Object3D) => void) {
     mesh.setMatrixAt(i, m4.compose(v.set(x, y, z), q.setFromEuler(e.set(rx, ry, rz)), s.set(sx, sy, sz)));
   };
 
-  /** The dike along the land won's coast, by look; a flooded slot's broken dike; the landfill's stakes. */
-  const dike = (coast: readonly CoastSegment[], L: LandSlots, l: Look) => {
+  /** The dike along the land won's coast, by look; a flooded slot's broken dike; the landfill's stakes (`fill`: x, z). */
+  const dike = (coast: readonly CoastSegment[], fill: Float32Array, L: LandSlots, l: Look) => {
     let stakes = 0;
     let stones = 0;
     let bands = 0;
@@ -241,12 +250,11 @@ export function createLand(add: (o: THREE.Object3D) => void) {
       if (len < 1e-4) continue;
       const tx = dx / len;
       const tz = dz / len;
-      // Out to sea: the side where the land's field falls.
+      // Out to sea: the side where the land's field falls (meshData.ts).
       const mx = (c.ax + c.bx) / 2;
       const mz = (c.az + c.bz) / 2;
-      let nx = tz;
-      let nz = -tx;
-      if (landDepth(mx + nx * 0.05, mz + nz * 0.05, L).depth > landDepth(mx - nx * 0.05, mz - nz * 0.05, L).depth) [nx, nz] = [-nx, -nz];
+      const nx = c.nx;
+      const nz = c.nz;
       const turn = -Math.atan2(tz, tx);
       if (l === "modern") {
         lay(p.quay, blocks++, mx - nx * 0.04, -0.13, mz - nz * 0.04, 0, turn, 0, len * 1.04, 1, 1);
@@ -278,15 +286,10 @@ export function createLand(add: (o: THREE.Object3D) => void) {
       }
     }
     // The landfill: stakes all around its slot, on the water's side.
-    if (L.filling) {
-      for (let j = 0; j < 30 && stakes < MAX_PIECES; j++) {
-        const a = (j / 30) * Math.PI * 2;
-        const x = L.filling.x + Math.cos(a) * 1.08;
-        const z = L.filling.z + Math.sin(a) * 1.08;
-        const f = L.filling;
-        if (landDepth(x, z, { ...L, filling: null, won: L.won.filter((w) => w.x !== f.x || w.z !== f.z) }).depth > 0.1) continue;
-        lay(p.stake, stakes++, x, SEA + 0.1, z, (hash(x, z) - 0.5) * 0.16, 0, (hash(x, z, 1) - 0.5) * 0.16, 1, 1.15, 1);
-      }
+    for (let j = 0; j < fill.length && stakes < MAX_PIECES; j += 2) {
+      const x = fill[j]!;
+      const z = fill[j + 1]!;
+      lay(p.stake, stakes++, x, SEA + 0.1, z, (hash(x, z) - 0.5) * 0.16, 0, (hash(x, z, 1) - 0.5) * 0.16, 1, 1.15, 1);
     }
     const counts: [THREE.InstancedMesh, number][] = [
       [p.stake, stakes],
@@ -302,16 +305,13 @@ export function createLand(add: (o: THREE.Object3D) => void) {
     }
   };
 
-  /** The landfill's heaps, wheelbarrow, planks and shovel; the drowned tufts of a flooded slot: one mesh. */
-  const propsOf = (L: LandSlots): THREE.BufferGeometry => {
-    const parts: THREE.BufferGeometry[] = [];
-    const heap = colored(new THREE.SphereGeometry(1, 8, 5), "#9A7448");
-    const tuft = colored(new THREE.ConeGeometry(0.03, 0.08, 4), "#5E8A4F");
-    const plank = colored(new THREE.BoxGeometry(0.5, 0.015, 0.07), "#C9A77A");
-    const wood = colored(new THREE.BoxGeometry(0.2, 0.07, 0.14), "#8C6B4A");
-    const load = colored(new THREE.BoxGeometry(0.16, 0.04, 0.1), "#9A7448");
-    const wheel = colored(new THREE.CylinderGeometry(0.055, 0.055, 0.025, 8), "#2A2018");
-    const handle = colored(new THREE.CylinderGeometry(0.008, 0.008, 0.18, 4), "#8C6B4A");
+  /**
+   * Where the props and plants need their ground (the land's job measures it): the landfill's heaps, its wheelbarrow and
+   * planks, then each plant's place on the plots won. Only hashes of places: the same land looks the same everywhere.
+   */
+  const planOf = (state: PlayerState, L: LandSlots, l: Look) => {
+    const points: number[] = [];
+    const heaps: [number, number, number][] = [];
     const f = L.filling;
     if (f) {
       for (let j = 0; j < 5; j++) {
@@ -319,28 +319,12 @@ export function createLand(add: (o: THREE.Object3D) => void) {
         const r = 0.1 + hash(f.x, f.z, j + 5) * 0.5;
         const x = f.x + Math.cos(a) * r;
         const z = f.z + Math.sin(a) * r;
-        const k = 0.16 + hash(x, z) * 0.1;
-        parts.push(at(heap, x, ground(x, z, L).y, z, 0, 0, 0, [k, k * 0.35, k]));
+        heaps.push([x, z, 0.16 + hash(x, z) * 0.1]);
+        points.push(x, z);
       }
-      const x = f.x - 0.35;
-      const z = f.z + 0.25;
-      const y = ground(x, z, L).y;
-      parts.push(at(wood, x, y + 0.11, z, 0, 0.4), at(load, x, y + 0.15, z, 0, 0.4), at(wheel, x + 0.11, y + 0.06, z - 0.05, Math.PI / 2, 0.4, 0));
-      for (const side of [-1, 1]) parts.push(at(handle, x - 0.12, y + 0.11, z + side * 0.06 + 0.05, 0, 0.4, Math.PI / 2 - 0.2));
-      for (let k = 0; k < 3; k++) parts.push(at(plank, f.x + 0.2 + k * 0.02, ground(f.x + 0.2, f.z - 0.4, L).y + 0.03 + k * 0.016, f.z - 0.4 + k * 0.08, 0, 0.2 * k));
+      points.push(f.x - 0.35, f.z + 0.25, f.x + 0.2, f.z - 0.4);
     }
-    for (const fl of L.flooded)
-      for (let j = 0; j < 8; j++) {
-        const a = hash(fl.x, fl.z, j + 20) * 6.28;
-        const r = hash(fl.x, fl.z, j + 30) * 0.65;
-        parts.push(at(tuft, fl.x + Math.cos(a) * r, SEA + 0.02, fl.z + Math.sin(a) * r));
-      }
-    return parts.length ? merge(parts) : new THREE.BufferGeometry();
-  };
-
-  /** A few plants on each plot won (not flooded, not being filled): never on its building's room, the dike or a trail. */
-  const plantsOf = (state: PlayerState, L: LandSlots, l: Look) => {
-    const out: typeof plantSpots = [];
+    const plants: { name: string; x: number; z: number; turn: number; scale: number }[] = [];
     const [tree, low, cover] = PLANTS[l];
     for (const sl of RAFT_SLOTS) {
       const raft = state.rafts[sl.key];
@@ -353,13 +337,59 @@ export function createLand(add: (o: THREE.Object3D) => void) {
         if (raft.building && r < 0.62) continue;
         const x = c.x + Math.cos(a) * r;
         const z = c.z + Math.sin(a) * r;
-        const g = ground(x, z, L);
-        if (g.depth < 0.2) continue;
         const roll = hash(x, z, 81);
         const name = !raft.building && roll < 0.45 ? tree : roll < 0.75 ? low : cover;
-        out.push({ name: `life-plant-${name}`, x, y: g.y - 0.01, z, turn: hash(x, z, 82) * 6.28, scale: 0.8 + hash(x, z, 83) * 0.4 });
+        plants.push({ name: `life-plant-${name}`, x, z, turn: hash(x, z, 82) * 6.28, scale: 0.8 + hash(x, z, 83) * 0.4 });
+        points.push(x, z);
       }
     }
+    return { points: new Float32Array(points), heaps, plants, fill: f };
+  };
+  type Plan = ReturnType<typeof planOf>;
+
+  /** The props' shapes, made once (each rebuild only places copies of them). */
+  let shapes: Record<"heap" | "tuft" | "plank" | "wood" | "load" | "wheel" | "handle", THREE.BufferGeometry> | null = null;
+  /** The landfill's heaps, wheelbarrow, planks and shovel; the drowned tufts of a flooded slot: one mesh. */
+  const propsOf = (L: LandSlots, plan: Plan, h: Float32Array): THREE.BufferGeometry => {
+    const parts: THREE.BufferGeometry[] = [];
+    const { heap, tuft, plank, wood, load, wheel, handle } = (shapes ??= {
+      heap: colored(new THREE.SphereGeometry(1, 8, 5), "#9A7448"),
+      tuft: colored(new THREE.ConeGeometry(0.03, 0.08, 4), "#5E8A4F"),
+      plank: colored(new THREE.BoxGeometry(0.5, 0.015, 0.07), "#C9A77A"),
+      wood: colored(new THREE.BoxGeometry(0.2, 0.07, 0.14), "#8C6B4A"),
+      load: colored(new THREE.BoxGeometry(0.16, 0.04, 0.1), "#9A7448"),
+      wheel: colored(new THREE.CylinderGeometry(0.055, 0.055, 0.025, 8), "#2A2018"),
+      handle: colored(new THREE.CylinderGeometry(0.008, 0.008, 0.18, 4), "#8C6B4A"),
+    });
+    const f = plan.fill;
+    if (f) {
+      plan.heaps.forEach(([x, z, k], j) => parts.push(at(heap, x, h[j * 2]!, z, 0, 0, 0, [k, k * 0.35, k])));
+      const x = f.x - 0.35;
+      const z = f.z + 0.25;
+      const y = h[plan.heaps.length * 2]!;
+      parts.push(at(wood, x, y + 0.11, z, 0, 0.4), at(load, x, y + 0.15, z, 0, 0.4), at(wheel, x + 0.11, y + 0.06, z - 0.05, Math.PI / 2, 0.4, 0));
+      for (const side of [-1, 1]) parts.push(at(handle, x - 0.12, y + 0.11, z + side * 0.06 + 0.05, 0, 0.4, Math.PI / 2 - 0.2));
+      const py = h[plan.heaps.length * 2 + 2]!;
+      for (let k = 0; k < 3; k++) parts.push(at(plank, f.x + 0.2 + k * 0.02, py + 0.03 + k * 0.016, f.z - 0.4 + k * 0.08, 0, 0.2 * k));
+    }
+    for (const fl of L.flooded)
+      for (let j = 0; j < 8; j++) {
+        const a = hash(fl.x, fl.z, j + 20) * 6.28;
+        const r = hash(fl.x, fl.z, j + 30) * 0.65;
+        parts.push(at(tuft, fl.x + Math.cos(a) * r, SEA + 0.02, fl.z + Math.sin(a) * r));
+      }
+    return parts.length ? merge(parts) : new THREE.BufferGeometry();
+  };
+
+  /** The plants that stand: never where the land is too thin (the dike, the shore). */
+  const plantsOf = (plan: Plan, h: Float32Array) => {
+    const first = plan.fill ? (plan.heaps.length + 2) * 2 : 0;
+    const out: typeof plantSpots = [];
+    plan.plants.forEach((it, k) => {
+      const y = h[first + k * 2]!;
+      const depth = h[first + k * 2 + 1]!;
+      if (depth >= 0.2) out.push({ ...it, y: y - 0.01 });
+    });
     return out;
   };
 
@@ -417,7 +447,30 @@ export function createLand(add: (o: THREE.Object3D) => void) {
     });
   };
 
-  return {
+  let jobId = 0;
+  let builtLand = "";
+  let grid: Uint8Array | null = null;
+  /** Puts a land's job in place: its ground (if built), its dike, props and plants. Timed for the ?fps counter. */
+  const put = (done: LandDone, plan: Plan, L: LandSlots, l: Look) => {
+    const t = performance.now();
+    if (done.data) {
+      ground_.geometry.dispose();
+      ground_.geometry = landGeometry(done.data);
+      coast = done.data.coast;
+      grid = done.grid;
+    }
+    dike(coast, done.fillStakes, L, l);
+    props.geometry.dispose();
+    props.geometry = propsOf(L, plan, done.heights);
+    plantSpots = plantsOf(plan, done.heights);
+    layPlants();
+    slots = L;
+    landClock.last = { aside: done.ms, shown: performance.now() - t };
+    if (done.data) land.onBuilt?.();
+  };
+  let coast: CoastSegment[] = [];
+
+  const land = {
     /** The land's group: what the shore's foam is measured from (its ground). */
     object: ground_,
     group,
@@ -439,29 +492,43 @@ export function createLand(add: (o: THREE.Object3D) => void) {
       const l = plantLook(state.buildings.lighthouse);
       setLook(l);
       const L = landSlotsOf(state);
-      // The buildings on rafts: the earth of their yards.
+      // The buildings on rafts: the earth of their yards (the shader's, no rebuild).
       const yards = RAFT_SLOTS.filter((sl) => state.rafts[sl.key]?.building).map((sl) => position(sl.key));
       uniforms.uYardCount.value = Math.min(6, yards.length);
       yards.slice(0, 6).forEach((y, i) => uniforms.uYards.value[i]!.set(y.x, y.z));
-      const k = key(L) + l + JSON.stringify(yards);
-      if (k === built) return false;
-      built = k;
-      const t = performance.now();
-      const mesh = buildLand(L);
-      ground_.geometry.dispose();
-      ground_.geometry = mesh.geometry;
-      dike(mesh.coast, L, l);
-      props.geometry.dispose();
-      props.geometry = propsOf(L);
-      plantSpots = plantsOf(state, L, l);
-      layPlants();
-      slots = L;
-      landClock.last = performance.now() - t;
-      return true;
+      const landKey = key(L);
+      const decorKey = landKey + l + JSON.stringify(yards);
+      if (decorKey === built) return false;
+      const mesh = landKey !== builtLand;
+      built = decorKey;
+      builtLand = landKey;
+      const plan = planOf(state, L, l);
+      const job = { kind: "land" as const, L, mesh, points: plan.points, waterY: SHORE_WATER };
+      // The first land, before the city's first image: at once (no frame to hold).
+      if (!ground_.geometry.index) {
+        put(landJobNow({ ...job, mesh: true }), plan, L, l);
+        return true;
+      }
+      // Then away from the display: the land shown stays until the new one is ready.
+      const id = ++jobId;
+      void landJob(job).then((done) => {
+        if (id !== jobId) return;
+        requestAnimationFrame(() => {
+          if (id === jobId) put(done, plan, L, l);
+        });
+      });
+      return false;
+    },
+    /** Called once a land built away from the display is shown (the shore's foam is measured again then). */
+    onBuilt: null as null | (() => void),
+    /** The shore's grid of the land shown: where it stands above the water. */
+    get grid(): Uint8Array | null {
+      return grid;
     },
     /** The triangles of the land's ground (tests, measures). */
     get triangles(): number {
       return (ground_.geometry.index?.count ?? 0) / 3;
     },
   };
+  return land;
 }

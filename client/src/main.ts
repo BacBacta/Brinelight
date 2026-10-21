@@ -19,7 +19,7 @@ import { apiUrl, createApi } from "./account/api.js";
 import { createProfile } from "./account/profile.js";
 import { watchWallets } from "./account/wallets.js";
 import { createCity, type City } from "./city/index.js";
-import { demoAllowed, demoCity, demoWanted, memoryStore } from "./demo.js";
+import { DEMO_CYCLE, demoAllowed, demoCity, demoCycle, demoCycles, demoWanted, memoryStore } from "./demo.js";
 import { LAND_NEWS, landNewsDue, landShown } from "./city/words.js";
 import { hasLand, landModels } from "./city/land/index.js";
 import { hasTerrain, isStaged, loadStage, shownModels, tallestHeight, terrainName } from "./city/staged.js";
@@ -157,6 +157,12 @@ if (new URLSearchParams(location.search).has("rules")) {
   ui.update(state);
   if (opened?.rejected) ui.toast("Your saved city could not be read. A copy was kept.", "bad", "!");
   if (demo) ui.toast("Demo city: nothing is saved", "", "i");
+  // ?demo=…&cycle: a plot flooded and mended in turn, so that the land is built again every few seconds (its hitch measured).
+  if (demo && demoCycles(location.search))
+    setInterval(() => {
+      state = demoCycle(state);
+      refresh();
+    }, DEMO_CYCLE);
   const celebrations = createCelebrations(app, (c) => sound.play(c.sound));
   /** Once per city (owner): its rafts became land, from the Lighthouse 5 with the look made in Blender. */
   const tellLand = () => {

@@ -10,7 +10,8 @@ Goal of week 2 (task 6): **30 FPS or more on the low-end Android test phone**, i
   - the quality step (`0`, `1` or `2`), `auto` or `forced`;
   - the view (City or Sea);
   - the draw calls and triangles of the last frame (`renderer.info`).
-  - with `?blender` from the Lighthouse 5, "Land built in X ms": the time the last rebuild of the land took (it is built again only when a slot or the era changes).
+  - the longest frame of the last 10 seconds (a hitch is one frame much longer than the others);
+  - from the Lighthouse 5, "Land built in X ms aside, shown in Y ms": the land's last rebuild, X in its worker (the display goes on, the old land shown) and Y on the display's thread to put the new one in place (it is built again only when a slot or the era changes).
 - The minimum ignores the 5 seconds after the 3D models load, and starts over after a change of view or a return to the tab.
 - `?quality=0`, `?quality=1` or `?quality=2` forces a quality step, to compare steps on the same phone. The automatic tuning is then off.
   - `0`: full quality.
@@ -20,6 +21,7 @@ Goal of week 2 (task 6): **30 FPS or more on the low-end Android test phone**, i
 - `?mist` shows the Mist's look (its mood only, no rule): the banner says "Mist", and the counter adds "Mist" after the view.
 - `?demo=phare30` shows a demonstration city for measuring the worst case: Lighthouse 30, the other buildings at 30, 39 rafts (each raft building type on two rafts at level 3), the Refinery's building site, 106 survivors. `?demo=phare15`: Lighthouse 15, 15 rafts, the same site, 46 survivors. Phare 30 has 38 rafts and fills the last slot at the shipyard; in both, the eighth raft is damaged (hp 40). With `?blender` they show the land: a flooded plot and a landfill under way. It lives in memory only: nothing is sent to the server, nothing is written on the device, and your own city stays as it was. Only in development and on the branch previews (`*.brinelight.pages.dev` built from a branch other than `main`); the production build does not even contain it (`client/test/demo.test.ts`).
 - `?legacy` shows the city's old look, to compare, until the old code is removed (the new look made in Blender is the default; `?blender` is still read and changes nothing).
+- `?demo=phare30&cycle` (or `phare15`) floods and mends the demo's flooded plot every 4 seconds: the land is built again each time, to read its hitch on a phone with `&fps`.
 - They can be combined: `?fps&quality=1`, `?fps&mist&quality=2`, `?blender&demo=phare30&fps`.
 
 ## Protocol (5 steps)
@@ -552,3 +554,18 @@ Time to the first image (10 Mbit/s, 40 ms, cache off, five runs, median), before
 - The 39-raft city was measured three times at quality 0: one run in five reached 7.7 to 8.2 s in two series, and the medians fall within each other's spread.
 - The Lighthouse 30 without rafts is 0.4 to 0.6 s slower: it fetches the land's texture (126 kB) on top of the island's, which the land hides. Dropping the island's texture once the land is the default (plan step B) saves its 86 to 92 kB again.
 - The 39-raft city downloads 209 kB fewer: the raft decks, walkways and moorings are no longer fetched.
+
+### The land built away from the display (owner, 21 October, on the S22)
+
+On the S22, "Land built in 122.7 ms": the land's rebuild held the display about 7 frames at each mooring, flood or repair. Now its mesh, the ground under its props and plants, its landfill's stakes and the shore's grid and foam are computed in a worker (`client/src/city/land/land.worker.ts`, 12.9 kB, no three.js); the old land stays shown until the new one is ready, then it is put in place in one frame. The shore's foam around the moored rafts is measured there too (it was measured on the display's thread at every mooring). The first land, before the city's first image, is still built at once: no frame is shown yet.
+
+Measured in Chromium on `?demo=phare30&cycle` (a plot flooded and mended every 4 s), 10 rebuilds:
+
+| On the display's thread | Before | After |
+| --- | --- | --- |
+| The land's rebuild | 134 to 270 ms (all of it) | 0.8 to 2.4 ms (putting the new land in place) |
+| The city's whole refresh at that moment (the land, the buildings, the rafts, the life, the labels) | – | 2.2 to 6.1 ms |
+| In the worker, beside the display | – | 22 to 57 ms |
+
+- The container draws without a graphics chip (a frame takes 80 to 170 ms here whatever happens), so it cannot show the frame itself; the S22 with `?demo=phare30&cycle&fps` reads it on the "Longest frame" line, which should stay near 16.7 ms.
+

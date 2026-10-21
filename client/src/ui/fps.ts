@@ -17,9 +17,16 @@ export function createFpsCounter(root: HTMLElement, scene: SceneHandle) {
   let meter = newFpsMeter(scene.view);
   let shownAt = 0;
   const round = (v: number | null) => (v === null ? "–" : v.toFixed(0));
+  // Each frame's time over the last 10 s: a hitch is one frame much longer than the others.
+  const frames: [number, number][] = [];
+  let last = 0;
+  const longest = () => frames.reduce((m, [, d]) => Math.max(m, d), 0);
 
   scene.onFrame((_now, view) => {
     const t = performance.now() / 1000;
+    if (last) frames.push([t, (t - last) * 1000]);
+    last = t;
+    while (frames.length && frames[0]![0] < t - MIN_WINDOW) frames.shift();
     meter = fpsFrame(meter, t, view);
     if (t - shownAt < 1) return;
     shownAt = t;
@@ -29,8 +36,10 @@ export function createFpsCounter(root: HTMLElement, scene: SceneHandle) {
       `Quality ${s.step} ${s.forced ? "forced" : "auto"} · ${VIEW_NAMES[view]}${s.mood === "mist" ? " · Mist" : ""}\n` +
       `${screenLine(innerWidth, innerHeight, devicePixelRatio || 1)}\n` +
       `${s.calls} calls · ${(s.triangles / 1000).toFixed(1)} k tris${s.post ? ` · finish +${s.post}` : ""}` +
-    // The land won on the sea: how long it took to build the last time (owner, to read on the S22).
-    (landClock.last !== null ? `\nLand built in ${landClock.last.toFixed(1)} ms` : "");
+    // The longest frame of the last 10 s; the land won on the sea's last rebuild: built aside (the display goes on),
+    // then put in place on the display's thread (owner, to read on the S22).
+    `\nLongest frame ${longest().toFixed(1)} ms` +
+    (landClock.last !== null ? `\nLand built in ${landClock.last.aside.toFixed(1)} ms aside, shown in ${landClock.last.shown.toFixed(1)} ms` : "");
   });
 
   return {

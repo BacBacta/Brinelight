@@ -7,7 +7,7 @@
  *     depth > 0 on land, < 0 in the sea.
  */
 import { BUILDING_IDS } from "@brinelight/shared";
-import { ERA_PLOTS } from "../plots.js";
+import { ERA_PLOTS } from "../eraPlots.js";
 
 /** The city's sea after the style pass (land.py, SEA): its rest level. */
 export const SEA = -0.22;

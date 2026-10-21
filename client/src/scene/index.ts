@@ -17,7 +17,8 @@ import { CITY_CALM, CITY_MIST, CITY_STYLE, STYLE_EXPOSURE, CITY_WATER, CITY_WATE
 import { createVeil } from "./veil.js";
 import { createSeaView } from "./sea.js";
 import { createWater } from "./water.js";
-import { SHORE, createShore, type Disc } from "./shore.js";
+import { SHORE, landOf, shoreDistances, type Disc } from "./shore.js";
+import { shoreJob } from "../city/land/jobs.js";
 import { terrainCoast } from "./terrainCoast.js";
 
 export type { Kit } from "./island.js";
@@ -101,9 +102,9 @@ export type SceneHandle = {
   /**
    * The land won on the sea (city/land, from the Lighthouse 5 with ?blender): its ground takes the island's place (the
    * island's own model hidden) and the shore's foam is measured from it; null gives the island back. `edge`: points of
-   * its outline the normal view keeps on screen.
+   * its outline the normal view keeps on screen; `grid`: where it stands above the water (measured with it, else here).
    */
-  useLand(ground: THREE.Object3D | null, edge?: readonly { x: number; z: number }[]): void;
+  useLand(ground: THREE.Object3D | null, edge?: readonly { x: number; z: number }[], grid?: Uint8Array | null): void;
   /** Quality step and the last frame's draw calls and triangles (renderer.info). */
   stats(): RenderStats;
   /** Stops the loop and removes the listeners. */
@@ -178,8 +179,36 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   const water = createWater(blenderLook() ? { ...CITY_WATER_STYLE, maxSegments: 64, lapping: true, y: SHORE.waterY + SEA_RISE } : CITY_WATER);
   scene.add(water.mesh);
   water.useRenderer(renderer);
-  // The foam goes along the island's shore and around the rafts moored there (setMoored).
-  let shore: ReturnType<typeof createShore> | null = null;
+  // The foam goes along the island's shore and around the rafts moored there (setMoored). Its distances are measured
+  // away from the display (city/land's worker; the first ones here, before the first image), only when they change.
+  let shoreGrid: Uint8Array | null = null;
+  let landGrid: Uint8Array | null = null;
+  let gridNew = false;
+  let shoreSent = "";
+  let shoreAsk = 0;
+  let shoreShown = false;
+  const discsKey = (discs: readonly Disc[]) => discs.map((d) => `${d.x.toFixed(2)},${d.z.toFixed(2)},${d.r}${d.still ? "s" : ""}`).join(";");
+  const measureShore = () => {
+    if (!shoreGrid) return;
+    const k = discsKey(moored);
+    if (!gridNew && k === shoreSent) return;
+    shoreSent = k;
+    const grid = gridNew ? shoreGrid.slice() : null;
+    gridNew = false;
+    if (!shoreShown) {
+      shoreShown = true;
+      water.setShore(shoreDistances(shoreGrid, moored));
+    }
+    const id = ++shoreAsk;
+    void shoreJob({ kind: "shore", grid, discs: moored.map((d) => ({ ...d })) }).then((d) => {
+      if (id === shoreAsk) water.setShore(d.distances);
+    });
+  };
+  const setShoreGrid = (grid: Uint8Array) => {
+    shoreGrid = grid;
+    gridNew = true;
+    measureShore();
+  };
   let moored: readonly Disc[] = [];
   const lighthouse = createLighthouse();
   scene.add(lighthouse.group);
@@ -320,8 +349,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       // The island after the style pass has no plot outlines: the grid shows only where you tap.
       land = terrain ? island : createIsland(island);
       scene.add(land);
-      shore = createShore(island, SHORE.waterY + SEA_RISE);
-      water.setShore(shore.distances(moored));
+      setShoreGrid(landOf(island, SHORE.waterY + SEA_RISE));
       lighthouse.useModel(buildings.lighthouse);
       sizeLighthouse();
       if (blenderLook()) {
@@ -511,23 +539,21 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
         glideTo(normal.target.clone().addScaledVector(CITY_ANGLE, normal.distance), normal.target.clone());
       } else controls.maxDistance = Math.max(40, normal.distance);
     },
-    useLand(ground, edge = []) {
+    useLand(ground, edge = [], grid = null) {
       wonLand = ground;
       if (land) land.visible = !ground;
       const nextEdge = ground ? edge : [];
       const edgeChanged = nextEdge.length !== landEdge.length || nextEdge.some((p, i) => p.x !== landEdge[i]!.x || p.z !== landEdge[i]!.z);
       landEdge = nextEdge;
+      landGrid = ground ? grid : null;
       const from = ground ?? land;
-      if (from) {
-        shore = createShore(from, SHORE.waterY + SEA_RISE);
-        water.setShore(shore.distances(moored));
-      }
+      if (from) setShoreGrid(landGrid ?? landOf(from, SHORE.waterY + SEA_RISE));
       if (edgeChanged) layout();
     },
     setMoored(discs) {
       const changed = discs.length !== moored.length || discs.some((d, i) => d.x !== moored[i]!.x || d.z !== moored[i]!.z);
       moored = discs;
-      if (shore) water.setShore(shore.distances(discs));
+      measureShore();
       if (changed) layout();
     },
     stats() {
@@ -567,8 +593,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
         land = next;
         scene.add(next);
         next.visible = !wonLand;
-        shore = createShore(wonLand ?? next, SHORE.waterY + SEA_RISE);
-        water.setShore(shore.distances(moored));
+        setShoreGrid(wonLand ? (landGrid ?? landOf(wonLand, SHORE.waterY + SEA_RISE)) : landOf(next, SHORE.waterY + SEA_RISE));
       });
     },
     onFrame(cb) {

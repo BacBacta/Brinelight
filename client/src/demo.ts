@@ -54,6 +54,21 @@ export function demoCity(name: DemoName, clock: number): PlayerState {
   return { ...base, buildings, rafts, yard, survivors: d.survivors, queue: [{ id: "refinery", left: Math.min(SITE_LEFT, duration), duration }] };
 }
 
+/** ?demo=…&cycle: the land is built again every few seconds, to measure its hitch on a phone (owner, on the S22). */
+export const demoCycles = (search: string): boolean => new URLSearchParams(search).has("cycle");
+export const DEMO_CYCLE = 4000;
+
+/**
+ * The next step of the cycle: the demo's flooded raft mended (100) or flooded again (40), in turn. Display only: the
+ * demo lives in memory.
+ */
+export function demoCycle(state: PlayerState): PlayerState {
+  const key = Object.keys(state.rafts)[FLOODED];
+  const raft = key ? state.rafts[key] : undefined;
+  if (!key || !raft) return state;
+  return { ...state, rafts: { ...state.rafts, [key]: { ...raft, hp: raft.hp < 60 ? 100 : 40 } } };
+}
+
 /** A store in memory: the demo's city and the sounds' setting live there, and go with the page. */
 export function memoryStore(): KeyValueStore {
   const items = new Map<string, string>();
