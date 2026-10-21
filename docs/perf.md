@@ -568,3 +568,29 @@ Measured in Chromium on `?demo=phare30&cycle` (a plot flooded and mended every 4
 
 - The container draws without a graphics chip (a frame takes 80 to 170 ms here whatever happens), so it cannot show the frame itself; the S22 with `?demo=phare30&cycle&fps` reads it on the "Longest frame" line, which should stay near 16.7 ms.
 
+
+### The city fabric (owner, 21 October)
+
+The houses, equipment, camp, streets, fields, lamps, poles, turbines and port of `client/src/city/fabric/`: three meshes at most (the still pieces, their windows, the turbines' rotors), the streets, yards, square and fields painted by the ground's own shader (one read of a 16 × 16 texture for the fields, however many plots are won). The land's dike now joins its props' mesh. Read on the `?fps` counter at 384 × 699, quality 1, the life loaded, before (7520da7) and after:
+
+| City | Before: draw calls, triangles | After: draw calls, triangles |
+| --- | --- | --- |
+| Lighthouse 4, 3 rafts (no land yet) | 28, 30.7 k | 30, 30.1 k |
+| Lighthouse 5, 3 plots | 29, 34.6 k | 27, 33.0 k |
+| Lighthouse 15, 15 plots (one flooded), a landfill | 39, 51.3 k | 38, 49.0 k |
+| Lighthouse 30, 38 plots (one flooded), a landfill | 40, 54.5 k | 40, 54.0 k |
+| `?demo=phare30` | 45, 55.9 k | 44, 54.8 k |
+
+- The fabric adds two draw calls (three with the turbines, from the Lighthouse 20); the dike merged into the props saves two to three. Its triangles, 9.0 k at most in the worst city of each era (`client/test/fabric.test.ts`), are about what the wild plants it replaces on the plots it takes weighed.
+- Planning and merging the fabric, once at each change of the city (a level, a plot): 1.5 to 3.6 ms and 2.2 to 5.4 ms in Node on this machine. The Harbor's coast it needs is found in fewer steps (about 80 ms less when the game starts).
+- On `?demo=phare30`, "shown in" (the land put in place with the fabric and the plants giving way) goes from 9 to 18 ms in the container: the S22 must say the real figure with `?demo=phare30&cycle&fps`.
+
+Time to the first image (10 Mbit/s, 40 ms, cache off, five runs, median; quality 0 measured twice each way, in turn):
+
+| City | Quality 0 before | Quality 0 after | Quality 1 before | Quality 1 after | Downloaded before → after |
+| --- | --- | --- | --- | --- | --- |
+| New player | 3.23 s, 3.13 s | 3.39 s, 3.39 s | 2.52 s | 2.54 s | 1,643 → 1,671 kB |
+| Lighthouse 30 | 4.06 s, 3.84 s | 4.46 s, 4.40 s | 3.20 s | 3.46 s | 1,810 → 1,864 kB |
+| Lighthouse 30, 39 plots | 4.62 s, 5.10 s | 5.27 s, 5.34 s | 4.44 s | 4.46 s | 1,957 → 2,013 kB |
+
+- The era's fabric file is 20 to 39 kB. At quality 1 the first image hardly moves; at quality 0 it comes 0.2 to 0.45 s later in the container, which draws without a graphics chip at twice the pixels (the ground's shader and the fabric's three new programs). The S22 must say whether a phone feels it.
