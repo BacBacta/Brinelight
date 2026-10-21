@@ -27,15 +27,17 @@ export function questBuilding(state: PlayerState): BuildingId | null {
 export const BADGES_SHOWN = 3;
 
 /**
- * Which of the `possible` upgrades show their badge: at most BADGES_SHOWN, the most useful first (the Lighthouse, then
- * the current objective's building, then the buildings furthest behind, the lowest level first); `more` counts the
- * others, shown as one discreet "+N".
+ * Which of the `possible` upgrades show their badge. A building to build (level 0, its "＋ name") always shows, apart:
+ * building is a new player's first move, never hidden (owner). Of the upgrades, at most BADGES_SHOWN, the most useful
+ * first (the Lighthouse, then the current objective's building, then the buildings furthest behind, the lowest level
+ * first); `more` counts the other upgrades, shown as one discreet "+N".
  */
 export function badgeUpgrades(state: PlayerState, possible: readonly BuildingId[]): { shown: BuildingId[]; more: number } {
   const quest = questBuilding(state);
   const rank = (id: BuildingId) => (id === "lighthouse" ? -2 : id === quest ? -1 : state.buildings[id]);
-  const order = [...possible].sort((a, b) => rank(a) - rank(b) || BUILDING_IDS.indexOf(a) - BUILDING_IDS.indexOf(b));
-  return { shown: order.slice(0, BADGES_SHOWN), more: Math.max(0, order.length - BADGES_SHOWN) };
+  const builds = possible.filter((id) => state.buildings[id] === 0);
+  const upgrades = possible.filter((id) => state.buildings[id] > 0).sort((a, b) => rank(a) - rank(b) || BUILDING_IDS.indexOf(a) - BUILDING_IDS.indexOf(b));
+  return { shown: [...builds, ...upgrades.slice(0, BADGES_SHOWN)], more: Math.max(0, upgrades.length - BADGES_SHOWN) };
 }
 
 /** Progress of an upgrade, from 0 to 1. */

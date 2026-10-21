@@ -197,9 +197,28 @@ describe("at most three \"upgrade possible\" badges (owner, 21 October)", () => 
   });
 
   it("the objective's building, while it is not done, comes right after the Lighthouse", () => {
-    const s = { ...rich(), objective: 2, buildings: { ...rich().buildings, harbor: 0 } };
-    expect(questBuilding(s)).toBe("harbor");
-    expect(badgeUpgrades(s, possibleUpgrades(s)).shown.slice(0, 2)).toEqual(["lighthouse", "harbor"]);
+    const s = { ...rich(), buildings: { ...rich().buildings, refinery: 1 } };
+    expect(questBuilding(s)).toBe("refinery");
+    expect(badgeUpgrades(s, possibleUpgrades(s)).shown.slice(0, 2)).toEqual(["lighthouse", "refinery"]);
+  });
+
+  it("a building to build always shows, apart: never among the three, never in the \"+N\"", () => {
+    const s = { ...rich(), objective: 2, buildings: { ...rich().buildings, harbor: 0, infirmary: 0 } };
+    const all = possibleUpgrades(s);
+    expect(all).toEqual(expect.arrayContaining(["harbor", "infirmary"]));
+    const { shown, more } = badgeUpgrades(s, all);
+    expect(shown.filter((id) => s.buildings[id] === 0).sort()).toEqual(["harbor", "infirmary"]);
+    expect(shown.filter((id) => s.buildings[id] > 0)).toHaveLength(3);
+    expect(more).toBe(all.length - 2 - 3);
+  });
+
+  it("at the Lighthouse 1, \"＋ Infirmary\" is in sight", () => {
+    const start = newPlayerState();
+    const s = { ...start, buildings: { ...start.buildings, lighthouse: 1 }, stock: { oil: 9e8, fish: 9e8, wood: 9e8, rope: 9e8 } } as unknown as PlayerState;
+    expect(s.buildings.infirmary).toBe(0);
+    const { shown } = badgeUpgrades(s, possibleUpgrades(s));
+    expect(shown).toContain("infirmary");
+    expect(badgeShown({ touched: false, atWork: false, suggested: false, justUpgraded: false, possible: shown.includes("infirmary") })).toBe("badge");
   });
 
   it("three or fewer upgrades: all shown, nothing counted", () => {
