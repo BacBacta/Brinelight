@@ -168,8 +168,6 @@ async function signOut(page: Page): Promise<void> {
 const queued = (c: City | null) => (c?.queue ?? []).map((j) => j.id).sort();
 /** Until no celebration is on screen: one would take the next tap (a tap closes it). */
 const calm = (page: Page) => expect.poll(() => page.locator(".celebration").count(), { timeout: 15_000, interval: 100 }).toBe(0);
-/** A tap on the screen as a finger gives it: a celebration closes, and lets it through to what is under it. */
-const tapAnywhere = (page: Page) => page.evaluate(() => document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })));
 /**
  * While a celebration shows: the middle of the quest card's button (or of the card) is the card's, not the
  * celebration's; and the gold text `above`, if given, stands wholly above the card.
@@ -674,10 +672,13 @@ describe("celebrations", () => {
         await expect(full.textContent()).resolves.toContain("Lighthouse level 5");
         await page.waitForTimeout(600);
         await page.screenshot({ path: `e2e/.shots/shot-celebrate-lighthouse-${size.width}.png` });
-        // The quest card answers under it too; a tap anywhere closes it.
-        await questReachable(page, null);
-        await tapAnywhere(page);
+        // It hides the whole screen: its first tap closes it and reaches nothing under it (owner). A tap where the
+        // Captains button is under it opens no sheet.
+        const captains = (await page.locator('.nav button[data-v="captains"]').boundingBox())!;
+        await page.mouse.click(captains.x + captains.width / 2, captains.y + captains.height / 2);
         await full.waitFor({ state: "detached" });
+        await page.waitForTimeout(300);
+        expect(await page.locator(".sheet.captains:not([hidden])").count()).toBe(0);
         // The Logbook takes the lead captain one level up.
         await page.locator('.nav button[data-v="captains"]').click();
         await page.locator('.sheet.captains [data-act="logbook"]').click();
@@ -1294,7 +1295,7 @@ describe("the look", () => {
       // The top bar and the line under it are hidden under the veil: the CI draws their rounded bars there in two ways
       // (week 6), and they have their own captures.
       await look(page, page.locator(".celebration.lighthouse"), `celebrate-lighthouse-${w}`, ".hud,.sub{visibility:hidden!important}");
-      await tapAnywhere(page);
+      await page.locator(".celebration.lighthouse").click();
       await page.locator('.nav button[data-v="captains"]').click();
       await page.locator('.sheet.captains [data-act="logbook"]').click();
       await page.clock.runFor(100);
@@ -1312,7 +1313,7 @@ describe("the look", () => {
     expect(missed).toEqual([]);
     if (strict) expect(problems).toEqual([]);
     else if (problems.length) console.warn(`The look differs from the CI's references on this machine (LOOK=strict to fail):\n${problems.join("\n")}`);
-  });
+  }, 420_000);
 });
 
 describe("signed in", () => {

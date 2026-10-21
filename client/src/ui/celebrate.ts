@@ -97,6 +97,9 @@ export function createPlayQueue<T>(play: (item: T, done: () => void) => void) {
   };
 }
 
+/** Only the Lighthouse's full screen takes a tap (it hides what the tap would reach); the others let it through. */
+export const takesTap = (kind: CelebrationKind): boolean => kind === "lighthouse";
+
 /** How far above the quest card the gold text rises. */
 export const FLOAT_GAP = 8;
 
@@ -138,8 +141,13 @@ export function createCelebrations(root: HTMLElement, onShow?: (c: Celebration) 
       done();
     };
     const timer = setTimeout(end, CELEBRATION_MS[c.kind]);
-    // A tap anywhere closes it, and still reaches what it was meant for: the celebration never takes it.
-    document.addEventListener("pointerdown", end, true);
+    if (takesTap(c.kind)) {
+      // The full screen hides what a tap would reach: its first tap closes it, and goes no further.
+      el.addEventListener("click", end);
+    } else {
+      // A tap anywhere closes it, and still reaches what it was meant for: the celebration never takes it.
+      document.addEventListener("pointerdown", end, true);
+    }
   });
   return {
     /** Celebrates these events; `away`: they ended while you were away (one card for several); `land`: the rafts show as land. */

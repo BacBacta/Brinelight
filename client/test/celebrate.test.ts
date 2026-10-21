@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { DAY, advance, newPlayerState, research, train, upgrade, type ActionResult, type GameEvent, type PlayerState } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
-import { AWAY_LINES, CELEBRATION_MS, FLOAT_GAP, celebrationOf, celebrationsFor, createPlayQueue, eventText, floatBottom } from "../src/ui/celebrate.js";
+import { AWAY_LINES, CELEBRATION_MS, FLOAT_GAP, celebrationOf, celebrationsFor, createPlayQueue, eventText, floatBottom, takesTap } from "../src/ui/celebrate.js";
 import { DEVICE, SEEN_KEY, accountOwner, awayEvents, readSeen, writeSeen } from "../src/state/seen.js";
 import type { KeyValueStore } from "../src/state/save.js";
 
@@ -135,9 +135,12 @@ describe("the gold text of a work that ends (owner, on the S22: it hid the quest
     expect(floatBottom(699, { top: 0, height: 0 })).toBeNull();
   });
 
-  it("never takes a tap: no celebration catches one, a tap anywhere closes it (the style)", () => {
+  it("the gold text and the cards never take a tap; only the Lighthouse's full screen does, its first tap closing it", () => {
+    expect((["float", "captain", "away"] as const).map(takesTap)).toEqual([false, false, false]);
+    expect(takesTap("lighthouse")).toBe(true);
     const css = readFileSync(new URL("../src/ui/style.css", import.meta.url), "utf8");
     expect(css).toContain(".celebration,.celebration *{pointer-events:none}");
-    expect(css).not.toMatch(/\.celebration[^{]*\{[^}]*pointer-events:auto/);
+    // The only celebration that takes a tap is the full screen.
+    expect([...css.matchAll(/([^}{]*\.celebration[^{]*)\{[^}]*pointer-events:auto/g)].map((m) => m[1]!.trim())).toEqual([".celebration.lighthouse"]);
   });
 });
