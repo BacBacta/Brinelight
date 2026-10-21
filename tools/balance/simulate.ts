@@ -72,7 +72,24 @@ export type Profile = {
   /** No session from the start of day `from` to the start of day `to` (days counted from 1). */
   away?: { from: number; to: number };
   /** What the player leaves out, to measure what each new rule changes (all played when absent). */
-  skip?: { hunts?: boolean; objectives?: boolean; chests?: boolean; repairs?: boolean };
+  skip?: { hunts?: boolean; objectives?: boolean; chests?: boolean; repairs?: boolean; sea?: boolean };
+  /** The Refinery, the Lumberyard and the Fishery before the Lighthouse while below it, reserve or not (a player without the sea). */
+  producersFirst?: boolean;
+};
+
+/**
+ * What a study adds to the play, without changing a rule (docs/studies/): the same players, the same choices. All
+ * optional: without them, the run is the balance's own.
+ */
+export type Hooks = {
+  /** Moves the city on by `seconds`, in place of the rules' `advance` (which it calls). */
+  advance?: (s: PlayerState, seconds: number) => PlayerState;
+  /** Fleets busy elsewhere, which the wrecks cannot have. */
+  busyFleets?: () => number;
+  /** Before the wrecks, at each round of a session: some free fleets may sail elsewhere (then counted in busyFleets). */
+  beforeWrecks?: (s: PlayerState) => void;
+  /** At the end of each session, with what blocked a builder (null: nothing). */
+  onSession?: (s: PlayerState, block: Block | null) => void;
 };
 
 const at = (hours: number, minutes = 0) => hours * HOUR + minutes * 60;
@@ -97,6 +114,7 @@ export const FOUNDED = at(8);
 
 /** The order of play (docs/balance.md, "How the players play"). */
 export const BUILD_ORDER: readonly BuildingId[] = ["refinery", "lumberyard", "fishery", "shelters", "barracks", "observatory", "harbor", "infirmary"];
+const PRODUCERS: readonly BuildingId[] = ["refinery", "lumberyard", "fishery"];
 export const RESEARCH_ORDER: readonly TechId[] = ["refining", "saws", "nets", "warehouses", "sails", "holds", "blades", "hulls", "stretchers", "veterans"];
 export const TROOP_ORDER: readonly TroopType[] = ["boarders", "harpooners", "crossbowmen"];
 export const RAFT_BUILDING_ORDER: readonly RaftBuildingId[] = ["greenhouse", "smokehouse", "watchtower"];
@@ -222,7 +240,7 @@ export function wallAt(s: PlayerState): { resource: Resource; cost: number; stor
 }
 
 /** Plays a new city for `days` days with a profile's sessions. */
-export function simulate(profile: Profile, days: number): Run {
+export function simulate(profile: Profile, days: number, hooks: Hooks = {}): Run {
   // Day 1 is 1 January 1970 on the city's clock: the Mist comes at 04:00, 12:00 and 20:00 UTC, as every day.
   let s = newPlayerState(FOUNDED);
   let t = FOUNDED; // seconds since day 1, 0:00, and the city's clock
@@ -280,10 +298,12 @@ export function simulate(profile: Profile, days: number): Run {
       const candidates: BuildingId[] = queued.includes("lighthouse") || s.buildings.lighthouse >= LIGHTHOUSE_MAX ? [] : ["lighthouse"];
       const others = BUILD_ORDER.filter((id) => !queued.includes(id) && s.buildings[id] < s.buildings.lighthouse);
       candidates.push(...[...others].sort((a, b) => s.buildings[a] - s.buildings[b]));
+      const producer = (b: BuildingId) => !!profile.producersFirst && PRODUCERS.includes(b);
+      if (profile.producersFirst) candidates.sort((a, b) => Number(producer(b)) - Number(producer(a)));
       const id = candidates.find((b) => {
         const level = s.buildings[b];
         const cost = upgradeCost(b, level);
-        if (!act({ type: "upgrade", building: b }, `${b} ${level + 1} (${short(cost)})`, b !== "lighthouse")) return false;
+        if (!act({ type: "upgrade", building: b }, `${b} ${level + 1} (${short(cost)})`, b !== "lighthouse" && !producer(b))) return false;
         const done = t + (s.queue.at(-1)?.left ?? 0);
         if (b === "lighthouse") lighthouse[level + 1] = since(done);
         if (b === "refinery" && level + 1 === 2) firsts.refinery2 ??= since(done);
@@ -320,6 +340,7 @@ export function simulate(profile: Profile, days: number): Run {
 
   const sea = () => {
     let any = false;
+    if (profile.skip?.sea) return false;
     const lead = s.lead ? s.captains[s.lead] : undefined;
     // The Leviathan first, when it is at sea and a fleet stays free for the wrecks (owner's decision, 18 October): all
     // the troops sail to it, and no camp is attacked meanwhile.
@@ -340,9 +361,11 @@ export function simulate(profile: Profile, days: number): Run {
       });
       if (chance === "easy") any = act({ type: "sail", site: camp.id }, `attack ${camp.id} (level ${level})`) || any;
     }
+    hooks.beforeWrecks?.(s);
     // Every other fleet salvages the nearest wreck it can sail to (oil and rope), one fleet a wreck: an emptied wreck
     // waits before it fills again.
     for (;;) {
+      if (hooks.busyFleets && s.fleets.length + hooks.busyFleets() >= fleetsMax(s.buildings.harbor)) break;
       const w = WRECKS.find((x) => !s.fleets.some((f) => f.site === x.id) && fleetCheck(s, x.id).ok);
       if (!w || !act({ type: "sail", site: w.id }, `salvage ${w.id}`)) break;
       any = true;
@@ -409,6 +432,7 @@ export function simulate(profile: Profile, days: number): Run {
       if (ids === mark) break;
     }
     today.sessions++;
+    hooks.onSession?.(s, block);
     if (ids === before) today.empty++;
     if (block) {
       today.blocked++;
@@ -434,7 +458,7 @@ export function simulate(profile: Profile, days: number): Run {
       const mist = { ...s.mist };
       // What the stoked Lighthouse burns above its usual oil, for the hour it is lit.
       if (isLit(s.clock, s.mist)) run.oilSpent.stoking += ((netRates(s).oil - netRates(s, { mist: true, stoked: true }).oil) * step) / HOUR;
-      s = advance(s, step);
+      s = hooks.advance ? hooks.advance(s, step) : advance(s, step);
       t += step;
       run.mists.held += s.mist.held - mist.held;
       run.mists.missed += s.mist.missed - mist.missed;
