@@ -104,6 +104,10 @@ body.at-sea .flood-marks{display:none}
 .bl .pb{width:60px;height:6px;border-radius:9px;background:rgba(0,0,0,.55);overflow:hidden;border:1px solid rgba(255,255,255,.3)}.bl .pb i{display:block;height:100%;background:linear-gradient(90deg,#3BC6FF,#7CFFD8)}
 .bl .tl{font:900 10.5px var(--f-b);color:#FFF4DA;text-shadow:0 1px 2px rgba(0,0,0,.8)}
 .bl .up{width:22px;height:22px;border-radius:50%;background:var(--green);border:2px solid #fff;display:grid;place-items:center;font:900 13px var(--f-b);box-shadow:0 2px 0 rgba(0,0,0,.3);animation:bob 1s ease-in-out infinite}
+/* The other upgrades that can start, beyond the three badges: one discreet count under the Tasks button (owner, 21 October). */
+.labels>.more-up{left:auto;right:8px;top:calc(156px + env(safe-area-inset-top,0px));padding:2px 8px;border-radius:10px;background:rgba(14,34,58,.72);color:#fff;font:900 11px var(--f-b);box-shadow:0 1px 0 rgba(0,0,0,.25)}
+.labels>.more-up[hidden]{display:none}
+body.at-sea .labels>.more-up{display:none}
 @keyframes bob{50%{transform:translateY(-3px)}}
 
 /* Sea: site labels, sheets and combat reports */

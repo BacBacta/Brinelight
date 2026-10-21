@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { GAP, layoutLabels, type LabelBox, type LabelPlace } from "../src/city/overlap.js";
 import { badgeShown } from "../src/city/labels.js";
-import { possibleUpgrades, suggestedUpgrades } from "../src/city/suggest.js";
+import { BADGES_SHOWN, badgeUpgrades, possibleUpgrades, questBuilding, suggestedUpgrades } from "../src/city/suggest.js";
 import { newPlayerState } from "@brinelight/shared";
 import type { PlayerState } from "../src/state/index.js";
 
@@ -169,5 +169,62 @@ describe("city labels layout", () => {
       const poor = { ...newPlayerState(), stock: { oil: 0, fish: 0, wood: 0 } } as unknown as PlayerState;
       expect(possibleUpgrades(poor)).toEqual([]);
     });
+  });
+});
+
+describe("at most three \"upgrade possible\" badges (owner, 21 October)", () => {
+  /** A rich city at the Lighthouse 12: every building can be upgraded. */
+  const rich = (): PlayerState => {
+    const s = newPlayerState();
+    return {
+      ...s,
+      buildings: { lighthouse: 12, refinery: 9, fishery: 7, lumberyard: 8, shelters: 6, barracks: 5, harbor: 4, observatory: 4, infirmary: 3 },
+      stock: { oil: 9e8, fish: 9e8, wood: 9e8, rope: 9e8 },
+      pearls: 9e8,
+      objective: 0,
+    } as PlayerState;
+  };
+
+  it("the Lighthouse first, then the current objective's building, then the ones furthest behind; the others counted", () => {
+    const s = rich();
+    const all = possibleUpgrades(s);
+    expect(all.length).toBeGreaterThanOrEqual(8);
+    // The first objective: "Upgrade the Refinery to level 2", done here (level 9): no objective's building.
+    expect(questBuilding(s)).toBe(null);
+    const { shown, more } = badgeUpgrades(s, all);
+    expect(shown).toEqual(["lighthouse", "infirmary", "harbor"]);
+    expect(more).toBe(all.length - 3);
+  });
+
+  it("the objective's building, while it is not done, comes right after the Lighthouse", () => {
+    const s = { ...rich(), buildings: { ...rich().buildings, refinery: 1 } };
+    expect(questBuilding(s)).toBe("refinery");
+    expect(badgeUpgrades(s, possibleUpgrades(s)).shown.slice(0, 2)).toEqual(["lighthouse", "refinery"]);
+  });
+
+  it("a building to build always shows, apart: never among the three, never in the \"+N\"", () => {
+    const s = { ...rich(), objective: 2, buildings: { ...rich().buildings, harbor: 0, infirmary: 0 } };
+    const all = possibleUpgrades(s);
+    expect(all).toEqual(expect.arrayContaining(["harbor", "infirmary"]));
+    const { shown, more } = badgeUpgrades(s, all);
+    expect(shown.filter((id) => s.buildings[id] === 0).sort()).toEqual(["harbor", "infirmary"]);
+    expect(shown.filter((id) => s.buildings[id] > 0)).toHaveLength(3);
+    expect(more).toBe(all.length - 2 - 3);
+  });
+
+  it("at the Lighthouse 1, \"＋ Infirmary\" is in sight", () => {
+    const start = newPlayerState();
+    const s = { ...start, buildings: { ...start.buildings, lighthouse: 1 }, stock: { oil: 9e8, fish: 9e8, wood: 9e8, rope: 9e8 } } as unknown as PlayerState;
+    expect(s.buildings.infirmary).toBe(0);
+    const { shown } = badgeUpgrades(s, possibleUpgrades(s));
+    expect(shown).toContain("infirmary");
+    expect(badgeShown({ touched: false, atWork: false, suggested: false, justUpgraded: false, possible: shown.includes("infirmary") })).toBe("badge");
+  });
+
+  it("three or fewer upgrades: all shown, nothing counted", () => {
+    const s = rich();
+    expect(badgeUpgrades(s, ["refinery", "fishery"])).toEqual({ shown: ["fishery", "refinery"], more: 0 });
+    expect(badgeUpgrades(s, []).more).toBe(0);
+    expect(BADGES_SHOWN).toBe(3);
   });
 });

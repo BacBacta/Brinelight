@@ -92,23 +92,24 @@ def plot_reach(x, z):
 def land_depth(x, z):
     """
     How far inside the land a point is (negative: in the sea): round lands softly joined around the plots, a coast pushed
-    in and out by noise, always holding round every plot (1.12 from its center: no plot's hexagon shows in the coast,
-    owner) and never reaching into the rooms of the rafts of ring 3.
+    in and out by noise, always holding the plots' round lands joined softly (no plot's hexagon shows in the coast, and no
+    point of it between two plots: owner) and never reaching into the rooms of the rafts of ring 3.
     """
     base = None
     for cx, cz in PLOTS:
         d = np.hypot(x - cx, z - cz) - 1.12
         base = d if base is None else smin(base, d, 0.6)
     coast = -base + 0.16 * fbm(x * 0.55, z * 0.55, 3.0) + 0.05 * fbm(x * 2.2, z * 2.2, 4.0)
-    near = np.min([np.hypot(x - cx, z - cz) for cx, cz in PLOTS], axis=0)
-    coast = -smin(-coast, -(1.12 - near), 0.12)
+    coast = -smin(-coast, base, 0.12)
     # The rafts' rooms joined softly into one band: the coast follows its round edge, with no point of land between two
     # rooms (owner: no hexagon shows); every room stays clear.
-    rooms = None
+    # Joined softly enough to round the coast between two rooms, and never into the island's own round shape (the
+    # plots' lands joined softly, without the noise): the coast stays round where there is no plot (owner).
+    band = None
     for cx, cz in RING3:
         r = np.hypot(x - cx, z - cz) - 0.98
-        rooms = r if rooms is None else smin(rooms, r, 0.6)
-    return np.minimum(coast, rooms)
+        band = r if band is None else smin(band, r, 0.9)
+    return np.minimum(coast, -smin(-band, base, 0.15))
 
 
 def cliffs(x, z):

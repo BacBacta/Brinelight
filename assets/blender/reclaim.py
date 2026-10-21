@@ -22,17 +22,24 @@ LAND = 1.12  # a slot's land around its center, as a plot's
 ROOM = 0.98  # a free slot's water, as the rafts' rooms
 JOIN = 0.9  # the soft join between neighbors: a smooth dike, gently waved
 CARVE = 0.12
+ROOM_JOIN = 0.9  # the free slots' waters joined softly into one round band: no point of land between two
+HOLD_EDGE = 0.15  # the soft edge where that band meets the island's round shape and the slots taken
 
 
-def island_depth(x, z):
-    """The island's own land (land.land_depth) without the rafts' rooms: those are carved only where a slot is free."""
+def island_shape(x, z):
+    """The island's own round shape: the plots' lands joined softly, without the noise (negative inside)."""
     base = None
     for cx, cz in land.PLOTS:
         d = np.hypot(x - cx, z - cz) - 1.12
         base = d if base is None else land.smin(base, d, 0.6)
+    return base
+
+
+def island_depth(x, z):
+    """The island's own land (land.land_depth) without the rafts' rooms: those are carved only where a slot is free."""
+    base = island_shape(x, z)
     coast = -base + 0.16 * land.fbm(x * 0.55, z * 0.55, 3.0) + 0.05 * land.fbm(x * 2.2, z * 2.2, 4.0)
-    near = np.min([np.hypot(x - cx, z - cz) for cx, cz in land.PLOTS], axis=0)
-    return -land.smin(-coast, -(1.12 - near), 0.12)
+    return -land.smin(-coast, base, 0.12)
 
 
 def slots_depth(x, z, slots):
@@ -65,11 +72,14 @@ class Land:
         won = slots_depth(x, z, self.won)
         whole = -land.smin(-isl, -won, 0.3)
         if self.free:
-            room = None
+            # The free slots' waters joined softly into one band, which never reaches into the island's own round shape
+            # (the plots' lands joined softly, without the noise) nor into the slots taken: the coast stays round.
+            band = None
             for s in self.free:
                 r = np.hypot(x - s["x"], z - s["z"]) - ROOM
-                room = r if room is None else np.minimum(room, r)
-            whole = land.smin(whole, room, CARVE)
+                band = r if band is None else land.smin(band, r, ROOM_JOIN)
+            sea = -land.smin(-band, -np.maximum(-island_shape(x, z), won), HOLD_EDGE)
+            whole = land.smin(whole, sea, CARVE)
         return isl, won, whole
 
     def depth(self, x, z):

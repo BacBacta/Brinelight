@@ -4,7 +4,7 @@ import type { PlayerState } from "../state/index.js";
 import { plotPosition } from "./buildings.js";
 import { layoutLabels, type LabelBox, type Rect } from "./overlap.js";
 import { formatTimeLeft } from "./format.js";
-import { possibleUpgrades, progress, suggestedUpgrades } from "./suggest.js";
+import { badgeUpgrades, possibleUpgrades, progress, suggestedUpgrades } from "./suggest.js";
 
 /** A building's level on its label; at work, the level being built too: "29 → 30" (owner). */
 export const levelText = (level: number, atWork: boolean): string => (atWork ? `${level} → ${level + 1}` : String(level));
@@ -18,7 +18,8 @@ export const JUST_UPGRADED_MS = 6000;
  * `badges` (week 8): a building shows nothing over it, unless you touched it (its full label), it is at
  * work (its full label and its timer), its upgrade can start (its level badge, with its arrow; in full when it is one
  * of the two suggested) or it was just upgraded (its full label for a few seconds); no label ever goes under one of
- * the `panels` (read four times a second).
+ * the `panels` (read four times a second). At most three badges at once, the most useful (suggest.ts, badgeUpgrades);
+ * the other upgrades that can start are counted in one discreet "+N" under the Tasks button.
  */
 /**
  * What a building's label shows with badges, when not touched: its full label at work, suggested or just upgraded,
@@ -39,6 +40,10 @@ export function createLabels(
   layer.className = "labels city";
   layer.setAttribute("aria-hidden", "true");
   root.appendChild(layer);
+  const more = document.createElement("div");
+  more.className = "more-up";
+  more.hidden = true;
+  layer.appendChild(more);
   type Label = { el: HTMLDivElement; key: string; bar: HTMLElement | null; left: HTMLElement | null; w: number; h: number; compactW: number; compactH: number };
   const els = {} as Record<BuildingId, Label>;
   for (const id of BUILDING_IDS) {
@@ -78,13 +83,18 @@ export function createLabels(
       for (const id of BUILDING_IDS) if (levels && state.buildings[id] > levels[id]) justUpgraded.set(id, now + JUST_UPGRADED_MS);
       levels = state.buildings;
       const suggested = suggestedUpgrades(state);
-      const possible = options.badges ? possibleUpgrades(state) : suggested;
+      const all = options.badges ? possibleUpgrades(state) : suggested;
+      const badged = options.badges ? badgeUpgrades(state, all) : { shown: all, more: 0 };
+      const possible = badged.shown;
+      const moreText = badged.more ? `+${badged.more} ↑` : "";
+      if (more.textContent !== moreText) more.textContent = moreText;
+      more.hidden = !badged.more;
       for (const id of BUILDING_IDS) {
         const L = els[id];
         const level = state.buildings[id];
         const job = state.queue.find((j) => j.id === id);
         const up = possible.includes(id);
-        const show = badgeShown({ touched: false, atWork: !!job, suggested: suggested.includes(id), justUpgraded: (justUpgraded.get(id) ?? 0) > now, possible: up });
+        const show = badgeShown({ touched: false, atWork: !!job, suggested: suggested.includes(id) && up, justUpgraded: (justUpgraded.get(id) ?? 0) > now, possible: up });
         if (show === "full") wantFull.add(id);
         else wantFull.delete(id);
         if (show !== "none") shown.add(id);

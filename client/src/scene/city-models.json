@@ -3034,36 +3034,36 @@
   ]
  },
  "terrain-garden": {
-  "kB": 86.2,
-  "triangles": 3600,
+  "kB": 86.1,
+  "triangles": 3599,
   "levels": [
    {
     "level": 0,
-    "indices": 10800,
+    "indices": 10797,
     "height": 0.087,
     "reach": 8.746
    }
   ]
  },
  "terrain-modern": {
-  "kB": 86.3,
-  "triangles": 3600,
+  "kB": 85.7,
+  "triangles": 3599,
   "levels": [
    {
     "level": 0,
-    "indices": 10800,
+    "indices": 10797,
     "height": 0.087,
     "reach": 8.746
    }
   ]
  },
  "terrain-wild": {
-  "kB": 86.7,
-  "triangles": 3600,
+  "kB": 86.4,
+  "triangles": 3599,
   "levels": [
    {
     "level": 0,
-    "indices": 10800,
+    "indices": 10797,
     "height": 0.087,
     "reach": 8.746
    }
