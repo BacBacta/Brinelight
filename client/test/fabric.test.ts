@@ -20,6 +20,7 @@ import { mergeFabric, readFabric, type FabricModels, type Merged } from "../src/
 import { createFabric } from "../src/city/fabric/index.js";
 import { SIZES } from "../src/city/fabric/sight.js";
 import { FIELD_SIZE, fieldTexels } from "../src/city/fabric/paint.js";
+import { PATH_HALF, fieldFrame, inField } from "../src/city/fabric/fields.js";
 import { IN_SIGHT, camera, inSight, shown } from "./sight.js";
 
 const NO_LAND: LandSlots = { won: [], flooded: [], filling: null, free: [] };
@@ -132,6 +133,26 @@ describe("the city fabric's plan", () => {
       const worth = plan.pieces.reduce((n, p) => n + (HOUSE_WORTH[p.model] ?? 0), 0);
       expect(plan.houses, `era ${era}`).toBe(63);
       expect(worth, `era ${era}`).toBeGreaterThanOrEqual(plan.houses);
+    }
+  });
+
+  it("the gardens' and the kelp's rows: inside their field's outline, on its own bed, on a plot won; varied vegetables", () => {
+    for (const lh of [9, 19, 30]) {
+      const state = city(lh, RAFT_SLOTS.length);
+      const plan = fabricPlan(state, landOf(state));
+      const rowed = plan.fields.filter((f) => f.kind === "garden" || f.kind === "kelp");
+      expect(plan.rows.length, `Lighthouse ${lh}`).toBeGreaterThan(rowed.length * 4);
+      for (const row of plan.rows)
+        for (const [x, z] of row.points) {
+          const field = plan.fields.find((f) => Math.hypot(f.x - x, f.z - z) < 1)!;
+          expect(field, `a row at (${x.toFixed(2)}, ${z.toFixed(2)})`).toBeDefined();
+          const r = Math.round(field.z / 1.732);
+          const frame = fieldFrame(Math.round(field.x / 2 - r / 2), r);
+          expect(inField(frame, x - field.x, z - field.z, 0.05), `a row at (${x.toFixed(2)}, ${z.toFixed(2)})`).toBe(true);
+          // Never on the garden's path.
+          if (row.kind === "garden") expect(Math.abs((x - field.x) * frame.n[0] + (z - field.z) * frame.n[1] - frame.offset)).toBeGreaterThan(PATH_HALF);
+        }
+      if (lh === 9) expect(new Set(plan.rows.map((r) => r.color)).size).toBeGreaterThanOrEqual(4);
     }
   });
 

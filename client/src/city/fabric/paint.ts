@@ -7,12 +7,13 @@
  */
 import * as THREE from "three";
 import type { FabricPlan, FieldKind } from "./plan.js";
+import { FIELD_REACH, FIELD_SIDES, KELP, PATH_HALF, ROW_SPACING, VEG, fieldBytes } from "./fields.js";
 
 /** The ground the texture covers: a square of 2 × SPAN around the Lighthouse, at SIZE pixels a side. */
 export const SPAN = 10;
 export const SIZE = 512;
 const FIELD_KIND: Record<FieldKind, number> = { garden: 1, orchard: 2, kelp: 3, park: 4 };
-/** The plots' fields, a texel each: plot (q, r) at (q + FIELD_AT, r + FIELD_AT), its kind times FIELD_STEP in red. */
+/** The plots' fields, a texel each: plot (q, r) at (q + FIELD_AT, r + FIELD_AT), its kind times FIELD_STEP in red, its shape's bytes in green, blue and alpha (fields.ts). */
 export const FIELD_SIZE = 16;
 const FIELD_AT = 8;
 const FIELD_STEP = 60;
@@ -41,6 +42,13 @@ export const FABRIC_PAINT = {
   uSquareCol: { value: new THREE.Color(STREET[0]) },
   uFieldKinds: { value: fieldKinds as THREE.Texture },
 };
+
+/** A color (sRGB hex) as the shader's linear vec3. */
+const vec3 = (hex: string) => {
+  const lin = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  return `vec3(${[1, 3, 5].map((i) => lin(parseInt(hex.slice(i, i + 2), 16) / 255).toFixed(4)).join(", ")})`;
+};
+const num = (v: number) => v.toFixed(4);
 
 const VERTEX = /* glsl */ `
 varying vec2 vFabricXZ;
@@ -78,16 +86,42 @@ const PAINT = /* glsl */ `
   vec3 dc = abs(rc - cube);
   if (dc.x > dc.y && dc.x > dc.z) rc.x = -rc.y - rc.z;
   else if (dc.y > dc.z) rc.y = -rc.x - rc.z;
-  float kind = floor(texture2D(uFieldKinds, (rc.xy + ${FIELD_AT}.5) / ${FIELD_SIZE}.).r * ${(255 / FIELD_STEP).toFixed(4)} + .5);
+  vec4 ft = texture2D(uFieldKinds, (rc.xy + ${FIELD_AT}.5) / ${FIELD_SIZE}.);
+  float kind = floor(ft.r * ${(255 / FIELD_STEP).toFixed(4)} + .5);
   if (kind > .5) {
-    vec2 f = vec2(2. * (rc.x + rc.y * .5), 1.732 * rc.y);
-    float r = length(p - f) + .06 * sin(p.x * 3.1 + p.y * 2.3);
-    float inside = clamp((.8 - r) / .06, 0., 1.);
+    // The plot's field (fields.ts): its outline, its path and its beds of rows, from its bytes.
+    vec2 fp = p - vec2(2. * (rc.x + rc.y * .5), 1.732 * rc.y);
+    float ang = ft.g * 3.14159265;
+    vec2 fn = vec2(cos(ang), sin(ang));
+    vec2 fm = vec2(-fn.y, fn.x);
+    float off = (ft.b - .5) * .3;
+    // Its outline: six sides, each turned and set back from a hexagon's (fields.ts, outsideField).
+    float seed = floor(ft.a * 255. + .5);
+    float outside = -1e3;
+    for (int k = 0; k < ${FIELD_SIDES}; k++) {
+      float fk = float(k);
+      float a = ft.a * 3.14159265 + fk * 1.04719755 + (fract(seed / 255. * (fk + 1.) * .618) - .5) * .5;
+      outside = max(outside, dot(fp, vec2(cos(a), sin(a))) - (${num(FIELD_REACH - 0.12)} + .2 * fract(seed / 255. * (fk + 1.) * 1.37)));
+    }
+    float inside = clamp(-outside / .04, 0., 1.);
+    float grain = .88 + .12 * sin(p.x * 53. + p.y * 31.) * sin(p.x * 17. - p.y * 23.);
     vec3 c;
-    if (kind < 1.5) c = sin((p.x - f.x) * 38.) > 0. ? vec3(.157, .27, .05) : vec3(.25, .144, .058);
-    else if (kind < 2.5) c = vec3(.235, .42, .095);
-    else if (kind < 3.5) c = sin((p.y - f.y) * 30.) > .3 ? vec3(.33, .26, .17) : vec3(.47, .39, .25);
-    else c = mix(vec3(.38, .63, .16), vec3(.72, .66, .55), clamp((.045 - abs(length(p - f) - .45)) / .015, 0., 1.));
+    if (kind < 1.5) {
+      float side = dot(fp, fn) - off;
+      float bed = side > 0. ? 0. : 1.;
+      float t = (bed < .5 ? dot(fp, fn) : dot(fp, fm)) / ${num(ROW_SPACING.garden)};
+      float row = floor(t);
+      float fr = fract(t);
+      float leaf = smoothstep(.18, .3, fr) * (1. - smoothstep(.7, .82, fr));
+      float v = mod(seed + row * 3. + bed * 2., ${VEG.length}.);
+      vec3 veg = v < .5 ? ${vec3(VEG[0])} : v < 1.5 ? ${vec3(VEG[1])} : v < 2.5 ? ${vec3(VEG[2])} : v < 3.5 ? ${vec3(VEG[3])} : ${vec3(VEG[4])};
+      c = mix(vec3(.10, .062, .03) * grain, veg * .85 * grain, leaf);
+      c = mix(c, vec3(.30, .23, .14) * grain, 1. - smoothstep(${num(PATH_HALF)}, ${num(PATH_HALF + 0.015)}, abs(side)));
+    } else if (kind < 2.5) c = vec3(.235, .42, .095) * grain;
+    else if (kind < 3.5) {
+      float fr = fract(dot(fp, fn) / ${num(ROW_SPACING.kelp)});
+      c = mix(vec3(.46, .40, .27) * grain, ${vec3(KELP)} * 1.1, smoothstep(.25, .35, fr) * (1. - smoothstep(.65, .75, fr)));
+    } else c = mix(vec3(.38, .63, .16), vec3(.72, .66, .55), clamp((.045 - abs(length(fp) - .45)) / .015, 0., 1.));
     fc = mix(fc, c, inside);
   }
   diffuseColor.rgb = fc;
@@ -159,7 +193,9 @@ export function fieldTexels(plan: Pick<FabricPlan, "fields">): Uint8Array {
     const q = Math.round(f.x / 2 - r / 2);
     const [u, v] = [q + FIELD_AT, r + FIELD_AT];
     if (u < 0 || v < 0 || u >= FIELD_SIZE || v >= FIELD_SIZE) continue;
-    out[(v * FIELD_SIZE + u) * 4] = FIELD_KIND[f.kind] * FIELD_STEP;
+    const at = (v * FIELD_SIZE + u) * 4;
+    out[at] = FIELD_KIND[f.kind] * FIELD_STEP;
+    out.set(fieldBytes(q, r), at + 1);
   }
   return out;
 }

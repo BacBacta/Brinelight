@@ -96,10 +96,45 @@ class Builder {
     }
     this.index.push(base, base + 1, base + 2, base, base + 2, base + 3, base, base + 2, base + 1, base, base + 3, base + 2);
   }
+  /**
+   * A raised row of a field along `points` (x, y, z: its foot): a low ridge `w` wide on either side, `h` high at each
+   * point, darker at its foot than on its top (linear colors).
+   */
+  ridge(points: readonly (readonly [number, number, number])[], w: number, h: readonly number[], top: readonly [number, number, number], foot: readonly [number, number, number]) {
+    const base = this.position.length / 3;
+    points.forEach(([x, y, z], i) => {
+      const [ax, az] = i + 1 < points.length ? [points[i + 1]![0] - x, points[i + 1]![2] - z] : [x - points[i - 1]![0], z - points[i - 1]![2]];
+      const len = Math.hypot(ax, az) || 1;
+      // Across the row, and each slope's normal (up and out).
+      const [sx, sz] = [-az / len, ax / len];
+      const k = Math.hypot(w, h[i]!) || 1;
+      for (const side of [1, -1]) {
+        const [ox, oz] = [sx * side, sz * side];
+        const normal = [(ox * h[i]!) / k, w / k, (oz * h[i]!) / k];
+        this.position.push(x + ox * w, y, z + oz * w, x, y + h[i]!, z);
+        this.normal.push(...normal, ...normal);
+        this.color.push(...foot, ...top);
+        this.lit.push(1, 1);
+      }
+    });
+    // Four vertices a point: the left foot and top, the right foot and top.
+    for (let i = 0; i + 1 < points.length; i++) {
+      const [a, b] = [base + i * 4, base + (i + 1) * 4];
+      this.index.push(a, b, b + 1, a, b + 1, a + 1, a + 2, a + 3, b + 3, a + 2, b + 3, b + 2);
+    }
+    // Its two ends.
+    const last = base + (points.length - 1) * 4;
+    this.index.push(base, base + 1, base + 2, last, last + 2, last + 1);
+  }
   done(): Merged {
     return { position: new Float32Array(this.position), normal: new Float32Array(this.normal), color: new Float32Array(this.color), lit: new Float32Array(this.lit), index: new Uint32Array(this.index) };
   }
 }
+
+const linearHex = (hex: string): [number, number, number] => [1, 3, 5].map((i) => linear(parseInt(hex.slice(i, i + 2), 16))) as [number, number, number];
+const scaled = (c: readonly number[], k: number) => c.map((v) => Math.min(1, v * k)) as [number, number, number];
+/** A row's height and half width: the vegetables stand higher than the kelp laid on the sand. */
+const ROW_SHAPE = { garden: { h: 0.04, w: 0.045 }, kelp: { h: 0.018, w: 0.032 } } as const;
 
 /** The pieces that move: drawn apart. */
 export const MOVING = new Set(["turbine-rotor"]);
@@ -127,6 +162,14 @@ export function mergeFabric(plan: FabricPlan, models: FabricModels, height: (p: 
       const [c, s] = [Math.cos(p.turn), Math.sin(p.turn)];
       rotors.push({ x: p.x + ROTOR_AT[2] * s, y: y + ROTOR_AT[1], z: p.z + ROTOR_AT[2] * c, turn: p.turn });
     }
+  }
+  for (const row of plan.rows) {
+    const shape = ROW_SHAPE[row.kind];
+    const c = linearHex(row.color);
+    const points = row.points.map(([x, z]) => [x, height({ model: "row", x, z, turn: 0, scale: 1, lit: 1 }) - 0.004, z] as const);
+    // Each plant a little higher or lower than the next; the row's ends lower.
+    const h = row.points.map(([x, z], i) => shape.h * (0.75 + 0.5 * (Math.sin(x * 41.3 + z * 17.9) * 0.5 + 0.5)) * (i === 0 || i === row.points.length - 1 ? 0.6 : 1));
+    body.ridge(points, shape.w, h, scaled(c, 1.25), scaled(c, 0.7));
   }
   for (const [ax, az, bx, bz] of plan.wires) {
     const ya = height({ model: "pole", x: ax, z: az, turn: 0, scale: 1, lit: 1 }) + WIRE_Y;

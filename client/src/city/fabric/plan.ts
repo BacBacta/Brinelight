@@ -12,7 +12,7 @@
  *   rowboat pulled up on the beach.
  * - Streets: the trails between the buildings and a street through each plot with houses, in the era's ground; lamps
  *   from the workshop era, power poles and street trees from the electricity era; a square around the Lighthouse.
- * - Fields on the plots won free of houses: gardens, orchards, kelp racks, then parks.
+ * - Fields on the plots won free of houses: gardens in rows, orchards, kelp in rows, then parks (fields.ts).
  * - The port: quays and boats along the coast on either side of the Harbor, more with the eras.
  *
  * Pure: the game builds its meshes from it (fabric/index.ts), the tests read it.
@@ -26,6 +26,7 @@ import { trails } from "../life/cast.js";
 import { SEA, hexReach, islandDepth, landDepth, type At, type LandSlots } from "../land/field.js";
 import LAND from "../life/land.json";
 import { boxOf, buildingBoxes, createView, hiddenBy, MOST_HIDDEN } from "./sight.js";
+import { fieldRows, type FieldRow } from "./fields.js";
 
 /** Where the washing dries by the Shelters (life/details.ts, LAUNDRY; a test checks they agree): no house there. */
 export const LAUNDRY_AT = { x: hexX(1, -1) + 0.42, z: hexZ(-1) + 0.2 } as const;
@@ -42,10 +43,12 @@ export const minHouses = (lighthouse: number): number => MIN_HOUSES[Math.min(MIN
 /** The houses a city shows: the larger of the Shelters' room and the Lighthouse's minimum. */
 export const housesShown = (lighthouse: number, shelters: number): number => Math.max(Math.ceil(survivorCap(shelters) / PER_HOUSE), minHouses(lighthouse));
 
-/** The houses are drawn 1.2 times as made (owner, after the target images). */
+/** The houses are drawn 1.2 times as made (owner, after the target images); the camp's tents and huts 1.3 times (owner, 21 October: the first Lighthouses). */
 export const HOUSE_SCALE = 1.2;
-/** The share of windows lit in the Mist, by era: a few lanterns in the camp, nearly every window in the Modern era. */
-export const LIT = [0.2, 0.3, 0.45, 0.6, 0.85, 0.95] as const;
+export const CAMP_SCALE = 1.3;
+export const houseScale = (model: string): number => (model === "tent" || model === "hut" ? CAMP_SCALE : HOUSE_SCALE);
+/** The share of windows lit in the Mist, by era (owner, 21 October): from two in five in the camp to nearly every window in the Modern era. */
+export const LIT = [0.4, 0.5, 0.6, 0.7, 0.85, 0.95] as const;
 
 /** What each era builds: the small house (one house's worth) and, from the industry era, the big one and its worth. */
 const STYLES: readonly { small: readonly string[]; big?: { model: string; worth: number }; older?: string }[] = [
@@ -78,6 +81,8 @@ export type FabricPlan = {
   wires: [number, number, number, number][];
   fields: Field[];
   trees: Tree[];
+  /** The gardens' and the kelp's raised rows (fields.ts). */
+  rows: FieldRow[];
   /** The streets, polylines of (x, z): their ground is painted. */
   streets: [number, number][][];
   /** The square around the Lighthouse: how far it reaches (hex distance), 0 for none. */
@@ -292,10 +297,10 @@ export function fabricPlan(state: PlayerState, L: LandSlots): FabricPlan {
     if (i >= small) break;
     const model = i >= small * 0.8 && style.older ? style.older : style.small[i % style.small.length]!;
     // Only where the view sees it, and it hides nothing it should not.
-    const box = boxOf(model, l.x, l.z, HOUSE_SCALE)!;
+    const box = boxOf(model, l.x, l.z, houseScale(model))!;
     if (!view.fits(box)) continue;
     view.put(box);
-    put(model, l.x, l.z, l.turn, HOUSE_SCALE, litOf(l.x, l.z));
+    put(model, l.x, l.z, l.turn, houseScale(model), litOf(l.x, l.z));
     take(l.plot);
     i++;
   }
@@ -322,6 +327,7 @@ export function fabricPlan(state: PlayerState, L: LandSlots): FabricPlan {
   const kinds: Record<number, FieldKind[]> = { 1: ["garden"], 2: ["garden", "orchard"], 3: ["garden", "orchard", "kelp"], 4: ["garden", "kelp", "orchard", "park"], 5: ["park", "garden", "orchard", "kelp"] };
   const fields: Field[] = [];
   const trees: Tree[] = [];
+  const rows: FieldRow[] = [];
   const treeName = era >= 5 ? "life-plant-modern-tree" : "life-plant-garden-tree";
   plots
     .filter((p) => p.won && !isTaken(p))
@@ -329,6 +335,9 @@ export function fabricPlan(state: PlayerState, L: LandSlots): FabricPlan {
       const kind = kinds[era]?.[k % kinds[era]!.length];
       if (!kind) return;
       fields.push({ kind, x: p.x, z: p.z });
+      // The plot's (q, r), for its field's shape (scene/island.ts, hexX and hexZ turned back).
+      const r = Math.round(p.z / 1.732);
+      rows.push(...fieldRows(kind, Math.round(p.x / 2 - r / 2), r, p.x, p.z));
       take(p);
       if (kind === "orchard")
         for (let j = 0; j < 7; j++) {
@@ -399,7 +408,7 @@ export function fabricPlan(state: PlayerState, L: LandSlots): FabricPlan {
   });
 
   const smoke = pieces.filter((p) => p.model === "chimneys" || p.model === "workshop").map((p) => ({ x: p.x + (p.model === "chimneys" ? 0.14 : 0.25), y: p.model === "chimneys" ? 0.82 : 0.75, z: p.z - 0.06 }));
-  return { era, houses, pieces, wires, fields, trees, streets, square: [0, 0.92, 1.0, 1.06, 1.12, 1.18][era]!, taken: [...taken.values()], yards, smoke };
+  return { era, houses, pieces, wires, fields, trees, rows, streets, square: [0, 0.92, 1.0, 1.06, 1.12, 1.18][era]!, taken: [...taken.values()], yards, smoke };
 }
 
 /** The pieces that sit on the water, not on the ground. */
