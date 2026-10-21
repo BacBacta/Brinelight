@@ -18,6 +18,9 @@ export const ROOM = 0.98;
 /** The soft join between neighboring slots (reclaim.py, JOIN). */
 export const JOIN = 0.9;
 const CARVE = 0.12;
+/** The free slots' waters joined softly into one round band (no point of land between two), and the soft edge where that band meets the island's round shape and the slots taken (reclaim.py, ROOM_JOIN and HOLD_EDGE). */
+export const ROOM_JOIN = 0.9;
+const HOLD_EDGE = 0.15;
 
 const fract = (v: number) => v - Math.floor(v);
 const hash = (i: number, j: number, seed: number) => fract(Math.sin(i * 127.1 + j * 311.7 + seed * 74.7) * 43758.5453);
@@ -73,19 +76,19 @@ export function plotReach(x: number, z: number): number {
   return m;
 }
 
-/** The island's own land, without the rafts' rooms (reclaim.py, island_depth). */
-export function islandDepth(x: number, z: number): number {
+/** The island's own round shape and land, without the rafts' rooms (reclaim.py, island_shape and island_depth). */
+export function islandParts(x: number, z: number): { shape: number; isl: number } {
   let base = 0;
-  let near = Infinity;
   PLOTS.forEach(([cx, cz], i) => {
-    const r = Math.hypot(x - cx, z - cz);
-    near = Math.min(near, r);
-    const d = r - 1.12;
+    const d = Math.hypot(x - cx, z - cz) - 1.12;
     base = i === 0 ? d : smin(base, d, 0.6);
   });
   const coast = -base + 0.16 * fbm(x * 0.55, z * 0.55, 3.0) + 0.05 * fbm(x * 2.2, z * 2.2, 4.0);
-  return -smin(-coast, -(1.12 - near), 0.12);
+  return { shape: base, isl: -smin(-coast, base, 0.12) };
 }
+
+/** The island's own land, without the rafts' rooms (reclaim.py, island_depth). */
+export const islandDepth = (x: number, z: number): number => islandParts(x, z).isl;
 
 /** Where the island's coast is a low cliff (1) rather than a beach (0) (land.py, cliffs). */
 export const cliffs = (x: number, z: number): number => clamp((fbm(x * 0.8, z * 0.8, 9.0) + 0.05) * 4) * clamp(1.1 - 0.25 * z, 0.35, 1);
@@ -105,9 +108,9 @@ export type At = { x: number; z: number };
 /** What the land is made of: the slots won (land, a flooded one too), the flooded ones, the one being filled, the free ones. */
 export type LandSlots = { won: readonly At[]; flooded: readonly At[]; filling: At | null; free: readonly At[] };
 
-/** The island's field kept apart (it never changes): its depth, hills, cliffs and plot reach at a point. */
-export type IslandAt = { isl: number; hills: number; cliffs: number; plot: number };
-export const islandAt = (x: number, z: number): IslandAt => ({ isl: islandDepth(x, z), hills: hills(x, z), cliffs: cliffs(x, z), plot: plotReach(x, z) });
+/** The island's field kept apart (it never changes): its depth, round shape, hills, cliffs and plot reach at a point. */
+export type IslandAt = { isl: number; shape: number; hills: number; cliffs: number; plot: number };
+export const islandAt = (x: number, z: number): IslandAt => ({ ...islandParts(x, z), hills: hills(x, z), cliffs: cliffs(x, z), plot: plotReach(x, z) });
 
 /** The slots' land: round lands joined softly (reclaim.py, slots_depth); -99 without any. */
 export function slotsDepth(x: number, z: number, won: readonly At[]): number {
@@ -133,14 +136,20 @@ export function landDepth(x: number, z: number, L: LandSlots, island: IslandAt =
   const won = slotsDepth(x, z, L.won);
   let whole = -smin(-isl, -won, 0.3);
   if (L.free.length) {
-    let room = Infinity;
+    // The free slots' waters joined softly into one band, which never reaches into the island's own round shape nor
+    // into the slots taken: the coast stays round where there is no plot (owner).
+    let band = Infinity;
     for (const s of L.free) {
       const dx = x - s.x;
       const dz = z - s.z;
-      const near = room + ROOM;
-      if (dx * dx + dz * dz < near * near) room = Math.sqrt(dx * dx + dz * dz) - ROOM;
+      // smin gives `band` itself when d is ROOM_JOIN or more above it: such a slot is skipped before its square root.
+      const far = band + ROOM_JOIN + ROOM;
+      if (dx * dx + dz * dz >= far * far) continue;
+      const r = Math.sqrt(dx * dx + dz * dz) - ROOM;
+      band = band === Infinity ? r : smin(band, r, ROOM_JOIN);
     }
-    whole = smin(whole, room, CARVE);
+    const sea = -smin(-band, -Math.max(-island.shape, won), HOLD_EDGE);
+    whole = smin(whole, sea, CARVE);
   }
   return { depth: whole, won, mine: clamp((won - isl) / 0.15 + 0.5) };
 }
