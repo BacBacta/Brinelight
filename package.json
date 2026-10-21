@@ -21,7 +21,8 @@
     "build": "npm run build -w client",
     "check": "npm run typecheck && npm test && npm run build",
     "e2e": "vitest run --config e2e/vitest.config.ts",
-    "balance": "tsx tools/balance/run.ts"
+    "balance": "tsx tools/balance/run.ts",
+    "study:depletion": "tsx tools/balance/depletion-run.ts"
   },
   "devDependencies": {
     "@types/node": "22.10.1",
