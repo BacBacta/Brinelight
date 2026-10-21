@@ -168,6 +168,23 @@ async function signOut(page: Page): Promise<void> {
 const queued = (c: City | null) => (c?.queue ?? []).map((j) => j.id).sort();
 /** Until no celebration is on screen: one would take the next tap (a tap closes it). */
 const calm = (page: Page) => expect.poll(() => page.locator(".celebration").count(), { timeout: 15_000, interval: 100 }).toBe(0);
+/** A tap on the screen as a finger gives it: a celebration closes, and lets it through to what is under it. */
+const tapAnywhere = (page: Page) => page.evaluate(() => document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })));
+/**
+ * While a celebration shows: the middle of the quest card's button (or of the card) is the card's, not the
+ * celebration's; and the gold text `above`, if given, stands wholly above the card.
+ */
+async function questReachable(page: Page, above: Locator | null): Promise<void> {
+  const quest = page.locator(".quest:not([hidden])");
+  expect(await quest.count()).toBe(1);
+  const target = (await quest.locator("button").first().boundingBox()) ?? (await quest.boundingBox())!;
+  const hit = await page.evaluate(({ x, y }) => !!document.elementFromPoint(x, y)?.closest(".quest"), { x: target.x + target.width / 2, y: target.y + target.height / 2 });
+  expect(hit).toBe(true);
+  if (above) {
+    const [card, text] = [(await quest.boundingBox())!, (await above.boundingBox())!];
+    expect(text.y + text.height).toBeLessThanOrEqual(card.y);
+  }
+}
 /** For a poll that waits on the network (an answer, a retry): longer than the default second. */
 const NET = { timeout: 15_000, interval: 100 };
 
@@ -646,6 +663,8 @@ describe("celebrations", () => {
           f.style.animation = "rise 1.2s ease-out -0.4s paused both";
         });
         await page.screenshot({ path: `e2e/.shots/shot-celebrate-work-${size.width}.png` });
+        // It rises above the quest card, and the card's button still answers under it (owner, on the S22).
+        await questReachable(page, float.locator(".cel-float"));
         await page.clock.runFor(1300);
         await float.waitFor({ state: "detached" });
         await page.clock.fastForward(600_000);
@@ -655,8 +674,9 @@ describe("celebrations", () => {
         await expect(full.textContent()).resolves.toContain("Lighthouse level 5");
         await page.waitForTimeout(600);
         await page.screenshot({ path: `e2e/.shots/shot-celebrate-lighthouse-${size.width}.png` });
-        // A tap closes it.
-        await full.click();
+        // The quest card answers under it too; a tap anywhere closes it.
+        await questReachable(page, null);
+        await tapAnywhere(page);
         await full.waitFor({ state: "detached" });
         // The Logbook takes the lead captain one level up.
         await page.locator('.nav button[data-v="captains"]').click();
@@ -1274,7 +1294,7 @@ describe("the look", () => {
       // The top bar and the line under it are hidden under the veil: the CI draws their rounded bars there in two ways
       // (week 6), and they have their own captures.
       await look(page, page.locator(".celebration.lighthouse"), `celebrate-lighthouse-${w}`, ".hud,.sub{visibility:hidden!important}");
-      await page.locator(".celebration.lighthouse").click();
+      await tapAnywhere(page);
       await page.locator('.nav button[data-v="captains"]').click();
       await page.locator('.sheet.captains [data-act="logbook"]').click();
       await page.clock.runFor(100);

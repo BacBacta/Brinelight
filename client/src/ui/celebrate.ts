@@ -97,6 +97,18 @@ export function createPlayQueue<T>(play: (item: T, done: () => void) => void) {
   };
 }
 
+/** How far above the quest card the gold text rises. */
+export const FLOAT_GAP = 8;
+
+/**
+ * Where the gold text of a work that ends stands: its bottom just above the quest card when the card shows (`quest`,
+ * its box on screen), else where the style puts it (null).
+ */
+export function floatBottom(viewportHeight: number, quest: { top: number; height: number } | null): number | null {
+  if (!quest || quest.height <= 0) return null;
+  return viewportHeight - quest.top + FLOAT_GAP;
+}
+
 /** The HTML of a celebration. */
 export function celebrationHtml(c: Celebration): string {
   const lines = c.lines.map((l) => `<p>${l}</p>`).join("");
@@ -115,13 +127,19 @@ export function createCelebrations(root: HTMLElement, onShow?: (c: Celebration) 
     el.innerHTML = celebrationHtml(c);
     root.appendChild(el);
     onShow?.(c);
+    if (c.kind === "float") {
+      const bottom = floatBottom(innerHeight, document.querySelector<HTMLElement>(".quest:not([hidden])")?.getBoundingClientRect() ?? null);
+      if (bottom !== null) el.style.bottom = `${bottom}px`;
+    }
     const end = () => {
       clearTimeout(timer);
+      document.removeEventListener("pointerdown", end, true);
       el.remove();
       done();
     };
     const timer = setTimeout(end, CELEBRATION_MS[c.kind]);
-    el.addEventListener("click", end);
+    // A tap anywhere closes it, and still reaches what it was meant for: the celebration never takes it.
+    document.addEventListener("pointerdown", end, true);
   });
   return {
     /** Celebrates these events; `away`: they ended while you were away (one card for several); `land`: the rafts show as land. */
