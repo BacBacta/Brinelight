@@ -19,6 +19,7 @@ import { AFLOAT, CAMP, HOUSE_WORTH, LAUNDRY_AT, MIN_HOUSES, eraOf, fabricPlan, h
 import { mergeFabric, readFabric, type FabricModels, type Merged } from "../src/city/fabric/models.js";
 import { createFabric } from "../src/city/fabric/index.js";
 import { SIZES } from "../src/city/fabric/sight.js";
+import { FIELD_SIZE, fieldTexels } from "../src/city/fabric/paint.js";
 import { IN_SIGHT, camera, inSight, shown } from "./sight.js";
 
 const NO_LAND: LandSlots = { won: [], flooded: [], filling: null, free: [] };
@@ -131,6 +132,22 @@ describe("the city fabric's plan", () => {
       const worth = plan.pieces.reduce((n, p) => n + (HOUSE_WORTH[p.model] ?? 0), 0);
       expect(plan.houses, `era ${era}`).toBe(63);
       expect(worth, `era ${era}`).toBeGreaterThanOrEqual(plan.houses);
+    }
+  });
+
+  it("the ground reads each plot's field in one texel: every field on its own plot's, its kind as the shader turns it back", () => {
+    for (let era = 1; era <= 5; era++) {
+      const plan = fabricPlan(WORST(era), landOf(WORST(era)));
+      const texels = fieldTexels(plan);
+      const set = [...texels].filter((v, i) => i % 4 === 0 && v > 0);
+      expect(set.length, `era ${era}`).toBe(plan.fields.length);
+      for (const f of plan.fields) {
+        const r = Math.round(f.z / 1.732);
+        const q = Math.round(f.x / 2 - r / 2);
+        expect(hexX(q, r)).toBeCloseTo(f.x, 3);
+        const v = texels[((r + 8) * FIELD_SIZE + q + 8) * 4]!;
+        expect(Math.floor((v / 255) * (255 / 60) + 0.5)).toBe({ garden: 1, orchard: 2, kelp: 3, park: 4 }[f.kind]);
+      }
     }
   });
 

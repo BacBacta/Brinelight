@@ -3,7 +3,7 @@
  * then paving), the yards of trodden earth around the houses, the square around the Lighthouse, and the fields on the
  * plots won (gardens in rows, orchards, kelp racks, parks). No mesh and no draw call: the island's terrain and the land
  * won read it in their own shader (paintGround), from a small texture of the streets and yards drawn when the city
- * changes, and a few numbers.
+ * changes, a tiny one of each plot's field (one read a pixel, however many fields), and a few numbers.
  */
 import * as THREE from "three";
 import type { FabricPlan, FieldKind } from "./plan.js";
@@ -11,9 +11,11 @@ import type { FabricPlan, FieldKind } from "./plan.js";
 /** The ground the texture covers: a square of 2 × SPAN around the Lighthouse, at SIZE pixels a side. */
 export const SPAN = 10;
 export const SIZE = 512;
-/** The most fields painted at once (the plots won: 39 at most). */
-export const MAX_FIELDS = 40;
 const FIELD_KIND: Record<FieldKind, number> = { garden: 1, orchard: 2, kelp: 3, park: 4 };
+/** The plots' fields, a texel each: plot (q, r) at (q + FIELD_AT, r + FIELD_AT), its kind times FIELD_STEP in red. */
+export const FIELD_SIZE = 16;
+const FIELD_AT = 8;
+const FIELD_STEP = 60;
 
 /** The streets' ground by era: dirt, then cobbles, then paving; and the square's. */
 export const STREET = ["#9A7448", "#A5835A", "#9C968B", "#9C968B", "#DDD5C4", "#DDD5C4"] as const;
@@ -23,6 +25,11 @@ export const streetWidth = (era: number): number => 0.18 + 0.04 * era;
 
 const empty = new THREE.DataTexture(new Uint8Array(4), 1, 1);
 empty.needsUpdate = true;
+const fieldData = new Uint8Array(FIELD_SIZE * FIELD_SIZE * 4);
+const fieldKinds = new THREE.DataTexture(fieldData, FIELD_SIZE, FIELD_SIZE);
+fieldKinds.magFilter = THREE.NearestFilter;
+fieldKinds.minFilter = THREE.NearestFilter;
+fieldKinds.needsUpdate = true;
 
 export const FABRIC_PAINT = {
   uFabricMap: { value: empty as THREE.Texture },
@@ -32,8 +39,7 @@ export const FABRIC_PAINT = {
   uYardCol: { value: new THREE.Color("#9A7448") },
   uSquare: { value: 0 },
   uSquareCol: { value: new THREE.Color(STREET[0]) },
-  uFields: { value: Array.from({ length: MAX_FIELDS }, () => new THREE.Vector4()) },
-  uFieldCount: { value: 0 },
+  uFieldKinds: { value: fieldKinds as THREE.Texture },
 };
 
 const VERTEX = /* glsl */ `
@@ -46,8 +52,7 @@ uniform vec3 uFabricBox;
 uniform vec3 uStreetCol, uYardCol, uSquareCol;
 uniform int uStreetKind;
 uniform float uSquare;
-uniform vec4 uFields[${MAX_FIELDS}];
-uniform int uFieldCount;
+uniform sampler2D uFieldKinds;
 `;
 const PAINT = /* glsl */ `
 {
@@ -65,17 +70,24 @@ const PAINT = /* glsl */ `
   if (uStreetKind == 1 && sin(p.x * 90.) * sin(p.y * 90.) > .6) st *= .82;
   fc = mix(fc, st, fm.r * (uStreetKind == 0 ? .85 : 1.));
   if (uStreetKind == 2) fc = mix(fc, st * .9, clamp(fm.r * (1. - fm.r) * 3., 0., 1.));
-  for (int i = 0; i < ${MAX_FIELDS}; i++) {
-    if (i >= uFieldCount) break;
-    vec4 f = uFields[i];
-    float r = length(p - f.xy) + .06 * sin(p.x * 3.1 + p.y * 2.3);
+  // The plot under the pixel (scene/island.ts, hexX and hexZ turned back, to the nearest middle), and its field.
+  float hr = p.y / 1.732;
+  vec3 cube = vec3(p.x * .5 - hr * .5, hr, 0.);
+  cube.z = -cube.x - cube.y;
+  vec3 rc = floor(cube + .5);
+  vec3 dc = abs(rc - cube);
+  if (dc.x > dc.y && dc.x > dc.z) rc.x = -rc.y - rc.z;
+  else if (dc.y > dc.z) rc.y = -rc.x - rc.z;
+  float kind = floor(texture2D(uFieldKinds, (rc.xy + ${FIELD_AT}.5) / ${FIELD_SIZE}.).r * ${(255 / FIELD_STEP).toFixed(4)} + .5);
+  if (kind > .5) {
+    vec2 f = vec2(2. * (rc.x + rc.y * .5), 1.732 * rc.y);
+    float r = length(p - f) + .06 * sin(p.x * 3.1 + p.y * 2.3);
     float inside = clamp((.8 - r) / .06, 0., 1.);
-    if (inside <= 0.) continue;
     vec3 c;
-    if (f.z < 1.5) c = sin((p.x - f.x) * 38.) > 0. ? vec3(.157, .27, .05) : vec3(.25, .144, .058);
-    else if (f.z < 2.5) c = vec3(.235, .42, .095);
-    else if (f.z < 3.5) c = sin((p.y - f.y) * 30.) > .3 ? vec3(.33, .26, .17) : vec3(.47, .39, .25);
-    else c = mix(vec3(.38, .63, .16), vec3(.72, .66, .55), clamp((.045 - abs(length(p - f.xy) - .45)) / .015, 0., 1.));
+    if (kind < 1.5) c = sin((p.x - f.x) * 38.) > 0. ? vec3(.157, .27, .05) : vec3(.25, .144, .058);
+    else if (kind < 2.5) c = vec3(.235, .42, .095);
+    else if (kind < 3.5) c = sin((p.y - f.y) * 30.) > .3 ? vec3(.33, .26, .17) : vec3(.47, .39, .25);
+    else c = mix(vec3(.38, .63, .16), vec3(.72, .66, .55), clamp((.045 - abs(length(p - f) - .45)) / .015, 0., 1.));
     fc = mix(fc, c, inside);
   }
   diffuseColor.rgb = fc;
@@ -133,7 +145,21 @@ export function usePaint(plan: FabricPlan, look: { yard: string }, map: THREE.Te
   FABRIC_PAINT.uYardCol.value.set(look.yard);
   FABRIC_PAINT.uSquare.value = plan.square;
   FABRIC_PAINT.uSquareCol.value.set(STREET[plan.era]!);
-  plan.fields.slice(0, MAX_FIELDS).forEach((f, i) => FABRIC_PAINT.uFields.value[i]!.set(f.x, f.z, FIELD_KIND[f.kind], 0));
-  FABRIC_PAINT.uFieldCount.value = Math.min(MAX_FIELDS, plan.fields.length);
+  fieldData.set(fieldTexels(plan));
+  fieldKinds.needsUpdate = true;
   if (map) FABRIC_PAINT.uFabricMap.value = map;
+}
+
+/** The plan's fields as the texels the ground reads: each field's kind on its plot's texel (red), nothing elsewhere. */
+export function fieldTexels(plan: Pick<FabricPlan, "fields">): Uint8Array {
+  const out = new Uint8Array(FIELD_SIZE * FIELD_SIZE * 4);
+  for (const f of plan.fields) {
+    // A plot's middle back to its (q, r): scene/island.ts.
+    const r = Math.round(f.z / 1.732);
+    const q = Math.round(f.x / 2 - r / 2);
+    const [u, v] = [q + FIELD_AT, r + FIELD_AT];
+    if (u < 0 || v < 0 || u >= FIELD_SIZE || v >= FIELD_SIZE) continue;
+    out[(v * FIELD_SIZE + u) * 4] = FIELD_KIND[f.kind] * FIELD_STEP;
+  }
+  return out;
 }
