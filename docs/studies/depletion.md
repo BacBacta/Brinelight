@@ -1,5 +1,13 @@
 # Study: the island runs out of breath
 
+> **Decision of 21 October 2026: not adopted.** No depletion setting enters the game, neither now nor after task 7; no value of this study does. The reasons:
+>
+> - the depletion bites only in the late game, where the game is already slowest (waiting for resources goes from 1.6 to 10 hours a day with the soft setting);
+> - the player who was away ends ahead of the one who plays;
+> - the sea is already necessary for oil.
+>
+> Instead of pushing (a poorer island), the game will pull: a richer sea. This page stays as the study's record; its pull request stays a draft and is not merged.
+
 **A study by simulation (owner, 21 October). Nothing in the game changes:** no rule of `shared/src/rules/`, no balance value, no code of the client or the server. Every speed and threshold below is a proposal to discuss; none enters the game without the owner's agreement on each value.
 
 The simulation is `tools/balance/depletion.ts`, beside the balance's simulator, and `npm run study:depletion` writes the tables and charts of this page (`tools/balance/depletion-run.ts`). It plays the balance's players (`tools/balance/simulate.ts`) with the rules of `shared/` as they are, over 730 days.
