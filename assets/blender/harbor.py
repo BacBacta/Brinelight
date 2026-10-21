@@ -12,8 +12,8 @@ lays from the plot's center:
 - Electricity (20–24): an office with big windows, an electric crane; lamps along the pier, a motor launch;
 - Modern (25–30): a concrete quay, a gantry crane, an office with a radar mast; a modern boat; at 30, gold on the boat.
 
-The pier goes from the coast to the first slot kept for it, on into the third, where it turns and the boat lies: always
-on the water, never on a raft's room (client/test/staged.test.ts).
+The pier leaves the shore from a step of the quay and goes out on its piles to the first slot kept for it, where it turns
+and the boat lies moored: always on the water past the shore, never on a raft's room (client/test/staged.test.ts).
 """
 import math
 
@@ -23,10 +23,17 @@ from stages import era_of
 
 # The quay: the plot's edge that faces the pier (back right), from one of its corners to the other.
 QUAY = ((0.86, -0.5), (0.0, -1.0))
-# The pier, from the plot's center: from its coast to the first slot kept for it (1, -3), straight on into the third
-# (2, -4), then a short arm across it, an L; the boat lies along the arm. The second slot (1, -4) stays open water.
-PIER = [(0.5, -0.86), (1.0, -1.732), (2.0, -3.464), (2.55, -3.464)]
-BOAT = (2.32, -3.12)
+# The pier, from the plot's center (owner, 21 October): from a step on the shore (the coast is 1.12 from the center that
+# way), straight out to the first slot kept for it (1, -3), then an arm to the left, toward the open water; the boat lies
+# along the arm, on its far side, moored to two bollards. Its deck is a little under the ground, on piles in the sea.
+PIER = [(0.475, -0.823), (1.0, -1.732), (0.394, -2.082)]
+ARM_MID = ((PIER[1][0] + PIER[2][0]) / 2, (PIER[1][1] + PIER[2][1]) / 2)
+BOLLARDS = [(PIER[1][0] + 0.06, PIER[1][1] - 0.1), (PIER[2][0] + 0.06, PIER[2][1] - 0.1)]
+BOAT_TURN = math.atan2(PIER[2][1] - PIER[1][1], PIER[2][0] - PIER[1][0])
+BOAT = (ARM_MID[0] + 0.5 * 0.27, ARM_MID[1] - 0.866 * 0.27)
+DECK_Y = -0.07
+# The city's sea after the style pass (client: cityLook.ts, SEA_RISE): the boat floats on it, under the deck.
+SEA = WATER + 0.2
 
 
 def quay(color, foot):
@@ -164,50 +171,92 @@ def base(s):
     return BUILD[era_of(s)](s)
 
 
+def along(d, across=0.0):
+    """A point of the boat's line: `d` along it from its middle, `across` toward its port side."""
+    c, s_ = math.cos(BOAT_TURN), math.sin(BOAT_TURN)
+    return BOAT[0] + d * c - across * s_, BOAT[1] + d * s_ + across * c
+
+
+def moorings(deck_y, rope="drift_light"):
+    """Two ropes from the arm's bollards down to the boat's bow and stern."""
+    out = []
+    for k, d in ((0, 0.2), (1, -0.2)):
+        bx, bz = BOLLARDS[k]
+        x, z = along(d)
+        out.append(rod((bx, deck_y + 0.05, bz), (x, SEA + 0.1, z), 0.006, rope, sides=4))
+    return out
+
+
+def bollards(deck_y, color):
+    return [cylinder(0.03, 0.07, (x, deck_y + 0.035, z), color, sides=8, bevel=0.004) for x, z in BOLLARDS]
+
+
+def landing(color, top=-0.02):
+    """Where the pier leaves the shore: a step of the quay, on the land, as high as the ground."""
+    (ax, az), (bx, bz) = PIER[0], PIER[1]
+    turn = math.atan2(bz - az, bx - ax)
+    return [box((0.3, 0.12, 0.36), (ax - math.cos(turn) * 0.05, top - 0.06, az - math.sin(turn) * 0.05), color, bevel=0.01, turn=-turn)]
+
+
 def pier_model(s):
-    """The pier and the boat of the stage's era, from the plot's center, on the water."""
+    """
+    The pier and the boat of the stage's era, from the plot's center (owner, 21 October): from a step on the shore,
+    straight out on its piles to the first slot kept for it, then an arm along which the era's boat lies moored.
+    """
     era = era_of(s)
+    deck = DECK_Y
     if era == "salvage":
-        p = []
-        for (ax, az), (bx, bz) in zip(PIER[:3], PIER[1:3]):
-            for t in (0.25, 0.75):
-                p.append(cylinder(0.07, 0.16, (ax + (bx - ax) * t, WATER + 0.06, az + (bz - az) * t), "navy" if t < 0.5 else "steel", sides=8, bevel=0, tilt=(math.radians(90), 0)))
-        p += pier(PIER[:3], 0.18, WATER + 0.17, "plank", piles="wood", step=0.6, pile_r=0.02)
-        p += hull(0.42, 0.16, 0.12, (BOAT[0], WATER, BOAT[1]), "wood", turn=0.1)
-        return p
+        p = landing("wood") + pier(PIER, 0.22, deck, "plank", piles="wood", step=0.25, pile_r=0.03)
+        p += bollards(deck, "wood")
+        p += hull(0.55, 0.21, 0.15, (BOAT[0], SEA, BOAT[1]), "wood", turn=BOAT_TURN)
+        return p + moorings(deck)
     if era == "colony":
-        p = pier(PIER[:3], 0.2, WATER + 0.2, "plank", piles="stone", step=0.45)
-        p += hull(0.5, 0.2, 0.14, (BOAT[0], WATER, BOAT[1]), "wood", turn=0.1)
-        p.append(cylinder(0.012, 0.5, (BOAT[0] + 0.02, WATER + 0.33, BOAT[1]), "wood", sides=4, bevel=0))
-        p.append(box((0.01, 0.3, 0.2), (BOAT[0] + 0.03, WATER + 0.36, BOAT[1] + 0.09), "cream", bevel=0, turn=0.1))
-        return p
+        p = landing("stone") + pier(PIER, 0.24, deck, "plank", piles="wood", step=0.25, pile_r=0.035)
+        p += bollards(deck, "stone_dark")
+        p += hull(0.65, 0.26, 0.18, (BOAT[0], SEA, BOAT[1]), "wood", turn=BOAT_TURN)
+        mx, mz = along(0.03)
+        p.append(cylinder(0.014, 0.62, (mx, SEA + 0.4, mz), "wood", sides=4, bevel=0))
+        sx, sz = along(-0.05, 0.0)
+        p.append(box((0.26, 0.38, 0.012), (sx, SEA + 0.42, sz), "cream", bevel=0, turn=-BOAT_TURN))
+        return p + moorings(deck)
     if era == "workshop":
-        p = pier(PIER, 0.24, WATER + 0.22, "stone_dark", piles="stone", step=0.4, pile_r=0.04)
-        p += hull(0.56, 0.22, 0.16, (BOAT[0], WATER, BOAT[1]), "navy", turn=0.1)
-        p.append(box((0.12, 0.12, 0.12), (BOAT[0] - 0.08, WATER + 0.17, BOAT[1]), "plank", bevel=0.008))
-        return p
+        p = landing("stone_dark") + pier(PIER, 0.26, deck, "stone_dark", piles="stone", step=0.3, pile_r=0.045)
+        p += bollards(deck, "dark")
+        p += hull(0.72, 0.28, 0.2, (BOAT[0], SEA, BOAT[1]), "navy", turn=BOAT_TURN)
+        wx, wz = along(-0.1)
+        p.append(box((0.16, 0.15, 0.16), (wx, SEA + 0.22, wz), "plank", bevel=0.008, turn=-BOAT_TURN))
+        return p + moorings(deck)
     if era == "industry":
-        p = pier(PIER, 0.24, WATER + 0.22, "steel", piles="steel", step=0.4)
-        p += hull(0.62, 0.22, 0.16, (BOAT[0], WATER, BOAT[1]), "navy", turn=0.1)
-        p.append(box((0.22, 0.1, 0.13), (BOAT[0] - 0.06, WATER + 0.16, BOAT[1]), "white", bevel=0.008))
-        p.append(cylinder(0.035, 0.16, (BOAT[0] + 0.02, WATER + 0.27, BOAT[1]), "dark", sides=8, bevel=0))
-        p.append(cylinder(0.037, 0.03, (BOAT[0] + 0.02, WATER + 0.31, BOAT[1]), "gold", sides=8, bevel=0))
-        return p
+        p = landing("stone_dark") + pier(PIER, 0.26, deck, "steel", piles="steel", step=0.3, pile_r=0.035)
+        p += bollards(deck, "dark")
+        p += hull(0.8, 0.28, 0.2, (BOAT[0], SEA, BOAT[1]), "navy", turn=BOAT_TURN)
+        hx, hz = along(-0.08)
+        p.append(box((0.28, 0.13, 0.17), (hx, SEA + 0.2, hz), "white", bevel=0.008, turn=-BOAT_TURN))
+        fx, fz = along(0.03)
+        p.append(cylinder(0.045, 0.2, (fx, SEA + 0.34, fz), "dark", sides=8, bevel=0))
+        p.append(cylinder(0.047, 0.04, (fx, SEA + 0.39, fz), "gold", sides=8, bevel=0))
+        return p + moorings(deck)
     if era == "electricity":
-        p = pier(PIER, 0.24, WATER + 0.22, "concrete", piles="steel", step=0.4)
-        for (x, z) in PIER[1:]:
-            p.append(cylinder(0.012, 0.3, (x + 0.08, WATER + 0.37, z + 0.06), "navy", sides=4, bevel=0))
-            p.append(sphere(0.03, (x + 0.08, WATER + 0.53, z + 0.06), "gold", subdivisions=1))
-        p += hull(0.58, 0.2, 0.14, (BOAT[0], WATER, BOAT[1]), "white", turn=0.1)
-        p.append(box((0.18, 0.09, 0.12), (BOAT[0] - 0.04, WATER + 0.14, BOAT[1]), "navy", bevel=0.01))
-        return p
-    p = pier(PIER, 0.26, WATER + 0.24, "concrete", piles="concrete", step=0.5, pile_r=0.04)
-    for (x, z) in PIER[1:]:
-        p.append(cylinder(0.025, 0.07, (x + 0.1, WATER + 0.3, z + 0.08), "dark", sides=6, bevel=0))
-    p += hull(0.66, 0.22, 0.16, (BOAT[0], WATER, BOAT[1]), "white", turn=0.1)
-    p.append(box((0.22, 0.1, 0.14), (BOAT[0] - 0.05, WATER + 0.16, BOAT[1]), "glass", bevel=0.01))
-    p.append(box((0.6, 0.02, 0.005), (BOAT[0], WATER + 0.03, BOAT[1] + 0.105), "gold" if s >= 30 else "navy", bevel=0, turn=-0.1))
-    return p
+        p = landing("concrete") + pier(PIER, 0.26, deck, "concrete", piles="steel", step=0.3, pile_r=0.035)
+        p += bollards(deck, "dark")
+        for x, z in (PIER[1], ARM_MID):
+            p.append(cylinder(0.012, 0.3, (x, deck + 0.15, z), "navy", sides=4, bevel=0))
+            p.append(sphere(0.03, (x, deck + 0.32, z), "gold", subdivisions=1))
+        p += hull(0.75, 0.26, 0.18, (BOAT[0], SEA, BOAT[1]), "white", turn=BOAT_TURN)
+        cx, cz = along(-0.05)
+        p.append(box((0.24, 0.12, 0.16), (cx, SEA + 0.18, cz), "navy", bevel=0.01, turn=-BOAT_TURN))
+        return p + moorings(deck)
+    p = landing("concrete") + pier(PIER, 0.28, deck, "concrete", piles="concrete", step=0.35, pile_r=0.045)
+    p += bollards(deck, "dark")
+    for x, z in (PIER[1], ARM_MID):
+        p.append(cylinder(0.012, 0.3, (x, deck + 0.15, z), "steel", sides=4, bevel=0))
+        p.append(sphere(0.03, (x, deck + 0.32, z), "gold", subdivisions=1))
+    p += hull(0.85, 0.28, 0.2, (BOAT[0], SEA, BOAT[1]), "white", turn=BOAT_TURN)
+    gx, gz = along(-0.06)
+    p.append(box((0.28, 0.13, 0.18), (gx, SEA + 0.2, gz), "glass", bevel=0.01, turn=-BOAT_TURN))
+    sx, sz = along(0.0, -0.145)
+    p.append(box((0.78, 0.025, 0.006), (sx, SEA + 0.04, sz), "gold" if s >= 30 else "navy", bevel=0, turn=-BOAT_TURN))
+    return p + moorings(deck)
 
 
 # Models laid with each stage's (the game puts them at the plot's center).

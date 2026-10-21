@@ -13,6 +13,7 @@ import { RAFT_FILL } from "../src/scene/coast.js";
 import { PIER_SLOTS } from "../src/scene/framing.js";
 import { SITE_PARTS, STAGES, extraName, isStaged, levelShape, radarAt, shownModels, stageName, stageOf, terrainName } from "../src/city/staged.js";
 import { ERA_PLOTS } from "../src/city/plots.js";
+import { SEA, islandDepth } from "../src/city/land/field.js";
 import { readGlb } from "./glb.js";
 
 const file = (name: string) => new URL(`../public/city/${name}.glb`, import.meta.url).pathname;
@@ -152,7 +153,8 @@ describe.runIf(isStaged("harbor"))("the Harbor's pier and boat lie on the water,
   for (let q = -2; q <= 2; q++) for (let r = -2; r <= 2; r++) if (Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)) <= 2) plots.push({ x: hexX(q, r), z: hexZ(r) });
   const pier = PIER_SLOTS.map(([q, r]) => ({ x: hexX(q, r), z: hexZ(r) }));
   const rafts = RAFT_SLOTS.map((s) => ({ x: hexX(s.q, s.r), z: hexZ(s.r) }));
-  const WATER = -0.42;
+  // The city's sea (land/field.ts, SEA: the models' -0.42 raised by the style pass's SEA_RISE).
+  const WATER = SEA;
 
   it("the Harbor stands on the coast, by the first slot kept for its pier", () => {
     expect(Math.max(Math.abs(hq), Math.abs(hr), Math.abs(hq + hr))).toBe(2);
@@ -171,11 +173,22 @@ describe.runIf(isStaged("harbor"))("the Harbor's pier and boat lie on the water,
         expect(onPlot || pier.some((c) => hexReach(p.x - c.x, p.z - c.z) <= 1.05), tag).toBe(true);
         for (const c of rafts) expect(hexReach(p.x - c.x, p.z - c.z), tag).toBeGreaterThan(RAFT_FILL);
         const onIsland = plots.some((c) => hexReach(p.x - c.x, p.z - c.z) <= 1.1);
-        // Past the coast: nothing higher than a deck and its boat over the water, and the boat sits in it.
-        if (!onIsland) expect(p.y, tag).toBeLessThan(0.4);
+        // Past the coast: nothing higher than a deck and its boat (a sailing boat's mast) over the water, and the boat sits in it.
+        if (!onIsland) expect(p.y, tag).toBeLessThan(0.6);
         if (!onIsland && p.y < WATER - 0.02) afloat = true;
       }
       expect(afloat, "a boat sits in the water").toBe(true);
+    });
+
+    it(`harbor-pier-${s}: leaves from the shore at the ground's height, out on piles that go into the sea (owner, 21 October)`, () => {
+      const points = drawn(`harbor-pier-${s}`, Infinity).map((p) => ({ x: p.x + at.x, y: p.y, z: p.z + at.z }));
+      // On land, by the coast: the step it leaves from, just under the ground.
+      const shore = points.filter((p) => islandDepth(p.x, p.z) > 0.01 && islandDepth(p.x, p.z) < 0.3);
+      expect(shore.length).toBeGreaterThan(0);
+      expect(Math.max(...shore.map((p) => p.y))).toBeGreaterThan(-0.1);
+      // Its piles: more than a few, down past the water's surface, past the coast.
+      const piles = points.filter((p) => islandDepth(p.x, p.z) < -0.05 && p.y < WATER - 0.1);
+      expect(new Set(piles.map((p) => `${p.x.toFixed(1)},${p.z.toFixed(1)}`)).size).toBeGreaterThanOrEqual(6);
     });
   }
 });

@@ -168,6 +168,25 @@ const HARBOR_COAST: [number, number, number, number][] = (() => {
   return out.sort((a, b) => Math.hypot(a[0] - hx, a[1] - hz) - Math.hypot(b[0] - hx, b[1] - hz));
 })();
 
+/** The Harbor's pier (assets/blender/harbor.py, PIER and BOAT, from its plot's middle): the port keeps clear of it. */
+const PIER_LINE: readonly (readonly [number, number])[] = [
+  [0.475, -0.823],
+  [1.0, -1.732],
+  [0.394, -2.082],
+  [0.832, -2.141],
+];
+const PIER_CLEAR = 0.7;
+const nearPier = (x: number, z: number): boolean => {
+  const [hq, hr] = ERA_PLOTS.harbor;
+  const [hx, hz] = [hexX(hq, hr), hexZ(hr)];
+  return PIER_LINE.some(([ax, az], i) => {
+    const [bx, bz] = PIER_LINE[Math.min(i + 1, PIER_LINE.length - 1)]!;
+    const [px, pz, dx, dz] = [x - hx - ax, z - hz - az, bx - ax, bz - az];
+    const t = Math.max(0, Math.min(1, (px * dx + pz * dz) / (dx * dx + dz * dz || 1)));
+    return Math.hypot(px - dx * t, pz - dz * t) < PIER_CLEAR;
+  });
+};
+
 /** The beach spots (land.json: the crabs'): the camp's rowboat is pulled up on the nearest. */
 const BEACH = (LAND as unknown as { beach: [number, number, number][] }).beach;
 
@@ -395,7 +414,7 @@ export function fabricPlan(state: PlayerState, L: LandSlots): FabricPlan {
   }
 
   // The port: a jetty, then quays, and boats moored, more with the eras (never on the land won).
-  const sea = HARBOR_COAST.filter(([x, z]) => landDepth(x, z, L).won < 0.05);
+  const sea = HARBOR_COAST.filter(([x, z, nx, nz]) => landDepth(x, z, L).won < 0.05 && !nearPier(x + nx * 0.3, z + nz * 0.3) && !nearPier(x, z));
   const quays = [0, 2, 4, 6, 8, 10][era]!;
   sea.slice(0, quays || 2).forEach(([x, z, nx, nz]) => {
     const turn = -(Math.atan2(nz, nx) + Math.PI / 2);

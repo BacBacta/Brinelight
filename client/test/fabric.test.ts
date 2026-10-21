@@ -22,6 +22,7 @@ import { SIZES } from "../src/city/fabric/sight.js";
 import { FIELD_SIZE, fieldTexels } from "../src/city/fabric/paint.js";
 import { PATH_HALF, fieldFrame, inField } from "../src/city/fabric/fields.js";
 import { IN_SIGHT, camera, inSight, shown } from "./sight.js";
+import { readGlb } from "./glb.js";
 
 const NO_LAND: LandSlots = { won: [], flooded: [], filling: null, free: [] };
 const models = new Map<number, FabricModels>();
@@ -181,6 +182,28 @@ describe("the city fabric's plan", () => {
       expect(Math.abs(x - w), `${name}'s width`).toBeLessThan(0.02);
       expect(Math.abs(z - d), `${name}'s depth`).toBeLessThan(0.02);
       expect(Math.abs(y - h), `${name}'s height`).toBeLessThan(0.02);
+    }
+  });
+
+  it("the port keeps clear of the Harbor's pier and its boat (assets/blender/harbor.py)", () => {
+    const [hq, hr] = ERA_PLOTS.harbor;
+    const at = { x: hexX(hq, hr), z: hexZ(hr) };
+    for (const [lh, rafts] of [...CITIES, [9, RAFT_SLOTS.length] as [number, number]]) {
+      const { scenes } = readGlb(new URL(`../public/city/harbor-pier-${[1, 5, 10, 15, 20, 25, 30].filter((s) => s <= lh).at(-1)}.glb`, import.meta.url).pathname);
+      const pier: { x: number; z: number }[] = [];
+      const root = Object.values(scenes)[0]!;
+      root.updateMatrixWorld(true);
+      root.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        const pos = mesh.geometry.getAttribute("position");
+        for (let i = 0; i < pos.count; i += 3) {
+          const v = new THREE.Vector3().fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld);
+          pier.push({ x: v.x + at.x, z: v.z + at.z });
+        }
+      });
+      for (const p of planOf(city(lh, rafts)).pieces.filter((p) => AFLOAT_OR_PORT.has(p.model) && p.model !== "rowboat"))
+        expect(Math.min(...pier.map((q) => Math.hypot(q.x - p.x, q.z - p.z))), `${p.model} at Lighthouse ${lh}`).toBeGreaterThan(0.3);
     }
   });
 
