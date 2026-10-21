@@ -893,6 +893,10 @@ The study (pull request #12, a draft not merged: `docs/studies/depletion.md` on 
 - **From Lighthouse 25 to Lighthouse 30: 195 days today** (an active player, 4 sessions a day, with the sea).
 - **The Fish Shoals and Wooded Isles are on the map but fleets cannot reach them yet.** Their amounts today (360 to 600) weigh too little in the late game. Making them harvestable, with amounts that follow the Lighthouse, is to be studied in this task as the main source of fish and wood in the middle and late game (the owner's choice: a richer sea rather than a poorer island).
 
+### The survivors never grow (owner, 21 October, found with the city fabric): an input of this task
+
+The survivors never grow in the rules: 8 from the start to the end (the top bar shows "8/10", then "8/62" at the Shelters 14). A real growth of the population is to be designed with the economy, in this task. No rule and no value change now: until then, the city fabric's houses (display only) follow the room the Shelters give (6 + 4 per level, two survivors to a house), not the survivors.
+
 ---
 
 ## Not this week
