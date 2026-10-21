@@ -6,6 +6,9 @@ import { layoutLabels, type LabelBox, type Rect } from "./overlap.js";
 import { formatTimeLeft } from "./format.js";
 import { possibleUpgrades, progress, suggestedUpgrades } from "./suggest.js";
 
+/** A building's level on its label; at work, the level being built too: "29 → 30" (owner). */
+export const levelText = (level: number, atWork: boolean): string => (atWork ? `${level} → ${level + 1}` : String(level));
+
 /** Level labels above the buildings, as in the prototype. */
 /** `heightOf` gives the height of a building's label above the ground, from its model and the levels (its tier, the Lighthouse's growth). */
 /** How long a building's full label stays after its upgrade ends, in milliseconds. */
@@ -92,7 +95,7 @@ export function createLabels(
           const name = BUILDINGS[id].name;
           L.el.innerHTML =
             (up ? '<span class="up">↑</span>' : "") +
-            (level === 0 && !job ? `<b class="new">＋<span class="nm"> ${name}</span></b>` : `<b><span class="nm">${name} </span><i>${level}</i></b>`) +
+            (level === 0 && !job ? `<b class="new">＋<span class="nm"> ${name}</span></b>` : `<b><span class="nm">${name} </span><i>${levelText(level, !!job)}</i></b>`) +
             (job ? '<span class="pb"><i></i></span><small class="tl"></small>' : "");
           L.bar = L.el.querySelector(".pb i");
           L.left = L.el.querySelector(".tl");

@@ -118,7 +118,7 @@ describe("the sheet of a raft slot", () => {
     expect(html.body).toContain(`<span>Rafts</span><span>0 / ${raftCap(4)}</span>`);
     expect(html.body).toContain('data-act="dock" aria-disabled="false"');
     const full = { ...lit(), rafts: Object.fromEntries(INNER.slice(1, raftCap(4) + 1).map((k) => [k, raft()])) };
-    expect(raftSheetHtml(full, INNER[0]!, 1)!.body).toContain('<p class="why">Upgrade the Lighthouse to moor more rafts</p>');
+    expect(raftSheetHtml(full, INNER[0]!, 1)!.body).toContain('<p class="why">Upgrade the Lighthouse to grow your city further</p>');
   });
 
   it("the slot the shipyard works on, then the moored raft and its sturdiness", () => {

@@ -20,6 +20,7 @@ import { createProfile } from "./account/profile.js";
 import { watchWallets } from "./account/wallets.js";
 import { createCity, type City } from "./city/index.js";
 import { demoAllowed, demoCity, demoWanted, memoryStore } from "./demo.js";
+import { LAND_NEWS, landNewsDue, landShown } from "./city/words.js";
 import { hasTerrain, isStaged, loadStage, shownModels, tallestHeight, terrainName } from "./city/staged.js";
 import { raftSlots, raftVariant } from "./city/rafts.js";
 import { hasVillage, villageShown } from "./city/village.js";
@@ -156,12 +157,18 @@ if (new URLSearchParams(location.search).has("rules")) {
   if (opened?.rejected) ui.toast("Your saved city could not be read. A copy was kept.", "bad", "!");
   if (demo) ui.toast("Demo city: nothing is saved", "", "i");
   const celebrations = createCelebrations(app, (c) => sound.play(c.sound));
+  /** Once per city (owner): its rafts became land, from the Lighthouse 5 with the look made in Blender. */
+  const tellLand = () => {
+    if (landNewsDue(store, owner(), Object.keys(state.rafts).length, landShown(state.buildings.lighthouse)))
+      celebrations.tell({ kind: "lighthouse", title: LAND_NEWS.title, lines: [LAND_NEWS.line], sound: "lighthouse" });
+  };
   /** The city has arrived: what ended since the last city seen on this device, if it is the same owner's, is told. */
   const arrive = () => {
     if (shownCity) return;
     if (onAccount && account) state = account.city()!;
-    celebrations.add(awayEvents(seen, owner(), state), true);
+    celebrations.add(awayEvents(seen, owner(), state), true, landShown(state.buildings.lighthouse));
     shownCity = state;
+    tellLand();
     remember();
   };
 
@@ -363,8 +370,9 @@ if (new URLSearchParams(location.search).has("rules")) {
     const changed = sig !== shown;
     shown = sig;
     if (changed && shownCity) {
-      celebrations.add(eventsBetween(shownCity, state));
+      celebrations.add(eventsBetween(shownCity, state), false, landShown(state.buildings.lighthouse));
       shownCity = state;
+      tellLand();
     }
     if (now - uiAt > 250 || changed) {
       uiAt = now;

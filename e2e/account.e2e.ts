@@ -531,7 +531,7 @@ describe("buildings on rafts", () => {
       await page.screenshot({ path: `e2e/.shots/shot-raft-free-${size.width}.png` });
       // aria-disabled: Playwright waits for an enabled button; a finger does not.
       await sheet.locator('[data-building="greenhouse"]').click({ force: true });
-      await page.locator(".toast", { hasText: "Each type is limited to 2 rafts" }).waitFor();
+      await page.locator(".toast", { hasText: "You can build each type twice" }).waitFor();
       await sheet.locator('[data-act="close"]').click();
 
       const second = slotAt(clear[1]!.slot, size.width, size.height, moored);
