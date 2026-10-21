@@ -1,0 +1,79 @@
+/**
+ * Demonstration cities, to measure the worst case on a phone (?demo=phare30, ?demo=phare15): a city at Lighthouse 30
+ * (or 15) with its rafts (one flooded, one more being filled), a building site and its survivors. Only in development and on the branch previews, never in
+ * production. Played from memory only: no request to the server, nothing written on the device, your city untouched.
+ */
+import { BUILDING_IDS, RAFT_BUILD_TIME, RAFT_SLOTS, newPlayerState, upgradeTime, type PlayerState } from "@brinelight/shared";
+import type { KeyValueStore } from "./state/index.js";
+import { previewHost } from "./preview.js";
+
+/**
+ * The demos (owner): their Lighthouse, their rafts (one more slot is being filled by the shipyard: phare30 takes all 39),
+ * their survivors. One raft is flooded (under 60): the land won shows its breach.
+ */
+export const DEMOS = {
+  phare30: { lighthouse: 30, rafts: 38, survivors: 106 },
+  phare15: { lighthouse: 15, rafts: 15, survivors: 46 },
+} as const;
+/** The raft of each demo that is flooded: a bare one, in front. */
+const FLOODED = 7;
+export type DemoName = keyof typeof DEMOS;
+
+/** The demo asked for in the address, when demos are allowed here; null otherwise (production: always null). */
+export function demoWanted(search: string, allowed: boolean): DemoName | null {
+  if (!allowed) return null;
+  const name = new URLSearchParams(search).get("demo");
+  return name !== null && Object.hasOwn(DEMOS, name) ? (name as DemoName) : null;
+}
+
+/** Demos are allowed in development (vite dev) and on a branch preview's build served at a preview's address. */
+export const demoAllowed = (env: { DEV: boolean; VITE_BRANCH_PREVIEW?: string }, hostname: string): boolean =>
+  env.DEV || (env.VITE_BRANCH_PREVIEW === "1" && previewHost(hostname));
+
+/** The rafts' buildings: each type on two rafts at its top level (the rules allow no more), the other rafts bare. */
+const RAFT_BUILDINGS = ["greenhouse", "smokehouse", "watchtower", "greenhouse", "smokehouse", "watchtower"] as const;
+
+/**
+ * Time left on the demo's building site. The Refinery's level 29 to 30 takes about 8.7 years by the rules (6 × 1.5^29
+ * prototype seconds): started long ago, two days and five hours are left.
+ */
+const SITE_LEFT = 53 * 3600;
+
+/** The demo's city at `clock` (seconds): every building at the Lighthouse's level, the Refinery's next level being built. */
+export function demoCity(name: DemoName, clock: number): PlayerState {
+  const d = DEMOS[name];
+  const base = newPlayerState(clock);
+  const buildings = Object.fromEntries(BUILDING_IDS.map((id) => [id, id === "refinery" ? d.lighthouse - 1 : d.lighthouse])) as PlayerState["buildings"];
+  // The slots nearest the island first, ring 3 then ring 4.
+  const order = [...RAFT_SLOTS].sort((a, b) => a.ring - b.ring || Math.atan2(a.q, a.r) - Math.atan2(b.q, b.r));
+  const slots = order.slice(0, d.rafts);
+  const rafts = Object.fromEntries(slots.map((s, i) => [s.key, { hp: i === FLOODED ? 40 : 100, building: RAFT_BUILDINGS[i] ?? null, level: RAFT_BUILDINGS[i] ? 3 : 0 }]));
+  const duration = upgradeTime("refinery", buildings.refinery);
+  // The shipyard fills the next slot: its landfill shows (a raft being built, by the rules).
+  const yard = { slot: order[d.rafts]!.key, kind: "raft" as const, left: RAFT_BUILD_TIME * 0.6, duration: RAFT_BUILD_TIME };
+  return { ...base, buildings, rafts, yard, survivors: d.survivors, queue: [{ id: "refinery", left: Math.min(SITE_LEFT, duration), duration }] };
+}
+
+/** ?demo=…&cycle: the land is built again every few seconds, to measure its hitch on a phone (owner, on the S22). */
+export const demoCycles = (search: string): boolean => new URLSearchParams(search).has("cycle");
+export const DEMO_CYCLE = 4000;
+
+/**
+ * The next step of the cycle: the demo's flooded raft mended (100) or flooded again (40), in turn. Display only: the
+ * demo lives in memory.
+ */
+export function demoCycle(state: PlayerState): PlayerState {
+  const key = Object.keys(state.rafts)[FLOODED];
+  const raft = key ? state.rafts[key] : undefined;
+  if (!key || !raft) return state;
+  return { ...state, rafts: { ...state.rafts, [key]: { ...raft, hp: raft.hp < 60 ? 100 : 40 } } };
+}
+
+/** A store in memory: the demo's city and the sounds' setting live there, and go with the page. */
+export function memoryStore(): KeyValueStore {
+  const items = new Map<string, string>();
+  return {
+    getItem: (key) => items.get(key) ?? null,
+    setItem: (key, value) => void items.set(key, String(value)),
+  };
+}

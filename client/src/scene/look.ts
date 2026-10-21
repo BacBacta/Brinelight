@@ -30,16 +30,24 @@ export type SeaMood = "calm" | "mist";
  */
 export const SUN_POSITION = { x: -14, y: 8.5, z: 9.5 } as const;
 
-/** The city: the camera stands 25 to 40 from the island, and the haze starts behind it. */
-export const CITY_CALM: Look = {
-  sky: ["#5FB8C9", "#BFE3DA", "#FFE6BE"],
-  fog: { color: "#DCE6DA", near: 32, far: 80 },
-  sun: { color: "#FFC98A", intensity: 3.6 },
-  hemi: { sky: "#FFE6C7", ground: "#4F6B3A", intensity: 0.85 },
+/**
+ * The city after the style pass (owner, after meeting 4: "a mix"): the warm, low sun of direction A,
+ * golden, from the left and a little behind the camera, its shadows long and a little blue (a cool, weaker light from
+ * the sky), A's contrast (less haze: no pastel veil), the sea's far side deeper but never night blue.
+ */
+export const CITY_STYLE: Look = {
+  sky: ["#4FAFC4", "#A9DCD6", "#FFE2B4"],
+  // A lighter, farther veil (owner, on the S22: it darkened the sea).
+  fog: { color: "#CFEAE4", near: 60, far: 160 },
+  sun: { color: "#FFB062", intensity: 4.6 },
+  hemi: { sky: "#A6C2EC", ground: "#66733F", intensity: 0.74 },
   veil: 0,
   beams: 0,
   lead: 0,
 };
+
+/** The screen's exposure with CITY_STYLE (1.05 before, renderer.ts). */
+export const STYLE_EXPOSURE = 1.15;
 
 /** The city in the Mist: a uniform grey-violet sky, fog eating the far sea, a dim, cold sun (art direction). */
 export const CITY_MIST: Look = {
@@ -90,8 +98,11 @@ export function mixLook(a: Look, b: Look, t: number): Look {
   };
 }
 
-/** The city's water: turquoise around the island and its rafts, navy from 30 m out, reflecting the calm sky. */
-export const CITY_WATER: WaterOptions = { size: 160, near: "#17A7CF", far: "#16508C", radii: [9, 30], sky: CITY_CALM.sky };
+/**
+ * The city's water after the style pass: B's light turquoise in the shallows along the shore and around
+ * the rafts, turning to a clear blue, and a deep blue offshore, lighter than before (no night blue).
+ */
+export const CITY_WATER_STYLE: WaterOptions = { size: 160, near: "#2AA3CB", far: "#2A8DBC", radii: [9, 34], shallows: ["#73E2D3", "#30B5C8"], sky: ["#5FB8C9", "#BFE3DA", "#FFE6BE"] };
 
 /** The sea map's water: one deep blue (its islands are small and many), reflecting the same sky. */
 export const SEA_WATER: WaterOptions = { size: 400, near: "#1E7DBE", far: "#1E7DBE", radii: [0, 1], sky: SEA_CALM.sky };

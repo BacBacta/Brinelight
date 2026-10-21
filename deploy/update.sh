@@ -19,8 +19,11 @@ docker compose up -d --build
 echo "4/4 Check"
 api_domain="$(grep -E '^API_DOMAIN=' .env | cut -d= -f2-)"
 for _ in $(seq 1 30); do
-  if curl -fsS "https://$api_domain/health" > /dev/null 2>&1; then
-    echo "Online: https://$api_domain/health answers."
+  # The new server is up when its database answers; /health also says how the backups are.
+  body="$(curl -sS "https://$api_domain/health" 2> /dev/null || true)"
+  if grep -q '"database":"ok"' <<< "$body"; then
+    echo "Online: https://$api_domain/health answers: $body"
+    if ! grep -q '"ok":true' <<< "$body"; then echo "Something else needs a look (the backups or the test restore): see docs/deploy.md, \"Solving problems\"." >&2; fi
     exit 0
   fi
   sleep 2

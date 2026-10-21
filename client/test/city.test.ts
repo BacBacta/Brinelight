@@ -1,29 +1,16 @@
 import { BUILDING_IDS } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
 import { formatDuration, formatTimeLeft } from "../src/city/format.js";
-import { PLOTS, buildingModel, hasTower } from "../src/city/plots.js";
+import { ERA_PLOTS } from "../src/city/plots.js";
 import { buildBadge } from "../src/city/queue.js";
 import { progress, suggestedUpgrades } from "../src/city/suggest.js";
 import { newPlayerState, upgrade } from "@brinelight/shared";
 
-describe("plots and models (prototype values)", () => {
-  it("every building has its own plot", () => {
-    const keys = BUILDING_IDS.map((id) => PLOTS[id].join(","));
+describe("plots", () => {
+  it("every building has its own plot, the Lighthouse in the middle", () => {
+    const keys = BUILDING_IDS.map((id) => ERA_PLOTS[id].join(","));
     expect(new Set(keys).size).toBe(9);
-    expect(PLOTS.lighthouse).toEqual([0, 0]);
-    expect(PLOTS.refinery).toEqual([1, -1]);
-  });
-
-  it("models from phare.glb, blue look", () => {
-    expect(buildingModel("refinery", 1)).toBe("building_blacksmith_blue");
-    expect(buildingModel("shelters", 3)).toBe("building_home_A_blue");
-    expect(buildingModel("shelters", 4)).toBe("building_home_B_blue");
-  });
-
-  it("a small tower from level 5, never on the Observatory", () => {
-    expect(hasTower("refinery", 4)).toBe(false);
-    expect(hasTower("refinery", 5)).toBe(true);
-    expect(hasTower("observatory", 9)).toBe(false);
+    expect(ERA_PLOTS.lighthouse).toEqual([0, 0]);
   });
 });
 
@@ -53,6 +40,15 @@ describe("formats", () => {
   it("durations on a sheet", () => {
     expect(formatDuration(3240)).toBe("54 min");
     expect(formatDuration(7800)).toBe("2 h 10 min");
+  });
+
+  it("from 48 hours on, in days and hours (owner, on the demo's Refinery 29 to 30: 46020 h)", () => {
+    expect(formatTimeLeft(47 * 3600 + 59 * 60)).toBe("47 h 59");
+    expect(formatTimeLeft(48 * 3600)).toBe("2 d 00 h");
+    expect(formatTimeLeft(3 * 86400 + 4 * 3600 + 30 * 60)).toBe("3 d 04 h");
+    expect(formatTimeLeft(46020 * 3600 + 15 * 60)).toBe("1917 d 12 h");
+    expect(formatDuration(47 * 3600 + 59 * 60)).toBe("47 h 59 min");
+    expect(formatDuration(43.4 * 86400)).toBe("43 d 09 h");
   });
 
   it("a duration sped up by DEV_SPEED (60) is shown in seconds", () => {

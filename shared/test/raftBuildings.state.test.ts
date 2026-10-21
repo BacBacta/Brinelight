@@ -85,11 +85,11 @@ describe("putting a building on a raft", () => {
     const s = carrying(carrying(moored(), A, "greenhouse", 1), B, "greenhouse", 2);
     const busy = ok(dockRaft({ ...s, rafts: { [A]: s.rafts[A]!, [B]: s.rafts[B]! } }, C));
     const broke = { ...busy, stock: { oil: 0, fish: 0, wood: 0, rope: 0 } };
-    expect(installOnRaft(broke, C, "greenhouse")).toEqual({ ok: false, reason: "There is no raft here" });
-    expect(installOnRaft(broke, A, "smokehouse")).toEqual({ ok: false, reason: "This raft already has a building" });
+    expect(installOnRaft(broke, C, "greenhouse")).toEqual({ ok: false, reason: "There is nothing here yet" });
+    expect(installOnRaft(broke, A, "smokehouse")).toEqual({ ok: false, reason: "There is already a building here" });
     const withFree = { ...broke, rafts: { ...broke.rafts, [D]: { ...free } } };
-    expect(installOnRaft(withFree, D, "greenhouse")).toEqual({ ok: false, reason: "Each type is limited to 2 rafts" });
-    expect(installOnRaft(withFree, D, "smokehouse")).toEqual({ ok: false, reason: "The shipyard is busy" });
+    expect(installOnRaft(withFree, D, "greenhouse")).toEqual({ ok: false, reason: "You can build each type twice" });
+    expect(installOnRaft(withFree, D, "smokehouse")).toEqual({ ok: false, reason: "Your builders on the shore are busy" });
     expect(installOnRaft({ ...withFree, yard: null }, D, "smokehouse")).toEqual({ ok: false, reason: "Not enough resources" });
     expect(installOnRaft({ ...withFree, yard: null, stock: moored().stock }, D, "smokehouse").ok).toBe(true);
   });
@@ -97,7 +97,7 @@ describe("putting a building on a raft", () => {
   it("a building being put on a raft counts as a copy", () => {
     const one = ok(installOnRaft(carrying(moored(), A, "watchtower", 1), B, "watchtower"));
     const done = advance(one, RAFT_INSTALL_TIME);
-    expect(installOnRaft(done, C, "watchtower")).toEqual({ ok: false, reason: "Each type is limited to 2 rafts" });
+    expect(installOnRaft(done, C, "watchtower")).toEqual({ ok: false, reason: "You can build each type twice" });
     expect(installOnRaft(done, C, "smokehouse").ok).toBe(true);
   });
 
@@ -125,20 +125,20 @@ describe("upgrading a building on a raft", () => {
     const s = carrying(carrying(moored(), A, "greenhouse", 3), B, "greenhouse", 1);
     const busy = { ...ok(installOnRaft(s, C, "watchtower")), stock: { oil: 0, fish: 0, wood: 0, rope: 0 } };
     const gone = { ...busy, rafts: { [A]: busy.rafts[A]!, [B]: busy.rafts[B]!, [C]: busy.rafts[C]! } };
-    expect(upgradeRaft(gone, D)).toEqual({ ok: false, reason: "There is no raft here" });
-    expect(upgradeRaft(busy, D)).toEqual({ ok: false, reason: "Put a building on this raft first" });
+    expect(upgradeRaft(gone, D)).toEqual({ ok: false, reason: "There is nothing here yet" });
+    expect(upgradeRaft(busy, D)).toEqual({ ok: false, reason: "Put a building here first" });
     expect(upgradeRaft(busy, A)).toEqual({ ok: false, reason: "Max level" });
-    expect(upgradeRaft(busy, B)).toEqual({ ok: false, reason: "The shipyard is busy" });
+    expect(upgradeRaft(busy, B)).toEqual({ ok: false, reason: "Your builders on the shore are busy" });
     expect(upgradeRaft({ ...busy, yard: null }, B)).toEqual({ ok: false, reason: "Not enough resources" });
   });
 
   it("one work at a time at the shipyard, new rafts included", () => {
     const s = carrying(moored(), A, "greenhouse", 1);
     const up = ok(upgradeRaft(s, A));
-    expect(dockRaft({ ...up, buildings: { ...up.buildings, lighthouse: 8 } }, INNER[5]!)).toEqual({ ok: false, reason: "The shipyard is busy" });
-    expect(installOnRaft(up, B, "smokehouse")).toEqual({ ok: false, reason: "The shipyard is busy" });
+    expect(dockRaft({ ...up, buildings: { ...up.buildings, lighthouse: 8 } }, INNER[5]!)).toEqual({ ok: false, reason: "Your builders on the shore are busy" });
+    expect(installOnRaft(up, B, "smokehouse")).toEqual({ ok: false, reason: "Your builders on the shore are busy" });
     const raft = ok(dockRaft({ ...s, rafts: { [A]: s.rafts[A]! } }, B));
-    expect(upgradeRaft(raft, A)).toEqual({ ok: false, reason: "The shipyard is busy" });
+    expect(upgradeRaft(raft, A)).toEqual({ ok: false, reason: "Your builders on the shore are busy" });
   });
 
   it("each level adds 90 to your Power, as the sheet says", () => {

@@ -8,6 +8,7 @@ import { BUILDINGS, CAPTAINS, RAFT_BUILDINGS, TECHS, trainingName, type GameEven
 import { esc } from "./components.js";
 import { captainPortrait } from "./portraits.js";
 import type { SoundId } from "./sound.js";
+import { raftWords } from "../city/words.js";
 
 export type CelebrationKind = "float" | "lighthouse" | "captain" | "away";
 export type Celebration = { kind: CelebrationKind; title: string; lines: string[]; sound: SoundId; portrait?: string };
@@ -17,17 +18,18 @@ export const CELEBRATION_MS: Record<CelebrationKind, number> = { float: 1200, li
 /** The lines of the "away" card; what is beyond is counted. */
 export const AWAY_LINES = 5;
 
-/** What an event says, in a few words. */
-export function eventText(e: GameEvent): string {
+/** What an event says, in a few words; `land`: the rafts show as land (words.ts). */
+export function eventText(e: GameEvent, land = false): string {
+  const w = raftWords(land);
   switch (e.kind) {
     case "building":
       return `${BUILDINGS[e.building].name} level ${e.level}`;
     case "research":
       return `${TECHS[e.tech].name} level ${e.level}`;
     case "raft":
-      return "A new raft is moored";
+      return w.newOne;
     case "repaired":
-      return e.count === 1 ? "A raft repaired" : `${e.count} rafts repaired`;
+      return w.mended(e.count);
     case "raftBuilding":
       return e.level === 1 ? `${RAFT_BUILDINGS[e.building].name} built` : `${RAFT_BUILDINGS[e.building].name} level ${e.level}`;
     case "troops":
@@ -42,26 +44,26 @@ export function eventText(e: GameEvent): string {
       return `${e.count === 1 ? "You held the Mist" : `You held ${e.count} Mists`} · +${e.pearls} Pearls`;
     case "mistMissed": {
       const when = e.count === 1 ? "in the Mist" : `in ${e.count} Mists`;
-      return e.rafts > 0 ? `Your Lighthouse went dark ${when} · ${e.rafts} ${e.rafts === 1 ? "raft" : "rafts"} damaged` : `Your Lighthouse went dark ${when}`;
+      return e.rafts > 0 ? `Your Lighthouse went dark ${when} · ${w.damaged(e.rafts)}` : `Your Lighthouse went dark ${when}`;
     }
   }
 }
 
 /** The celebration of one event. */
-export function celebrationOf(e: GameEvent): Celebration {
-  if (e.kind === "building" && e.building === "lighthouse") return { kind: "lighthouse", title: eventText(e), lines: ["Your light reaches farther."], sound: "lighthouse" };
-  if (e.kind === "captain") return { kind: "captain", title: eventText(e), lines: [], sound: "captain", portrait: captainPortrait(e.captain, 512) };
+export function celebrationOf(e: GameEvent, land = false): Celebration {
+  if (e.kind === "building" && e.building === "lighthouse") return { kind: "lighthouse", title: eventText(e, land), lines: ["Your light reaches farther."], sound: "lighthouse" };
+  if (e.kind === "captain") return { kind: "captain", title: eventText(e, land), lines: [], sound: "captain", portrait: captainPortrait(e.captain, 512) };
   const sound = e.kind === "troops" || e.kind === "veterans" ? "troops" : e.kind === "mistMissed" ? "refused" : "done";
-  return { kind: "float", title: eventText(e), lines: [], sound };
+  return { kind: "float", title: eventText(e, land), lines: [], sound };
 }
 
 /**
  * The celebrations of some events. While you were away, several are told on one card; a single one is celebrated as
  * usual.
  */
-export function celebrationsFor(events: readonly GameEvent[], away = false): Celebration[] {
-  if (!away || events.length < 2) return events.map(celebrationOf);
-  const lines = events.slice(0, AWAY_LINES).map(eventText);
+export function celebrationsFor(events: readonly GameEvent[], away = false, land = false): Celebration[] {
+  if (!away || events.length < 2) return events.map((e) => celebrationOf(e, land));
+  const lines = events.slice(0, AWAY_LINES).map((e) => eventText(e, land));
   if (events.length > AWAY_LINES) lines.push(`And ${events.length - AWAY_LINES} more`);
   return [{ kind: "away", title: "While you were away", lines, sound: "away" }];
 }
@@ -95,6 +97,21 @@ export function createPlayQueue<T>(play: (item: T, done: () => void) => void) {
   };
 }
 
+/** Only the Lighthouse's full screen takes a tap (it hides what the tap would reach); the others let it through. */
+export const takesTap = (kind: CelebrationKind): boolean => kind === "lighthouse";
+
+/** How far above the quest card the gold text rises. */
+export const FLOAT_GAP = 8;
+
+/**
+ * Where the gold text of a work that ends stands: its bottom just above the quest card when the card shows (`quest`,
+ * its box on screen), else where the style puts it (null).
+ */
+export function floatBottom(viewportHeight: number, quest: { top: number; height: number } | null): number | null {
+  if (!quest || quest.height <= 0) return null;
+  return viewportHeight - quest.top + FLOAT_GAP;
+}
+
 /** The HTML of a celebration. */
 export function celebrationHtml(c: Celebration): string {
   const lines = c.lines.map((l) => `<p>${l}</p>`).join("");
@@ -113,18 +130,33 @@ export function createCelebrations(root: HTMLElement, onShow?: (c: Celebration) 
     el.innerHTML = celebrationHtml(c);
     root.appendChild(el);
     onShow?.(c);
+    if (c.kind === "float") {
+      const bottom = floatBottom(innerHeight, document.querySelector<HTMLElement>(".quest:not([hidden])")?.getBoundingClientRect() ?? null);
+      if (bottom !== null) el.style.bottom = `${bottom}px`;
+    }
     const end = () => {
       clearTimeout(timer);
+      document.removeEventListener("pointerdown", end, true);
       el.remove();
       done();
     };
     const timer = setTimeout(end, CELEBRATION_MS[c.kind]);
-    el.addEventListener("click", end);
+    if (takesTap(c.kind)) {
+      // The full screen hides what a tap would reach: its first tap closes it, and goes no further.
+      el.addEventListener("click", end);
+    } else {
+      // A tap anywhere closes it, and still reaches what it was meant for: the celebration never takes it.
+      document.addEventListener("pointerdown", end, true);
+    }
   });
   return {
-    /** Celebrates these events; `away`: they ended while you were away (one card for several). */
-    add(events: readonly GameEvent[], away = false) {
-      queue.add(celebrationsFor(events, away));
+    /** Celebrates these events; `away`: they ended while you were away (one card for several); `land`: the rafts show as land. */
+    add(events: readonly GameEvent[], away = false, land = false) {
+      queue.add(celebrationsFor(events, away, land));
+    },
+    /** One celebration made here (the rafts becoming land). */
+    tell(c: Celebration) {
+      queue.add([c]);
     },
     get playing(): boolean {
       return queue.playing;

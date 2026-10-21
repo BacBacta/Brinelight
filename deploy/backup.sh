@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Nightly backup of the database (run by the brinelight-backup timer, see docs/deploy.md).
 # Writes /var/backups/brinelight/brinelight-<date>.dump and keeps the last 7 days.
+# On success, writes the time in /var/lib/brinelight/status/backup: the game server reads it (read-only) for /health.
 set -euo pipefail
 
 DEPLOY_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/brinelight}"
+STATUS_DIR="${STATUS_DIR:-/var/lib/brinelight/status}"
 KEEP_DAYS=7
 
 mkdir -p "$BACKUP_DIR"
@@ -34,5 +36,12 @@ trap - EXIT
 
 # Keep the last 7 days: delete dumps 7 days old or more.
 find "$BACKUP_DIR" -maxdepth 1 -name 'brinelight-*.dump' -mtime +$((KEEP_DAYS - 1)) -delete
+
+# The time of this success, for /health: only a number, never the dump. Readable by the server's container.
+mkdir -p "$STATUS_DIR"
+chmod 755 "$STATUS_DIR"
+date -u +%s > "$STATUS_DIR/.backup.part"
+chmod 644 "$STATUS_DIR/.backup.part"
+mv "$STATUS_DIR/.backup.part" "$STATUS_DIR/backup"
 
 echo "Backup written: $BACKUP_DIR/$name ($(du -h "$BACKUP_DIR/$name" | cut -f1))"

@@ -48,12 +48,13 @@ export function seaMood(state: PlayerState, preview = false): SeaMood {
   return preview || mistAt(state.clock).on ? "mist" : "calm";
 }
 
-/** A time from now, rounded up to the minute: "52 min", "3 h 05", "99+ h". */
+/** A time from now, rounded up to the minute: "52 min", "3 h 05", then "3 d 04 h" from 48 hours. */
 export function inMinutes(seconds: number): string {
   const minutes = Math.max(1, Math.ceil(seconds / 60));
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return h >= 100 ? "99+ h" : h > 0 ? `${h} h ${String(m).padStart(2, "0")}` : `${m} min`;
+  if (minutes >= 48 * 60) return `${Math.floor(h / 24)} d ${String(h % 24).padStart(2, "0")} h`;
+  return h > 0 ? `${h} h ${String(m).padStart(2, "0")}` : `${m} min`;
 }
 
 /**

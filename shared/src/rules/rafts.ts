@@ -66,10 +66,10 @@ export function raftBuildingCost(id: RaftBuildingId, level: number): Cost {
 export function canAddRaft(ctx: { rafts: Rafts; lighthouse: number; slot: string; stock: Stock; yardBusy: boolean }): Check {
   const slot = RAFT_SLOTS.find((s) => s.key === ctx.slot);
   if (!slot) return refuse("Unknown slot");
-  if (ctx.rafts[ctx.slot]) return refuse("A raft is already moored here");
+  if (ctx.rafts[ctx.slot]) return refuse("This spot is taken");
   if (!slotOpen(slot.ring, ctx.lighthouse)) return refuse("The Lighthouse's light doesn't reach this far yet");
-  if (Object.keys(ctx.rafts).length >= raftCap(ctx.lighthouse)) return refuse("Upgrade the Lighthouse to moor more rafts");
-  if (ctx.yardBusy) return refuse("The shipyard is busy");
+  if (Object.keys(ctx.rafts).length >= raftCap(ctx.lighthouse)) return refuse("Upgrade the Lighthouse to grow your city further");
+  if (ctx.yardBusy) return refuse("Your builders on the shore are busy");
   if (!canPay(ctx.stock, raftCost(Object.keys(ctx.rafts).length))) return refuse("Not enough resources");
   return OK;
 }
@@ -151,10 +151,10 @@ export function raftBuildingCopies(id: RaftBuildingId, rafts: Rafts, yard: YardJ
 /** Can you put this building on the raft of this slot now? The refusals keep the prototype's words where it had some. */
 export function canInstall(id: RaftBuildingId, ctx: { rafts: Rafts; slot: string; stock: Stock; yard: YardJob | null }): Check {
   const raft = ctx.rafts[ctx.slot];
-  if (!raft) return refuse("There is no raft here");
-  if (raft.building) return refuse("This raft already has a building");
-  if (raftBuildingCopies(id, ctx.rafts, ctx.yard) >= RAFT_BUILDING_MAX_COPIES) return refuse(`Each type is limited to ${RAFT_BUILDING_MAX_COPIES} rafts`);
-  if (ctx.yard) return refuse("The shipyard is busy");
+  if (!raft) return refuse("There is nothing here yet");
+  if (raft.building) return refuse("There is already a building here");
+  if (raftBuildingCopies(id, ctx.rafts, ctx.yard) >= RAFT_BUILDING_MAX_COPIES) return refuse(`You can build each type ${RAFT_BUILDING_MAX_COPIES === 2 ? "twice" : `${RAFT_BUILDING_MAX_COPIES} times`}`);
+  if (ctx.yard) return refuse("Your builders on the shore are busy");
   if (!canPay(ctx.stock, raftBuildingCost(id, 0))) return refuse("Not enough resources");
   return OK;
 }
@@ -173,11 +173,11 @@ export function startInstall(id: RaftBuildingId, ctx: { rafts: Rafts; slot: stri
 /** Can you take the building on this raft one level up now? */
 export function canUpgradeRaft(ctx: { rafts: Rafts; slot: string; stock: Stock; yard: YardJob | null }): Check {
   const raft = ctx.rafts[ctx.slot];
-  if (!raft) return refuse("There is no raft here");
-  if (!raft.building) return refuse("Put a building on this raft first");
+  if (!raft) return refuse("There is nothing here yet");
+  if (!raft.building) return refuse("Put a building here first");
   if (raft.level >= RAFT_BUILDING_MAX_LEVEL) return refuse("Max level");
-  if (raft.hp < RAFT_DAMAGED_BELOW) return refuse("Repair this raft first");
-  if (ctx.yard) return refuse("The shipyard is busy");
+  if (raft.hp < RAFT_DAMAGED_BELOW) return refuse("Mend this first");
+  if (ctx.yard) return refuse("Your builders on the shore are busy");
   if (!canPay(ctx.stock, raftBuildingCost(raft.building, raft.level))) return refuse("Not enough resources");
   return OK;
 }
@@ -193,8 +193,8 @@ export function startRaftUpgrade(ctx: { rafts: Rafts; slot: string; stock: Stock
 
 /** Can you repair your rafts now? */
 export function canRepair(ctx: { rafts: Rafts; stock: Stock; yard: YardJob | null }): Check {
-  if (damagedRafts(ctx.rafts).length === 0) return refuse("Your rafts are in good shape");
-  if (ctx.yard) return refuse("The shipyard is busy");
+  if (damagedRafts(ctx.rafts).length === 0) return refuse("Nothing needs mending");
+  if (ctx.yard) return refuse("Your builders on the shore are busy");
   if (!canPay(ctx.stock, repairCost(ctx.rafts))) return refuse("Not enough resources");
   return OK;
 }

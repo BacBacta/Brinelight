@@ -75,6 +75,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
       - run: shellcheck deploy/*.sh
       - name: Start the stack
         working-directory: deploy
@@ -89,14 +94,33 @@ jobs:
       - name: Check it
         working-directory: deploy
         run: |
-          curl -fsSk https://localhost/health
+          # /health's status code and answer, on one line.
+          health() { code="$(curl -sSk -o "$RUNNER_TEMP/health.json" -w '%{http_code}' https://localhost/health)"; echo "$code $(cat "$RUNNER_TEMP/health.json")"; }
+          expect() { out="$(health)"; echo "$out"; grep -Eq "$1" <<< "$out"; }
+          # Before the first backup: the database answers, and /health says the backup is missing.
+          expect '^503 .*"database":"ok".*"backup":"none"'
           # The database and the game server are never reachable from outside.
           for port in 5432 8787; do
             if (exec 3<>/dev/tcp/127.0.0.1/$port) 2>/dev/null; then echo "Port $port is open, it must not be"; exit 1; fi
           done
-          # A backup, then a test restore of it.
-          BACKUP_DIR="$RUNNER_TEMP/backups" sudo -E ./backup.sh
-          BACKUP_DIR="$RUNNER_TEMP/backups" sudo -E ./restore.sh test
+          # The nightly backup and the weekly test restore, installed as on the server, each started once by hand.
+          sudo ./install-backup.sh
+          sudo systemctl start brinelight-backup.service
+          expect '^200 .*"database":"ok","backup":"ok","restore":"none"'
+          sudo systemctl start brinelight-restore-test.service
+          expect '^200 .*"restore":"ok"'
+          # The database stopped: 503, database down; started again: all well.
+          docker compose stop db
+          expect '^503 .*"database":"down"'
+          docker compose start db
+          for _ in $(seq 1 30); do if health | grep -q '^200 '; then break; fi; sleep 2; done
+          expect '^200 .*"ok":true'
+      - name: Load test (20 players for 30 seconds; the real one runs on the server, docs/perf.md)
+        working-directory: deploy
+        run: |
+          # Caddy's local certificate, trusted for this run only.
+          docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt "$RUNNER_TEMP/caddy-root.crt"
+          NODE_EXTRA_CA_CERTS="$RUNNER_TEMP/caddy-root.crt" npm run load -- --url https://localhost --origin https://play.example.test --stages 20 --stage-seconds 30 --stats
       - if: failure()
         working-directory: deploy
         run: docker compose logs --tail 100

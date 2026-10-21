@@ -91,7 +91,7 @@ describe("rafts", () => {
 
   it("refuses a raft when the Lighthouse is too low", () => {
     const r = canAddRaft({ rafts: {}, lighthouse: 3, slot: "-3,0", stock: rich, yardBusy: false });
-    expect(r).toEqual({ ok: false, reason: "Upgrade the Lighthouse to moor more rafts" });
+    expect(r).toEqual({ ok: false, reason: "Upgrade the Lighthouse to grow your city further" });
   });
 
   it("refuses a slot that is taken or unknown", () => {

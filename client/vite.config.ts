@@ -1,7 +1,10 @@
 import { defineConfig } from "vite";
+import { previewBuild } from "./src/preview.js";
 
 export default defineConfig({
   server: { port: 5173 },
+  // A branch preview's build (Cloudflare Pages, not main): ?demo works there (src/demo.ts), never in production.
+  define: { "import.meta.env.VITE_BRANCH_PREVIEW": JSON.stringify(previewBuild(process.env) ? "1" : "") },
   build: {
     outDir: "dist",
     target: "es2022",

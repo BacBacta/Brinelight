@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { newPlayerState, sail } from "@brinelight/shared";
 import { NAV_ITEMS } from "../src/ui/nav.js";
 import { MAX_TOASTS, keepToasts } from "../src/ui/toast.js";
-import { FULL_AT, cityPower, fillRatio, longAmount, mistPreview, mistText, rateText, seaMood, shortAmount, survivorsText } from "../src/ui/values.js";
+import { FULL_AT, cityPower, fillRatio, inMinutes, longAmount, mistPreview, mistText, rateText, seaMood, shortAmount, survivorsText } from "../src/ui/values.js";
 
 describe("amounts", () => {
   it("short amounts for the pills, as in the prototype", () => {
@@ -119,5 +119,15 @@ describe("a number that rolls", () => {
     // Halfway in time, more than halfway in value.
     expect(rolled(1000, 400, ROLL_MS / 2)).toBeLessThan(700);
     expect(rolled(0, 100, -5)).toBe(0);
+  });
+});
+
+describe("a time from now", () => {
+  it("in minutes, then hours, then days and hours from 48 hours on (no more \"99+ h\")", () => {
+    expect(inMinutes(52 * 60)).toBe("52 min");
+    expect(inMinutes(3 * 3600 + 5 * 60)).toBe("3 h 05");
+    expect(inMinutes(47 * 3600 + 59 * 60)).toBe("47 h 59");
+    expect(inMinutes(48 * 3600)).toBe("2 d 00 h");
+    expect(inMinutes(120 * 3600)).toBe("5 d 00 h");
   });
 });
