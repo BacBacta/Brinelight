@@ -4,12 +4,14 @@ Goal of week 2 (task 6): **30 FPS or more on the low-end Android test phone**, i
 
 ## Tools in the game
 
-- `?fps` in the URL shows a small counter in the bottom left corner, just above the bottom menu, refreshed every second:
+- `?fps` in the URL shows a small counter at the top center, under the top bar, over everything and never in the way of a tap, refreshed every second:
   - FPS: the average over the last second;
   - min: the lowest one-second rate of the last 10 seconds;
   - the quality step (`0`, `1` or `2`), `auto` or `forced`;
   - the view (City or Sea);
   - the draw calls and triangles of the last frame (`renderer.info`).
+  - the longest frame of the last 10 seconds (a hitch is one frame much longer than the others);
+  - from the Lighthouse 5, "Land built in X ms aside, shown in Y ms": the land's last rebuild, X in its worker (the display goes on, the old land shown) and Y on the display's thread to put the new one in place (it is built again only when a slot or the era changes).
 - The minimum ignores the 5 seconds after the 3D models load, and starts over after a change of view or a return to the tab.
 - `?quality=0`, `?quality=1` or `?quality=2` forces a quality step, to compare steps on the same phone. The automatic tuning is then off.
   - `0`: full quality.
@@ -17,7 +19,9 @@ Goal of week 2 (task 6): **30 FPS or more on the low-end Android test phone**, i
   - `2`: pixel ratio 1, no shadows, and the water without its sky reflection, small ripples and moving foam, on a coarser grid (week 6, task 4).
 - Without `?quality`, the game starts at step 0 and lowers the step by itself when it stays under 30 FPS for 3 seconds, as the prototype did.
 - `?mist` shows the Mist's look (its mood only, no rule): the banner says "Mist", and the counter adds "Mist" after the view.
-- They can be combined: `?fps&quality=1`, `?fps&mist&quality=2`.
+- `?demo=phare30` shows a demonstration city for measuring the worst case: Lighthouse 30, the other buildings at 30, 39 rafts (each raft building type on two rafts at level 3), the Refinery's building site, 106 survivors. `?demo=phare15`: Lighthouse 15, 15 rafts, the same site, 46 survivors. Phare 30 has 38 rafts and fills the last slot at the shipyard; in both, the eighth raft is damaged (hp 40). With `?blender` they show the land: a flooded plot and a landfill under way. It lives in memory only: nothing is sent to the server, nothing is written on the device, and your own city stays as it was. Only in development and on the branch previews (`*.brinelight.pages.dev` built from a branch other than `main`); the production build does not even contain it (`client/test/demo.test.ts`).
+- `?demo=phare30&cycle` (or `phare15`) floods and mends the demo's flooded plot every 4 seconds: the land is built again each time, to read its hitch on a phone with `&fps`.
+- They can be combined: `?fps&quality=1`, `?fps&mist&quality=2`, `?demo=phare30&fps`.
 
 ## Protocol (5 steps)
 
@@ -272,3 +276,347 @@ With the protocol at the top of this file, on the pull request's Cloudflare prev
 4. In the city at step 0, turn the camera toward the horizon: the Mist's veil (with `&mist`) and the shore's foam should hold still while the camera stays still.
 
 Note each FPS and min, with the draw calls and triangles the counter shows, in the results table above.
+
+## How many players one CX23 holds (week 8, task 4)
+
+`npm run load` (`tools/load/`, Node, no new dependency) plays simulated players against a game server. Each one signs in with its own throwaway Ed25519 key, made by the script and forgotten when it ends, exactly as a wallet signs in. Then it plays at a human rhythm: an action every 20 to 60 seconds (an upgrade, a fleet, a claim; the rules refuse many of them, as they would a new player's), and a `GET /city` at each "launch", every 3 to 7 minutes. The server's limits are never changed: sign-ins go at 18 a minute, under the limit of 20 a minute per address, so 500 players take about 28 minutes to arrive. Sign-ins are counted apart, never in a stage's measures.
+
+It reports, for each stage: the answers a second, the median and the slowest 1 % (p99), the refusals by the rules, the "too many" (429) and the errors. It exits with 1 at the first 429 or error. The CI runs it with 20 players for 30 seconds against the whole stack (job `deploy`).
+
+### On the real server, before it opens (owner, with Claude Code)
+
+1. **A backup just before** (on the server): `sudo systemctl start brinelight-backup.service`, and note the file name it prints (`journalctl -u brinelight-backup.service -n 3`).
+2. **The machine's processor and memory**, in a second SSH window on the server, until the test ends (`Ctrl+C`):
+
+   ```
+   while true; do docker stats --no-stream --format '{{.Name}},{{.CPUPerc}},{{.MemUsage}}' | sed "s/^/$(date -u +%T),/" >> ~/load-stats.csv; sleep 5; done
+   ```
+
+3. **The test**, from your computer (not from the server: it would take the server's processor), about an hour:
+
+   ```
+   npm run load -- --url https://api.brinelight.xyz --origin https://play.brinelight.xyz --stages 100,250,500 --stage-seconds 600
+   ```
+
+4. **The database put back as it was**: `sudo ./restore.sh replace` with the backup of step 1 (it removes the test's players and cities).
+5. The results go in the table below, with `~/load-stats.csv`'s highest processor and memory for each stage; then delete `~/load-stats.csv`.
+
+### When to move to the CX33
+
+When, at the busy hour, the processor stays over 70 %, or the p99 of the actions goes over 500 ms. The CX33 (4 vCPU, 8 GB, about €10.70 a month) is one click in the Hetzner console and a few minutes offline; the data stays (`docs/tasks/week-8.md`, "What it costs").
+
+### Results
+
+| Where | Players | Answers a second | p50 (ms) | p99 (ms) | Processor (server, db) | Memory (server, db) | Refused by the rules | 429 / errors |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| This machine's container, the whole stack in Docker (19 October; not a measure of the CX23) | 20 | 0.37 | 17 | 25 | 2.5 %, 0.8 % | 58 MB, 38 MB | 6 | 0 / 0 |
+| CX23 | 100 | | | | | | | |
+| CX23 | 250 | | | | | | | |
+| CX23 | 500 | | | | | | | |
+
+## The city remade in Blender (week 8): meeting 1, the island, the Lighthouse and the Refinery
+
+Measured with the city at 412 × 915 (container, quality 2, the e2e's counter), `?blender`, three rafts. The other seven buildings still have their old models and details.
+
+| City | Draw calls | Triangles |
+| --- | --- | --- |
+| Level 15, old look (today) | 22 | 37.9 k |
+| Level 15, the island, the Lighthouse and the Refinery remade | 20 | 38.7 k |
+| Level 1 (Lighthouse 2) | 16 | 32.7 k |
+| Level 5 | 19 | 34.1 k |
+| Level 10 | 20 | 38.0 k |
+| Level 30 | 20 | 41.0 k |
+| Level 12, the Refinery at work (its building site) | 24 | 39.5 k |
+| Level 20, 15 rafts, 360 px | 20 | 56.1 k |
+
+- **One draw call per building, whatever its level:** a stage's model holds its levels' details with its triangles ordered by level, and the game draws a range of it.
+- **A building site:** four draw calls (scaffolding, mast, arm, crate) while it works, against two for all sites before. There are at most two at once (two builders).
+
+**The files** (served: 512 px WebP, 1,024 for the island, quantized):
+
+| Model | Triangles | File |
+| --- | --- | --- |
+| The island (made to the grid) | 2,656 | 171 kB (the old one: 2,517 and 222 kB) |
+| The Lighthouse, six eras (seven models) | 1,378 to 2,022 | 93 to 127 kB |
+| The island's ground, one an era (six models) | 588 to 2,480 | 76 to 198 kB |
+| The Refinery, six eras (seven models) | 896 to 1,556 | 69 to 109 kB |
+| The building site, four pieces | 1,076 in all | 93 kB in all |
+| The Shelters, six eras (seven models) | 772 to 1,316 | 57 to 87 kB |
+| The Barracks, six eras (seven models) | 710 to 1,072 | 53 to 83 kB |
+| The Infirmary, six eras (seven models) | 708 to 1,232 | 53 to 80 kB |
+| The Fishery, six eras (seven models) | 646 to 1,036 | 52 to 70 kB |
+| The Lumberyard, six eras (seven models) | 764 to 1,024 | 57 to 70 kB |
+| The Harbor, six eras (seven models) | 720 to 928 | 55 to 65 kB |
+| The Harbor's pier and boat (one an era) | 460 to 780 | 43 to 59 kB (one more draw call) |
+| The Observatory, six eras (seven models) | 892 to 1,392 | 68 to 94 kB |
+
+- **What is downloaded:** only the stage each building shows, and the next one while an upgrade toward it runs. With the Observatory, all nine buildings are remade: with `?blender`, no old building model is fetched any more.
+- **At level 30:** 171 + 163 + 113 + 109 kB for the island, its ground, the Lighthouse and the Refinery, about 0.55 MB. The ground adds one draw call.
+
+### What a phone downloads, and how soon the city shows (owner, 19 October)
+
+With `?blender`, the old models of the buildings remade and the old island are no longer fetched, and the city waits for the models of its buildings' current era before its first image (they no longer pop in after it). The next era is fetched in the background once an upgrade toward it runs. Measured in Chromium at 412 × 915 with the network held to 10 Mbit/s and 40 ms, cache off, three runs each (median):
+
+| City | First image | Downloaded in all |
+| --- | --- | --- |
+| New player, old look (today's default) | 11.0 s | 5.8 MB |
+| New player, `?blender` before | 10.5 s | 6.2 MB |
+| New player, `?blender` now | 10.3 s | 5.7 MB |
+| Lighthouse 30 city, old look | 11.7 s | 5.8 MB |
+| Lighthouse 30 city, `?blender` before | 11.0 s | 6.3 MB |
+| Lighthouse 30 city, `?blender` now | 10.6 s | 5.9 MB |
+
+- **Half of it is the prototype's kit** (`phare.glb`, 2.9 MB): the sea's sites and the old details still use it. Once every building is remade, it can wait until you first go to sea, and the city's first image would need about 2.9 MB.
+- The game's code is about 340 kB; the old models of the seven buildings not remade yet about 1.07 MB.
+
+### The sea's models wait for the sea (owner, 19 October, night)
+
+With `?blender`, the prototype's kit (`phare.glb`, 2.9 MB) and the wreck, the camp and your boat wait for your first visit at sea; the island's ground is now counted. Same measure (10 Mbit/s, 40 ms, three runs, median), the Blender bake paused so the machine is free:
+
+| City | First image | Downloaded in all |
+| --- | --- | --- |
+| New player, old look (today's default) | 10.6 s | 5.8 MB |
+| New player, `?blender` | 7.5 s | 2.5 MB, all before the first image |
+| Lighthouse 30 city, old look | 10.5 s | 5.8 MB |
+| Lighthouse 30 city, `?blender` | 8.0 s | 2.6 MB, of which 0.45 MB after the first image (the raft buildings) |
+
+- **The goal of about 3 MB holds; the goal of 5 s cannot be judged here.** With no network limit at all, the first image still takes 7.2 s with `?blender` and 7.5 s with the old look: this container draws without a graphics chip (software WebGL), and decoding the textures, compiling the shaders and building the scene take that time. The network now costs about 1 s of the 7.5. A real phone must say what is left.
+- **What weighs the most before the first image** (new player): the old models of the seven buildings not remade yet (1.07 MB; each building remade takes its old model off), the island (171 kB), three.js (145 kB), the raft (101 kB), the Lighthouse (98 kB), the Refinery (86 kB), the building site's parts (95 kB), the ground (57 kB), the game's code (59 kB), the fonts (76 kB).
+
+### All nine buildings remade, then the floating village (owner, 20 October)
+
+Same measure (10 Mbit/s, 40 ms, cache off, three runs, median), with `?blender`; "before the first image" leaves out what comes after it (the raft buildings' old models, while the floating village was not made yet):
+
+| City | First image | Before the first image | Without any network limit |
+| --- | --- | --- | --- |
+| New player | 6.0 s | 1.1 MB | 5.9 s |
+| Lighthouse 30 city | 6.4 s | 1.5 MB | 5.7 s |
+| Lighthouse 30 city, 39 rafts and six buildings on rafts (the floating village made in Blender) | 7.1 s | 2.0 MB | |
+| The same, old look | 10.2 s | 5.4 MB | |
+
+- **About 3 MB: held.** **5 s: not reached here**, and the network is not what is missing: with no limit at all, the first image takes the same 5.7 to 5.9 s. This container draws without a graphics chip; a real phone must say what is left.
+
+**The floating village** (`?blender`), at 412 × 915 (container, quality 2):
+
+| City | Draw calls | Triangles |
+| --- | --- | --- |
+| 3 rafts, Lighthouse 5 (free slots shown) | 24 | 24.7 k |
+| 15 rafts, Lighthouse 15, the shipyard at work | 26 | 39.2 k |
+| 39 rafts, Lighthouse 30, six buildings on rafts, two damaged | 27 | 63.7 k |
+| The same 39 rafts, old look | 23 | 103.5 k |
+
+- Each model of the village shown is one InstancedMesh: the draw calls grow with the kinds of things afloat (three decks, a damaged one, the shipyard's, the walkways, the buoys, each building at its level), never with the rafts.
+- Its files (served: 512 px WebP, quantized), one set for each of its three ages:
+
+| Model | Triangles | File |
+| --- | --- | --- |
+| A deck (three variants) | 864 to 998 | 76 to 81 kB |
+| The damaged deck | 628 to 784 | 61 to 68 kB |
+| The shipyard's raft | 908 to 1,012 | 70 to 75 kB |
+| A walkway | 168 | 17 to 23 kB |
+| The free slot's buoys (one for all ages) | 324 | 35 kB |
+| The Kelp Greenhouse, levels 1 to 3 | 364 to 832 | 31 to 66 kB |
+| The Smokehouse, levels 1 to 3 | 272 to 540 | 24 to 45 kB |
+| The Watchtower, levels 1 to 3 | 322 to 566 | 31 to 52 kB |
+
+**Next:** an entry-level phone must still be measured before players are invited.
+
+### The island's life (meeting 4, owner, 20 October)
+
+With `?blender`: survivors at work and on their ways, animals, plants that follow the Lighthouse, smoke, washing, lanterns that light in the Mist, lapping against the rafts. To make room, the city's water keeps 64 subdivisions at most (96 before) and the rafts show a light version in the normal view (their full models are fetched the first time the camera comes near). Same cities before (12e11a2) and after, each with one building site, at 412 × 915, the life fully loaded; the counter is `?fps`'s (the shadow pass is never in it):
+
+| City | Quality | Before: draw calls, triangles | After: draw calls, triangles |
+| --- | --- | --- | --- |
+| New player (8 survivors: 5 shown) | full | 19, 29.7 k | 35, 27.2 k |
+| New player | 2 | 19, 15.9 k | 35, 23.6 k |
+| 15 rafts, Lighthouse 15, 80 survivors | full | 30, 61.7 k | 49, 54.7 k |
+| 15 rafts, Lighthouse 15 | 2 | 30, 47.9 k | 50, 51.1 k |
+| 39 rafts, Lighthouse 30, 150 survivors (24 shown) | full | 30, 79.7 k | 49, 68.7 k |
+| 39 rafts, Lighthouse 30 | 2 | 30, 65.9 k | 50, 65.1 k |
+
+- The life's share in the 39-raft city: the survivors 4.5 k (24 × 188), their tools 0.2 k, the plants 3.9 k (the Modern era's vegetable plots and trees in rows), the animals 1.6 k, the washing 0.1 k; the smoke and the lanterns are points (no triangle). About 10 k in all, 19 draw calls more.
+- The light rafts save 3 to 4 hundred triangles each (484 to 664 instead of 628 to 1,012): about 10.5 k for 39 rafts, less than the 17 k foreseen. The water's 64 subdivisions save 10.2 k (quality 2 keeps its 48).
+- At full quality the 39-raft city drops from 79.7 k to 68.7 k, between the S22's city (66.7 k) and its sea (73.3 k), both at 60 FPS. At quality 2, the life about makes up for what was saved.
+- Frame rate here (no graphics chip, quality 2, 8 s): new player 13.0 → 10.9 FPS, 39 rafts 6.4 → 6.5. The S22 and an entry-level phone must say what is left.
+
+Time to the city's first image (10 Mbit/s, 40 ms, cache off, five runs, median) and what is fetched before it; the life comes after it:
+
+| City | Before: first image, before it | After: first image, before it | All fetched in the first 6 s after, then |
+| --- | --- | --- | --- |
+| New player | 6.00 s, 1,022 kB | 5.94 s, 1,033 kB | 1,334 → 1,477 kB |
+| Lighthouse 30 | 6.42 s, 1,472 kB | 6.60 s, 1,482 kB | 1,566 → 1,694 kB |
+| Lighthouse 30, 39 rafts | 7.46 s, 1,931 kB | 6.97 s, 1,889 kB | 2,025 → 2,107 kB |
+
+- The first image waits for nothing more (10 kB: the code). The life's models (the survivor 16.5 kB, its seven tools 26 kB, six animals 57 kB, a look's plants 25 to 40 kB, the washing 6.5 kB) come once the city shows.
+
+
+### The style pass, step 2 (owner, 20 October)
+
+With `?blender`: one island in three looks (`terrain-wild`, `-garden`, `-modern`: 3,600 triangles, 89 to 92 kB each, in place of the island, 171 kB, and an era's ground, 57 to 174 kB), its groves in one model per look, the buildings 1.15 times larger, the survivors 1.5 times, the mix's light and water, the rafts rebaked, lighter walkways (128 triangles, 168 before) and moorings (96 to 116, 104 to 140 before), the smoke and the lanterns in one cloud of points, and at full quality the finish (a glow around the lamps and a color grade). Same cities before (a99060c) and after, at 412 × 915, quality 0, the life fully loaded; the counter leaves the shadow pass out, as before:
+
+| City | Before: draw calls, triangles | After: draw calls, triangles | After: the finish's own passes |
+| --- | --- | --- | --- |
+| Lighthouse 5, two building sites (the owner's capture) | 46, 38.5 k | 40, 36.3 k | 14 |
+| 3 rafts, Lighthouse 5 | 38, 35.0 k | 33, 32.9 k | 14 |
+| 15 rafts, Lighthouse 15, a building site, the shipyard at work | 49, 45.9 k | 43, 46.5 k | 14 |
+| 39 rafts, Lighthouse 30, a building site | 50, 68.8 k | 43, 66.0 k | 14 |
+| 39 rafts, Lighthouse 30, no building site | 49, 68.7 k (meeting 4) | 38, 64.8 k | 14 |
+| The same, quality 2 (no finish) | 50, 65.1 k (meeting 4) | 38, 62.5 k | 0 |
+
+- The worst city stays under the S22's 66.7 k (66.0 k with a site, the animals all out); its draw calls go from 50 to 43 (a building site's scaffolding, mast, arm and crate are four of them).
+- The finish draws 14 full-screen passes of its own (the glow at half the screen's size and its five blurs, then the output pass with the grade in it), and no triangle. Its cost, measured apart on the 39-raft city in the container (no graphics chip): 1.35 FPS without it, 0.85 with it. A phone's graphics chip must say the real cost; a phone that falls under 30 FPS drops it with quality step 1.
+- The finish starts 4 seconds after the city's first image, once the life has come: drawn from the first frames, it slowed the first image down by 5 seconds in the container.
+- The free slots' golden marks: 24 triangles each, in the same draw call as before.
+
+Time to the city's first image (10 Mbit/s, 40 ms, cache off, five runs, median), measured again before and after on the same machine:
+
+| City | Before: first image, before it | After: first image, before it |
+| --- | --- | --- |
+| New player | 6.40 s, 1,033 kB | 6.48 s, 903 kB |
+| Lighthouse 30 | 6.56 s, 1,482 kB | 6.62 s, 1,255 kB |
+| Lighthouse 30, 39 rafts | 7.45 s, 1,889 kB | 7.84 s, 1,665 kB |
+
+- 130 to 230 kB fewer before the first image (the terrain in place of the island and its ground); the times are within one run's spread for the new player and the Lighthouse 30, 0.4 s slower for the 39 rafts (its first frames cost more in the container).
+- After the first image, a look's groves weigh 245 to 347 kB (25 to 40 kB for the plants before): one model with its own baked texture.
+
+### The style pass's cleanup (owner, 20 October)
+
+Behind `?blender`: labels only where something is to say, lamps out by day, a glow only around lit lamps, four raft decks in calmer wood, free slots shown only when a raft can be moored, the sea 0.2 higher (half-height cliffs, beaches), a fresher, brighter look. Same cities before (f35faa9) and after, 412 × 915 unless noted, the life loaded; the counter leaves the shadow pass out:
+
+| City | Quality 0 before | Quality 0 after | Quality 1 before | Quality 1 after |
+| --- | --- | --- | --- | --- |
+| Lighthouse 5, two building sites (the owner's) | 40, 36.3 k | 37, 32.2 k | 40, 36.3 k | 37, 32.2 k |
+| Lighthouse 5, 3 rafts | 34, 33.0 k | 30, 28.8 k | 34, 33.0 k | 31, 28.9 k |
+| Lighthouse 15, 15 rafts, a site, the shipyard at work | 42, 46.4 k | 43, 46.4 k | 42, 46.4 k | 43, 46.4 k |
+| Lighthouse 30, 39 rafts, a site | 43, 66.0 k | 43, 65.9 k | 43, 66.0 k | 43, 65.9 k |
+| Lighthouse 15 in the Mist | 47, 46.6 k | 48, 46.6 k | 47, 46.6 k | 48, 46.6 k |
+
+- The finish keeps its 14 passes of its own at quality 0. The worst city stays under 66.7 k.
+- The free slots nobody can fill now are no longer drawn: about 4 k triangles fewer in the small cities. The fourth deck adds one draw call when it floats.
+- The light decks stay within the light budget: 514 to 644 triangles (664 at most before).
+
+Time to the first image (10 Mbit/s, 40 ms, cache off, five runs, median):
+
+| City | Quality 0 before | Quality 0 after | Quality 1 before | Quality 1 after |
+| --- | --- | --- | --- | --- |
+| New player | 6.19 s, 903 kB | 6.39 s, 903 kB | 2.98 s | 2.93 s |
+| Lighthouse 30 | 6.45 s, 1,255 kB | 6.60 s, 1,252 kB | 3.48 s | 3.58 s |
+| Lighthouse 30, 39 rafts | 7.18 s, then 7.63 s | 7.96 s, then 7.52 s | 4.11 s | 4.25 s |
+
+- The 39-raft city was measured twice at quality 0: the runs' spread is wider than the gap.
+
+### The first image at full quality (owner, 20 October)
+
+With `?blender`, quality 0 showed the city about 3.5 s later than quality 1. Each step of the load, measured in the container (a new player, 10 Mbit/s):
+
+| Step | Quality 0 | Quality 1 |
+| --- | --- | --- |
+| The models fetched and read | 6.9 s | 2.4 s |
+| The island, its shore and the city made | +0.06 s | +0.05 s |
+| "Loading your city…" gone, as the page sees it | 7.6 s | 3.1 s |
+
+- The draw calls took 0.24 s in all while loading, and only 11 frames came in 6 s. The cost was the screen's raster at full quality (pixel ratio 2): in the container the processor draws, so the sea behind "Loading your city…" took it from the models' decoding. It was not the shadows, the shaders or the finish: the finish starts 4 s after the first image.
+- Now, until the city shows, that sea is drawn twice a second at most, at one pixel per CSS pixel. The city's first image and everything after it are as before: its step's pixels and shadows, and the finish 4 s later, now fading in over 1 s.
+
+Time to the first image (10 Mbit/s, 40 ms, cache off, five runs, median), before (036efbc) and after:
+
+| City | Quality 0 before | Quality 0 after | Quality 1 before | Quality 1 after |
+| --- | --- | --- | --- | --- |
+| New player | 6.05 s | 2.85 s | 2.91 s | 2.16 s |
+| Lighthouse 30 | 6.39 s | 3.38 s | 3.50 s | 2.50 s |
+| Lighthouse 30, 39 rafts | 7.07 s | 3.95 s | 4.09 s | 3.17 s |
+
+- All under 5 s. Quality 0 still trails quality 1 by 0.7 to 0.9 s here: its first image itself (4 times the pixels, 2048 shadows) takes the processor that long in the container.
+
+### The land won on the sea, step 2 (owner, 21 October)
+
+With `?blender` from the Lighthouse 5, the rafts are land: one mesh built in the game from the slots taken (`client/src/city/land/`), its dike in instances, a flooded plot, a landfill. Draw calls and triangles read on the `?fps` counter, the life loaded, quality 1 (quality 0 gives the same at 384 × 699; at 412 × 915 its counter had not drawn enough frames in the container to count the life):
+
+| City | Draw calls, triangles | Land built in (container) |
+| --- | --- | --- |
+| Lighthouse 4, 3 rafts (no land yet) | 28, 30.7 k | – |
+| Lighthouse 5, 3 plots | 29, 34.6 k | 97 to 102 ms |
+| Lighthouse 15, 15 plots (one flooded), a landfill | 39, 51.3 k | 131 to 141 ms |
+| Lighthouse 30, 38 plots (one flooded), a landfill | 40, 54.5 k | 146 to 154 ms |
+
+- The worst city goes from 43 draw calls and 65.9 k triangles (the floating village) to 40 and 54.5 k: the decks, walkways and moorings are gone, the land itself is one mesh of about 10 k triangles at most (tested on 200 random cities) and its dike two to four instanced meshes.
+- "Land built in" is the whole rebuild: the mesh (13 to 17 ms in Node on this machine, whatever the slots), the dike and its props, and the shore's distances for the water's foam. It happens once at load and again only when a slot or the era changes. The container has no graphics chip and a shared processor; the S22 must say the real figure.
+
+Time to the first image (10 Mbit/s, 40 ms, cache off, five runs, median), before (33a13c5) and after:
+
+| City | Quality 0 before | Quality 0 after | Quality 1 before | Quality 1 after | Downloaded before → after |
+| --- | --- | --- | --- | --- | --- |
+| New player | 3.12 s | 3.09 s | 2.28 s | 2.30 s | 1,641 → 1,649 kB |
+| Lighthouse 30 | 3.42 s | 4.05 s | 2.64 s | 3.05 s | 1,682 → 1,817 kB |
+| Lighthouse 30, 39 rafts | 4.56 s, then 5.24 s | 5.80 s, then 5.05 s and 5.22 s | 3.88 s | 3.94 s | 2,173 → 1,964 kB |
+
+- The 39-raft city was measured three times at quality 0: one run in five reached 7.7 to 8.2 s in two series, and the medians fall within each other's spread.
+- The Lighthouse 30 without rafts is 0.4 to 0.6 s slower: it fetches the land's texture (126 kB) on top of the island's, which the land hides. Dropping the island's texture once the land is the default (plan step B) saves its 86 to 92 kB again.
+- The 39-raft city downloads 209 kB fewer: the raft decks, walkways and moorings are no longer fetched.
+
+### The land built away from the display (owner, 21 October, on the S22)
+
+On the S22, "Land built in 122.7 ms": the land's rebuild held the display about 7 frames at each mooring, flood or repair. Now its mesh, the ground under its props and plants, its landfill's stakes and the shore's grid and foam are computed in a worker (`client/src/city/land/land.worker.ts`, 12.9 kB, no three.js); the old land stays shown until the new one is ready, then it is put in place in one frame. The shore's foam around the moored rafts is measured there too (it was measured on the display's thread at every mooring). The first land, before the city's first image, is still built at once: no frame is shown yet.
+
+Measured in Chromium on `?demo=phare30&cycle` (a plot flooded and mended every 4 s), 10 rebuilds:
+
+| On the display's thread | Before | After |
+| --- | --- | --- |
+| The land's rebuild | 134 to 270 ms (all of it) | 0.8 to 2.4 ms (putting the new land in place) |
+| The city's whole refresh at that moment (the land, the buildings, the rafts, the life, the labels) | – | 2.2 to 6.1 ms |
+| In the worker, beside the display | – | 22 to 57 ms |
+
+- The container draws without a graphics chip (a frame takes 80 to 170 ms here whatever happens), so it cannot show the frame itself; the S22 with `?demo=phare30&cycle&fps` reads it on the "Longest frame" line, which should stay near 16.7 ms.
+
+
+### The city fabric (owner, 21 October)
+
+The houses, equipment, camp, streets, fields, lamps, poles, turbines and port of `client/src/city/fabric/`: three meshes at most (the still pieces, their windows, the turbines' rotors), the streets, yards, square and fields painted by the ground's own shader (one read of a 16 × 16 texture for the fields, however many plots are won). The land's dike now joins its props' mesh. Read on the `?fps` counter at 384 × 699, quality 1, the life loaded, before (7520da7) and after:
+
+| City | Before: draw calls, triangles | After: draw calls, triangles |
+| --- | --- | --- |
+| Lighthouse 4, 3 rafts (no land yet) | 28, 30.7 k | 30, 30.1 k |
+| Lighthouse 5, 3 plots | 29, 34.6 k | 27, 33.0 k |
+| Lighthouse 15, 15 plots (one flooded), a landfill | 39, 51.3 k | 38, 49.0 k |
+| Lighthouse 30, 38 plots (one flooded), a landfill | 40, 54.5 k | 40, 54.0 k |
+| `?demo=phare30` | 45, 55.9 k | 44, 54.8 k |
+
+- The fabric adds two draw calls (three with the turbines, from the Lighthouse 20); the dike merged into the props saves two to three. Its triangles, 9.0 k at most in the worst city of each era (`client/test/fabric.test.ts`), are about what the wild plants it replaces on the plots it takes weighed.
+- Planning and merging the fabric, once at each change of the city (a level, a plot): 1.5 to 3.6 ms and 2.2 to 5.4 ms in Node on this machine. The Harbor's coast it needs is found in fewer steps (about 80 ms less when the game starts).
+- On `?demo=phare30`, "shown in" (the land put in place with the fabric and the plants giving way) goes from 9 to 18 ms in the container: the S22 must say the real figure with `?demo=phare30&cycle&fps`.
+
+Time to the first image (10 Mbit/s, 40 ms, cache off, five runs, median; quality 0 measured twice each way, in turn):
+
+| City | Quality 0 before | Quality 0 after | Quality 1 before | Quality 1 after | Downloaded before → after |
+| --- | --- | --- | --- | --- | --- |
+| New player | 3.23 s, 3.13 s | 3.39 s, 3.39 s | 2.52 s | 2.54 s | 1,643 → 1,671 kB |
+| Lighthouse 30 | 4.06 s, 3.84 s | 4.46 s, 4.40 s | 3.20 s | 3.46 s | 1,810 → 1,864 kB |
+| Lighthouse 30, 39 plots | 4.62 s, 5.10 s | 5.27 s, 5.34 s | 4.44 s | 4.46 s | 1,957 → 2,013 kB |
+
+- The era's fabric file is 20 to 39 kB. At quality 1 the first image hardly moves; at quality 0 it comes 0.2 to 0.45 s later in the container, which draws without a graphics chip at twice the pixels (the ground's shader and the fabric's three new programs). The S22 must say whether a phone feels it.
+
+### The final measure of the city's visual work (owner, 21 October, step F)
+
+With the gardens in rows, the Mist's windows, the camp 1.3 times larger, the Harbor's pier from the shore and the `?fps` counter's "First image in X.X s" (from the page's start to the city's first frame on screen). Draw calls and triangles at 384 × 699, quality 1, the life loaded:
+
+| City | Draw calls, triangles |
+| --- | --- |
+| Lighthouse 4, 3 rafts (no land yet) | 30, 30.3 k |
+| Lighthouse 5, 3 plots | 27, 33.7 k |
+| Lighthouse 15, 15 plots (one flooded), a landfill | 38, 49.6 k |
+| Lighthouse 30, 38 plots (one flooded), a landfill | 40, 56.4 k |
+| `?demo=phare30` | 45, 57.4 k |
+
+- The gardens' and the kelp's rows stand in the fabric's mesh: no draw call more. The fabric's worst city is 11.8 k triangles (39 gardens at the Lighthouse 9), under the 14 k of its test.
+- The Harbor's pier: 692 to 768 triangles a model, 50 to 60 kB (it was 460 to 780, 43 to 59 kB). Its boats floated under the sea since the style pass raised it by 0.2; they float on it now.
+
+Time to the first image (10 Mbit/s, 40 ms, cache off, five runs, median; quality 0 measured twice). "The game's count" is what `?fps` shows; "the page" is when the test sees the loading screen go, which in the container comes later (it draws without a graphics chip: a frame at quality 0 takes about a second to reach the screen):
+
+| City | Quality 0: the game's count | Quality 0: the page | Quality 1: the game's count | Quality 1: the page | Downloaded |
+| --- | --- | --- | --- | --- | --- |
+| New player | 2.8 s, 3.1 s | 3.47 s, 3.69 s | 2.4 s | 2.66 s | 1,682 kB |
+| Lighthouse 30 | 3.6 s, 3.3 s | 4.91 s, 4.12 s | 3.0 s | 3.27 s | 1,870 kB |
+| Lighthouse 30, 39 plots | 3.9 s, 3.8 s | 4.83 s, 5.04 s | 3.3 s | 4.03 s | 2,019 kB |
+
+- The worst city at quality 0 is at the 5 s aimed at, by the page's measure (4.83 and 5.04 s, the two series within each other's spread), and at 3.8 to 3.9 s by the game's count. The S22 reads the game's count on `?fps`: it should be lower there, with a graphics chip.
+- Since the city fabric's first measure (`docs/perf.md`, "The city fabric"): the Harbor's coast found in fewer steps (about 80 ms less at the start), and the fields read in one texel a pixel instead of a loop over every field.

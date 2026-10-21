@@ -76,9 +76,9 @@ describe("repairing the rafts", () => {
 
   it("refuses: nothing to repair, the shipyard busy, not enough resources", () => {
     const sound = { ...worn(), rafts: { [A]: worn().rafts[A]! } };
-    expect(repairRafts(sound)).toEqual({ ok: false, reason: "Your rafts are in good shape" });
+    expect(repairRafts(sound)).toEqual({ ok: false, reason: "Nothing needs mending" });
     const busy = ok(repairRafts(worn()));
-    expect(repairRafts(busy)).toEqual({ ok: false, reason: "The shipyard is busy" });
+    expect(repairRafts(busy)).toEqual({ ok: false, reason: "Your builders on the shore are busy" });
     expect(repairRafts({ ...worn(), stock: { oil: 219, fish: 0, wood: 0, rope: 0 } })).toEqual({ ok: false, reason: "Not enough resources" });
     expect(repairRafts({ ...worn(), stock: { oil: 220, fish: 0, wood: 0, rope: 0 } }).ok).toBe(true);
     expect(canRepair({ rafts: worn().rafts, stock: worn().stock, yard: null })).toEqual({ ok: true });
@@ -86,7 +86,7 @@ describe("repairing the rafts", () => {
 
   it("a raft below 60 cannot be upgraded until it is repaired", () => {
     const s = worn();
-    expect(canUpgradeRaft({ rafts: s.rafts, slot: C, stock: s.stock, yard: null })).toEqual({ ok: false, reason: "Repair this raft first" });
+    expect(canUpgradeRaft({ rafts: s.rafts, slot: C, stock: s.stock, yard: null })).toEqual({ ok: false, reason: "Mend this first" });
     expect(canUpgradeRaft({ rafts: s.rafts, slot: B, stock: s.stock, yard: null }).ok).toBe(true);
     const repaired = advance(ok(repairRafts(s)), HOUR);
     expect(canUpgradeRaft({ rafts: repaired.rafts, slot: C, stock: repaired.stock, yard: null }).ok).toBe(true);

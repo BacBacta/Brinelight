@@ -11,7 +11,7 @@
  * light sounds of wood and rope, made by the game, that you can turn off in the Profile.
  * The reference prototype stays playable at /prototype/.
  */
-import { HOME, applyAction, yardSlot, type GameAction } from "@brinelight/shared";
+import { BUILDING_IDS, HOME, applyAction, yardSlot, type GameAction } from "@brinelight/shared";
 import type { Wallet } from "@wallet-standard/base";
 import type { ActionInput } from "./account/actions.js";
 import { createAccount, isUntouched } from "./account/index.js";
@@ -19,8 +19,14 @@ import { apiUrl, createApi } from "./account/api.js";
 import { createProfile } from "./account/profile.js";
 import { watchWallets } from "./account/wallets.js";
 import { createCity, type City } from "./city/index.js";
+import { DEMO_CYCLE, demoAllowed, demoCity, demoCycle, demoCycles, demoWanted, memoryStore } from "./demo.js";
+import { LAND_NEWS, landNewsDue, landShown } from "./city/words.js";
+import { landModels } from "./city/land/index.js";
+import { loadStage, shownModels, terrainName } from "./city/staged.js";
+import { raftSlots, raftVariant } from "./city/rafts.js";
+import { villageShown } from "./city/village.js";
 import { showRules } from "./rules.js";
-import { forcedQuality, startScene, type View } from "./scene/index.js";
+import { forcedQuality, startScene, type Kit, type Models, type View } from "./scene/index.js";
 import { createSea, type Sea } from "./sea/index.js";
 import { createFpsCounter } from "./ui/fps.js";
 import { fpsWanted } from "./ui/fpsMeter.js";
@@ -46,18 +52,23 @@ if (new URLSearchParams(location.search).has("rules")) {
   showRules(app);
 } else {
   document.body.classList.add("scene");
+  // The city made in Blender: its sheets take at most half the screen, so the close view shows the building.
+  document.body.classList.add("era-look");
   app.innerHTML = `<canvas id="cv" aria-label="3D view of your city"></canvas><p class="loading" role="status">Loading your city…</p>`;
   const status = app.querySelector<HTMLParagraphElement>(".loading")!;
   const canvas = app.querySelector<HTMLCanvasElement>("#cv")!;
 
-  const store = browserStore();
+  // ?demo=phare30 or phare15 (development and branch previews only): a demonstration city, kept in memory.
+  // In production the condition is false when the game is built: the demos are not even in its files.
+  const demo = import.meta.env.DEV || import.meta.env.VITE_BRANCH_PREVIEW === "1" ? demoWanted(location.search, demoAllowed(import.meta.env, location.hostname)) : null;
+  const store = demo ? memoryStore() : browserStore();
   // The last city seen on this device, read before anything writes it: at launch, what ended since is told once.
   const seen = readSeen(store);
   // Sounds: none before your first tap, and none when turned off on this device.
   const sound = createSound(store);
 
   // The account: only with a server address. Without one, or without signing in, nothing goes on the network.
-  const server = apiUrl();
+  const server = demo ? null : apiUrl();
   const accountStore = (() => {
     try {
       return window.localStorage;
@@ -78,7 +89,7 @@ if (new URLSearchParams(location.search).has("rules")) {
 
   /** Signed in, the account's city is played (the server's); otherwise the city of this device, saved here. */
   let onAccount = !!account?.signedIn;
-  const opened = onAccount ? null : openSave(store, Date.now());
+  const opened = onAccount ? null : demo ? { state: demoCity(demo, Date.now() / 1000), rejected: false } : openSave(store, Date.now());
   let state: PlayerState = onAccount ? account!.city()! : opened!.state;
   /** Only the city of this device is saved under its key: the account's city has its own copy (account/actions.ts). */
   const save = () => {
@@ -100,17 +111,22 @@ if (new URLSearchParams(location.search).has("rules")) {
   let sea: Sea | null = null;
   const refresh = () => {
     city?.update(state);
+    // An unread report opens by itself, wherever you are (sea/index.ts): its sheet comes with the sea, fetched now.
+    if (city && state.reports.some((r) => !r.read)) openSea();
     sea?.update(state);
     captains.update(state);
     daily.update(state);
     quest.update(state);
     tasks.update(state);
     ui.update(state);
+    scene.reframe();
   };
 
   const showView = (v: View) => {
+    if (v === "sea") openSea();
     scene.setView(v);
     document.body.classList.toggle("at-sea", v === "sea");
+    scene.reframe();
     city?.closeSheet();
     sea?.closeSheet();
     captains.close();
@@ -141,13 +157,26 @@ if (new URLSearchParams(location.search).has("rules")) {
   );
   ui.update(state);
   if (opened?.rejected) ui.toast("Your saved city could not be read. A copy was kept.", "bad", "!");
+  if (demo) ui.toast("Demo city: nothing is saved", "", "i");
+  // ?demo=…&cycle: a plot flooded and mended in turn, so that the land is built again every few seconds (its hitch measured).
+  if (demo && demoCycles(location.search))
+    setInterval(() => {
+      state = demoCycle(state);
+      refresh();
+    }, DEMO_CYCLE);
   const celebrations = createCelebrations(app, (c) => sound.play(c.sound));
+  /** Once per city (owner): its rafts became land, from the Lighthouse 5 with the look made in Blender. */
+  const tellLand = () => {
+    if (landNewsDue(store, owner(), Object.keys(state.rafts).length, landShown(state.buildings.lighthouse)))
+      celebrations.tell({ kind: "lighthouse", title: LAND_NEWS.title, lines: [LAND_NEWS.line], sound: "lighthouse" });
+  };
   /** The city has arrived: what ended since the last city seen on this device, if it is the same owner's, is told. */
   const arrive = () => {
     if (shownCity) return;
     if (onAccount && account) state = account.city()!;
-    celebrations.add(awayEvents(seen, owner(), state), true);
+    celebrations.add(awayEvents(seen, owner(), state), true, landShown(state.buildings.lighthouse));
     shownCity = state;
+    tellLand();
     remember();
   };
 
@@ -228,24 +257,82 @@ if (new URLSearchParams(location.search).has("rules")) {
   }
 
   let fps: ReturnType<typeof createFpsCounter> | null = null;
+  /** The city's normal view fits below the panels at the top and above the tab bar (scene/framing.ts). */
+  function panelBand() {
+    let top = 0;
+    for (const el of document.querySelectorAll(".hud > *, .sub > *")) {
+      const r = el.getBoundingClientRect();
+      if (r.height > 0) top = Math.max(top, r.bottom);
+    }
+    const nav = document.querySelector(".nav")?.getBoundingClientRect();
+    return { top: top + 4, bottom: (nav && nav.height > 0 ? nav.top : innerHeight) - 4 };
+  }
+  /**
+   * The normal view's band: below the cards at the top too (the works under way, Tasks) and above the
+   * quest card, so that no building passes under one (owner, on the S22). At sea, the band the city last had.
+   */
+  let lastCityBand: { top: number; bottom: number } | null = null;
+  function cityBand() {
+    if (document.body.classList.contains("at-sea") && lastCityBand) return lastCityBand;
+    const band = panelBand();
+    for (const el of document.querySelectorAll(".queue, .rail")) {
+      const r = el.getBoundingClientRect();
+      if (r.height > 0) band.top = Math.max(band.top, r.bottom + 4);
+    }
+    const quest = document.querySelector(".quest")?.getBoundingClientRect();
+    if (quest && quest.height > 0) band.bottom = Math.min(band.bottom, quest.top - 4);
+    return (lastCityBand = band);
+  }
+  // The sea: made at your first visit at sea, when its models (the prototype's kit, the wreck, the camp, your boat) are
+  // fetched.
+  function makeSea(kit: Kit, models: Models): void {
+    if (sea) return;
+    sea = createSea(kit, models, scene, canvas, app, {
+      state: () => state,
+      sail: (site) => {
+        act({ type: "sail", site });
+        sea?.closeSheet();
+      },
+      readReport: (reportId) => act({ type: "readReport", reportId }),
+      soon: () => ui.toast("Coming soon", "", "~"),
+      speed,
+    });
+    refresh();
+  }
+  let seaAsked = false;
+  function openSea(): void {
+    if (seaAsked) return;
+    seaAsked = true;
+    scene.loadSea().then(
+      ({ kit, models }) => makeSea(kit, models),
+      (err: unknown) => {
+        seaAsked = false;
+        console.error(err);
+        ui.toast("Could not load the sea. Try again.", "bad", "!");
+      },
+    );
+  }
+  // The city shows once the models of its buildings' current era are there, and its rafts' (the floating village) or,
+  // from the Lighthouse 5, its land's (city/land): its ground's texture instead of the rafts' decks.
+  const slots = raftSlots(state).map((s) => ({ ...s, variant: raftVariant(s.key) }));
+  const afloat = landShown(state.buildings.lighthouse) ? landModels(state) : villageShown(slots, state.rafts, state.buildings.lighthouse);
+  const ready = Promise.all([...shownModels(state), ...afloat].map(loadStage));
   const scene = startScene(canvas, {
     home: HOME,
+    // The sheet open at the bottom (on a phone; on a wide screen it stands at the right): its height, not its slide-in.
+    sheetTop: () => {
+      const open = document.querySelector<HTMLElement>(".sheet:not([hidden])");
+      return open && innerWidth < 900 ? innerHeight - open.offsetHeight : null;
+    },
+    ready,
+    terrain: terrainName(state.buildings.lighthouse),
+    band: panelBand,
+    cityBand,
     quality: forcedQuality(location.search),
-    onRaftBuildings: (models) => city?.useRaftBuildings(models),
-    onLoaded: (kit, buildings, models) => {
+    onLoaded: () => {
       status.remove();
       fps?.modelsLoaded();
-      city = createCity(kit, buildings, models, scene, canvas, app, { state: () => state, upgrade: (building) => act({ type: "upgrade", building }), research: (tech) => act({ type: "research", tech }), train: (troop) => act({ type: "train", troop }), promote: (troop) => act({ type: "promote", troop }), heal: () => act({ type: "heal" }), stoke: (on) => act({ type: "stoke", on }), dockRaft: (slot) => act({ type: "dockRaft", slot }), installOnRaft: (slot, building) => act({ type: "installOnRaft", slot, building }), upgradeRaft: (slot) => act({ type: "upgradeRaft", slot }), repairRafts: () => act({ type: "repairRafts" }), toCity: () => ui.showView("city"), speed });
-      sea = createSea(kit, models, scene, canvas, app, {
-        state: () => state,
-        sail: (site) => {
-          act({ type: "sail", site });
-          sea?.closeSheet();
-        },
-        readReport: (reportId) => act({ type: "readReport", reportId }),
-        soon: () => ui.toast("Coming soon", "", "~"),
-        speed,
-      });
+      city = createCity(scene, canvas, app, { state: () => state, upgrade: (building) => act({ type: "upgrade", building }), research: (tech) => act({ type: "research", tech }), train: (troop) => act({ type: "train", troop }), promote: (troop) => act({ type: "promote", troop }), heal: () => act({ type: "heal" }), stoke: (on) => act({ type: "stoke", on }), dockRaft: (slot) => act({ type: "dockRaft", slot }), installOnRaft: (slot, building) => act({ type: "installOnRaft", slot, building }), upgradeRaft: (slot) => act({ type: "upgradeRaft", slot }), repairRafts: () => act({ type: "repairRafts" }), toCity: () => ui.showView("city"), speed });
       refresh();
     },
     onError: () => (status.textContent = "Could not load the 3D models. Reload the page."),
@@ -282,8 +369,9 @@ if (new URLSearchParams(location.search).has("rules")) {
     const changed = sig !== shown;
     shown = sig;
     if (changed && shownCity) {
-      celebrations.add(eventsBetween(shownCity, state));
+      celebrations.add(eventsBetween(shownCity, state), false, landShown(state.buildings.lighthouse));
       shownCity = state;
+      tellLand();
     }
     if (now - uiAt > 250 || changed) {
       uiAt = now;

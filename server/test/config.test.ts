@@ -3,7 +3,7 @@ import { loadConfig } from "../src/config.js";
 
 describe("settings", () => {
   it("development: defaults for a local game, and no database address (PGlite in memory)", () => {
-    expect(loadConfig({})).toEqual({ allowedOrigins: ["http://localhost:5173"], chainId: "mainnet", trustedProxy: null, databaseUrl: undefined, devSpeed: 1 });
+    expect(loadConfig({})).toEqual({ allowedOrigins: ["http://localhost:5173"], chainId: "mainnet", trustedProxy: null, databaseUrl: undefined, devSpeed: 1, statusDir: null });
   });
 
   it("reads the online settings", () => {
@@ -13,7 +13,12 @@ describe("settings", () => {
       TRUSTED_PROXY: "172.30.0.10",
       DATABASE_URL: "postgres://u:p@db:5432/b",
     });
-    expect(c).toEqual({ allowedOrigins: ["https://play.example.com"], chainId: "devnet", trustedProxy: "172.30.0.10", databaseUrl: "postgres://u:p@db:5432/b", devSpeed: 1 });
+    expect(c).toEqual({ allowedOrigins: ["https://play.example.com"], chainId: "devnet", trustedProxy: "172.30.0.10", databaseUrl: "postgres://u:p@db:5432/b", devSpeed: 1, statusDir: null });
+  });
+
+  it("HEALTH_STATUS_DIR: the folder of the backups' and restores' status, none by default", () => {
+    expect(loadConfig({ HEALTH_STATUS_DIR: "/status" }).statusDir).toBe("/status");
+    expect(loadConfig({ HEALTH_STATUS_DIR: " " }).statusDir).toBeNull();
   });
 
   it("DEV_SPEED: 1 by default, a number above 0 in development", () => {

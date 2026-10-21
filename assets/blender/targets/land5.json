@@ -1,0 +1,220 @@
+{
+ "lighthouse": 5,
+ "look": "wild",
+ "camera": {
+  "position": [
+   0,
+   22.604765906222312,
+   21.897111245494564
+  ],
+  "target": [
+   0,
+   0,
+   0.23421058536484926
+  ],
+  "fov": 40,
+  "aspect": 0.5493562231759657,
+  "width": 384,
+  "height": 699
+ },
+ "buildings": [
+  {
+   "id": "lighthouse",
+   "level": 5,
+   "model": "lighthouse-5",
+   "extra": null,
+   "scale": 1,
+   "x": 0,
+   "z": 0,
+   "reach": 0.697,
+   "height": 2.95
+  },
+  {
+   "id": "refinery",
+   "level": 5,
+   "model": "refinery-5",
+   "extra": null,
+   "scale": 1.15,
+   "x": 2,
+   "z": -3.464,
+   "reach": 0.98325,
+   "height": 1.541
+  },
+  {
+   "id": "fishery",
+   "level": 4,
+   "model": "fishery-1",
+   "extra": null,
+   "scale": 1.15,
+   "x": 4,
+   "z": 0,
+   "reach": 1.0465,
+   "height": 0.59915
+  },
+  {
+   "id": "lumberyard",
+   "level": 4,
+   "model": "lumberyard-1",
+   "extra": null,
+   "scale": 1.15,
+   "x": 1,
+   "z": 1.732,
+   "reach": 1.035,
+   "height": 0.60835
+  },
+  {
+   "id": "shelters",
+   "level": 5,
+   "model": "shelters-5",
+   "extra": null,
+   "scale": 1.15,
+   "x": 3,
+   "z": -1.732,
+   "reach": 0.9889999999999999,
+   "height": 1.012
+  },
+  {
+   "id": "barracks",
+   "level": 3,
+   "model": "barracks-1",
+   "extra": null,
+   "scale": 1,
+   "x": -2,
+   "z": 0,
+   "reach": 0.704,
+   "height": 1
+  },
+  {
+   "id": "harbor",
+   "level": 3,
+   "model": "harbor-1",
+   "extra": "harbor-pier-1",
+   "scale": 1.15,
+   "x": -2,
+   "z": -3.464,
+   "reach": 0.9223,
+   "height": 0.621
+  },
+  {
+   "id": "observatory",
+   "level": 2,
+   "model": "observatory-1",
+   "extra": null,
+   "scale": 1,
+   "x": -3,
+   "z": -1.732,
+   "reach": 0.611,
+   "height": 1.11
+  },
+  {
+   "id": "infirmary",
+   "level": 3,
+   "model": "infirmary-1",
+   "extra": null,
+   "scale": 1.15,
+   "x": -1,
+   "z": 1.732,
+   "reach": 0.8084499999999999,
+   "height": 0.529
+  }
+ ],
+ "slots": [
+  {
+   "x": -1,
+   "z": 5.196,
+   "key": "-2,3",
+   "ring": 3,
+   "building": null,
+   "flooded": false
+  },
+  {
+   "x": 1,
+   "z": 5.196,
+   "key": "-1,3",
+   "ring": 3,
+   "building": null,
+   "flooded": false
+  },
+  {
+   "x": 3,
+   "z": 5.196,
+   "key": "0,3",
+   "ring": 3,
+   "building": null,
+   "flooded": false
+  }
+ ],
+ "free": [
+  {
+   "key": "-3,0",
+   "x": -6,
+   "z": 0
+  },
+  {
+   "key": "-3,1",
+   "x": -5,
+   "z": 1.732
+  },
+  {
+   "key": "-3,2",
+   "x": -4,
+   "z": 3.464
+  },
+  {
+   "key": "-3,3",
+   "x": -3,
+   "z": 5.196
+  },
+  {
+   "key": "-2,-1",
+   "x": -5,
+   "z": -1.732
+  },
+  {
+   "key": "-1,-2",
+   "x": -4,
+   "z": -3.464
+  },
+  {
+   "key": "0,-3",
+   "x": -3,
+   "z": -5.196
+  },
+  {
+   "key": "1,2",
+   "x": 4,
+   "z": 3.464
+  },
+  {
+   "key": "2,-3",
+   "x": 1,
+   "z": -5.196
+  },
+  {
+   "key": "2,1",
+   "x": 5,
+   "z": 1.732
+  },
+  {
+   "key": "3,-3",
+   "x": 3,
+   "z": -5.196
+  },
+  {
+   "key": "3,-2",
+   "x": 4,
+   "z": -3.464
+  },
+  {
+   "key": "3,-1",
+   "x": 5,
+   "z": -1.732
+  },
+  {
+   "key": "3,0",
+   "x": 6,
+   "z": 0
+  }
+ ],
+ "filling": null
+}

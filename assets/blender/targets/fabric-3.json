@@ -1,0 +1,94 @@
+{
+ "lighthouse": 3,
+ "era": 0,
+ "eraName": "salvage",
+ "look": "wild",
+ "room": 10,
+ "camera": {
+  "position": [
+   0,
+   22.8324803868091,
+   21.658488186255532
+  ],
+  "target": [
+   0,
+   0,
+   -0.22263885110318846
+  ],
+  "fov": 40,
+  "aspect": 0.5493562231759657,
+  "width": 384,
+  "height": 699
+ },
+ "buildings": [
+  {
+   "id": "lighthouse",
+   "level": 3,
+   "model": "lighthouse-1",
+   "extra": null,
+   "scale": 1,
+   "x": 0,
+   "z": 0,
+   "reach": 0.81,
+   "height": 2.46
+  },
+  {
+   "id": "refinery",
+   "level": 1,
+   "model": "refinery-1",
+   "extra": null,
+   "scale": 1.15,
+   "x": 2,
+   "z": -3.464,
+   "reach": 0.9878499999999999,
+   "height": 1.5191499999999998
+  },
+  {
+   "id": "fishery",
+   "level": 1,
+   "model": "fishery-1",
+   "extra": null,
+   "scale": 1.15,
+   "x": 4,
+   "z": 0,
+   "reach": 1.0465,
+   "height": 0.59915
+  },
+  {
+   "id": "lumberyard",
+   "level": 1,
+   "model": "lumberyard-1",
+   "extra": null,
+   "scale": 1.15,
+   "x": 1,
+   "z": 1.732,
+   "reach": 1.035,
+   "height": 0.60835
+  },
+  {
+   "id": "shelters",
+   "level": 1,
+   "model": "shelters-1",
+   "extra": null,
+   "scale": 1.15,
+   "x": 3,
+   "z": -1.732,
+   "reach": 0.9774999999999999,
+   "height": 0.6669999999999999
+  },
+  {
+   "id": "barracks",
+   "level": 1,
+   "model": "barracks-1",
+   "extra": null,
+   "scale": 1,
+   "x": -2,
+   "z": 0,
+   "reach": 0.704,
+   "height": 1
+  }
+ ],
+ "slots": [],
+ "free": [],
+ "filling": null
+}

@@ -12,6 +12,11 @@ export type Config = {
    * It changes only the time a city advances by: never sessions, nonces, rate limits or the purge.
    */
   devSpeed: number;
+  /**
+   * The folder where the backups and the weekly test restore write their status (HEALTH_STATUS_DIR, read-only in the
+   * server's container); none in development, and /health then does not check them.
+   */
+  statusDir: string | null;
 };
 
 /**
@@ -39,5 +44,6 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     trustedProxy: env.TRUSTED_PROXY?.trim() || null,
     databaseUrl: env.DATABASE_URL || undefined,
     devSpeed,
+    statusDir: env.HEALTH_STATUS_DIR?.trim() || null,
   };
 }

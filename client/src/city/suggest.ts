@@ -2,6 +2,12 @@ import { BUILDING_IDS, canUpgrade, upgradeCost, type BuildingId } from "@brineli
 import type { PlayerState } from "../state/index.js";
 
 /** The (up to) 2 cheapest upgrades you can start right now, as the green arrows of the prototype. */
+/** Every building whose upgrade (or building, at level 0) can start now. */
+export function possibleUpgrades(state: PlayerState): BuildingId[] {
+  const queue = state.queue.map((j) => j.id);
+  return BUILDING_IDS.filter((id) => canUpgrade(id, { buildings: state.buildings, stock: state.stock, pearls: state.pearls, queue }).ok);
+}
+
 export function suggestedUpgrades(state: PlayerState): BuildingId[] {
   const queue = state.queue.map((j) => j.id);
   const total = (id: BuildingId) => Object.values(upgradeCost(id, state.buildings[id])).reduce((a, b) => a + b, 0);

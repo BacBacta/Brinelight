@@ -15,6 +15,17 @@ export type WaterOptions = {
   radii: readonly [number, number];
   /** The sky it reflects: top, middle, horizon (as the scene's sky). */
   sky: readonly [string, string, string];
+  /** The most subdivisions of its grid, whatever the quality step (the city's water, week 8, meeting 4). */
+  maxSegments?: number;
+  /**
+   * The shallows' colors along the shore and around the rafts (the city's water, the style pass): at the
+   * shore, and a meter out; past two meters, the water's own.
+   */
+  shallows?: readonly [shore: string, out: string];
+  /** Where the water rests (the city's sea stands higher: cityLook.ts, SEA_RISE). */
+  y?: number;
+  /** A ripple that laps against the shore and the rafts, coming and going (the city's water, meeting 4). */
+  lapping?: boolean;
 };
 
 export type Water = {
@@ -56,9 +67,13 @@ export function createWater(opts: WaterOptions): Water {
     uShoreBox: { value: new THREE.Vector3(-SHORE.extent, -SHORE.extent, 2 * SHORE.extent) },
     uFoam: { value: 0 },
     uFoamMoves: { value: 1 },
+    uLap: { value: opts.lapping ? 1 : 0 },
     uFoamColor: { value: new THREE.Color("#FFF6E6").multiplyScalar(1.05) },
     uLead: { value: 0 },
     uLeadColor: { value: new THREE.Color("#6A7382") },
+    uShallows: { value: opts.shallows ? 1 : 0 },
+    uShallow: { value: new THREE.Color(opts.shallows?.[0] ?? opts.near) },
+    uShallowOut: { value: new THREE.Color(opts.shallows?.[1] ?? opts.near) },
   };
   const ENV = 0.55;
   const material = new THREE.MeshStandardMaterial({ color: opts.far, roughness: 0.12, metalness: 0.05, envMapIntensity: ENV });
@@ -73,8 +88,8 @@ export function createWater(opts: WaterOptions): Water {
         .replace("#include <project_vertex>", "#include <project_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.)).xyz;");
     sh.fragmentShader =
       [
-        "uniform float uT, uRipples, uFoam, uFoamMoves, uLead;",
-        "uniform vec3 uNear, uFar, uSkyTint, uFoamColor, uShoreBox, uLeadColor;",
+        "uniform float uT, uRipples, uFoam, uFoamMoves, uLead, uLap, uShallows;",
+        "uniform vec3 uNear, uFar, uSkyTint, uFoamColor, uShoreBox, uLeadColor, uShallow, uShallowOut;",
         "uniform vec2 uRadii;",
         "uniform sampler2D uShore;",
         "varying vec3 vWPos;",
@@ -82,10 +97,19 @@ export function createWater(opts: WaterOptions): Water {
       ].join("\n") +
       "\n" +
       sh.fragmentShader
-        // Turquoise near the center, navy far away.
+        // Turquoise near the center, navy far away; with shallows, light turquoise along the shore and the rafts, a
+        // little darker right against them (their shade on the water).
         .replace(
           "vec4 diffuseColor = vec4( diffuse, opacity );",
-          "vec4 diffuseColor = vec4( mix(mix(uNear, uFar, smoothstep(uRadii.x, uRadii.y, length(vWPos.xz))), uLeadColor, uLead * .75), opacity );",
+          `vec3 water = mix(uNear, uFar, smoothstep(uRadii.x, uRadii.y, length(vWPos.xz)));
+if (uShallows > 0. && uFoam > 0.) {
+  vec2 suv = (vWPos.xz - uShoreBox.xy) / uShoreBox.z;
+  float sd = (suv.x > 0. && suv.y > 0. && suv.x < 1. && suv.y < 1.) ? texture2D(uShore, suv).r * SHORE_REACH : SHORE_REACH;
+  vec3 shallow = mix(uShallow, uShallowOut, smoothstep(0.05, 1., sd));
+  water = mix(shallow, water, smoothstep(.6, SHORE_REACH, sd));
+  water *= 1. - .22 * (1. - smoothstep(0., .14, sd));
+}
+vec4 diffuseColor = vec4( mix(water, uLeadColor, uLead * .75), opacity );`,
         )
         // Small ripples: a few crossing sines tilt the normal, pixel by pixel.
         .replace(
@@ -113,18 +137,23 @@ if (uFoam > 0.) {
     float t = uT * uFoamMoves;
     float swell = .5 + .5 * sin(d * 9. - t * 2.2);
     float grain = sin(vWPos.x * 7.3 + sin(vWPos.z * 5.1)) * sin(vWPos.z * 6.7 + sin(vWPos.x * 4.3 + t * .4));
-    float f = (1. - smoothstep(.03, .28 + .1 * swell, d)) * smoothstep(-.5, .5, grain + swell * .8 - d * 2.);
-    outgoingLight = mix(outgoingLight, uFoamColor * (1. - uLead * .35), clamp(f, 0., 1.) * .7);
+    // With the shallows (the city's water), a thinner foam: the coast and the rafts never bathe in a pale glow (owner).
+    float reach = mix(.28 + .1 * swell, .12 + .05 * swell, uShallows);
+    float f = (1. - smoothstep(.03, reach, d)) * smoothstep(-.5, .5, grain + swell * .8 - d * 2.) * (1. - .35 * uShallows);
+    // The lapping: a thin line of foam that comes and goes against what floats and the shore.
+    f = max(f, uLap * (1. - smoothstep(0., .022, abs(d - .07 - .04 * sin(t * 2.6 + vWPos.x * 2.3 + vWPos.z * 1.7)))) * .85);
+    outgoingLight = mix(outgoingLight, mix(uFoamColor, vec3(.86, .95, .97), uShallows) * (1. - uLead * .35), clamp(f, 0., 1.) * .7);
   }
 }
 #include <opaque_fragment>`,
         );
   };
   const grid = (segments: number) => new THREE.PlaneGeometry(opts.size, opts.size, segments, segments);
-  const mesh = new THREE.Mesh(grid(96), material);
+  const capped = (segments: number) => Math.min(segments, opts.maxSegments ?? segments);
+  let segments = capped(96);
+  const mesh = new THREE.Mesh(grid(segments), material);
   mesh.rotation.x = -Math.PI / 2;
-  mesh.position.y = SHORE.waterY;
-  let segments = 96;
+  mesh.position.y = opts.y ?? SHORE.waterY;
 
   let reflection: THREE.Texture | null = null;
   let reflections = true;
@@ -144,8 +173,8 @@ if (uFoam > 0.) {
       uniforms.uFoamMoves.value = step.foamMoves ? 1 : 0;
       reflections = step.reflections;
       setEnv();
-      if (step.waterSegments !== segments) {
-        segments = step.waterSegments;
+      if (capped(step.waterSegments) !== segments) {
+        segments = capped(step.waterSegments);
         mesh.geometry.dispose();
         mesh.geometry = grid(segments);
       }

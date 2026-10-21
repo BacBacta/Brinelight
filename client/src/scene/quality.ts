@@ -6,15 +6,16 @@ export type QualityStep = 0 | 1 | 2;
 
 /**
  * What each step keeps, to hold 30 FPS on an entry-level phone (week 6, task 4): the screen's pixel density, the
- * shadows' map (0: none), and the water's sky reflection, small ripples, moving foam and grid.
+ * shadows' map (0: none), and the water's sky reflection, small ripples, moving foam and grid; the city's
+ * finish too (post.ts: the lamps' glow and the color grade), at full quality only.
  */
 export const QUALITY_STEPS: Record<
   QualityStep,
-  { maxPixelRatio: number; shadowMap: number; reflections: boolean; ripples: boolean; foamMoves: boolean; waterSegments: number }
+  { maxPixelRatio: number; shadowMap: number; reflections: boolean; ripples: boolean; foamMoves: boolean; waterSegments: number; finish: boolean }
 > = {
-  0: { maxPixelRatio: 2, shadowMap: 2048, reflections: true, ripples: true, foamMoves: true, waterSegments: 96 },
-  1: { maxPixelRatio: 1, shadowMap: 1024, reflections: true, ripples: true, foamMoves: true, waterSegments: 96 },
-  2: { maxPixelRatio: 1, shadowMap: 0, reflections: false, ripples: false, foamMoves: false, waterSegments: 48 },
+  0: { maxPixelRatio: 2, shadowMap: 2048, reflections: true, ripples: true, foamMoves: true, waterSegments: 96, finish: true },
+  1: { maxPixelRatio: 1, shadowMap: 1024, reflections: true, ripples: true, foamMoves: true, waterSegments: 96, finish: false },
+  2: { maxPixelRatio: 1, shadowMap: 0, reflections: false, ripples: false, foamMoves: false, waterSegments: 48, finish: false },
 };
 
 export const QUALITY_MIN_FPS = 30;

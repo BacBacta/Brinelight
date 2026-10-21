@@ -23,7 +23,7 @@ export type LabelPlace = { dy: number; compact: boolean; hidden: boolean };
 /** Space kept between two labels. */
 export const GAP = 2;
 
-type Rect = { left: number; right: number; top: number; bottom: number };
+export type Rect = { left: number; right: number; top: number; bottom: number };
 
 const size = (b: LabelBox, compact: boolean) => (compact ? { w: b.compactW, h: b.compactH } : { w: b.w, h: b.h });
 
@@ -59,16 +59,34 @@ function lift(b: LabelBox, compact: boolean, placed: Rect[]): { dy: number; rect
  * makes room, and its building can still be tapped. The `pinned` label (the building you tapped) is laid out
  * first and keeps its full size.
  */
-export function layoutLabels(boxes: readonly LabelBox[], pinned: string | null = null): Record<string, LabelPlace> {
+export function layoutLabels(
+  boxes: readonly LabelBox[],
+  pinned: string | null = null,
+  options: {
+    /** The labels that may show in full (week 8: the building touched, at work, suggested, just upgraded); the others are badges. All when not given. */
+    full?: ReadonlySet<string>;
+    /** The panels on screen (top bar, quest card, tab bar, sheet): no label goes under one, not even the pinned one. */
+    panels?: readonly Rect[];
+  } = {},
+): Record<string, LabelPlace> {
   const out: Record<string, LabelPlace> = {};
-  const placed: Rect[] = [];
+  const panels = options.panels ?? [];
+  const placed: Rect[] = [...panels];
+  const clear = (r: Rect) => !panels.some((p) => overlaps(r, p));
   const order = [...boxes].sort((a, c) => (a.id === pinned ? -1 : c.id === pinned ? 1 : a.depth - c.depth));
   for (const b of order) {
-    const full = lift(b, false, placed);
-    if (full || b.id === pinned) {
-      const place = full ?? { dy: 0, rect: rectOf(b, 0, false) };
-      placed.push(place.rect);
-      out[b.id] = { dy: place.dy, compact: false, hidden: false };
+    const mayBeFull = !options.full || options.full.has(b.id) || b.id === pinned;
+    const full = mayBeFull ? lift(b, false, placed) : null;
+    // A pinned label keeps its full size, unless it would go under a panel.
+    if (b.id === pinned && !full && clear(rectOf(b, 0, false))) {
+      const rect = rectOf(b, 0, false);
+      placed.push(rect);
+      out[b.id] = { dy: 0, compact: false, hidden: false };
+      continue;
+    }
+    if (full) {
+      placed.push(full.rect);
+      out[b.id] = { dy: full.dy, compact: false, hidden: false };
       continue;
     }
     const small = lift(b, true, placed);

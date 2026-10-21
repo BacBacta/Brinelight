@@ -12,8 +12,12 @@ import {
 } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
 import { RAFT_TEXT, raftEffectText, raftSheetHtml, yardName } from "../src/city/raftSheet.js";
+
+/** These sheets read the rafts' words (before the Lighthouse 5); the land's are read in words.test.ts. */
+const RAFTS = false;
 import { QUEUE_ROWS, queueFold } from "../src/city/queue.js";
-import { RAFT_BUILDING_FIT, createCityRafts, raftBuildingGeometry, raftBuildingTurn, raftBuildingsShown } from "../src/city/rafts.js";
+import { createCityRafts, raftBuildingsShown } from "../src/city/rafts.js";
+import type { Placed, Village } from "../src/city/village.js";
 import { attackInput } from "../src/sea/odds.js";
 import { SAVE_KEY, openSave, saveGame, type KeyValueStore } from "../src/state/save.js";
 
@@ -36,13 +40,11 @@ const locally = (s: PlayerState, a: RaftAction) => {
   if (!r.ok) throw new Error(r.reason);
   return r.state;
 };
-/** A stand-in for a building model: a tall box off center, as a loaded model may be. */
-const tower = () => {
-  const g = new THREE.Group();
-  const m = new THREE.Mesh(new THREE.BoxGeometry(1, 6, 1), new THREE.MeshStandardMaterial());
-  m.position.set(3, 5, -1);
-  g.add(m);
-  return g;
+/** A stand-in for the village (village.ts): it keeps what it is asked to lay. */
+const fakeVillage = () => {
+  const laid: { items: Placed[] } = { items: [] };
+  const village = { meshes: [], show: (items: Placed[]) => void (laid.items = items), animate() {}, prefetch() {}, setDimness() {}, setCloseness() {} } as unknown as Village;
+  return { village, laid };
 };
 
 describe("what a raft building does, in your units", () => {
@@ -56,7 +58,7 @@ describe("what a raft building does, in your units", () => {
 
 describe("the sheet of a raft", () => {
   it("a free raft: the three buildings, their effect, cost, time and copies, an Install button each", () => {
-    const html = raftSheetHtml(carrying(moored(), B, "smokehouse", 1), A, 1)!;
+    const html = raftSheetHtml(carrying(moored(), B, "smokehouse", 1), A, 1, RAFTS)!;
     expect(html.title).toBe("Raft");
     expect(html.body).toContain("A free raft. Put a building on it. Each type is limited to 2 rafts.");
     expect(html.body).toContain("Sturdiness");
@@ -69,21 +71,21 @@ describe("the sheet of a raft", () => {
 
   it("a third copy, or the shipyard busy: the button is still there, refused; the busy shipyard is said", () => {
     const two = carrying(carrying(moored(), B, "greenhouse", 1), C, "greenhouse", 1);
-    expect(raftSheetHtml(two, A, 1)!.body).toContain('data-act="install" data-building="greenhouse" aria-disabled="true"');
+    expect(raftSheetHtml(two, A, 1, RAFTS)!.body).toContain('data-act="install" data-building="greenhouse" aria-disabled="true"');
     const busy = locally(moored(), { type: "installOnRaft", slot: B, building: "watchtower" });
-    const html = raftSheetHtml(busy, A, 1)!.body;
+    const html = raftSheetHtml(busy, A, 1, RAFTS)!.body;
     expect(html).toContain("1/2</small>");
     expect(html).toContain('<p class="why">The shipyard is busy</p>');
   });
 
   it("a raft with a building: its effect at this level, the next level's cost, time and Power, or Max level", () => {
-    const html = raftSheetHtml(carrying(moored(), A, "greenhouse", 2), A, 1)!;
+    const html = raftSheetHtml(carrying(moored(), A, "greenhouse", 2), A, 1, RAFTS)!;
     expect(html.title).toBe("Kelp Greenhouse");
     expect(html.body).toContain("Kelp Greenhouse level 2: +9 fish/h.");
     expect(html.body).toContain("<h4>Upgrade to level 3</h4>");
     expect(html.body).toContain("Time: 1 h 48 min · Power +90");
     expect(html.body).toContain('data-act="upgrade-raft" aria-disabled="false">Upgrade</button>');
-    const max = raftSheetHtml(carrying(moored(), A, "watchtower", 3), A, 1)!;
+    const max = raftSheetHtml(carrying(moored(), A, "watchtower", 3), A, 1, RAFTS)!;
     expect(max.body).toContain("Watchtower level 3: +15% fleet attack.");
     expect(max.body).toContain(RAFT_TEXT.max);
     expect(max.body).not.toContain('data-act="upgrade-raft"');
@@ -91,7 +93,7 @@ describe("the sheet of a raft", () => {
 
   it("while the shipyard works on it: what and how long", () => {
     const s = locally(moored(), { type: "installOnRaft", slot: A, building: "smokehouse" });
-    const html = raftSheetHtml(s, A, 1)!;
+    const html = raftSheetHtml(s, A, 1, RAFTS)!;
     expect(html.title).toBe("Smokehouse");
     expect(html.body).toContain(RAFT_TEXT.working);
     expect(html.body).toContain("Done in 48:00");
@@ -105,7 +107,7 @@ describe("repairing the rafts, on a raft's sheet", () => {
   };
 
   it("while rafts are damaged, every raft's sheet offers to repair them all: the cost in oil, the time", () => {
-    const html = raftSheetHtml(damaged(), C, 1)!.body;
+    const html = raftSheetHtml(damaged(), C, 1, RAFTS)!.body;
     // 35 + 75 = 110 points: 220 oil and no wood, whatever the Lighthouse's level; 110 / 35 × 6 minutes.
     expect(html).toContain("Repair the 2 damaged rafts");
     expect(html).toContain('data-act="repair"');
@@ -113,16 +115,16 @@ describe("repairing the rafts, on a raft's sheet", () => {
     expect(html).toMatch(/title="oil"><span class="ic oil">.*?<\/span>220<\/span>/);
     expect(html).not.toContain('title="wood"');
     expect(html).toContain("Time: 19 min");
-    expect(raftSheetHtml(damaged(), A, 1)!.body).toContain("Repair the 2 damaged rafts");
-    expect(raftSheetHtml(moored(), A, 1)!.body).not.toContain('data-act="repair"');
+    expect(raftSheetHtml(damaged(), A, 1, RAFTS)!.body).toContain("Repair the 2 damaged rafts");
+    expect(raftSheetHtml(moored(), A, 1, RAFTS)!.body).not.toContain('data-act="repair"');
   });
 
   it("while they are repaired: their sheets show the work, the queue names it", () => {
     const r = applyAction(damaged(), { id: "", type: "repairRafts" });
     if (!r.ok) throw new Error(r.reason);
-    expect(raftSheetHtml(r.state, B, 1)!.body).toContain("Repairing 2 rafts.");
-    expect(raftSheetHtml(r.state, C, 1)!.body).not.toContain('data-act="repair"');
-    expect(yardName(r.state)).toBe("Shipyard · repairing 2 rafts");
+    expect(raftSheetHtml(r.state, B, 1, RAFTS)!.body).toContain("Repairing 2 rafts.");
+    expect(raftSheetHtml(r.state, C, 1, RAFTS)!.body).not.toContain('data-act="repair"');
+    expect(yardName(r.state, RAFTS)).toBe("Shipyard · repairing 2 rafts");
   });
 });
 
@@ -130,10 +132,10 @@ describe("the queue", () => {
   it("names the shipyard's work: a raft, a building put on a raft, a building one level up", () => {
     const docked = applyAction(moored(), { id: "", type: "dockRaft", slot: INNER[4]! });
     if (!docked.ok) throw new Error(docked.reason);
-    expect(yardName(docked.state)).toBe("Shipyard · raft");
-    expect(yardName(locally(moored(), { type: "installOnRaft", slot: A, building: "greenhouse" }))).toBe("Shipyard · Kelp Greenhouse");
-    expect(yardName(locally(carrying(moored(), A, "watchtower", 1), { type: "upgradeRaft", slot: A }))).toBe("Shipyard · Watchtower Lv 2");
-    expect(yardName(moored())).toBeNull();
+    expect(yardName(docked.state, RAFTS)).toBe("Shipyard · raft");
+    expect(yardName(locally(moored(), { type: "installOnRaft", slot: A, building: "greenhouse" }), RAFTS)).toBe("Shipyard · Kelp Greenhouse");
+    expect(yardName(locally(carrying(moored(), A, "watchtower", 1), { type: "upgradeRaft", slot: A }), RAFTS)).toBe("Shipyard · Watchtower Lv 2");
+    expect(yardName(moored(), RAFTS)).toBeNull();
   });
 
   it(`shows at most ${QUEUE_ROWS} rows, then "+N more", which unfolds the rest and folds it back`, () => {
@@ -153,44 +155,29 @@ describe("buildings on rafts in the city", () => {
     expect(raftBuildingsShown(advance(s, RAFT_INSTALL_TIME)).greenhouse.sort()).toEqual([A, B].sort());
   });
 
-  it("each model becomes one geometry, centered, standing on its bottom, within the room a raft gives", () => {
-    const { geometry } = raftBuildingGeometry(tower());
-    const box = geometry.boundingBox!;
-    expect(box.min.y).toBeCloseTo(0, 6);
-    expect((box.min.x + box.max.x) / 2).toBeCloseTo(0, 6);
-    expect(box.max.y - box.min.y).toBeCloseTo(RAFT_BUILDING_FIT.height, 6);
-    expect(Math.max(box.max.x - box.min.x, box.max.z - box.min.z)).toBeLessThanOrEqual(RAFT_BUILDING_FIT.width);
-  });
-
-  it("three meshes for the three types, two copies each at most, and a tap on a building opens its raft", () => {
+  it("the village lays each building on the raft that carries it, two copies of a type at most, and a tap on it opens its raft", () => {
     const added: THREE.Object3D[] = [];
-    const rafts = createCityRafts({}, tower(), (o) => added.push(o));
-    let s = moored();
+    const { village, laid } = fakeVillage();
+    const rafts = createCityRafts((o) => added.push(o), () => 4.6, village);
+    let s = { ...moored(), buildings: { ...moored().buildings, lighthouse: 4 } };
     s = carrying(carrying(carrying(s, A, "greenhouse", 1), B, "greenhouse", 3), C, "watchtower", 2);
     rafts.refresh(s);
-    rafts.useBuildings({ greenhouse: tower(), smokehouse: tower(), watchtower: tower() });
     rafts.animate(2);
-    expect(added).toHaveLength(5 + 3);
-    const onRafts = rafts.meshes.slice(4) as THREE.InstancedMesh[];
-    expect(onRafts.map((m) => [m.userData.raftBuilding, m.count, m.visible])).toEqual([
-      ["greenhouse", 2, true],
-      ["smokehouse", 0, false],
-      ["watchtower", 1, true],
-    ]);
-    expect(onRafts.every((m) => m.instanceMatrix.count === 2)).toBe(true);
-    expect(rafts.hits).toContain(onRafts[2]);
-    expect(rafts.slotOf({ object: onRafts[2]!, instanceId: 0 } as unknown as THREE.Intersection)).toBe(C);
-    // Each building stands on its raft's slot, turned as the prototype turned it.
-    const m = new THREE.Matrix4();
-    onRafts[2]!.getMatrixAt(0, m);
-    const p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3();
-    m.decompose(p, q, sc);
-    const turn = new THREE.Euler().setFromQuaternion(q, "YXZ").y;
-    expect(Math.cos(turn)).toBeCloseTo(Math.cos(raftBuildingTurn(C)), 6);
-    // The city changes: the meshes stay, their counts follow.
-    rafts.refresh(moored());
-    expect(onRafts.map((m) => m.count)).toEqual([0, 0, 0]);
-    expect(added).toHaveLength(8);
+    const at = (key: string) => RAFT_SLOTS.find((x) => x.key === key)!;
+    const on = (prefix: string) => laid.items.filter((it) => it.name.startsWith(prefix));
+    expect(on("greenhouse")).toHaveLength(2);
+    expect(on("smokehouse")).toHaveLength(0);
+    expect(on("watchtower")).toHaveLength(1);
+    const tower = on("watchtower")[0]!;
+    expect(Math.hypot(tower.x - 2 * (at(C).q + at(C).r / 2), tower.z - 1.732 * at(C).r)).toBeLessThan(1e-9);
+    // The tap shapes: one per slot shown, the slot's own.
+    const hit = rafts.hits[0] as THREE.InstancedMesh;
+    const slots = Array.from({ length: hit.count }, (_, i) => rafts.slotOf({ object: hit, instanceId: i } as unknown as THREE.Intersection));
+    expect(slots).toContain(C);
+    // The city changes: no new mesh, the buildings go.
+    rafts.refresh({ ...moored(), buildings: { ...moored().buildings, lighthouse: 4 } });
+    expect(on("greenhouse")).toHaveLength(0);
+    expect(added).toHaveLength(2);
   });
 });
 

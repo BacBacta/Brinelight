@@ -42,6 +42,11 @@ services:
       SIWS_CHAIN_ID: ${SIWS_CHAIN_ID:-mainnet}
       # Only Caddy (its fixed address below) may say who the player is, with X-Forwarded-For.
       TRUSTED_PROXY: 172.30.0.10
+      # Where /health reads the last backup's time and the last test restore's result (backup.sh, restore.sh).
+      HEALTH_STATUS_DIR: /status
+    volumes:
+      # Read-only, and only the status folder: two one-line files, never a dump.
+      - ${STATUS_DIR:-/var/lib/brinelight/status}:/status:ro
     depends_on:
       db: { condition: service_healthy }
     # No "ports" either: only Caddy reaches it.

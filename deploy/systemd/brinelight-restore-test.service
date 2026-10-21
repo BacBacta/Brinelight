@@ -1,0 +1,9 @@
+[Unit]
+Description=Brinelight: test restore of the latest backup (nothing live is changed)
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+# The path is written by install-backup.sh. The result goes to /var/lib/brinelight/status/restore, read by /health.
+ExecStart=__DEPLOY_DIR__/restore.sh test

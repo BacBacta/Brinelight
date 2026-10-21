@@ -38,15 +38,11 @@ import { RAFT_BUILDING_IDS } from "../scene/index.js";
 import { actionButton, box, button, costLine, costText, createSheetView, keyValues, kv, listRow, progressBar, why } from "../ui/components.js";
 import { formatAmount, formatDuration, formatTimeLeft } from "./format.js";
 import { progress } from "./suggest.js";
+import { landShown, raftWords, type RaftWords } from "./words.js";
 
-export const RAFT_TEXT = {
-  free: "The Lighthouse's light reaches this far. You can moor a raft here and grow your city.",
-  working: "Work in progress.",
-  raft: `A free raft. Put a building on it. Each type is limited to ${RAFT_BUILDING_MAX_COPIES} rafts.`,
-  build: "Build the raft",
-  rope: "You find rope in wrecks and on pirates.",
-  max: "Max level.",
-} as const;
+/** The rafts' words (words.ts), before the Lighthouse 5 or with the old look. */
+const R = raftWords(false);
+export const RAFT_TEXT = { free: R.free, working: R.working, raft: R.empty, build: R.build, rope: R.rope, max: R.max } as const;
 
 const tenth = (n: number): string => String(Number(n.toFixed(1)));
 /** What a raft building does at `level` levels, in the player's units: "+4.5 fish/h", "−10% fish eaten", "+5% fleet attack". */
@@ -56,71 +52,71 @@ export function raftEffectText(id: RaftBuildingId, level: number): string {
   return `+${tenth(WATCHTOWER_ATTACK * 100 * level)}% fleet attack`;
 }
 
-/** The raft's sturdiness, as on every raft's sheet. */
-const sturdiness = (raft: Raft): string => {
+/** The raft's sturdiness (the land's dike), as on every raft's sheet. */
+const sturdiness = (raft: Raft, w: RaftWords): string => {
   const bad = raft.hp < RAFT_DAMAGED_BELOW;
   return (
-    keyValues(kv("Sturdiness", `${Math.round((raft.hp / RAFT_MAX_HP) * 100)}%${bad ? " · half efficiency" : ""}`, "", bad ? "no" : "ok")) +
+    keyValues(kv(w.sturdiness, `${Math.round((raft.hp / RAFT_MAX_HP) * 100)}%${bad ? ` · ${w.weak}` : ""}`, "", bad ? "no" : "ok")) +
     progressBar(raft.hp / RAFT_MAX_HP, 0)
   );
 };
 
-/** "Shipyard · Kelp Greenhouse": what the shipyard works on, as the queue names it. */
-export function yardName(state: PlayerState): string | null {
+/** "Shipyard · Kelp Greenhouse": what the shipyard works on, as the queue names it ("Dike works" on land). */
+export function yardName(state: PlayerState, land = landShown(state.buildings.lighthouse)): string | null {
   const job = state.yard;
   if (!job) return null;
-  if (job.kind === "raft") return "Shipyard · raft";
-  if (job.kind === "install") return `Shipyard · ${RAFT_BUILDINGS[job.building].name}`;
-  if (job.kind === "repair") return `Shipyard · repairing ${rafts(job.slots.length)}`;
+  const w = raftWords(land);
+  if (job.kind === "raft") return `${w.yard} · ${w.yardNew}`;
+  if (job.kind === "install") return `${w.yard} · ${RAFT_BUILDINGS[job.building].name}`;
+  if (job.kind === "repair") return `${w.yard} · ${w.repairing(job.slots.length).toLowerCase()}`;
   const raft = state.rafts[job.slot];
-  return raft?.building ? `Shipyard · ${RAFT_BUILDINGS[raft.building].name} Lv ${raft.level + 1}` : "Shipyard · upgrade";
+  return raft?.building ? `${w.yard} · ${RAFT_BUILDINGS[raft.building].name} Lv ${raft.level + 1}` : `${w.yard} · upgrade`;
 }
-
-const rafts = (n: number): string => `${n} ${n === 1 ? "raft" : "rafts"}`;
 
 /**
  * Repairing every damaged raft, on the sheet of any raft: how many, what it costs (oil only) and takes, and the
  * button; nothing when every raft is sound.
  */
-function repairHtml(state: PlayerState, speed: number): string {
+function repairHtml(state: PlayerState, speed: number, w: RaftWords): string {
   const damaged = damagedRafts(state.rafts);
   if (damaged.length === 0 || state.yard?.kind === "repair") return "";
   const check = canRepair({ rafts: state.rafts, stock: state.stock, yard: state.yard });
   return (
     box(
-      `Repair ${damaged.length === 1 ? "the damaged raft" : `the ${damaged.length} damaged rafts`}`,
+      w.repair(damaged.length),
       costLine(state.stock, repairCost(state.rafts)) +
-        `<p class="p" style="font-size:12.5px;margin-top:6px">Time: ${formatDuration(repairTime(state.rafts) / speed)}. Back to full sturdiness, all at once.</p>`,
+        `<p class="p" style="font-size:12.5px;margin-top:6px">Time: ${formatDuration(repairTime(state.rafts) / speed)}. ${w.repaired}</p>`,
     ) +
     // Still tappable when refused: the tap shows the reason in a toast too.
-    actionButton("Repair", check, "gold", "repair")
+    actionButton(w.repairButton, check, "gold", "repair")
   );
 }
 
 /** The inside of a raft slot's sheet; null when the slot shows nothing (not lit, or nothing to start). */
-export function raftSheetHtml(state: PlayerState, slot: string, speed: number): { title: string; body: string } | null {
+export function raftSheetHtml(state: PlayerState, slot: string, speed: number, land = landShown(state.buildings.lighthouse)): { title: string; body: string } | null {
   const s = RAFT_SLOTS.find((x) => x.key === slot);
   if (!s) return null;
+  const w = raftWords(land);
   const raft = state.rafts[slot];
   const lighthouse = state.buildings.lighthouse;
   const job = state.yard;
   if (job?.kind === "repair" && job.slots.includes(slot)) {
     return {
-      title: raft?.building ? RAFT_BUILDINGS[raft.building].name : "Raft",
-      body: `<p class="p">Repairing ${rafts(job.slots.length)}.</p>${progressBar(progress(job))}<p class="p">Done in ${formatTimeLeft(job.left / speed)}</p>`,
+      title: raft?.building ? RAFT_BUILDINGS[raft.building].name : w.emptyTitle,
+      body: `<p class="p">${w.repairing(job.slots.length)}.</p>${progressBar(progress(job))}<p class="p">Done in ${formatTimeLeft(job.left / speed)}</p>`,
     };
   }
   if (job && yardSlot(job) === slot && job.kind !== "repair") {
-    const title = job.kind === "install" ? RAFT_BUILDINGS[job.building].name : job.kind === "upgrade" && raft?.building ? RAFT_BUILDINGS[raft.building].name : "Shipyard";
+    const title = job.kind === "install" ? RAFT_BUILDINGS[job.building].name : job.kind === "upgrade" && raft?.building ? RAFT_BUILDINGS[raft.building].name : w.yard;
     return {
       title,
-      body: `<p class="p">${RAFT_TEXT.working}</p>${progressBar(progress(job))}<p class="p">Done in ${formatTimeLeft(job.left / speed)}</p>`,
+      body: `<p class="p">${w.working}</p>${progressBar(progress(job))}<p class="p">Done in ${formatTimeLeft(job.left / speed)}</p>`,
     };
   }
   if (raft && raft.building) {
     const b = RAFT_BUILDINGS[raft.building];
-    const head = `<p class="p">${b.name} level ${raft.level}: ${raftEffectText(raft.building, raft.level)}.</p>${sturdiness(raft)}${repairHtml(state, speed)}`;
-    if (raft.level >= RAFT_BUILDING_MAX_LEVEL) return { title: b.name, body: `${head}<p class="p">${RAFT_TEXT.max}</p>` };
+    const head = `<p class="p">${b.name} level ${raft.level}: ${raftEffectText(raft.building, raft.level)}.</p>${sturdiness(raft, w)}${repairHtml(state, speed, w)}`;
+    if (raft.level >= RAFT_BUILDING_MAX_LEVEL) return { title: b.name, body: `${head}<p class="p">${w.max}</p>` };
     const check = canUpgradeRaft({ rafts: state.rafts, slot, stock: state.stock, yard: state.yard });
     return {
       title: b.name,
@@ -150,25 +146,25 @@ export function raftSheetHtml(state: PlayerState, slot: string, speed: number): 
       );
     }).join("");
     return {
-      title: "Raft",
-      body: `<p class="p">${RAFT_TEXT.raft}</p>${sturdiness(raft)}${repairHtml(state, speed)}<div class="list">${rows}</div>` + (state.yard ? why("The shipyard is busy") : ""),
+      title: w.emptyTitle,
+      body: `<p class="p">${w.empty}</p>${sturdiness(raft, w)}${repairHtml(state, speed, w)}<div class="list">${rows}</div>` + (state.yard ? why(w.yardBusy) : ""),
     };
   }
   const n = Object.keys(state.rafts).length;
   const check = canAddRaft({ rafts: state.rafts, lighthouse, slot, stock: state.stock, yardBusy: state.yard !== null });
   return {
-    title: "Raft slot",
+    title: w.slotTitle,
     body:
-      `<p class="p">${RAFT_TEXT.free}</p>` +
+      `<p class="p">${w.free}</p>` +
       keyValues(
-        kv("Rafts", `${n} / ${raftCap(lighthouse)}`) +
+        kv(w.count, `${n} / ${raftCap(lighthouse)}`) +
           kv("Ring", s.ring === 3 ? "first" : "second") +
-          kv("At next Lighthouse level", `${raftCap(lighthouse + 1)} rafts`) +
+          kv("At next Lighthouse level", w.many(raftCap(lighthouse + 1))) +
           kv("Your rope", formatAmount(state.stock.rope)),
       ) +
-      box("Moor a raft", costLine(state.stock, raftCost(n)) + `<p class="p" style="font-size:12.5px;margin-top:6px">Time: ${formatDuration(RAFT_BUILD_TIME / speed)}. ${RAFT_TEXT.rope}</p>`) +
+      box(w.moor, costLine(state.stock, raftCost(n)) + `<p class="p" style="font-size:12.5px;margin-top:6px">Time: ${formatDuration(RAFT_BUILD_TIME / speed)}. ${w.rope}</p>`) +
       // Still tappable when refused: the tap shows the reason in a toast too.
-      actionButton(RAFT_TEXT.build, check, "gold xl", "dock"),
+      actionButton(w.build, check, "gold xl", "dock"),
   };
 }
 

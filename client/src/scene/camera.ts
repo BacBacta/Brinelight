@@ -1,21 +1,12 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { CITY_ANGLE, CITY_FOV } from "./framing.js";
 
 /** Below this width / height ratio the screen counts as portrait (prototype: W/H < .8). */
 export const PORTRAIT_ASPECT = 0.8;
 
-/**
- * Distance from the camera to the city, as in the prototype:
- * further back in portrait, and further again from Lighthouse level 4 and level 8.
- */
-export function cameraDistance(aspect: number, lighthouseLevel: number): number {
-  const portrait = aspect < PORTRAIT_ASPECT;
-  const far = lighthouseLevel >= 8 ? (portrait ? 1.6 : 1.35) : lighthouseLevel >= 4 ? (portrait ? 1.4 : 1.2) : 1;
-  return (portrait ? 24.5 : 17) * far;
-}
-
 export function createCamera(): THREE.PerspectiveCamera {
-  return new THREE.PerspectiveCamera(40, 1, 0.1, 200);
+  return new THREE.PerspectiveCamera(CITY_FOV, 1, 0.1, 400);
 }
 
 export function createControls(camera: THREE.PerspectiveCamera, dom: HTMLElement): OrbitControls {
@@ -32,12 +23,13 @@ export function createControls(camera: THREE.PerspectiveCamera, dom: HTMLElement
   return ctl;
 }
 
-/** Puts the camera back on its starting view for this screen and Lighthouse level. */
-export function frameCity(camera: THREE.PerspectiveCamera, ctl: OrbitControls, aspect: number, lighthouseLevel: number): void {
+/** Puts the camera on the city's normal view (framing.ts) for this screen: its distance and the point it looks at. */
+export function frameCity(camera: THREE.PerspectiveCamera, ctl: OrbitControls, aspect: number, framing: { distance: number; target: THREE.Vector3 }): void {
   camera.aspect = aspect;
   camera.updateProjectionMatrix();
-  const d = cameraDistance(aspect, lighthouseLevel);
-  camera.position.set(0, d * 0.72, d * 0.69 + 0.6);
-  ctl.target.set(0, 0, aspect < PORTRAIT_ASPECT ? -0.2 : 0.6);
+  ctl.target.copy(framing.target);
+  camera.position.copy(framing.target).addScaledVector(CITY_ANGLE, framing.distance);
+  // Zooming out stops at the normal view (or at 40 where the prototype stopped, if that is farther).
+  ctl.maxDistance = Math.max(40, framing.distance);
   ctl.update();
 }

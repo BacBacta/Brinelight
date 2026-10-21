@@ -54,6 +54,10 @@ Three states, with a fade between them.
 | Observatory | Round turret, verdigris dome, telescope |
 | Infirmary | Low building, white cross on a cream canvas roof, awning with cots |
 
+## Rafts
+
+- A floating village: hexagonal decks on the grid, water between them, walkways toward the island. Three painted decks (sail, nets, planters) and a damaged one, as briefed in `docs/raft-models.md`.
+
 ## Captains
 
 - Painted bust portraits, in three-quarter view.
@@ -113,6 +117,26 @@ Generated from this page (GPT Image and Meshy, through Higgsfield):
 - on 2026-10-16: seven objects, the raft, the wreck, the pirate camp, your boat, and the three buildings on rafts (Kelp Greenhouse, Smokehouse, Watchtower). Their concepts are in `assets/concepts/` and their meshes in `assets/models/src/`;
 - on 2026-10-16: the icon sheet (24 icons, flat two-tone: a palette color with a night-blue outline), in `assets/icons/sheet.png`;
 - on 2026-10-17: the island, a green meadow on dark rock with moss, dune grass, a sandy corner and a windswept pine, in `assets/concepts/island.png` and `assets/models/src/island.glb`. The model had two pines inside the plots; `assets/make-models.py` moves the smaller one to the rim, at the pier's gap (the only place clear of every plot and raft slot), and drops the other. It follows "No neon lawn". It replaces a first, sandy island, which looked too barren for an inhabited place.
+
+## Made in Blender (week 8)
+
+From 19 October the city is remade with Blender 5.2.2 run from Python (`assets/blender/`), with no window: a kit of parts in this page's palette (`kit.py`), joined into one mesh per model, its colors and soft shadows baked into one texture. With the style pass:
+- each piece gets a shade of its own;
+- wood and stone get a grain;
+- edges catch the light;
+- tops are lighter and feet darker;
+- two shadows lean to blue.
+
+- **The island**: the 19 plots' hexagons edge to edge, widened by 0.1 past the plots, so its coast follows the grid. The rafts of ring 3 float in its notches. Its cliff never comes out past the meadow above the water.
+- **A building goes through six eras** (owner, 19 October; `docs/tasks/week-8.md`, "The eras"): Salvage (levels 1–4), Colony (5–9), Workshop (10–14), Industry (15–19), Electricity (20–24), Modern (25–30). Each era is a new building, with its own architecture and silhouette, not the same one repainted; a detail at every other level within its era, at the front, on the walls the camera sees, or on a roof. Level 30 is the Modern era complete, with a crown.
+  - Five neutral materials join the palette, as materials rather than colors: steel `#8E979C`, glass `#A9DCD8`, a terracotta brick `#B9674A` (browner and duller than the pirates' red), concrete `#C8C1B4`, and the solar panels' navy. The three-color rule holds for the accent colors.
+  - The Modern era's bright light is the palette's warm gold, never a cold white or a neon.
+  - Its flag in its era's color: cream (Salvage, Colony), navy (Workshop, Industry), copper (Electricity), gold (Modern). Brick red stays the pirates'.
+  - It always stays under the top of the Lighthouse and inside its plot (tested at every level).
+- **The island's ground** follows the Lighthouse's era: earth paths and driftwood stakes, stone-edged paths and fences, cobbles, paving and iron bollards, lamp posts, then concrete quays all along the coast. One small model an era, laid over the island.
+- **The building site**: a scaffolding stretched to the building, and a crane whose arm swings and whose crate goes up and down.
+
+`assets/blender/build.py` makes them; `assets/blender/serve.py` serves them like `make-models.py` does.
 
 `assets/make-models.py` and `assets/icons/make-icons.py` make the files the game serves.
 

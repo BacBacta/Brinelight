@@ -1,0 +1,10 @@
+[Unit]
+Description=Brinelight: test restore of the latest backup every week
+
+[Timer]
+# Every Sunday at 04:30 UTC, an hour after the night's backup. Persistent: a Sunday missed while the server was off runs at start.
+OnCalendar=Sun *-*-* 04:30:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

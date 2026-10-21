@@ -2,19 +2,35 @@
 # Restore the database from a backup (docs/deploy.md, "Backups").
 #
 #   ./restore.sh test [file]     Restores into a separate, temporary database and compares it with the live one.
-#                                Nothing is changed. Without a file, the latest backup is used.
+#                                Nothing is changed. Without a file, the latest backup is used. Its result ("ok" or
+#                                "failed", and the time) goes to /var/lib/brinelight/status/restore, for /health.
+#                                The brinelight-restore-test timer runs it every Sunday at 04:30 UTC.
 #   ./restore.sh replace <file>  Replaces the live database with the backup. Asks you to type the file name first.
-set -euo pipefail
+set -Eeuo pipefail
 
 DEPLOY_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/brinelight}"
+STATUS_DIR="${STATUS_DIR:-/var/lib/brinelight/status}"
 cd "$DEPLOY_DIR"
+
+# The result of a test restore, for /health: "ok" or "failed", and the time.
+test_result() {
+  mkdir -p "$STATUS_DIR"
+  chmod 755 "$STATUS_DIR"
+  printf '%s %s\n' "$1" "$(date -u +%s)" > "$STATUS_DIR/.restore.part"
+  chmod 644 "$STATUS_DIR/.restore.part"
+  mv "$STATUS_DIR/.restore.part" "$STATUS_DIR/restore"
+}
 
 psql_db() { docker compose exec -T -e PGOPTIONS=--client-min-messages=warning db psql -U brinelight -d "$1" -v ON_ERROR_STOP=1 -qtA -c "$2"; }
 counts() { psql_db "$1" "select (select count(*) from players) || ' players, ' || (select count(*) from cities) || ' cities'"; }
 
 mode="${1:-}"
 file="${2:-}"
+# A test that stops on any error, a missing backup included, is a failed test.
+if [ "$mode" = "test" ]; then
+  trap 'test_result failed' ERR
+fi
 if [ -z "$file" ] && [ "$mode" = "test" ]; then
   # shellcheck disable=SC2012 # our own file names, no spaces
   file="$(ls -1t "$BACKUP_DIR"/brinelight-*.dump 2>/dev/null | head -n 1 || true)"
@@ -23,6 +39,7 @@ if [ -z "$mode" ] || [ -z "$file" ] || [ ! -s "$file" ]; then
   echo "Usage: $0 test [file]   or   $0 replace <file>" >&2
   echo "Backups in $BACKUP_DIR:" >&2
   ls -1t "$BACKUP_DIR" 2>/dev/null >&2 || true
+  if [ "$mode" = "test" ]; then test_result failed; fi
   exit 1
 fi
 
@@ -35,6 +52,7 @@ case "$mode" in
     echo "In the backup:   $(counts brinelight_restore_test)"
     echo "Live right now:  $(counts brinelight)"
     psql_db brinelight "drop database brinelight_restore_test" > /dev/null
+    test_result ok
     echo "Test restore OK. The temporary database was deleted; the live database was not touched."
     ;;
   replace)

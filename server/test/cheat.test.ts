@@ -289,14 +289,14 @@ describe("a modified client cannot change the rules", () => {
     const sound = { hp: RAFT_MAX_HP, building: null, level: 0 };
 
     const p = await player({ ...lit, rafts: { [inner[0]!]: sound } });
-    await expectRefused(server, p, action({ type: "dockRaft", slot: inner[0]! }), "A raft is already moored here");
+    await expectRefused(server, p, action({ type: "dockRaft", slot: inner[0]! }), "This spot is taken");
     await expectRefused(server, p, action({ type: "dockRaft", slot: outer[0]! }), "The Lighthouse's light doesn't reach this far yet");
     await expectApplied(server, p, action({ type: "dockRaft", slot: inner[1]! }));
     later(1000);
-    await expectRefused(server, p, action({ type: "dockRaft", slot: inner[2]! }), "The shipyard is busy");
+    await expectRefused(server, p, action({ type: "dockRaft", slot: inner[2]! }), "Your builders on the shore are busy");
 
     const full = await player({ ...lit, rafts: Object.fromEntries(inner.slice(0, raftCap(4)).map((k) => [k, sound])) });
-    await expectRefused(server, full, action({ type: "dockRaft", slot: inner[raftCap(4)]! }), "Upgrade the Lighthouse to moor more rafts");
+    await expectRefused(server, full, action({ type: "dockRaft", slot: inner[raftCap(4)]! }), "Upgrade the Lighthouse to grow your city further");
     for (const slot of ["0,0", "1,-3", "toString", "__proto__"]) await expectInvalid(server, full, { action: { ...action({ type: "dockRaft", slot: inner[0]! }), slot } });
 
     // The raft being built is moored by the server's clock, not before.
@@ -322,11 +322,11 @@ describe("a modified client cannot change the rules", () => {
     };
 
     const p = await player(city);
-    await expectRefused(server, p, action({ type: "installOnRaft", slot: a, building: "smokehouse" }), "This raft already has a building");
-    await expectRefused(server, p, action({ type: "installOnRaft", slot: d, building: "smokehouse" }), "There is no raft here");
-    await expectRefused(server, p, action({ type: "upgradeRaft", slot: d }), "There is no raft here");
-    await expectRefused(server, p, action({ type: "upgradeRaft", slot: c }), "Put a building on this raft first");
-    await expectRefused(server, p, action({ type: "installOnRaft", slot: c, building: "greenhouse" }), "Each type is limited to 2 rafts");
+    await expectRefused(server, p, action({ type: "installOnRaft", slot: a, building: "smokehouse" }), "There is already a building here");
+    await expectRefused(server, p, action({ type: "installOnRaft", slot: d, building: "smokehouse" }), "There is nothing here yet");
+    await expectRefused(server, p, action({ type: "upgradeRaft", slot: d }), "There is nothing here yet");
+    await expectRefused(server, p, action({ type: "upgradeRaft", slot: c }), "Put a building here first");
+    await expectRefused(server, p, action({ type: "installOnRaft", slot: c, building: "greenhouse" }), "You can build each type twice");
     await expectRefused(server, p, action({ type: "upgradeRaft", slot: a }), "Max level");
     for (const building of ["casino", "toString", "__proto__", ""]) await expectInvalid(server, p, { action: { ...action({ type: "installOnRaft", slot: c, building: "watchtower" }), building } });
     for (const slot of ["0,0", "1,-3", "toString"]) await expectInvalid(server, p, { action: { ...action({ type: "upgradeRaft", slot: b }), slot } });
@@ -339,8 +339,8 @@ describe("a modified client cannot change the rules", () => {
     await expectApplied(server, p, action({ type: "installOnRaft", slot: c, building: "watchtower" }));
     expect(p.ref.now().yard).toMatchObject({ slot: c, kind: "install", building: "watchtower" });
     later(1000);
-    await expectRefused(server, p, action({ type: "upgradeRaft", slot: b }), "The shipyard is busy");
-    await expectRefused(server, p, action({ type: "dockRaft", slot: d }), "The shipyard is busy");
+    await expectRefused(server, p, action({ type: "upgradeRaft", slot: b }), "Your builders on the shore are busy");
+    await expectRefused(server, p, action({ type: "dockRaft", slot: d }), "Your builders on the shore are busy");
   });
 
   it("from shipyard to fleet: the server puts the Watchtower on its raft by its clock, then a fleet sails with it", async () => {
@@ -570,7 +570,7 @@ describe("a modified client cannot change the rules", () => {
     const [a, b] = RAFT_SLOTS.map((s) => s.key) as [string, string];
     const base = newPlayerState();
     const sound = await player({ ...base, rafts: { [a]: { hp: RAFT_MAX_HP, building: null, level: 0 } } });
-    await expectRefused(server, sound, action({ type: "repairRafts" }), "Your rafts are in good shape");
+    await expectRefused(server, sound, action({ type: "repairRafts" }), "Nothing needs mending");
     const damaged = { ...base, buildings: { ...base.buildings, lighthouse: 5 }, rafts: { [a]: { hp: 65, building: null, level: 0 }, [b]: { hp: 25, building: "greenhouse" as const, level: 1 } } };
     const poor = await player({ ...damaged, stock: { ...damaged.stock, oil: 0 } });
     await expectRefused(server, poor, action({ type: "repairRafts" }), "Not enough resources");
@@ -579,7 +579,7 @@ describe("a modified client cannot change the rules", () => {
     const order = action({ type: "repairRafts" });
     for (const extra of [{ slots: [a] }, { hp: RAFT_MAX_HP }, { oil: 0 }]) await expectInvalid(server, p, { action: { ...order, ...extra } });
     await expectApplied(server, p, action({ type: "repairRafts" }));
-    await expectRefused(server, p, action({ type: "repairRafts" }), "The shipyard is busy");
+    await expectRefused(server, p, action({ type: "repairRafts" }), "Your builders on the shore are busy");
     // 110 points missing: 110 / 35 × 6 minutes, on the server's clock.
     later(Math.floor((110 / 35) * 360 * 1000) - 1000);
     await expectRules(server, p);

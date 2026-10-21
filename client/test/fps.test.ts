@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { forcedQuality } from "../src/scene/quality.js";
-import { GAP, MIN_WINDOW, WARMUP, fpsFrame, fpsMin, fpsWanted, modelsLoaded, newFpsMeter, type FpsMeter } from "../src/ui/fpsMeter.js";
+import { GAP, MIN_WINDOW, WARMUP, fpsAvg, fpsFrame, fpsMin, fpsWanted, modelsLoaded, newFpsMeter, screenLine, type FpsMeter } from "../src/ui/fpsMeter.js";
 
 /** Plays frames at `fps` from `from` for `seconds`, in one view. */
 function play(m: FpsMeter, from: number, seconds: number, fps: number, view = "city"): FpsMeter {
@@ -79,6 +79,27 @@ describe("fps counter", () => {
     m = fpsFrame(m, 2 + GAP, "city");
     expect(m.avg).not.toBeNull();
     expect(fpsMin(m)!).toBeLessThan(5);
+  });
+});
+
+describe("fps counter: the owner's capture (before the S22's test)", () => {
+  it("the mean of the last 10 seconds, warm-up excluded, beside their minimum", () => {
+    let m = modelsLoaded(newFpsMeter("city"), -WARMUP);
+    m = fpsFrame(m, 0, "city");
+    m = play(m, 0, 5, 30);
+    m = play(m, 5, 5, 60);
+    // About half at 30, half at 60 in the window (its oldest second may just have left it).
+    expect(fpsAvg(m)!).toBeGreaterThan(44);
+    expect(fpsAvg(m)!).toBeLessThan(48);
+    expect(fpsMin(m)).toBeCloseTo(30, 0);
+    m = play(m, 10, MIN_WINDOW + 1, 60);
+    expect(fpsAvg(m)).toBeCloseTo(60, 0);
+    expect(fpsAvg(fpsFrame(newFpsMeter("city"), 0, "city"))).toBeNull();
+  });
+
+  it("the screen's size in CSS pixels and its pixel ratio", () => {
+    expect(screenLine(360, 780, 3)).toBe("360 × 780 px · ×3");
+    expect(screenLine(412, 915, 2.625)).toBe("412 × 915 px · ×2.63");
   });
 });
 

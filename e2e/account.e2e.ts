@@ -7,9 +7,10 @@ import { cpus } from "node:os";
 import type { BrowserContext, Locator, Page } from "playwright-core";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import * as THREE from "three";
-import { HOUR, PROMOTE_TIME, RAFT_INSTALL_TIME, RAFT_SLOTS, advance, heal, installOnRaft, newPlayerState, promote, raftUpgradeTime, research, sail, upgrade, type ActionResult, type PlayerState, type RaftBuildingId } from "@brinelight/shared";
-import { frameCity } from "../client/src/scene/camera.js";
-import { SHORE_RADIUS } from "../client/src/scene/models.js";
+import { BUILDINGS, BUILDING_IDS, HOUR, PROMOTE_TIME, RAFT_INSTALL_TIME, RAFT_SLOTS, advance, heal, installOnRaft, newPlayerState, promote, raftUpgradeTime, research, sail, upgrade, type ActionResult, type PlayerState, type RaftBuildingId } from "@brinelight/shared";
+import { CITY_ANGLE, CITY_FILL, CITY_FOV, cityFraming } from "../client/src/scene/framing.js";
+import { ERA_PLOTS } from "../client/src/city/plots.js";
+import { terrainCoast } from "../client/src/scene/terrainCoast.js";
 import { CITY_KEY_PREFIX } from "../client/src/account/actions.js";
 import { PROFILE_TEXT } from "../client/src/account/profile.js";
 import { TEXT } from "../client/src/account/index.js";
@@ -60,6 +61,8 @@ async function newPlayer(
     if (r.url().startsWith(API) && why !== "net::ERR_ABORTED") problems.push(`failed ${r.method()} ${r.url()} ${why}`);
   });
   context.on("console", (m) => /CORS|blocked|keepalive|preflight/i.test(m.text()) && problems.push(m.text()));
+  if (process.env.E2E_DEBUG) context.on("weberror", (e) => console.log("page error:", e.error().message, e.error().stack));
+  if (process.env.E2E_DEBUG) context.on("console", (m) => m.type() === "error" && console.log("console:", m.text()));
   return { context, wallet, apiCalls, actionIds, problems };
 }
 
@@ -69,29 +72,36 @@ async function openGame(context: BrowserContext): Promise<Page> {
   // The lowest quality step: the container draws without a graphics chip.
   await page.goto(`${GAME}/?quality=2`);
   await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
-  await page.waitForSelector(".labels.city .bl b");
+  await page.waitForSelector(".labels.city .bl", { state: "attached" });
   return page;
 }
 
-/** Taps a building in the 3D view, just under its label, until its sheet opens. */
+/** Where to tap a building: its plot's middle, a little above the ground, as the game's camera shows it; then under its label. */
+async function tapsFor(page: Page, name: string): Promise<{ x: number; y: number }[]> {
+  const id = BUILDING_IDS.find((b) => BUILDINGS[b].name === name)!;
+  const [q, r] = ERA_PLOTS[id];
+  const at = (await screenOf(page))(2 * (q + r / 2), 0.5, 1.732 * r);
+  const taps = [at];
+  const box = await page.locator(".labels.city .bl", { hasText: name }).first().boundingBox();
+  if (box) for (const dy of [30, 45, 60, 20]) taps.push({ x: box.x + box.width / 2, y: box.y + box.height + dy });
+  return taps;
+}
+
+/** Taps a building in the 3D view until its sheet opens. */
 async function openSheet(page: Page, name: string): Promise<void> {
   await page.waitForTimeout(300);
-  const label = page.locator(".labels.city .bl", { hasText: name }).first();
-  const box = (await label.boundingBox())!;
-  for (const dy of [30, 45, 60, 20]) {
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height + dy);
+  for (const t of await tapsFor(page, name)) {
+    await page.mouse.click(t.x, t.y);
     if (await page.locator(".sheet:not(.profile)", { hasText: name }).isVisible()) return;
   }
   throw new Error(`Could not open the sheet of ${name}`);
 }
 
-/** Taps a building in the 3D view, just under its label, and upgrades it from its sheet. */
+/** Taps a building in the 3D view, and upgrades it from its sheet. */
 async function upgradeBuilding(page: Page, name: string): Promise<void> {
   await page.waitForTimeout(300);
-  const label = page.locator(".labels.city .bl", { hasText: name }).first();
-  const box = (await label.boundingBox())!;
-  for (const dy of [30, 45, 60, 20]) {
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height + dy);
+  for (const t of await tapsFor(page, name)) {
+    await page.mouse.click(t.x, t.y);
     const sheet = page.locator(".sheet:not(.profile)", { hasText: name });
     if (await sheet.isVisible()) {
       await sheet.locator('[data-act="upgrade"]').click();
@@ -158,6 +168,21 @@ async function signOut(page: Page): Promise<void> {
 const queued = (c: City | null) => (c?.queue ?? []).map((j) => j.id).sort();
 /** Until no celebration is on screen: one would take the next tap (a tap closes it). */
 const calm = (page: Page) => expect.poll(() => page.locator(".celebration").count(), { timeout: 15_000, interval: 100 }).toBe(0);
+/**
+ * While a celebration shows: the middle of the quest card's button (or of the card) is the card's, not the
+ * celebration's; and the gold text `above`, if given, stands wholly above the card.
+ */
+async function questReachable(page: Page, above: Locator | null): Promise<void> {
+  const quest = page.locator(".quest:not([hidden])");
+  expect(await quest.count()).toBe(1);
+  const target = (await quest.locator("button").first().boundingBox()) ?? (await quest.boundingBox())!;
+  const hit = await page.evaluate(({ x, y }) => !!document.elementFromPoint(x, y)?.closest(".quest"), { x: target.x + target.width / 2, y: target.y + target.height / 2 });
+  expect(hit).toBe(true);
+  if (above) {
+    const [card, text] = [(await quest.boundingBox())!, (await above.boundingBox())!];
+    expect(text.y + text.height).toBeLessThanOrEqual(card.y);
+  }
+}
 /** For a poll that waits on the network (an answer, a retry): longer than the default second. */
 const NET = { timeout: 15_000, interval: 100 };
 
@@ -179,7 +204,7 @@ describe("playing without signing in", () => {
     await hide(page);
     expect(queued(await localCity(page))).toEqual(["refinery"]);
     await page.reload();
-    await page.waitForSelector(".labels.city .bl b");
+    await page.waitForSelector(".labels.city .bl", { state: "attached" });
     expect(queued(await localCity(page))).toEqual(["refinery"]);
     await page.locator(".hud .lvl").click();
     await expect(page.locator(".profile").textContent()).resolves.toContain(PROFILE_TEXT.noWallet);
@@ -190,25 +215,19 @@ describe("playing without signing in", () => {
 });
 
 describe("city labels", () => {
-  it("the nine building models: all loaded, each label just above its building, and a tap under it opens its sheet", async () => {
+  it("the nine buildings: each one's model of its era loaded, and a tap on it opens its sheet", async () => {
     const base = newPlayerState();
     const city = { ...base, buildings: { lighthouse: 4, refinery: 2, fishery: 2, lumberyard: 2, shelters: 1, barracks: 1, harbor: 1, observatory: 1, infirmary: 1 } };
     const p = await newPlayer(false);
     await p.context.addInitScript(({ key, file }) => localStorage.setItem(key, file), { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: Date.now(), state: city }) });
     const models: string[] = [];
-    p.context.on("response", (r) => r.url().includes("/buildings/") && r.ok() && models.push(new URL(r.url()).pathname));
+    p.context.on("response", (r) => r.url().includes("/city/") && r.ok() && models.push(new URL(r.url()).pathname));
     const page = await openGame(p.context);
-    expect(models.sort()).toEqual(["barracks", "fishery", "harbor", "infirmary", "lighthouse", "lumberyard", "observatory", "refinery", "shelters"].map((id) => `/buildings/${id}.glb`));
+    // The first era's model of each building, made in Blender, before the city's first image.
+    for (const id of BUILDING_IDS) expect(models, id).toContain(`/city/${id}-1.glb`);
     await page.waitForTimeout(1000);
     await page.screenshot({ path: "e2e/.shots/shot-buildings.png" });
-    // Closer, every label has room at full size.
-    await page.mouse.move(206, 500);
-    await page.mouse.wheel(0, -600);
-    await page.waitForTimeout(1000);
-    const shown = () => page.evaluate(() => [...document.querySelectorAll<HTMLElement>(".labels.city .bl")].filter((e) => e.style.display !== "none" && !e.classList.contains("compact")).length);
-    await expect.poll(shown).toBe(9);
-    await page.screenshot({ path: "e2e/.shots/shot-buildings-near.png" });
-    // A tap just under each label lands on its building: the labels follow the models' heights.
+    // A tap on each building, where the game's camera shows it, opens its sheet.
     for (const name of ["Lighthouse", "Refinery", "Fishery", "Lumberyard", "Shelters", "Barracks", "Harbor", "Observatory", "Infirmary"]) {
       await openSheet(page, name);
       await page.evaluate(() => document.querySelector<HTMLButtonElement>('.sheet:not(.profile):not([hidden]) [data-act="close"]')?.click());
@@ -216,7 +235,7 @@ describe("city labels", () => {
     await p.context.close();
   });
 
-  it("the island, the rafts, the sea's wrecks, camps and boat, and the icons: the models of the art direction", async () => {
+  it("the island, the rafts, the sea's wrecks, camps and boat, and the icons: the sea's models wait for your first visit at sea", async () => {
     const base = newPlayerState();
     const inner = RAFT_SLOTS.filter((x) => x.ring === 3).map((x) => x.key);
     let city: PlayerState = {
@@ -232,10 +251,9 @@ describe("city labels", () => {
     const models: string[] = [];
     p.context.on("response", (r) => r.url().includes("/models/") && r.ok() && models.push(new URL(r.url()).pathname));
     const page = await openGame(p.context);
-    // The five models of the first screen, then the three buildings on rafts, loaded once the city shows.
-    expect(models.slice(0, 5).sort()).toEqual(["boat", "camp", "island", "raft", "wreck"].map((id) => `/models/${id}.glb`));
-    await expect.poll(() => models.slice(5).sort(), NET).toEqual(["greenhouse", "smokehouse", "watchtower"].map((id) => `/models/${id}.glb`));
+    // The city is made in Blender (/city/): none of the old models; the sea's wait for your first visit at sea.
     await page.waitForTimeout(1000);
+    expect(models).toEqual([]);
     await page.screenshot({ path: "e2e/.shots/shot-island.png" });
     await page.screenshot({ path: "e2e/.shots/shot-hud.png", clip: { x: 0, y: 0, width: 412, height: 140 } });
     // The top bar (Lighthouse, oil, fish, wood, Pearls, survivors) and the bottom menu (five views): every icon loaded.
@@ -243,6 +261,7 @@ describe("city labels", () => {
     expect(icons.length).toBeGreaterThanOrEqual(11);
     expect(icons.every(Boolean)).toBe(true);
     await page.locator('.nav button[data-v="sea"]').click();
+    await expect.poll(() => [...models].sort(), NET).toEqual(["boat", "camp", "wreck"].map((id) => `/models/${id}.glb`));
     await page.waitForTimeout(1500);
     await page.screenshot({ path: "e2e/.shots/shot-sea.png" });
     await page.mouse.move(206, 500);
@@ -392,6 +411,8 @@ const SIZES = [
   { width: 412, height: 915 },
   { width: 360, height: 800 },
 ];
+/** The look captures add the owner's S22 (384 × 699, the last visual step's step D). */
+const LOOK_SIZES = [...SIZES, { width: 384, height: 699 }];
 
 describe("the queue", () => {
   it("six works: three rows and \"+3 more\", clear of the island; unfolded, no name cut; folded back, at 412 and 360 px", async () => {
@@ -435,7 +456,7 @@ describe("the queue", () => {
       expect(folded.map((r) => r.text), `${size.width} px`).toEqual(names.slice(0, 3));
       // Folded, the queue ends above the island's shore wherever they share the screen's width.
       const queue = (await page.locator(".queue").boundingBox())!;
-      const shore = shoreOnScreen(6, size.width, size.height).filter((pt) => pt.x >= queue.x && pt.x <= queue.x + queue.width);
+      const shore = (await shoreOn(page)).filter((pt) => pt.x >= queue.x && pt.x <= queue.x + queue.width);
       expect(shore.length).toBeGreaterThan(0);
       expect(queue.y + queue.height, `${size.width} px`).toBeLessThan(Math.min(...shore.map((pt) => pt.y)));
       await page.screenshot({ path: `e2e/.shots/shot-queue-folded-${size.width}.png` });
@@ -471,13 +492,14 @@ describe("buildings on rafts", () => {
     ];
     for (const size of SIZES) {
       // The two lowest slots on screen: a free raft, then the Kelp Greenhouse level 2; the others around them.
-      const clear = slotsOnScreen(6, size.width, size.height);
+      const clear = slotsOnScreen(size.width, size.height);
       const rest = RAFT_SLOTS.filter((x) => x.ring === 3 && x.key !== clear[0]!.slot && x.key !== clear[1]!.slot).map((x) => x.key);
       const equipped = [clear[1]!.slot, ...rest.slice(0, 5)];
       const base = newPlayerState();
       const city: PlayerState = {
         ...base,
-        buildings: { lighthouse: 6, refinery: 2, fishery: 2, lumberyard: 2, shelters: 1, barracks: 1, harbor: 1, observatory: 1, infirmary: 1 },
+        // Before the Lighthouse 5: the rafts float, and their sheets say "Raft".
+        buildings: { lighthouse: 4, refinery: 2, fishery: 2, lumberyard: 2, shelters: 1, barracks: 1, harbor: 1, observatory: 1, infirmary: 1 },
         stock: { oil: 5000, fish: 5000, wood: 5000, rope: 3 },
         rafts: {
           [clear[0]!.slot]: { hp: 100, building: null, level: 0 },
@@ -487,14 +509,17 @@ describe("buildings on rafts", () => {
       const p = await newPlayer(false, size);
       await injectCity(p.context, city);
       const models: string[] = [];
-      p.context.on("response", (r) => r.url().includes("/models/") && r.ok() && models.push(new URL(r.url()).pathname));
+      p.context.on("response", (r) => r.url().includes("/city/") && r.ok() && models.push(new URL(r.url()).pathname));
       const page = await openGame(p.context);
-      await expect.poll(() => models.filter((m) => /greenhouse|smokehouse|watchtower/.test(m)).length, NET).toBe(3);
+      // The buildings on rafts made in Blender, by type and level.
+      await expect.poll(() => new Set(models.map((m) => /\/city\/(greenhouse|smokehouse|watchtower)-/.exec(m)?.[1]).filter(Boolean)).size, NET).toBe(3);
       await page.waitForTimeout(1000);
       await page.screenshot({ path: `e2e/.shots/shot-rafts-${size.width}.png` });
 
       const sheet = page.locator(".raft-sheet:not([hidden])");
-      await page.mouse.click(clear[0]!.x, clear[0]!.y);
+      // Where the slots are, as the game's camera shows them.
+      const first = await slotOn(page, clear[0]!.slot);
+      await page.mouse.click(first.x, first.y);
       await sheet.waitFor();
       expect(await sheet.locator("h2").textContent()).toBe("Raft");
       expect(await sheet.locator("[data-raft-building]").count()).toBe(3);
@@ -504,10 +529,11 @@ describe("buildings on rafts", () => {
       await page.screenshot({ path: `e2e/.shots/shot-raft-free-${size.width}.png` });
       // aria-disabled: Playwright waits for an enabled button; a finger does not.
       await sheet.locator('[data-building="greenhouse"]').click({ force: true });
-      await page.locator(".toast", { hasText: "Each type is limited to 2 rafts" }).waitFor();
+      await page.locator(".toast", { hasText: "You can build each type twice" }).waitFor();
       await sheet.locator('[data-act="close"]').click();
 
-      await page.mouse.click(clear[1]!.x, clear[1]!.y);
+      const second = await slotOn(page, clear[1]!.slot);
+      await page.mouse.click(second.x, second.y);
       await sheet.waitFor();
       expect(await sheet.locator("h2").textContent()).toBe("Kelp Greenhouse");
       expect(await sheet.textContent()).toContain("Kelp Greenhouse level 2: +9 fish/h.");
@@ -619,7 +645,7 @@ describe("celebrations", () => {
       await page.clock.pauseAt(t0 + 500);
       await page.goto(`${GAME}/?quality=2`);
       await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
-      await page.waitForSelector(".labels.city .bl b");
+      await page.waitForSelector(".labels.city .bl", { state: "attached" });
       const most = await oneAtATime(page, async () => {
         expect(await page.locator(".celebration").count()).toBe(0);
         await page.clock.fastForward(600_000);
@@ -635,6 +661,8 @@ describe("celebrations", () => {
           f.style.animation = "rise 1.2s ease-out -0.4s paused both";
         });
         await page.screenshot({ path: `e2e/.shots/shot-celebrate-work-${size.width}.png` });
+        // It rises above the quest card, and the card's button still answers under it (owner, on the S22).
+        await questReachable(page, float.locator(".cel-float"));
         await page.clock.runFor(1300);
         await float.waitFor({ state: "detached" });
         await page.clock.fastForward(600_000);
@@ -644,9 +672,13 @@ describe("celebrations", () => {
         await expect(full.textContent()).resolves.toContain("Lighthouse level 5");
         await page.waitForTimeout(600);
         await page.screenshot({ path: `e2e/.shots/shot-celebrate-lighthouse-${size.width}.png` });
-        // A tap closes it.
-        await full.click();
+        // It hides the whole screen: its first tap closes it and reaches nothing under it (owner). A tap where the
+        // Captains button is under it opens no sheet.
+        const captains = (await page.locator('.nav button[data-v="captains"]').boundingBox())!;
+        await page.mouse.click(captains.x + captains.width / 2, captains.y + captains.height / 2);
         await full.waitFor({ state: "detached" });
+        await page.waitForTimeout(300);
+        expect(await page.locator(".sheet.captains:not([hidden])").count()).toBe(0);
         // The Logbook takes the lead captain one level up.
         await page.locator('.nav button[data-v="captains"]').click();
         await page.locator('.sheet.captains [data-act="logbook"]').click();
@@ -694,7 +726,7 @@ describe("celebrations", () => {
         await page.screenshot({ path: "e2e/.shots/shot-celebrate-away.png" });
         // Reloaded at once: nothing more ended, nothing told.
         await page.reload();
-        await page.waitForSelector(".labels.city .bl b");
+        await page.waitForSelector(".labels.city .bl", { state: "attached" });
         await page.waitForTimeout(1500);
         expect(await page.locator(".celebration").count()).toBe(0);
       }
@@ -817,7 +849,7 @@ describe("sounds", () => {
     await expect(button.getAttribute("aria-pressed")).resolves.toBe("false");
     await page.screenshot({ path: "e2e/.shots/shot-profile-sounds-off.png" });
     await page.reload();
-    await page.waitForSelector(".labels.city .bl b");
+    await page.waitForSelector(".labels.city .bl", { state: "attached" });
     await page.locator(".hud .lvl").click();
     await expect(page.locator('.profile [data-act="sound"]').textContent()).resolves.toBe("Off");
     await page.locator('.profile [data-act="close"]').click();
@@ -877,7 +909,7 @@ describe("short motions", () => {
     await page.clock.pauseAt(t0 + 500);
     await page.goto(`${GAME}/?quality=2`);
     await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
-    await page.waitForSelector(".labels.city .bl b");
+    await page.waitForSelector(".labels.city .bl", { state: "attached" });
     await page.locator('.nav button[data-v="captains"]').click();
     expect(await running(page)).toEqual([]);
     await page.locator('.sheet.captains [data-act="close"]').click();
@@ -892,8 +924,8 @@ describe("short motions", () => {
   });
 });
 
-describe("building tiers", () => {
-  it("every building at level 1, 5 and 10: the three tiers, captured, with their draw calls and FPS (?fps)", async () => {
+describe("the buildings' eras", () => {
+  it("every building at level 1, 5 and 10, captured, with the draw calls and FPS (?fps)", async () => {
     const rows: string[] = [];
     for (const [tier, level, lighthouse] of [
       [1, 1, 4],
@@ -907,7 +939,7 @@ describe("building tiers", () => {
       const page = await p.context.newPage();
       await page.goto(`${GAME}/?quality=2&fps`);
       await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
-      await page.waitForSelector(".labels.city .bl b");
+      await page.waitForSelector(".labels.city .bl", { state: "attached" });
       await page.waitForTimeout(1000);
       await page.screenshot({ path: `e2e/.shots/shot-tier-${tier}.png` });
       // As the art direction asks: each building by its silhouette, close up, without the labels.
@@ -999,7 +1031,7 @@ describe("the look", () => {
     await page.evaluate(() => document.fonts.ready);
     await page.clock.fastForward(5 * 60_000);
     await page.clock.runFor(200);
-    await page.waitForSelector(".labels.city .bl b");
+    await page.waitForSelector(".labels.city .bl", { state: "attached" });
     return page;
   }
 
@@ -1094,10 +1126,10 @@ describe("the look", () => {
   const close = (page: Page) => page.evaluate(() => document.querySelector<HTMLButtonElement>('.sheet:not([hidden]) [data-act="close"]')?.click());
   const toBottom = (page: Page) => page.evaluate(() => document.querySelectorAll(".sheet:not([hidden]) .sh-b").forEach((b) => (b.scrollTop = b.scrollHeight)));
 
-  it("every sheet, the top bar and the queue, at 412 and 360 px", async () => {
-    for (const size of SIZES) {
+  it("every sheet, the top bar and the queue, at 412, 384 and 360 px", async () => {
+    for (const size of LOOK_SIZES) {
       const w = size.width;
-      const clear = slotsOnScreen(6, size.width, size.height);
+      const clear = slotsOnScreen(size.width, size.height);
       const base = newPlayerState();
 
       // A built city: every building, a research, a work at the shipyard, rafts, wounded and captains.
@@ -1180,7 +1212,7 @@ describe("the look", () => {
       await openSheet(page, "Refinery");
       await look(page, sheet(page), `refinery-refused-${w}`);
       await close(page);
-      const free = slotsOnScreen(4, size.width, size.height)[0]!;
+      const free = (await slotsOn(page))[0]!;
       await page.mouse.click(free.x, free.y);
       await page.locator(".raft-sheet:not([hidden])").waitFor();
       await look(page, page.locator(".raft-sheet"), `raft-slot-${w}`);
@@ -1281,7 +1313,7 @@ describe("the look", () => {
     expect(missed).toEqual([]);
     if (strict) expect(problems).toEqual([]);
     else if (problems.length) console.warn(`The look differs from the CI's references on this machine (LOOK=strict to fail):\n${problems.join("\n")}`);
-  });
+  }, 420_000);
 });
 
 describe("signed in", () => {
@@ -1305,7 +1337,7 @@ describe("signed in", () => {
     expect(queued(await localCity(page))).toEqual(["refinery"]);
 
     await page.reload();
-    await page.waitForSelector(".labels.city .bl b");
+    await page.waitForSelector(".labels.city .bl", { state: "attached" });
     await expect.poll(() => shownJobs(page), NET).toEqual(["Fishery"]);
     expect((await copyOf(page, playerId))?.pending).toEqual([]);
     expect(queued(await localCity(page))).toEqual(["refinery"]);
@@ -1428,7 +1460,7 @@ describe("signed in", () => {
       localStorage.setItem(k, JSON.stringify(copy));
     }, `${CITY_KEY_PREFIX}${p.playerId}`);
     await p.page.reload();
-    await p.page.waitForSelector(".labels.city .bl b");
+    await p.page.waitForSelector(".labels.city .bl", { state: "attached" });
     await expect.poll(() => shownJobs(p.page), NET).toEqual([]);
     await upgradeBuilding(p.page, "Lumberyard");
     await expect.poll(() => shownJobs(p.page), NET).toEqual(["Lumberyard"]);
@@ -1502,7 +1534,7 @@ describe("signed in", () => {
       { key: `${CITY_KEY_PREFIX}${playerId}` },
     );
     await page.reload();
-    await page.waitForSelector(".labels.city .bl b");
+    await page.waitForSelector(".labels.city .bl", { state: "attached" });
 
     // Actions sent by hand, past the game's own rules: one carrying the edited city, one plain.
     const sent = await page.evaluate(
@@ -1545,7 +1577,8 @@ describe("signed in", () => {
     const base = newPlayerState();
     await h.putCity(p.playerId, { ...base, buildings: { ...base.buildings, observatory: 1 }, stock: { oil: 5000, fish: 5000, wood: 5000, rope: 3 } });
     await show(p.page);
-    await p.page.locator(".labels.city .bl", { hasText: "Observatory" }).first().waitFor();
+    // Its label is there (a badge, or hidden where labels crowd: the tap goes to the building itself).
+    await p.page.locator(".labels.city .bl", { hasText: "Observatory" }).first().waitFor({ state: "attached" });
     await openSheet(p.page, "Observatory");
     await p.page.locator('[data-act="research"][data-tech="refining"]').click();
     await expect.poll(async () => (await serverCity(p.token) as { state: { research: { id: string } | null } } | null)?.state.research?.id, NET).toBe("refining");
@@ -1618,7 +1651,7 @@ describe("signed in", () => {
 
     // Reloaded: the training is the server's, and still there.
     await p.page.reload();
-    await p.page.waitForSelector(".labels.city .bl b");
+    await p.page.waitForSelector(".labels.city .bl", { state: "attached" });
     await expect.poll(() => p.page.locator(".queue .n", { hasText: "20 harpooners" }).count(), NET).toBe(1);
     expect(((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState).training).toMatchObject({ kind: "train", troop: "harpooners", count: 20 });
     await openSheet(p.page, "Barracks");
@@ -1665,7 +1698,7 @@ describe("signed in", () => {
 
     // Reloaded: the promotion is the server's, and still there.
     await p.page.reload();
-    await p.page.waitForSelector(".labels.city .bl b");
+    await p.page.waitForSelector(".labels.city .bl", { state: "attached" });
     await expect.poll(() => p.page.locator(".queue .n", { hasText: "10 veteran boarders" }).count(), NET).toBe(1);
     await openSheet(p.page, "Barracks");
     await expect.poll(() => p.page.locator(".sheet", { hasText: "In progress: 10 veteran boarders" }).count(), NET).toBe(1);
@@ -1707,7 +1740,7 @@ describe("signed in", () => {
 
     // Reloaded: the healing is the server's, and still there.
     await p.page.reload();
-    await p.page.waitForSelector(".labels.city .bl b");
+    await p.page.waitForSelector(".labels.city .bl", { state: "attached" });
     await expect.poll(() => p.page.locator(".queue .n", { hasText: "Healing · 20 wounded" }).count(), NET).toBe(1);
     await openSheet(p.page, "Infirmary");
     await expect.poll(() => p.page.locator(".sheet", { hasText: "Healing: 20 soldiers" }).count(), NET).toBe(1);
@@ -1739,7 +1772,8 @@ describe("signed in", () => {
     await calm(p.page);
 
     // Where a slot of the first ring is on screen, from the game's own starting camera for this Lighthouse level.
-    const { slot, x, y } = slotOnScreen(4);
+    const { slot } = slotOnScreen();
+    const { x, y } = await slotOn(p.page, slot);
     await p.page.mouse.click(x, y);
     const sheet = p.page.locator(".raft-sheet:not([hidden])");
     await sheet.waitFor();
@@ -1759,7 +1793,11 @@ describe("signed in", () => {
     await show(p.page);
     await expect.poll(async () => ((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.rafts[slot], NET).toEqual(done.rafts[slot]);
     await p.page.waitForTimeout(500);
-    await p.page.mouse.click(x, y);
+    // Where the slot is now, as the game's camera shows it.
+    {
+      const now = await slotOn(p.page, slot);
+      await p.page.mouse.click(now.x, now.y);
+    }
     await expect.poll(() => p.page.locator(".raft-sheet:not([hidden])").textContent(), NET).toContain("Sturdiness");
     await p.page.screenshot({ path: "e2e/.shots/shot-raft.png" });
     await p.context.close();
@@ -1778,7 +1816,7 @@ describe("signed in", () => {
     await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).captains.sel, NET).toEqual({ level: 1, xp: 0, stars: 1 });
 
     await p.page.reload();
-    await p.page.waitForSelector(".labels.city .bl b");
+    await p.page.waitForSelector(".labels.city .bl", { state: "attached" });
     await p.page.locator('.nav button[data-v="captains"]').click();
     await sheet.waitFor();
     await expect.poll(() => sheet.locator('[data-captain-row="sel"] small').last().textContent(), NET).toBe("Lv 1 · 0/80 XP · shards 0/10");
@@ -1795,7 +1833,7 @@ describe("signed in", () => {
   it("repairing the rafts: from a raft's sheet, all damaged rafts at once, paid in oil, sound again by the server's clock", async () => {
     const p = await signedInPlayer();
     const base = newPlayerState();
-    const { slot, x, y } = slotOnScreen(4);
+    const { slot } = slotOnScreen();
     const other = RAFT_SLOTS.find((s) => s.ring === 3 && s.key !== slot)!.key;
     // Two rafts after Mists not held (the e2e harness only).
     await h.putCity(p.playerId, { ...base, buildings: { ...base.buildings, lighthouse: 4 }, stock: { oil: 5000, fish: 5000, wood: 5000, rope: 20 }, rafts: { [slot]: { hp: 65, building: null, level: 0 }, [other]: { hp: 25, building: null, level: 0 } } });
@@ -1803,7 +1841,11 @@ describe("signed in", () => {
     await expect.poll(async () => Object.keys(((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.rafts ?? {}).length, NET).toBe(2);
     await p.page.waitForTimeout(500);
     await calm(p.page);
-    await p.page.mouse.click(x, y);
+    // Where the slot is now, as the game's camera shows it.
+    {
+      const now = await slotOn(p.page, slot);
+      await p.page.mouse.click(now.x, now.y);
+    }
     const sheet = p.page.locator(".raft-sheet:not([hidden])");
     await sheet.waitFor();
     await expect.poll(() => sheet.locator(".box", { hasText: "Repair the 2 damaged rafts" }).count(), NET).toBe(1);
@@ -1914,14 +1956,18 @@ describe("signed in", () => {
   it("a building on a raft: put from the raft's sheet, found again after a reload, standing by the server's clock, then upgraded", async () => {
     const p = await signedInPlayer();
     const base = newPlayerState();
-    const { slot, x, y } = slotOnScreen(4);
+    const { slot } = slotOnScreen();
     await h.putCity(p.playerId, { ...base, buildings: { ...base.buildings, lighthouse: 4 }, stock: { oil: 5000, fish: 5000, wood: 5000, rope: 20 }, rafts: { [slot]: { hp: 100, building: null, level: 0 } } });
     await show(p.page);
     await expect.poll(async () => Object.keys(((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.rafts ?? {}), NET).toEqual([slot]);
     await p.page.waitForTimeout(500);
     // The Lighthouse rose to level 4 on the server: its celebration goes first.
     await calm(p.page);
-    await p.page.mouse.click(x, y);
+    // Where the slot is now, as the game's camera shows it.
+    {
+      const now = await slotOn(p.page, slot);
+      await p.page.mouse.click(now.x, now.y);
+    }
     const sheet = p.page.locator(".raft-sheet:not([hidden])");
     await sheet.waitFor();
     await sheet.locator('[data-act="install"][data-building="greenhouse"]').click();
@@ -1930,7 +1976,7 @@ describe("signed in", () => {
 
     // Reloaded: the work is the server's, and still there.
     await p.page.reload();
-    await p.page.waitForSelector(".labels.city .bl b");
+    await p.page.waitForSelector(".labels.city .bl", { state: "attached" });
     await expect.poll(() => p.page.locator(".queue .n", { hasText: "Shipyard · Kelp Greenhouse" }).count(), NET).toBe(1);
 
     // 3 seconds from its end: the server puts the building on the raft on its own clock.
@@ -1945,7 +1991,11 @@ describe("signed in", () => {
     await show(p.page);
     await expect.poll(async () => ((await copyOf(p.page, p.playerId))?.server?.state as unknown as PlayerState | undefined)?.rafts[slot]?.building, NET).toBe("greenhouse");
     await p.page.waitForTimeout(500);
-    await p.page.mouse.click(x, y);
+    // Where the slot is now, as the game's camera shows it.
+    {
+      const now = await slotOn(p.page, slot);
+      await p.page.mouse.click(now.x, now.y);
+    }
     await expect.poll(() => p.page.locator(".raft-sheet:not([hidden]) h2").textContent(), NET).toBe("Kelp Greenhouse");
     await p.page.locator('.raft-sheet:not([hidden]) [data-act="upgrade-raft"]').click();
     await expect.poll(async () => ((await serverCity(p.token))?.state as unknown as PlayerState).yard, NET).toMatchObject({ slot, kind: "upgrade", duration: raftUpgradeTime(1) });
@@ -1956,20 +2006,25 @@ describe("signed in", () => {
 });
 
 /**
- * Where a lit slot of the first ring is on the 412 × 915 screen, with the game's starting camera (frameCity) for this
- * Lighthouse level: the one lowest on screen that stays clear of the top bar and the bottom menu.
+ * Where a lit slot of the first ring is on the 412 × 915 screen, before the game opens (to choose it): the one lowest
+ * on screen that stays clear of the top bar and the bottom menu. Tap it where the game shows it (slotOn).
  */
-function slotOnScreen(lighthouse: number): { slot: string; x: number; y: number } {
-  const clear = slotsOnScreen(lighthouse, 412, 915);
+function slotOnScreen(): { slot: string; x: number; y: number } {
+  const clear = slotsOnScreen(412, 915);
   if (!clear[0]) throw new Error("No raft slot clear on screen");
   return clear[0];
 }
 
-/** The game's starting camera (frameCity) for this Lighthouse level, on a w × h screen, and a point's place on that screen. */
-function cityCamera(lighthouse: number, w: number, hgt: number) {
-  const camera = new THREE.PerspectiveCamera(40, w / hgt, 0.1, 200);
-  const target = new THREE.Vector3();
-  frameCity(camera, { target, update: () => camera.lookAt(target) } as unknown as Parameters<typeof frameCity>[1], w / hgt, lighthouse);
+/**
+ * Where the game will frame the city on a w × h screen, before it opens: its framing (scene/framing.ts) by the city's
+ * width, its plots' middles in the band it measures at 360, 384 and 412 px. Only to choose the slots a test uses: a tap
+ * goes where the game's own camera shows it (screenOf).
+ */
+function plannedCamera(w: number, hgt: number) {
+  const framing = cityFraming({ width: w, height: hgt, top: 92, bottom: hgt - 75 }, [], [], { share: CITY_FILL, coast: terrainCoast });
+  const camera = new THREE.PerspectiveCamera(CITY_FOV, w / hgt, 0.1, 400);
+  camera.position.copy(framing.target).addScaledVector(CITY_ANGLE, framing.distance);
+  camera.lookAt(framing.target);
   camera.updateMatrixWorld();
   return (x: number, y: number, z: number) => {
     const v = new THREE.Vector3(x, y, z).project(camera);
@@ -1977,17 +2032,63 @@ function cityCamera(lighthouse: number, w: number, hgt: number) {
   };
 }
 
-/** The slots of the first ring clear of the top bar and the bottom menu on a w × h screen, lowest on screen first. */
-function slotsOnScreen(lighthouse: number, w: number, hgt: number): { slot: string; x: number; y: number }[] {
-  const at = cityCamera(lighthouse, w, hgt);
+/**
+ * The game's own camera on this page, once it stands still: the scene writes its projection times its view on the
+ * canvas (data-view) when it moves. And a point's place on the screen with it.
+ */
+async function screenOf(page: Page): Promise<(x: number, y: number, z: number) => { x: number; y: number }> {
+  const size = page.viewportSize()!;
+  const canvas = page.locator("#cv");
+  let told = "";
+  // Still for 300 ms: the camera has stopped gliding.
+  await expect
+    .poll(
+      async () => {
+        const before = await canvas.getAttribute("data-view");
+        await page.waitForTimeout(300);
+        const now = await canvas.getAttribute("data-view");
+        told = now ?? "";
+        return !!now && now === before;
+      },
+      NET,
+    )
+    .toBe(true);
+  const m = new THREE.Matrix4().fromArray(told.split(",").map(Number));
+  return (x, y, z) => {
+    const v = new THREE.Vector3(x, y, z).applyMatrix4(m);
+    return { x: ((v.x + 1) / 2) * size.width, y: ((1 - v.y) / 2) * size.height };
+  };
+}
+
+/** Where a slot is on the page's screen, as the game's camera shows it. */
+async function slotOn(page: Page, key: string): Promise<{ slot: string; x: number; y: number }> {
+  const s = RAFT_SLOTS.find((x) => x.key === key)!;
+  return { slot: key, ...(await screenOf(page))(2 * (s.q + s.r / 2), 0, 1.732 * s.r) };
+}
+
+/** The slots of the first ring clear of the top bar and the bottom menu on a w × h screen, lowest on screen first, before the game opens. */
+function slotsOnScreen(w: number, hgt: number): { slot: string; x: number; y: number }[] {
+  return clearSlots(plannedCamera(w, hgt), w, hgt);
+}
+
+/** The same, on the page's screen as the game's camera shows it. */
+async function slotsOn(page: Page): Promise<{ slot: string; x: number; y: number }[]> {
+  const size = page.viewportSize()!;
+  return clearSlots(await screenOf(page), size.width, size.height);
+}
+
+function clearSlots(at: (x: number, y: number, z: number) => { x: number; y: number }, w: number, hgt: number): { slot: string; x: number; y: number }[] {
   return RAFT_SLOTS.filter((s) => s.ring === 3)
     .map((s) => ({ slot: s.key, ...at(2 * (s.q + s.r / 2), 0, 1.732 * s.r) }))
     .filter((p) => p.x > 40 && p.x < w - 40 && p.y > 200 && p.y < hgt - 140)
     .sort((a, b) => b.y - a.y);
 }
 
-/** The island's shore (its meadow's edge, SHORE_RADIUS from the center) on a w × h screen, every 5 degrees. */
-function shoreOnScreen(lighthouse: number, w: number, hgt: number): { x: number; y: number }[] {
-  const at = cityCamera(lighthouse, w, hgt);
-  return Array.from({ length: 72 }, (_, i) => at(SHORE_RADIUS * Math.cos((i * Math.PI) / 36), 0, SHORE_RADIUS * Math.sin((i * Math.PI) / 36)));
+/** The island's coast on the page's screen, every 5 degrees, as the game's camera shows it. */
+async function shoreOn(page: Page): Promise<{ x: number; y: number }[]> {
+  const at = await screenOf(page);
+  return Array.from({ length: 72 }, (_, i) => {
+    const a = (i * Math.PI) / 36;
+    return at(terrainCoast(a) * Math.cos(a), 0, terrainCoast(a) * Math.sin(a));
+  });
 }

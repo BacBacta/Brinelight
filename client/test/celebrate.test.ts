@@ -1,6 +1,7 @@
+import { readFileSync } from "node:fs";
 import { DAY, advance, newPlayerState, research, train, upgrade, type ActionResult, type GameEvent, type PlayerState } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
-import { AWAY_LINES, CELEBRATION_MS, celebrationOf, celebrationsFor, createPlayQueue, eventText } from "../src/ui/celebrate.js";
+import { AWAY_LINES, CELEBRATION_MS, FLOAT_GAP, celebrationOf, celebrationsFor, createPlayQueue, eventText, floatBottom, takesTap } from "../src/ui/celebrate.js";
 import { DEVICE, SEEN_KEY, accountOwner, awayEvents, readSeen, writeSeen } from "../src/state/seen.js";
 import type { KeyValueStore } from "../src/state/save.js";
 
@@ -122,5 +123,24 @@ describe("at launch, what ended while you were away", () => {
   it("signing in, the account's city replaces the city of this device: nothing told", () => {
     expect(awayEvents({ owner: DEVICE, state: before }, accountOwner("Wa11et"), after)).toEqual([]);
     expect(awayEvents({ owner: accountOwner("Other"), state: before }, accountOwner("Wa11et"), after)).toEqual([]);
+  });
+});
+
+describe("the gold text of a work that ends (owner, on the S22: it hid the quest card's Claim)", () => {
+  it("rises just above the quest card when it shows, where the style puts it otherwise", () => {
+    // The S22: 699 px high, the quest card from 551 to 617.
+    expect(floatBottom(699, { top: 551, height: 66 })).toBe(699 - 551 + FLOAT_GAP);
+    expect(floatBottom(699, null)).toBeNull();
+    // A hidden card has no height.
+    expect(floatBottom(699, { top: 0, height: 0 })).toBeNull();
+  });
+
+  it("the gold text and the cards never take a tap; only the Lighthouse's full screen does, its first tap closing it", () => {
+    expect((["float", "captain", "away"] as const).map(takesTap)).toEqual([false, false, false]);
+    expect(takesTap("lighthouse")).toBe(true);
+    const css = readFileSync(new URL("../src/ui/style.css", import.meta.url), "utf8");
+    expect(css).toContain(".celebration,.celebration *{pointer-events:none}");
+    // The only celebration that takes a tap is the full screen.
+    expect([...css.matchAll(/([^}{]*\.celebration[^{]*)\{[^}]*pointer-events:auto/g)].map((m) => m[1]!.trim())).toEqual([".celebration.lighthouse"]);
   });
 });
