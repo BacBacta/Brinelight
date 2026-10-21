@@ -1,0 +1,345 @@
+{
+ "lighthouse": 30,
+ "era": 5,
+ "eraName": "modern",
+ "look": "modern",
+ "room": 62,
+ "camera": {
+  "position": [
+   0,
+   23.829268301830517,
+   23.010704582888835
+  ],
+  "target": [
+   0,
+   0,
+   0.1743224603012565
+  ],
+  "fov": 40,
+  "aspect": 0.5493562231759657,
+  "width": 384,
+  "height": 699
+ },
+ "buildings": [
+  {
+   "id": "lighthouse",
+   "level": 30,
+   "model": "lighthouse-30",
+   "extra": null,
+   "scale": 1,
+   "x": 0,
+   "z": 0,
+   "reach": 0.877,
+   "height": 4.35
+  },
+  {
+   "id": "refinery",
+   "level": 15,
+   "model": "refinery-15",
+   "extra": null,
+   "scale": 1.15,
+   "x": 2,
+   "z": -3.464,
+   "reach": 1.0384499999999999,
+   "height": 2.4265
+  },
+  {
+   "id": "fishery",
+   "level": 15,
+   "model": "fishery-15",
+   "extra": null,
+   "scale": 1.15,
+   "x": 4,
+   "z": 0,
+   "reach": 1.0465,
+   "height": 1.4029999999999998
+  },
+  {
+   "id": "lumberyard",
+   "level": 19,
+   "model": "lumberyard-15",
+   "extra": null,
+   "scale": 1.15,
+   "x": 1,
+   "z": 1.732,
+   "reach": 0.9889999999999999,
+   "height": 1.564
+  },
+  {
+   "id": "shelters",
+   "level": 14,
+   "model": "shelters-10",
+   "extra": null,
+   "scale": 1.15,
+   "x": 3,
+   "z": -1.732,
+   "reach": 0.9889999999999999,
+   "height": 1.3455
+  },
+  {
+   "id": "barracks",
+   "level": 14,
+   "model": "barracks-10",
+   "extra": null,
+   "scale": 1,
+   "x": -2,
+   "z": 0,
+   "reach": 0.86,
+   "height": 1.69
+  },
+  {
+   "id": "harbor",
+   "level": 14,
+   "model": "harbor-10",
+   "extra": "harbor-pier-10",
+   "scale": 1.15,
+   "x": -2,
+   "z": -3.464,
+   "reach": 1.0246499999999998,
+   "height": 1.6329999999999998
+  },
+  {
+   "id": "observatory",
+   "level": 14,
+   "model": "observatory-10",
+   "extra": null,
+   "scale": 1,
+   "x": -3,
+   "z": -1.732,
+   "reach": 0.86,
+   "height": 1.362
+  },
+  {
+   "id": "infirmary",
+   "level": 14,
+   "model": "infirmary-10",
+   "extra": null,
+   "scale": 1.15,
+   "x": -1,
+   "z": 1.732,
+   "reach": 0.9889999999999999,
+   "height": 1.1844999999999999
+  }
+ ],
+ "slots": [
+  {
+   "key": "-3,3",
+   "x": -3,
+   "z": 5.196,
+   "ring": 3,
+   "building": null,
+   "flooded": false
+  },
+  {
+   "key": "-2,3",
+   "x": -1,
+   "z": 5.196,
+   "ring": 3,
+   "building": null,
+   "flooded": false
+  },
+  {
+   "key": "-1,3",
+   "x": 1,
+   "z": 5.196,
+   "ring": 3,
+   "building": null,
+   "flooded": false
+  },
+  {
+   "key": "0,3",
+   "x": 3,
+   "z": 5.196,
+   "ring": 3,
+   "building": null,
+   "flooded": false
+  },
+  {
+   "key": "-3,2",
+   "x": -4,
+   "z": 3.464,
+   "ring": 3,
+   "building": null,
+   "flooded": false
+  },
+  {
+   "key": "1,2",
+   "x": 4,
+   "z": 3.464,
+   "ring": 3,
+   "building": null,
+   "flooded": false
+  },
+  {
+   "key": "-3,1",
+   "x": -5,
+   "z": 1.732,
+   "ring": 3,
+   "building": null,
+   "flooded": false
+  }
+ ],
+ "free": [
+  {
+   "key": "-3,0",
+   "x": -6,
+   "z": 0
+  },
+  {
+   "key": "-2,-1",
+   "x": -5,
+   "z": -1.732
+  },
+  {
+   "key": "-1,-2",
+   "x": -4,
+   "z": -3.464
+  },
+  {
+   "key": "0,-3",
+   "x": -3,
+   "z": -5.196
+  },
+  {
+   "key": "2,-3",
+   "x": 1,
+   "z": -5.196
+  },
+  {
+   "key": "2,1",
+   "x": 5,
+   "z": 1.732
+  },
+  {
+   "key": "3,-3",
+   "x": 3,
+   "z": -5.196
+  },
+  {
+   "key": "3,-2",
+   "x": 4,
+   "z": -3.464
+  },
+  {
+   "key": "3,-1",
+   "x": 5,
+   "z": -1.732
+  },
+  {
+   "key": "3,0",
+   "x": 6,
+   "z": 0
+  },
+  {
+   "key": "-4,0",
+   "x": -8,
+   "z": 0
+  },
+  {
+   "key": "-4,1",
+   "x": -7,
+   "z": 1.732
+  },
+  {
+   "key": "-4,2",
+   "x": -6,
+   "z": 3.464
+  },
+  {
+   "key": "-4,3",
+   "x": -5,
+   "z": 5.196
+  },
+  {
+   "key": "-4,4",
+   "x": -4,
+   "z": 6.928
+  },
+  {
+   "key": "-3,-1",
+   "x": -7,
+   "z": -1.732
+  },
+  {
+   "key": "-3,4",
+   "x": -2,
+   "z": 6.928
+  },
+  {
+   "key": "-2,-2",
+   "x": -6,
+   "z": -3.464
+  },
+  {
+   "key": "-2,4",
+   "x": 0,
+   "z": 6.928
+  },
+  {
+   "key": "-1,-3",
+   "x": -5,
+   "z": -5.196
+  },
+  {
+   "key": "-1,4",
+   "x": 2,
+   "z": 6.928
+  },
+  {
+   "key": "0,-4",
+   "x": -4,
+   "z": -6.928
+  },
+  {
+   "key": "0,4",
+   "x": 4,
+   "z": 6.928
+  },
+  {
+   "key": "1,3",
+   "x": 5,
+   "z": 5.196
+  },
+  {
+   "key": "2,2",
+   "x": 6,
+   "z": 3.464
+  },
+  {
+   "key": "3,-4",
+   "x": 2,
+   "z": -6.928
+  },
+  {
+   "key": "3,1",
+   "x": 7,
+   "z": 1.732
+  },
+  {
+   "key": "4,-4",
+   "x": 4,
+   "z": -6.928
+  },
+  {
+   "key": "4,-3",
+   "x": 5,
+   "z": -5.196
+  },
+  {
+   "key": "4,-2",
+   "x": 6,
+   "z": -3.464
+  },
+  {
+   "key": "4,-1",
+   "x": 7,
+   "z": -1.732
+  },
+  {
+   "key": "4,0",
+   "x": 8,
+   "z": 0
+  }
+ ],
+ "filling": null
+}
