@@ -1,7 +1,7 @@
 /**
  * The city remade in Blender (week 8): the models made by the scripts of assets/blender/ and served by
- * assets/blender/serve.py in client/public/city/, with their measures in city-models.json. Until the owner approves
- * them, they show only with ?blender in the address.
+ * assets/blender/serve.py in client/public/city/, with their measures in city-models.json. They are the city's look
+ * (step A of the last visual step); ?legacy shows the old look to compare, until the old code is removed (step B).
  */
 import * as THREE from "three";
 import CITY_MODELS from "./city-models.json";
@@ -13,8 +13,8 @@ import CITY_MODELS from "./city-models.json";
 export type CityModel = { kB: number; triangles: number; levels: { level: number; indices: number; height: number; reach: number }[]; lantern?: number; radar?: number[]; lamps?: number[][] };
 export const CITY_MANIFEST = CITY_MODELS as Record<string, CityModel>;
 
-/** The new look is on (?blender), until it replaces the old one. */
-export const blenderLook = (search: string = typeof location === "undefined" ? "" : location.search): boolean => new URLSearchParams(search).has("blender");
+/** The new look is on unless ?legacy asks for the old one (owner's plan, step A; ?blender is still read, and changes nothing). */
+export const blenderLook = (search: string = typeof location === "undefined" ? "" : location.search): boolean => !new URLSearchParams(search).has("legacy");
 
 /**
  * How much higher the city's sea stands with ?blender (owner, after the style pass: the island's cliffs half as high),

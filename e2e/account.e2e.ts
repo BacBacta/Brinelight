@@ -18,6 +18,12 @@ import { installFakeWallet, type TestWallet } from "./fakeWallet.js";
 import { comparePixels, decodePng } from "./png.js";
 import { API, GAME, holdActions, startHarness, type Harness } from "./harness.js";
 
+/**
+ * The old look, until the old code goes (step B of the last visual step): the look references stay the old look's
+ * until the owner has seen the new ones (step C).
+ */
+const OLD_LOOK = "&legacy";
+
 const SAVE_KEY = "brinelight-client-v1";
 const ACCOUNT_KEY = "brinelight-account-v1";
 type Job = { id: string };
@@ -68,7 +74,7 @@ async function newPlayer(
 async function openGame(context: BrowserContext): Promise<Page> {
   const page = await context.newPage();
   // The lowest quality step: the container draws without a graphics chip.
-  await page.goto(`${GAME}/?quality=2`);
+  await page.goto(`${GAME}/?quality=2${OLD_LOOK}`);
   await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
   await page.waitForSelector(".labels.city .bl b");
   return page;
@@ -645,7 +651,7 @@ describe("celebrations", () => {
       const page = await p.context.newPage();
       await page.clock.install({ time: t0 });
       await page.clock.pauseAt(t0 + 500);
-      await page.goto(`${GAME}/?quality=2`);
+      await page.goto(`${GAME}/?quality=2${OLD_LOOK}`);
       await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
       await page.waitForSelector(".labels.city .bl b");
       const most = await oneAtATime(page, async () => {
@@ -772,7 +778,7 @@ describe("the Mist's mood", () => {
       const page = await p.context.newPage();
       await page.clock.install({ time: T });
       await page.clock.pauseAt(new Date(T + 1000));
-      await page.goto(`${GAME}/?quality=2&fps${query}`);
+      await page.goto(`${GAME}/?quality=2${OLD_LOOK}&fps${query}`);
       await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
       const banner = await page.locator('.sub [data-k="mist"]').innerText();
       // Frames for the counter: the page's clock runs 200 ms at a time until it shows the draw calls.
@@ -903,7 +909,7 @@ describe("short motions", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.clock.install({ time: t0 });
     await page.clock.pauseAt(t0 + 500);
-    await page.goto(`${GAME}/?quality=2`);
+    await page.goto(`${GAME}/?quality=2${OLD_LOOK}`);
     await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
     await page.waitForSelector(".labels.city .bl b");
     await page.locator('.nav button[data-v="captains"]').click();
@@ -933,7 +939,7 @@ describe("building tiers", () => {
       const p = await newPlayer(false);
       await p.context.addInitScript(({ key, file }) => localStorage.setItem(key, file), { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: Date.now(), state: city }) });
       const page = await p.context.newPage();
-      await page.goto(`${GAME}/?quality=2&fps`);
+      await page.goto(`${GAME}/?quality=2${OLD_LOOK}&fps`);
       await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
       await page.waitForSelector(".labels.city .bl b");
       await page.waitForTimeout(1000);
@@ -956,7 +962,7 @@ describe("building tiers", () => {
     const city: PlayerState = { ...base, buildings: { ...base.buildings, lighthouse: 9 }, queue: [{ id: "lighthouse", left: 35, duration: 600 }] };
     await p.context.addInitScript(({ key, file }) => localStorage.setItem(key, file), { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: Date.now(), state: city }) });
     const page = await p.context.newPage();
-    await page.goto(`${GAME}/?quality=2&fps`);
+    await page.goto(`${GAME}/?quality=2${OLD_LOOK}&fps`);
     await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
     await page.locator(".celebration.lighthouse").waitFor({ timeout: 60_000 });
     await page.waitForTimeout(1600);
@@ -1022,7 +1028,7 @@ describe("the look", () => {
     // Paused before the game starts: however long the loading takes, the game sees the same times, frame by frame.
     await page.clock.install({ time: T0 });
     await page.clock.pauseAt(new Date(T0.getTime() + 1000));
-    await page.goto(`${GAME}/?quality=2`);
+    await page.goto(`${GAME}/?quality=2${OLD_LOOK}`);
     await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
     await page.evaluate(() => document.fonts.ready);
     await page.clock.fastForward(5 * 60_000);
