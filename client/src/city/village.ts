@@ -1,7 +1,9 @@
 /**
- * The floating village made in Blender (week 8, meeting 3; assets/blender/raft.py and raft_buildings.py), with ?blender:
- * the rafts, their walkways, the moorings of the rafts of ring 3, the raft the shipyard builds, the free slots' buoys and
- * the buildings on rafts at their level, in the Lighthouse's age (driftwood, tarred, steel). Each model shown is one
+ * The floating village made in Blender (week 8, meeting 3; assets/blender/raft.py and raft_buildings.py): the rafts,
+ * their walkways, the moorings of the rafts of ring 3, the raft the shipyard builds, the free slots' buoys and the
+ * buildings on rafts at their level. The rafts float only before the Lighthouse 5 (from then on they are land,
+ * city/land), so they are of driftwood only (the tarred and steel rafts were removed, step B of the last visual step);
+ * the buildings on rafts keep the Lighthouse's age (driftwood, tarred, steel), on their land. Each model shown is one
  * InstancedMesh, and the lit lamps one more: the draw calls grow with the kinds of things afloat, never with the rafts.
  * Only the current age's models are fetched, and the next age's while the Lighthouse's upgrade toward it runs. The
  * decks show in a light version (fewer sides, no hoops) in the normal view, and in full once the camera comes near: the
@@ -16,8 +18,10 @@ import type { PlayerState } from "../state/index.js";
 import { loadStage } from "./staged.js";
 import { reducedMotion } from "../scene/motion.js";
 
-/** The village's three ages, by the Lighthouse's level: driftwood from 1, tarred from 10, steel from 20. */
+/** The buildings on rafts' three ages, by the Lighthouse's level: driftwood from 1, tarred from 10, steel from 20. */
 export const VILLAGE_AGES = [1, 10, 20] as const;
+/** The rafts' own age: driftwood (they float only before the Lighthouse 5). */
+export const RAFT_AGE = 1;
 export const villageAge = (lighthouse: number): number => Math.max(...VILLAGE_AGES.filter((a) => a <= Math.max(1, lighthouse)));
 
 /** The deck's top over the floats' bottom (raft.py, DECK), where a building stands and a walkway lands. */
@@ -35,21 +39,21 @@ export const LITE = "-lite";
 /** The full model of a deck's light version (other models are their own). */
 export const fullName = (name: string): string => (name.endsWith(LITE) ? name.slice(0, -LITE.length) : name);
 
-/** Every model of the village in an age (and the free slot's, the same in all). */
+/** Every model of the village in an age: the rafts' (of driftwood, whatever the age) and the buildings on rafts' of that age. */
 export function villageNames(age: number): string[] {
-  const out = [...LIGHT.flatMap((v) => [`raft-${v}-age${age}`, `raft-${v}-age${age}${LITE}`]), `raft-yard-age${age}`, `raft-walk-age${age}`, `raft-moor-age${age}`];
+  const out = [...LIGHT.flatMap((v) => [`raft-${v}-age${RAFT_AGE}`, `raft-${v}-age${RAFT_AGE}${LITE}`]), `raft-yard-age${RAFT_AGE}`, `raft-walk-age${RAFT_AGE}`, `raft-moor-age${RAFT_AGE}`];
   for (const id of BUILDING_IDS) for (let level = 1; level <= RAFT_BUILDING_MAX_LEVEL; level++) out.push(`${id}-${level}-age${age}`);
   return out;
 }
 
 /** The models of an age the normal view shows: all but the decks' full models. */
-export const villageNormalNames = (age: number): string[] => villageNames(age).filter((n) => !LIGHT.some((v) => n === `raft-${v}-age${age}`));
+export const villageNormalNames = (age: number): string[] => villageNames(age).filter((n) => !LIGHT.some((v) => n === `raft-${v}-age${RAFT_AGE}`));
 
-/** The village is made: every age's models are in the manifest. */
-export const hasVillage = (): boolean => [...VILLAGE_AGES.flatMap(villageNames), "raft-free"].every((n) => CITY_MANIFEST[n]);
+/** Every model of the village is served (the manifest), the free slot's included. */
+export const villageServed = (): boolean => [...VILLAGE_AGES.flatMap(villageNames), "raft-free"].every((n) => CITY_MANIFEST[n]);
 
 /** A deck's light version, as the normal view shows it. */
-export const deckName = (variant: number, age: number): string => `raft-${DECKS[variant % DECKS.length]}-age${age}${LITE}`;
+export const deckName = (variant: number): string => `raft-${DECKS[variant % DECKS.length]}-age${RAFT_AGE}${LITE}`;
 export const raftBuildingName = (id: RaftBuildingId, level: number, age: number): string => `${id}-${Math.min(RAFT_BUILDING_MAX_LEVEL, Math.max(1, level))}-age${age}`;
 
 /** What a slot shows (rafts.ts, raftSlots), with its deck's variant. */
@@ -61,11 +65,11 @@ export function villageModels(slots: readonly VillageSlot[], rafts: PlayerState[
   const out = new Map<string, string>();
   const buildings = new Map<string, string>();
   for (const s of slots) {
-    out.set(s.key, s.view === "free" ? "raft-free" : s.view === "damaged" ? `raft-damaged-age${age}${LITE}` : s.view === "building" ? `raft-yard-age${age}` : deckName(s.variant, age));
+    out.set(s.key, s.view === "free" ? "raft-free" : s.view === "damaged" ? `raft-damaged-age${RAFT_AGE}${LITE}` : s.view === "building" ? `raft-yard-age${RAFT_AGE}` : deckName(s.variant));
     const raft = rafts[s.key];
     if (raft?.building && s.view !== "free" && s.view !== "building") buildings.set(s.key, raftBuildingName(raft.building, raft.level, age));
   }
-  return { slots: out, buildings, walk: `raft-walk-age${age}`, moor: `raft-moor-age${age}` };
+  return { slots: out, buildings, walk: `raft-walk-age${RAFT_AGE}`, moor: `raft-moor-age${RAFT_AGE}` };
 }
 
 const ringOf = (key: string): number => RAFT_SLOTS.find((s) => s.key === key)?.ring ?? 0;

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { BUILDING_FIX, PLOT_ROOM, footprintReach, type BuildingModel, type Tier } from "./buildings.js";
+import type { Tier } from "./buildings.js";
 
 /** The Modern era's radar: one turn in this many seconds, slow and even. */
 export const RADAR_TURN = 8;
@@ -12,17 +12,10 @@ export function lighthouseScale(level: number): number {
 export type Lighthouse = {
   group: THREE.Group;
   animate(seconds: number): void;
-  /** In the city: the painted model takes the place of the tower built in code; the beams and the light stay, at its lantern. */
-  useModel(model: BuildingModel): void;
   /** The model of its stage (made in Blender), at its own size: the beams and the light go to `lantern`, its height. */
   useStaged(object: THREE.Object3D, lantern: number): void;
   /** The Modern era's radar bar, turning slowly around its mast at `at` (still with reduced motion); null takes it off. */
   useRadar(object: THREE.Object3D | null, at?: readonly [number, number, number]): void;
-  /**
-   * The widest it may grow and stay within its plot (PLOT_ROOM): past it, it only grows taller. Infinity before its
-   * model is there.
-   */
-  readonly widthCap: number;
   /** Its lantern shines brighter with each visual tier. */
   setTier(tier: Tier): void;
   /**
@@ -94,12 +87,8 @@ export function createLighthouse(opts: { gold?: boolean; light?: boolean } = {})
   g.add(radar);
   const still = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
   pivot.visible = false;
-  let widthCap = Infinity;
   return {
     group: g,
-    get widthCap() {
-      return widthCap;
-    },
     setTier(tier) {
       lampM.emissiveIntensity = [1.6, 1.6, 2.2, 3][tier]!;
       if (light) light.intensity = [5, 5, 6, 7][tier]!;
@@ -124,15 +113,6 @@ export function createLighthouse(opts: { gold?: boolean; light?: boolean } = {})
       if (staged && staged !== object) g.remove(staged);
       staged = object;
       g.add(object);
-      lamp.position.y = lantern;
-      pivot.position.y = lantern;
-      if (light) light.position.y = lantern;
-    },
-    useModel(model) {
-      for (const m of tower) m.visible = m === lamp;
-      g.add(model.object);
-      widthCap = PLOT_ROOM / footprintReach(model.object);
-      const lantern = model.height * (BUILDING_FIX.lighthouse.lantern ?? 0.8);
       lamp.position.y = lantern;
       pivot.position.y = lantern;
       if (light) light.position.y = lantern;

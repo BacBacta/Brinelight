@@ -20,9 +20,8 @@ Goal of week 2 (task 6): **30 FPS or more on the low-end Android test phone**, i
 - Without `?quality`, the game starts at step 0 and lowers the step by itself when it stays under 30 FPS for 3 seconds, as the prototype did.
 - `?mist` shows the Mist's look (its mood only, no rule): the banner says "Mist", and the counter adds "Mist" after the view.
 - `?demo=phare30` shows a demonstration city for measuring the worst case: Lighthouse 30, the other buildings at 30, 39 rafts (each raft building type on two rafts at level 3), the Refinery's building site, 106 survivors. `?demo=phare15`: Lighthouse 15, 15 rafts, the same site, 46 survivors. Phare 30 has 38 rafts and fills the last slot at the shipyard; in both, the eighth raft is damaged (hp 40). With `?blender` they show the land: a flooded plot and a landfill under way. It lives in memory only: nothing is sent to the server, nothing is written on the device, and your own city stays as it was. Only in development and on the branch previews (`*.brinelight.pages.dev` built from a branch other than `main`); the production build does not even contain it (`client/test/demo.test.ts`).
-- `?legacy` shows the city's old look, to compare, until the old code is removed (the new look made in Blender is the default; `?blender` is still read and changes nothing).
 - `?demo=phare30&cycle` (or `phare15`) floods and mends the demo's flooded plot every 4 seconds: the land is built again each time, to read its hitch on a phone with `&fps`.
-- They can be combined: `?fps&quality=1`, `?fps&mist&quality=2`, `?blender&demo=phare30&fps`.
+- They can be combined: `?fps&quality=1`, `?fps&mist&quality=2`, `?demo=phare30&fps`.
 
 ## Protocol (5 steps)
 

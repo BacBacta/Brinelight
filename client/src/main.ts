@@ -21,11 +21,10 @@ import { watchWallets } from "./account/wallets.js";
 import { createCity, type City } from "./city/index.js";
 import { DEMO_CYCLE, demoAllowed, demoCity, demoCycle, demoCycles, demoWanted, memoryStore } from "./demo.js";
 import { LAND_NEWS, landNewsDue, landShown } from "./city/words.js";
-import { hasLand, landModels } from "./city/land/index.js";
-import { hasTerrain, isStaged, loadStage, shownModels, tallestHeight, terrainName } from "./city/staged.js";
+import { landModels } from "./city/land/index.js";
+import { loadStage, shownModels, terrainName } from "./city/staged.js";
 import { raftSlots, raftVariant } from "./city/rafts.js";
-import { hasVillage, villageShown } from "./city/village.js";
-import { blenderLook } from "./scene/cityLook.js";
+import { villageShown } from "./city/village.js";
 import { showRules } from "./rules.js";
 import { forcedQuality, startScene, type Kit, type Models, type View } from "./scene/index.js";
 import { createSea, type Sea } from "./sea/index.js";
@@ -53,8 +52,8 @@ if (new URLSearchParams(location.search).has("rules")) {
   showRules(app);
 } else {
   document.body.classList.add("scene");
-  // The look made in Blender (?blender): its sheets take at most half the screen, so the close view shows the building.
-  document.body.classList.toggle("era-look", blenderLook());
+  // The city made in Blender: its sheets take at most half the screen, so the close view shows the building.
+  document.body.classList.add("era-look");
   app.innerHTML = `<canvas id="cv" aria-label="3D view of your city"></canvas><p class="loading" role="status">Loading your city…</p>`;
   const status = app.querySelector<HTMLParagraphElement>(".loading")!;
   const canvas = app.querySelector<HTMLCanvasElement>("#cv")!;
@@ -112,6 +111,8 @@ if (new URLSearchParams(location.search).has("rules")) {
   let sea: Sea | null = null;
   const refresh = () => {
     city?.update(state);
+    // An unread report opens by itself, wherever you are (sea/index.ts): its sheet comes with the sea, fetched now.
+    if (city && state.reports.some((r) => !r.read)) openSea();
     sea?.update(state);
     captains.update(state);
     daily.update(state);
@@ -267,7 +268,7 @@ if (new URLSearchParams(location.search).has("rules")) {
     return { top: top + 4, bottom: (nav && nav.height > 0 ? nav.top : innerHeight) - 4 };
   }
   /**
-   * The normal view's band with ?blender: below the cards at the top too (the works under way, Tasks) and above the
+   * The normal view's band: below the cards at the top too (the works under way, Tasks) and above the
    * quest card, so that no building passes under one (owner, on the S22). At sea, the band the city last had.
    */
   let lastCityBand: { top: number; bottom: number } | null = null;
@@ -282,9 +283,8 @@ if (new URLSearchParams(location.search).has("rules")) {
     if (quest && quest.height > 0) band.bottom = Math.min(band.bottom, quest.top - 4);
     return (lastCityBand = band);
   }
-  // The sea: made at once with the old look; with the look made in Blender, at your first visit at sea, when its models
-  // (the prototype's kit, the wreck, the camp, your boat) are fetched.
-  const seaLater = blenderLook();
+  // The sea: made at your first visit at sea, when its models (the prototype's kit, the wreck, the camp, your boat) are
+  // fetched.
   function makeSea(kit: Kit, models: Models): void {
     if (sea) return;
     sea = createSea(kit, models, scene, canvas, app, {
@@ -301,7 +301,7 @@ if (new URLSearchParams(location.search).has("rules")) {
   }
   let seaAsked = false;
   function openSea(): void {
-    if (!seaLater || seaAsked) return;
+    if (seaAsked) return;
     seaAsked = true;
     scene.loadSea().then(
       ({ kit, models }) => makeSea(kit, models),
@@ -312,15 +312,11 @@ if (new URLSearchParams(location.search).has("rules")) {
       },
     );
   }
-  // The look made in Blender (?blender, week 8): the old models of the buildings remade are not fetched, and the city
-  // shows once the models of their current era are there.
-  const remade = blenderLook() ? Object.fromEntries(BUILDING_IDS.filter(isStaged).map((id) => [id, tallestHeight(id)])) : undefined;
-  // The floating village made in Blender: its models of the Lighthouse's age that the city shows, also before its first image.
-  const village = blenderLook() && hasVillage();
+  // The city shows once the models of its buildings' current era are there, and its rafts' (the floating village) or,
+  // from the Lighthouse 5, its land's (city/land): its ground's texture instead of the rafts' decks.
   const slots = raftSlots(state).map((s) => ({ ...s, variant: raftVariant(s.key) }));
-  // From the Lighthouse 5 the rafts are land (city/land): its ground's texture instead of the rafts' decks.
-  const afloat = village ? (hasLand() && landShown(state.buildings.lighthouse) ? landModels(state) : villageShown(slots, state.rafts, state.buildings.lighthouse)) : [];
-  const ready = blenderLook() ? Promise.all([...shownModels(state), ...afloat].map(loadStage)) : undefined;
+  const afloat = landShown(state.buildings.lighthouse) ? landModels(state) : villageShown(slots, state.rafts, state.buildings.lighthouse);
+  const ready = Promise.all([...shownModels(state), ...afloat].map(loadStage));
   const scene = startScene(canvas, {
     home: HOME,
     // The sheet open at the bottom (on a phone; on a wide screen it stands at the right): its height, not its slide-in.
@@ -328,20 +324,15 @@ if (new URLSearchParams(location.search).has("rules")) {
       const open = document.querySelector<HTMLElement>(".sheet:not([hidden])");
       return open && innerWidth < 900 ? innerHeight - open.offsetHeight : null;
     },
-    remade,
     ready,
-    village,
-    terrain: blenderLook() && hasTerrain() ? terrainName(state.buildings.lighthouse) : undefined,
-    seaLater,
+    terrain: terrainName(state.buildings.lighthouse),
     band: panelBand,
-    cityBand: blenderLook() ? cityBand : undefined,
+    cityBand,
     quality: forcedQuality(location.search),
-    onRaftBuildings: (models) => city?.useRaftBuildings(models),
-    onLoaded: (kit, buildings, models) => {
+    onLoaded: () => {
       status.remove();
       fps?.modelsLoaded();
-      if (!seaLater) makeSea(kit, models);
-      city = createCity(kit, buildings, models, scene, canvas, app, { state: () => state, upgrade: (building) => act({ type: "upgrade", building }), research: (tech) => act({ type: "research", tech }), train: (troop) => act({ type: "train", troop }), promote: (troop) => act({ type: "promote", troop }), heal: () => act({ type: "heal" }), stoke: (on) => act({ type: "stoke", on }), dockRaft: (slot) => act({ type: "dockRaft", slot }), installOnRaft: (slot, building) => act({ type: "installOnRaft", slot, building }), upgradeRaft: (slot) => act({ type: "upgradeRaft", slot }), repairRafts: () => act({ type: "repairRafts" }), toCity: () => ui.showView("city"), speed });
+      city = createCity(scene, canvas, app, { state: () => state, upgrade: (building) => act({ type: "upgrade", building }), research: (tech) => act({ type: "research", tech }), train: (troop) => act({ type: "train", troop }), promote: (troop) => act({ type: "promote", troop }), heal: () => act({ type: "heal" }), stoke: (on) => act({ type: "stoke", on }), dockRaft: (slot) => act({ type: "dockRaft", slot }), installOnRaft: (slot, building) => act({ type: "installOnRaft", slot, building }), upgradeRaft: (slot) => act({ type: "upgradeRaft", slot }), repairRafts: () => act({ type: "repairRafts" }), toCity: () => ui.showView("city"), speed });
       refresh();
     },
     onError: () => (status.textContent = "Could not load the 3D models. Reload the page."),

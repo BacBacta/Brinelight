@@ -1,5 +1,5 @@
 /**
- * The island's life (week 8, meeting 4), with ?blender: its survivors at work and on their ways. Display only: it reads
+ * The island's life (week 8, meeting 4): its survivors at work and on their ways. Display only: it reads
  * the city, never changes it, and is never what a tap lands on. Its models are fetched after the city's first image.
  */
 import type * as THREE from "three";

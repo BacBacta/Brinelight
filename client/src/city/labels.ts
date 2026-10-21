@@ -15,7 +15,7 @@ export const levelText = (level: number, atWork: boolean): string => (atWork ? `
 export const JUST_UPGRADED_MS = 6000;
 
 /**
- * `badges` (week 8, with ?blender): a building shows nothing over it, unless you touched it (its full label), it is at
+ * `badges` (week 8): a building shows nothing over it, unless you touched it (its full label), it is at
  * work (its full label and its timer), its upgrade can start (its level badge, with its arrow; in full when it is one
  * of the two suggested) or it was just upgraded (its full label for a few seconds); no label ever goes under one of
  * the `panels` (read four times a second).

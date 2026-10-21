@@ -12,12 +12,12 @@ const rich = (lighthouse: number): PlayerState => {
 };
 const slot = RAFT_SLOTS.find((s) => s.ring === 3)!.key;
 
-describe("the rafts' words: land from the Lighthouse 5 with ?blender, rafts before (owner)", () => {
-  it("land only with the look made in Blender and the Lighthouse at 5 or more", () => {
+describe("the rafts' words: land from the Lighthouse 5, rafts before (owner)", () => {
+  it("land from the Lighthouse 5", () => {
     expect(LAND_FROM).toBe(5);
-    expect(landShown(4, true)).toBe(false);
-    expect(landShown(5, true)).toBe(true);
-    expect(landShown(30, false)).toBe(false);
+    expect(landShown(4)).toBe(false);
+    expect(landShown(5)).toBe(true);
+    expect(landShown(30)).toBe(true);
   });
 
   it("the sheets: a free plot to win, an empty plot, the dike, draining", () => {

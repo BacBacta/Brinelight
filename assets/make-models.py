@@ -1,7 +1,7 @@
 """
-Makes the 3D models the game serves, from the Meshy originals (one mesh, one 2048 px JPEG texture each):
-the nine buildings (assets/buildings/src/ to client/public/buildings/) and the other models (assets/models/src/ to
-client/public/models/).
+Makes the 3D models the game serves, from the Meshy originals (one mesh, one 2048 px JPEG texture each): the sea's
+wreck, camp and boat (assets/models/src/ to client/public/models/). The nine buildings, the island and the raft it once
+made are no longer served (the city is made in Blender).
 
     python3 assets/make-models.py
 
@@ -26,9 +26,10 @@ QUALITY = 82
 here = Path(__file__).resolve().parent
 public = here.parent / "client" / "public"
 
-BUILDINGS = ["lighthouse", "refinery", "fishery", "lumberyard", "shelters", "barracks", "harbor", "observatory", "infirmary"]
-# The buildings on rafts (greenhouse, smokehouse, watchtower) are made now; the shipyard's task shows them later.
-OTHERS = ["island", "raft", "wreck", "camp", "boat", "greenhouse", "smokehouse", "watchtower"]
+# The city is made in Blender (assets/blender/) since the last visual step (step B): the nine buildings, the island, the
+# raft and the buildings on rafts made here are no longer served. Only the sea's models are.
+BUILDINGS: list[str] = []
+OTHERS = ["wreck", "camp", "boat"]
 # Texture size, 512 px unless set here: the island is the largest thing on screen.
 TEXTURE = {"island": 1024}
 # The island's two windswept pines, found by their box (x, z in the original's units) and their height: the vertices

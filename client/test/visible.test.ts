@@ -1,8 +1,7 @@
 /**
  * In the city remade in Blender, seen in the normal view, each building stays mostly in sight (owner, 19 October): at
  * least 70 % of what the camera would see of it is not hidden by the Lighthouse or a neighbor, at every era, with its
- * neighbors at their tallest. Measured on the files the game serves: the remade buildings' models at their level, the
- * others' current models at their tier's size.
+ * neighbors at their tallest. Measured on the files the game serves: each building's model at its level.
  */
 import { beforeAll, describe, expect, it } from "vitest";
 import * as THREE from "three";
@@ -11,17 +10,14 @@ import { CITY_ANGLE, CITY_FILL, CITY_FOV, cityFraming } from "../src/scene/frami
 import { LAND_FROM } from "../src/city/words.js";
 import { terrainCoast } from "../src/scene/terrainCoast.js";
 import { hexX, hexZ } from "../src/scene/island.js";
-import { BUILDING_FIX, LIGHTHOUSE_FIT, TILE_FIT, normalizeBuilding } from "../src/scene/buildings.js";
 import { ERA_PLOTS } from "../src/city/plots.js";
-import { TIER_SCALE, tierOf } from "../src/city/tiers.js";
-import { STAGES, buildingScale, isStaged, levelShape, stageName } from "../src/city/staged.js";
+import { STAGES, buildingScale, levelShape, stageName } from "../src/city/staged.js";
 import { readGlb } from "./glb.js";
 import { plantLook } from "../src/city/life/plants.js";
 
 /** The least share of a building the normal view must show. */
 const IN_SIGHT = 0.7;
 const VIEW = { width: 412, height: 915, top: 92, bottom: 840 };
-const STAGED = BUILDING_IDS.filter(isStaged);
 
 const glb = (path: string) => {
   const { scenes } = readGlb(new URL(`../public/${path}.glb`, import.meta.url).pathname);
@@ -33,28 +29,22 @@ const once = (path: string) => {
   return loaded.get(path)!;
 };
 
-/** A building as shown at a level on its plot: its stage's model drawn up to the level, or its current model at its tier's size. */
+/** A building as shown at a level on its plot: its stage's model drawn up to the level. */
 function shown(id: BuildingId, level: number): THREE.Object3D {
   const [q, r] = ERA_PLOTS[id];
   const group = new THREE.Group();
   group.position.set(hexX(q, r), 0, hexZ(r));
-  if (isStaged(id)) {
-    const model = once(`city/${stageName(id, level)}`).clone(true);
-    const { indices } = levelShape(id, level);
-    model.traverse((o) => {
-      const mesh = o as THREE.Mesh;
-      if (!mesh.isMesh) return;
-      mesh.geometry = mesh.geometry.clone();
-      mesh.geometry.setDrawRange(0, indices);
-    });
-    // Drawn larger than made, the Lighthouse excepted (staged.ts, the style pass).
-    model.scale.setScalar(buildingScale(id));
-    group.add(model);
-  } else {
-    const { object } = normalizeBuilding(once(`buildings/${id}`).clone(true), id === "lighthouse" ? LIGHTHOUSE_FIT : TILE_FIT, BUILDING_FIX[id]);
-    object.scale.setScalar(TIER_SCALE[tierOf(level)]);
-    group.add(object);
-  }
+  const model = once(`city/${stageName(id, level)}`).clone(true);
+  const { indices } = levelShape(id, level);
+  model.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    mesh.geometry = mesh.geometry.clone();
+    mesh.geometry.setDrawRange(0, indices);
+  });
+  // Drawn larger than made, the Lighthouse excepted (staged.ts, the style pass).
+  model.scale.setScalar(buildingScale(id));
+  group.add(model);
   group.traverse((o) => {
     const mesh = o as THREE.Mesh;
     if (mesh.isMesh) mesh.material = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
@@ -65,7 +55,6 @@ function shown(id: BuildingId, level: number): THREE.Object3D {
 
 /** The level up to `cap` at which a building stands tallest. */
 function tallest(id: BuildingId, cap: number): number {
-  if (!isStaged(id)) return cap;
   let best = 1;
   for (let l = 1; l <= cap; l++) if (levelShape(id, l).height > levelShape(id, best).height) best = l;
   return best;
@@ -74,10 +63,10 @@ function tallest(id: BuildingId, cap: number): number {
 /** The normal view's camera with these rafts moored and the Lighthouse at this level. */
 function camera(rafts: number, lighthouse: number): THREE.PerspectiveCamera {
   const slots = RAFT_SLOTS.slice(0, rafts).map((s) => ({ x: hexX(s.q, s.r), z: hexZ(s.r) }));
-  const top = isStaged("lighthouse") ? [{ x: 0, y: levelShape("lighthouse", lighthouse).height * buildingScale("lighthouse"), z: 0 }] : [];
+  const top = [{ x: 0, y: levelShape("lighthouse", lighthouse).height * buildingScale("lighthouse"), z: 0 }];
   // From the Lighthouse 5 the rafts are land (city/land): its outline stays on screen, as the game frames it (city/index.ts).
   const edge = lighthouse >= LAND_FROM ? slots.flatMap((c) => Array.from({ length: 8 }, (_, i) => ({ x: c.x + Math.cos((i * Math.PI) / 4) * 1.25, y: 0, z: c.z + Math.sin((i * Math.PI) / 4) * 1.25 }))) : [];
-  // The normal view with ?blender: the city across three quarters of the screen's width (owner, after the style pass).
+  // The normal view: the city across three quarters of the screen's width (owner, after the style pass).
   const { distance, target } = cityFraming(VIEW, slots, [...top, ...edge], { share: CITY_FILL, coast: terrainCoast });
   const cam = new THREE.PerspectiveCamera(CITY_FOV, VIEW.width / VIEW.height, 0.1, 400);
   cam.position.copy(target).addScaledVector(CITY_ANGLE, distance);
@@ -133,7 +122,7 @@ describe("in the normal view, each building stays mostly in sight", () => {
     for (const id of BUILDING_IDS) shown(id, 1);
   });
 
-  for (const id of STAGED) {
+  for (const id of BUILDING_IDS) {
     it(`${id}: at least ${IN_SIGHT * 100} % in sight at every era, with the Lighthouse and its neighbors at their tallest`, () => {
       // Each era's first and last levels.
       const levels = [...new Set(STAGES.flatMap((s, i) => [s, (STAGES[i + 1] ?? 31) - 1]))];
@@ -169,7 +158,6 @@ describe("the island's plants (the style pass) never hide a building", () => {
       const all = BUILDING_IDS.map((id) => [id, shown(id, lighthouse)] as const);
       const worst: string[] = [];
       for (const [id, target] of all) {
-        if (!isStaged(id)) continue;
         const others = [...all.filter(([o]) => o !== id).map(([, o]) => o), green];
         const share = inSight(target, others, camera(RAFT_SLOTS.length, lighthouse));
         worst.push(`${id} ${(share * 100).toFixed(0)} %`);

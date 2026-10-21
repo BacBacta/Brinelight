@@ -1,19 +1,17 @@
 import * as THREE from "three";
-import type { BuildingId } from "@brinelight/shared";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { loadBuildings, tierOf, type BuildingModels } from "./buildings.js";
-import { ISLAND_ANISOTROPY, filterTexture, fitIsland, loadModels, loadRaftBuildings, type Models, type RaftBuildingModels } from "./models.js";
+import { tierOf } from "./buildings.js";
+import { ISLAND_ANISOTROPY, filterTexture, loadModels, type Models } from "./models.js";
 import { createCamera, createControls, frameCity } from "./camera.js";
-import { shapeCoast } from "./coast.js";
-import { CITY_MANIFEST, SEA_RISE, blenderLook, cityModelUrl, gridIsland } from "./cityLook.js";
+import { CITY_MANIFEST, SEA_RISE, cityModelUrl, gridIsland } from "./cityLook.js";
 import { CITY_ANGLE, CITY_FILL, buildingPoints, cityFraming, clearView, type Volume } from "./framing.js";
-import { createIsland, type Kit } from "./island.js";
+import type { Kit } from "./island.js";
 import { createLighthouse, lighthouseScale } from "./lighthouse.js";
 import { QUALITY_STEPS, applyQualityStep, createQualityMonitor, type QualityStep } from "./quality.js";
 import { createPost, type Post } from "./post.js";
 import { createRenderer } from "./renderer.js";
 import { createSky } from "./sky.js";
-import { CITY_CALM, CITY_MIST, CITY_STYLE, STYLE_EXPOSURE, CITY_WATER, CITY_WATER_STYLE, SEA_CALM, SEA_MIST, addLook, applyLook, mixLook, type SeaMood } from "./look.js";
+import { CITY_MIST, CITY_STYLE, STYLE_EXPOSURE, CITY_WATER_STYLE, SEA_CALM, SEA_MIST, addLook, applyLook, mixLook, type SeaMood } from "./look.js";
 import { createVeil } from "./veil.js";
 import { createSeaView } from "./sea.js";
 import { createWater } from "./water.js";
@@ -22,8 +20,8 @@ import { shoreJob } from "../city/land/jobs.js";
 import { terrainCoast } from "./terrainCoast.js";
 
 export type { Kit } from "./island.js";
-export { BUILDING_FIX, buildingUrl, normalizeBuilding, type BuildingModel, type BuildingModels } from "./buildings.js";
-export { ISLAND_TURN, MODEL_IDS, RAFT_BUILDING_IDS, SHORE_RADIUS, bakeModel, fitIsland, modelUrl, type Models, type RaftBuildingModels } from "./models.js";
+export { normalizeBuilding, type BuildingModel } from "./buildings.js";
+export { RAFT_BUILDING_IDS, bakeModel, modelUrl, type Models } from "./models.js";
 export { hexGeometry, hexX, hexZ, kitModel } from "./island.js";
 export { createLighthouse, lighthouseScale } from "./lighthouse.js";
 export { WAVE_HEIGHT } from "./water.js";
@@ -64,7 +62,7 @@ export type SceneHandle = {
   unfocus(): void;
   /** Shows the city or the sea; only the shown view moves with your fingers. */
   setView(view: View): void;
-  /** The sea's models, fetched once (at once, unless `seaLater` held them back): the kit and all the models. */
+  /** The sea's models, fetched at your first visit at sea: the prototype's kit, the wreck, the camp and your boat. */
   loadSea(): Promise<{ kit: Kit; models: Models }>;
   readonly view: View;
   /** Adds an object to the city (default) or to the sea. */
@@ -90,7 +88,7 @@ export type SceneHandle = {
   setMood(mood: SeaMood, now?: boolean): void;
   /** How much the Lighthouses' beams show, 0 to 1 (the sea map's Lighthouses follow it). */
   readonly beams: number;
-  /** The buildings' room at their levels (with ?blender): each one's top and foot stays in the normal view's band. */
+  /** The buildings' room at their levels: each one's top and foot stays in the normal view's band. */
   setBuildings(volumes: readonly Volume[]): void;
   /**
    * The band or the buildings changed (a card came or went, a building grew): the normal view follows, gliding there if
@@ -100,7 +98,7 @@ export type SceneHandle = {
   /** The rafts moored around the island (and the shipyard at work): the foam goes around them, and the normal view keeps them on screen. */
   setMoored(discs: readonly Disc[]): void;
   /**
-   * The land won on the sea (city/land, from the Lighthouse 5 with ?blender): its ground takes the island's place (the
+   * The land won on the sea (city/land, from the Lighthouse 5): its ground takes the island's place (the
    * island's own model hidden) and the shore's foam is measured from it; null gives the island back. `edge`: points of
    * its outline the normal view keeps on screen; `grid`: where it stands above the water (measured with it, else here).
    */
@@ -116,32 +114,23 @@ export type SceneOptions = {
   quality?: QualityStep | null;
   /** Where the sea camera first looks: your city on the sea map. */
   home?: { x: number; z: number };
-  /** Called once phare.glb, the nine buildings and the other models are loaded (and what `ready` waits for). */
-  onLoaded?: (kit: Kit, buildings: BuildingModels, models: Models) => void;
+  /** Called once the island and what `ready` waits for are there: the city's first image follows. */
+  onLoaded?: () => void;
   /**
-   * The buildings made in Blender (week 8), with the height they stand in at: their old models are not fetched. The
-   * city shows once `ready` is done too: the models of their current era, so they are there from the first image.
+   * The models the city's first image waits for (its buildings' current era, its rafts or its land): they are there from
+   * the first image. The sea's models (the prototype's kit, 2.9 MB, the wreck, the camp, your boat) wait for your first
+   * visit at sea: `loadSea` fetches them.
    */
-  remade?: Partial<Record<BuildingId, number>>;
   ready?: Promise<unknown>;
   /**
-   * The sea's models wait for your first visit at sea (with the look made in Blender): the prototype's kit (2.9 MB) and
-   * the wreck, the camp and your boat are not fetched for the city's first image; `loadSea` fetches them.
-   */
-  seaLater?: boolean;
-  /** The buildings on rafts, loaded after the city shows. */
-  onRaftBuildings?: (models: RaftBuildingModels) => void;
-  /** The floating village is made in Blender (city/village.ts): the old raft and buildings on rafts are not fetched. */
-  village?: boolean;
-  /**
    * The island after the style pass (assets/blender/terrain.py), in the Lighthouse's look: one continuous land, its
-   * ground painted on it, no plot outlines. Its name, when it is made; the grid's island otherwise.
+   * ground painted on it, no plot outlines.
    */
-  terrain?: string;
+  terrain: string;
   onError?: (err: unknown) => void;
   /** The band of the screen the city's close view must fit in, in CSS pixels: below the top panels, above the bottom ones. */
   band?: () => { top: number; bottom: number };
-  /** The normal view's band, if it is narrower (with ?blender: below the cards at the top too, above the quest card). */
+  /** The normal view's band, if it is narrower (below the cards at the top too, above the quest card). */
   cityBand?: () => { top: number; bottom: number };
   /** The top of the sheet open at the bottom of the screen, if one is (CSS pixels): the close view stays above it. */
   sheetTop?: () => number | null;
@@ -150,9 +139,9 @@ export type SceneOptions = {
 const KIT_URL = `${import.meta.env.BASE_URL}prototype/assets/phare.glb`;
 
 /** The two views of the prototype: the city (island, Lighthouse) and the sea map. */
-export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}): SceneHandle {
+export function startScene(canvas: HTMLCanvasElement, options: SceneOptions): SceneHandle {
   const renderer = createRenderer(canvas);
-  // With ?blender, the city's finish at full quality only (post.ts): made the first time it is drawn, a few seconds after
+  // The city's finish at full quality only (post.ts): made the first time it is drawn, a few seconds after
   // the city's first image, once the island's life has come (its passes would slow those first frames down).
   let post: Post | null = null;
   let posted = false;
@@ -161,22 +150,22 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   /** The finish fades in over this many seconds: it never pops in. */
   const FINISH_FADE = 1;
   /**
-   * With ?blender, until the city's first image, the sea behind "Loading your city…" is drawn twice a second at most:
+   * Until the city's first image, the sea behind "Loading your city…" is drawn twice a second at most:
    * drawn at every frame at full quality, it slowed the models' loading down by seconds (week 8, the first image).
    */
   const LOADING_FRAME = 0.5;
   let loadingDrawn = -Infinity;
 
   const scene = new THREE.Scene();
-  // With ?blender, the city's light after the style pass (look.ts), a little brighter (owner, on the S22).
-  const calm = blenderLook() ? CITY_STYLE : CITY_CALM;
-  if (blenderLook()) renderer.toneMappingExposure = STYLE_EXPOSURE;
+  // The city's light after the style pass (look.ts), a little brighter (owner, on the S22).
+  const calm = CITY_STYLE;
+  renderer.toneMappingExposure = STYLE_EXPOSURE;
   const look = addLook(scene, createSky(calm.sky), calm, true);
   const { sun } = look;
   const veil = createVeil();
   scene.add(veil.mesh);
-  // With ?blender, the city's water has 64 subdivisions at most (meeting 4: room for the island's life).
-  const water = createWater(blenderLook() ? { ...CITY_WATER_STYLE, maxSegments: 64, lapping: true, y: SHORE.waterY + SEA_RISE } : CITY_WATER);
+  // The city's water has 64 subdivisions at most (meeting 4: room for the island's life).
+  const water = createWater({ ...CITY_WATER_STYLE, maxSegments: 64, lapping: true, y: SHORE.waterY + SEA_RISE });
   scene.add(water.mesh);
   water.useRenderer(renderer);
   // The foam goes along the island's shore and around the rafts moored there (setMoored). Its distances are measured
@@ -249,7 +238,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     while (from.theta - to.theta > Math.PI) to.theta += Math.PI * 2;
     glide = { from: [from, controls.target.clone()], to: [to, target], start: performance.now() };
   };
-  // The buildings' room (with ?blender): each one's top and foot stays in the normal view's band.
+  // The buildings' room: each one's top and foot stays in the normal view's band.
   let volumes: readonly Volume[] = [];
   let framedBand = { top: 0, bottom: 0 };
   let stale = false;
@@ -258,8 +247,8 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     framedBand = band;
     // The Lighthouse made in Blender is taller: its top stays on screen too.
     const tops = [...(lighthouseStaged ? [{ x: 0, y: lighthouseTop, z: 0 }] : []), ...volumes.flatMap(buildingPoints), ...landEdge.map((p) => ({ x: p.x, y: 0, z: p.z }))];
-    // With ?blender, the city spans three quarters of the screen's width (owner, after the style pass).
-    return cityFraming({ width: innerWidth, height: innerHeight, ...band }, moored, tops, blenderLook() ? { share: CITY_FILL, coast: terrainCoast } : undefined);
+    // The city spans three quarters of the screen's width (owner, after the style pass).
+    return cityFraming({ width: innerWidth, height: innerHeight, ...band }, moored, tops, { share: CITY_FILL, coast: terrainCoast });
   };
   const layout = () => {
     renderer.setSize(innerWidth, innerHeight, false);
@@ -299,21 +288,14 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   addEventListener("resize", layout);
 
   let disposed = false;
-  // One loader: the kit (scaffolding, the sea's other sites), the nine buildings and the other models, in parallel;
-  // the city shows once all are there. The buildings on rafts follow.
-  const loader = new GLTFLoader();
-  const blender = blenderLook();
-  // The island made to the grid replaces the old island: that one is not fetched. With `seaLater`, the sea's own
+  // One loader: the island in the Lighthouse's look and the models the first image waits for (`ready`); the sea's own
   // models wait for your first visit at sea.
-  const seaOnly = ["wreck", "camp", "boat"] as const;
-  const terrain = blender && options.terrain && CITY_MANIFEST[options.terrain] ? options.terrain : null;
-  let terrainShown = terrain;
+  const loader = new GLTFLoader();
+  let terrainShown = CITY_MANIFEST[options.terrain] ? options.terrain : null;
   let land: THREE.Object3D | null = null;
   // The land won on the sea, when it shows: its ground, and the edge the framing keeps on screen.
   let wonLand: THREE.Object3D | null = null;
   let landEdge: readonly { x: number; z: number }[] = [];
-  const later = !!options.seaLater;
-  let city: { kit: Kit; models: Models } | null = null;
   let cityLoaded = () => {};
   const cityDone = new Promise<void>((resolve) => (cityLoaded = resolve));
   let seaModels: Promise<{ kit: Kit; models: Models }> | null = null;
@@ -322,47 +304,23 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     gltf.scenes.forEach((sc) => (kit[sc.name] = sc));
     return kit;
   };
-  Promise.all([
-    later ? Promise.resolve({ scenes: [] as THREE.Group[] }) : loader.loadAsync(KIT_URL),
-    loadBuildings(loader, options.remade),
-    loadModels(loader, [...(blender ? (["island"] as const) : []), ...(options.village ? (["raft"] as const) : []), ...(later ? seaOnly : [])]),
-    blender ? loader.loadAsync(cityModelUrl(terrain ?? "island")) : null,
-    options.ready,
-  ]).then(
-    ([gltf, buildings, models, gridModel]) => {
+  Promise.all([terrainShown ? loader.loadAsync(cityModelUrl(terrainShown)) : null, options.ready]).then(
+    ([gridModel]) => {
       if (disposed) return;
-      const kit = kitOf(gltf);
-      city = { kit, models };
       cityLoaded();
-      const anisotropy = Math.min(ISLAND_ANISOTROPY, renderer.capabilities.getMaxAnisotropy());
-      let island: THREE.Object3D;
       if (gridModel) {
-        // The island made to the grid: its coast is already where the rafts need it.
+        const anisotropy = Math.min(ISLAND_ANISOTROPY, renderer.capabilities.getMaxAnisotropy());
         filterTexture(gridModel.scene, anisotropy);
         // The terrain's relief has its shade baked (terrain.py): it only receives the buildings' shadows.
-        island = gridIsland(gridModel.scene, !terrain);
-      } else {
-        filterTexture(models.island, anisotropy);
-        island = fitIsland(models.island);
-        shapeCoast(island);
+        land = gridIsland(gridModel.scene, false);
+        scene.add(land);
+        setShoreGrid(landOf(land, SHORE.waterY + SEA_RISE));
       }
-      // The island after the style pass has no plot outlines: the grid shows only where you tap.
-      land = terrain ? island : createIsland(island);
-      scene.add(land);
-      setShoreGrid(landOf(island, SHORE.waterY + SEA_RISE));
-      lighthouse.useModel(buildings.lighthouse);
       sizeLighthouse();
-      if (blenderLook()) {
-        renderer.setPixelRatio(Math.min(QUALITY_STEPS[step].maxPixelRatio, devicePixelRatio || 1));
-        layout();
-      }
-      options.onLoaded?.(kit, buildings, models);
+      renderer.setPixelRatio(Math.min(QUALITY_STEPS[step].maxPixelRatio, devicePixelRatio || 1));
+      layout();
+      options.onLoaded?.();
       shownAt = clock.elapsedTime;
-      if (!options.village)
-        loadRaftBuildings(loader).then(
-          (m) => !disposed && options.onRaftBuildings?.(m),
-          (err: unknown) => console.error(err),
-        );
     },
     (err: unknown) => {
       console.error(err);
@@ -370,18 +328,26 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     },
   );
 
-  /** Its level's size, as wide as its plot allows (it then only grows taller), and its tier's lantern. */
+  /** Its tier's lantern, and its level's size until its stage's model (which has its own size) is there. */
   let lighthouseStaged = false;
   let lighthouseTop = 0;
   function sizeLighthouse(): void {
     lighthouse.setTier(tierOf(level));
-    // A stage's model has its own size.
-    if (lighthouseStaged) return void lighthouse.group.scale.setScalar(1);
-    const s = lighthouseScale(level);
-    const w = Math.min(s, lighthouse.widthCap);
-    lighthouse.group.scale.set(w, s, w);
-    lighthouse.setTier(tierOf(level));
+    lighthouse.group.scale.setScalar(lighthouseStaged ? 1 : lighthouseScale(level));
   }
+  /**
+   * The city's camera, as the screen shows it: its projection times its view, on the canvas (data-view), written only
+   * when it moves. The end-to-end tests tap where the game draws, never where a copy of its framing would.
+   */
+  let toldView = "";
+  const viewMatrix = new THREE.Matrix4();
+  const tellView = (cam: THREE.Camera) => {
+    cam.updateMatrixWorld();
+    const told = viewMatrix.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse).elements.map((x) => +x.toFixed(5)).join(",");
+    if (told === toldView) return;
+    toldView = told;
+    canvas.dataset.view = told;
+  };
   const frameCallbacks: ((now: number, view: View) => void)[] = [];
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
@@ -429,8 +395,9 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       }
     }
     v.controls.update();
+    if (view === "city" && shownAt !== null) tellView(v.camera);
     for (const cb of frameCallbacks) cb(now, view);
-    if (blenderLook() && shownAt === null) {
+    if (shownAt === null) {
       if (now - loadingDrawn < LOADING_FRAME) return;
       loadingDrawn = now;
       // Under "Loading your city…", at one pixel per CSS pixel too; the city's first image has its step's pixels.
@@ -439,7 +406,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
         layout();
       }
     }
-    posted = blenderLook() && QUALITY_STEPS[step].finish && view === "city" && shownAt !== null && now - shownAt > FINISH_AFTER;
+    posted = QUALITY_STEPS[step].finish && view === "city" && shownAt !== null && now - shownAt > FINISH_AFTER;
     if (posted) {
       if (!post) {
         post = createPost(renderer);
@@ -483,16 +450,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       glideTo(normal.target.clone().addScaledVector(CITY_ANGLE, normal.distance), normal.target.clone());
     },
     loadSea() {
-      if (!seaModels) {
-        if (!later) seaModels = cityDone.then(() => city!);
-        else
-          seaModels = Promise.all([loader.loadAsync(KIT_URL), loadModels(loader, ["island", "raft"]), cityDone]).then(([gltf, more]) => {
-            const kit = kitOf(gltf);
-            // The city's models gain the sea's: the same object, so what holds it sees them.
-            for (const id of seaOnly) city!.models[id] = more[id];
-            return { kit, models: city!.models };
-          });
-      }
+      seaModels ??= Promise.all([loader.loadAsync(KIT_URL), loadModels(loader), cityDone]).then(([gltf, models]) => ({ kit: kitOf(gltf), models }));
       return seaModels;
     },
     setView(v) {
@@ -521,8 +479,6 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
       stale = true;
     },
     reframe() {
-      // The old look keeps its framing: set on resizing, on mooring and on the Lighthouse's growth only.
-      if (!blenderLook()) return;
       const band = (options.cityBand ?? options.band)?.() ?? { top: 0, bottom: innerHeight };
       if (!stale && Math.abs(band.top - framedBand.top) <= 1 && Math.abs(band.bottom - framedBand.bottom) <= 1) return;
       stale = false;
@@ -583,7 +539,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     cityCamera: camera,
     dimness: () => moodAt,
     useTerrain(name) {
-      if (!terrain || name === terrainShown || !CITY_MANIFEST[name]) return;
+      if (name === terrainShown || !CITY_MANIFEST[name]) return;
       terrainShown = name;
       void loader.loadAsync(cityModelUrl(name)).then((g) => {
         if (terrainShown !== name || disposed) return;

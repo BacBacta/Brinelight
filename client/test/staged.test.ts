@@ -11,7 +11,7 @@ import { PLOT_ROOM, hexReach } from "../src/scene/buildings.js";
 import { hexX, hexZ } from "../src/scene/island.js";
 import { RAFT_FILL } from "../src/scene/coast.js";
 import { PIER_SLOTS } from "../src/scene/framing.js";
-import { SITE_PARTS, STAGES, extraName, groundName, hasGround, isStaged, levelShape, radarAt, shownModels, stageName, stageOf, terrainName } from "../src/city/staged.js";
+import { SITE_PARTS, STAGES, extraName, isStaged, levelShape, radarAt, shownModels, stageName, stageOf, terrainName } from "../src/city/staged.js";
 import { ERA_PLOTS } from "../src/city/plots.js";
 import { readGlb } from "./glb.js";
 
@@ -76,15 +76,13 @@ describe("the buildings remade in Blender", () => {
     }
   });
 
-  it("budgets: each stage at most 3,300 triangles and 180 kB, the island at most 3,000 triangles and 260 kB", () => {
+  it("budgets: each stage at most 3,300 triangles and 180 kB", () => {
     for (const id of STAGED)
       for (const s of STAGES) {
         const m = CITY_MANIFEST[`${id}-${s}`]!;
         expect(m.triangles, `${id}-${s}`).toBeLessThanOrEqual(3300);
         expect(m.kB, `${id}-${s}`).toBeLessThanOrEqual(180);
       }
-    expect(CITY_MANIFEST.island!.triangles).toBeLessThanOrEqual(3000);
-    expect(CITY_MANIFEST.island!.kB).toBeLessThanOrEqual(260);
   });
 
   it("a city fetches only the models of its buildings' current era: for a new player, then at the Lighthouse 30", () => {
@@ -145,65 +143,6 @@ describe("the buildings remade in Blender", () => {
       expect(m.lantern!).toBeLessThan(m.levels[0]!.height);
     }
   });
-});
-
-describe("the island made to the grid", () => {
-  const points = drawn("island", Infinity);
-  const above = points.filter((p) => p.y > -0.42);
-  const plots: { x: number; z: number }[] = [];
-  for (let q = -2; q <= 2; q++) for (let r = -2; r <= 2; r++) if (Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)) <= 2) plots.push({ x: hexX(q, r), z: hexZ(r) });
-  const rooms = [...RAFT_SLOTS.filter((s) => s.ring === 3).map((s) => ({ x: hexX(s.q, s.r), z: hexZ(s.r) })), ...PIER_SLOTS.map(([q, r]) => ({ x: hexX(q, r), z: hexZ(r) }))];
-
-  it("above the water, nothing of it is in the room of a raft of ring 3 or of the pier: the rafts float on water", () => {
-    for (const p of above) for (const c of rooms) expect(hexReach(p.x - c.x, p.z - c.z), `${p.x.toFixed(2)}, ${p.z.toFixed(2)}`).toBeGreaterThan(RAFT_FILL);
-  });
-
-  it("above the water, it stays within 0.12 past the plots' hexagons: its coast follows the grid", () => {
-    for (const p of above) expect(Math.min(...plots.map((c) => hexReach(p.x - c.x, p.z - c.z)))).toBeLessThanOrEqual(1.12);
-  });
-
-  it("its meadow is flat at 0 and reaches past every plot's outline (1.08)", () => {
-    const meadow = points.filter((p) => Math.abs(p.y) < 0.01);
-    for (const c of plots)
-      for (let i = 0; i < 6; i++) {
-        const a = (i / 6) * Math.PI * 2;
-        const x = c.x + Math.cos(a) * 1.08;
-        const z = c.z + Math.sin(a) * 1.08;
-        // A meadow point no farther than the meadow's own reach: the outline lies on land everywhere.
-        const inside = Math.min(...plots.map((o) => hexReach(x - o.x, z - o.z))) <= 1.08 + 1e-6;
-        if (inside) expect(meadow.some((p) => Math.hypot(p.x - x, p.z - z) < 1.3)).toBe(true);
-      }
-  });
-});
-
-describe("the island's ground through the Lighthouse's eras", () => {
-  const ERAS = [1, 5, 10, 15, 20, 25];
-  const plots: { x: number; z: number }[] = [];
-  for (let q = -2; q <= 2; q++) for (let r = -2; r <= 2; r++) if (Math.max(Math.abs(q), Math.abs(r), Math.abs(q + r)) <= 2) plots.push({ x: hexX(q, r), z: hexZ(r) });
-  const rooms = [...RAFT_SLOTS.filter((s) => s.ring === 3).map((s) => ({ x: hexX(s.q, s.r), z: hexZ(s.r) })), ...PIER_SLOTS.map(([q, r]) => ({ x: hexX(q, r), z: hexZ(r) }))];
-
-  it("one ground an era, the one of the Lighthouse's level (the Modern era's at 30)", () => {
-    expect(hasGround()).toBe(true);
-    expect([1, 4, 5, 9, 10, 15, 20, 24, 25, 29, 30].map(groundName)).toEqual(["ground-1", "ground-1", "ground-5", "ground-5", "ground-10", "ground-15", "ground-20", "ground-20", "ground-25", "ground-25", "ground-25"]);
-  });
-
-  for (const era of ERAS) {
-    const points = drawn(`ground-${era}`, Infinity);
-    it(`ground-${era}: on the island, not on the rafts' rooms, nothing standing where a building stands, low`, () => {
-      for (const p of points) {
-        // Within the meadow's margin past the plots (0.1), with the quays' curb (0.12).
-        expect(Math.min(...plots.map((c) => hexReach(p.x - c.x, p.z - c.z)))).toBeLessThanOrEqual(1.12);
-        if (p.y > -0.42) for (const c of rooms) expect(hexReach(p.x - c.x, p.z - c.z)).toBeGreaterThan(RAFT_FILL);
-        // Above the paths, nothing inside a building's room on its plot.
-        if (p.y > 0.03) for (const c of plots) expect(hexReach(p.x - c.x, p.z - c.z), `${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)}`).toBeGreaterThanOrEqual(PLOT_ROOM);
-        expect(p.y).toBeLessThan(0.6);
-      }
-    });
-    it(`ground-${era}: within its budget (4,000 triangles, 200 kB)`, () => {
-      expect(CITY_MANIFEST[`ground-${era}`]!.triangles).toBeLessThanOrEqual(4000);
-      expect(CITY_MANIFEST[`ground-${era}`]!.kB).toBeLessThanOrEqual(200);
-    });
-  }
 });
 
 describe.runIf(isStaged("harbor"))("the Harbor's pier and boat lie on the water, in the slots the rules keep for them", () => {

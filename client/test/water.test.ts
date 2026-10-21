@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { SHORE, createShore, landOf, shoreDistances } from "../src/scene/shore.js";
 import { QUALITY_STEPS, applyQualityStep, type QualityStep } from "../src/scene/quality.js";
 import { WAVE_HEIGHT, createWater, type Water } from "../src/scene/water.js";
-import { CITY_WATER } from "../src/scene/look.js";
+import { CITY_WATER_STYLE } from "../src/scene/look.js";
 import { ABOVE_WAVES } from "../src/sea/map.js";
 
 const n = SHORE.size;
@@ -65,7 +65,7 @@ describe("what each quality step keeps", () => {
     expect(s1).toMatchObject({ maxPixelRatio: 1, shadowMap: 1024, reflections: true, ripples: true, foamMoves: true });
     expect(s2).toMatchObject({ maxPixelRatio: 1, shadowMap: 0, reflections: false, ripples: false, foamMoves: false });
     expect(s2.waterSegments).toBeLessThan(s1.waterSegments);
-    // The city's finish (?blender: the lamps' glow, the color grade) at full quality only.
+    // The city's finish (the lamps' glow, the color grade) at full quality only.
     expect([s0.finish, s1.finish, s2.finish]).toEqual([true, false, false]);
   });
 
@@ -89,7 +89,7 @@ describe("what each quality step keeps", () => {
 
 describe("the water", () => {
   it("a coarser grid at the lowest step; no reflection before a renderer builds it", () => {
-    const water = createWater(CITY_WATER);
+    const water = createWater(CITY_WATER_STYLE);
     const segments = () => (water.mesh.geometry as THREE.PlaneGeometry).parameters.widthSegments;
     expect(segments()).toBe(QUALITY_STEPS[0].waterSegments);
     water.setQuality(QUALITY_STEPS[2]);

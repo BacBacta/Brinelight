@@ -10,7 +10,7 @@ import { RAFT_BUILDING_MAX_LEVEL, RAFT_SLOTS } from "@brinelight/shared";
 import { CITY_MANIFEST } from "../src/scene/cityLook.js";
 import { hexReach } from "../src/scene/buildings.js";
 import { RAFT_FILL } from "../src/scene/coast.js";
-import { MOOR_ASIDE, MOOR_STAKE, VILLAGE_AGES, fullName, villageNormalNames, VILLAGE_DECK, hasVillage, raftBuildingName, raftMoorings, villageAge, villageModels, villageNames, villageShown } from "../src/city/village.js";
+import { MOOR_ASIDE, MOOR_STAKE, RAFT_AGE, VILLAGE_AGES, fullName, villageNormalNames, VILLAGE_DECK, villageServed, raftBuildingName, raftMoorings, villageAge, villageModels, villageNames, villageShown } from "../src/city/village.js";
 import { hexX, hexZ } from "../src/scene/island.js";
 import { PLOT_ROOM } from "../src/scene/buildings.js";
 import { raftVariant } from "../src/city/rafts.js";
@@ -67,22 +67,23 @@ describe("the ages of the floating village", () => {
     const rafts = { [a]: { hp: 100, building: "smokehouse" as const, level: 2 }, [b]: { hp: 20, building: "watchtower" as const, level: 3 } };
     const m = villageModels(slots, rafts, 15);
     // The normal view shows the decks' light versions.
-    expect(m.slots.get(a)).toBe(`raft-${"abcd"[raftVariant(a)]}-age10-lite`);
-    expect([m.slots.get(b), m.slots.get(c), m.slots.get(d)]).toEqual(["raft-damaged-age10-lite", "raft-yard-age10", "raft-free"]);
+    // The rafts are of driftwood at every age (they float only before the Lighthouse 5); their buildings follow the age.
+    expect(m.slots.get(a)).toBe(`raft-${"abcd"[raftVariant(a)]}-age1-lite`);
+    expect([m.slots.get(b), m.slots.get(c), m.slots.get(d)]).toEqual(["raft-damaged-age1-lite", "raft-yard-age1", "raft-free"]);
     expect([...m.buildings.entries()]).toEqual([
       [a, "smokehouse-2-age10"],
       [b, "watchtower-3-age10"],
     ]);
-    expect([m.walk, m.moor]).toEqual(["raft-walk-age10", "raft-moor-age10"]);
+    expect([m.walk, m.moor]).toEqual(["raft-walk-age1", "raft-moor-age1"]);
     // What the first image waits for: only what shows, once each.
-    expect(villageShown(slots, rafts, 15).sort()).toEqual([m.slots.get(a)!, "raft-damaged-age10-lite", "raft-free", "raft-moor-age10", "raft-walk-age10", "raft-yard-age10", "smokehouse-2-age10", "watchtower-3-age10"].sort());
+    expect(villageShown(slots, rafts, 15).sort()).toEqual([m.slots.get(a)!, "raft-damaged-age1-lite", "raft-free", "raft-moor-age1", "raft-walk-age1", "raft-yard-age1", "smokehouse-2-age10", "watchtower-3-age10"].sort());
     // Without a raft of ring 3, no mooring; without one of ring 4, no walkway.
-    expect(villageShown([slots[0]!], rafts, 15)).not.toContain("raft-walk-age10");
-    expect(villageShown([slots[1]!], rafts, 15)).not.toContain("raft-moor-age10");
+    expect(villageShown([slots[0]!], rafts, 15)).not.toContain("raft-walk-age1");
+    expect(villageShown([slots[1]!], rafts, 15)).not.toContain("raft-moor-age1");
     expect(raftBuildingName("greenhouse", 9, 1)).toBe(`greenhouse-${RAFT_BUILDING_MAX_LEVEL}-age1`);
-    expect([fullName("raft-a-age10-lite"), fullName("raft-yard-age10")]).toEqual(["raft-a-age10", "raft-yard-age10"]);
+    expect([fullName("raft-a-age1-lite"), fullName("raft-yard-age1")]).toEqual(["raft-a-age1", "raft-yard-age1"]);
     // The normal view never fetches a deck's full model.
-    expect(villageNormalNames(10).filter((n) => /^raft-(a|b|c|damaged)-age10$/.test(n))).toEqual([]);
+    expect(villageNormalNames(10).filter((n) => /^raft-(a|b|c|damaged)-age1$/.test(n))).toEqual([]);
   });
 });
 
@@ -115,8 +116,10 @@ describe("the moorings of the rafts of ring 3", () => {
   });
 });
 
-describe.runIf(hasVillage())("the floating village's models", () => {
-  for (const age of VILLAGE_AGES) {
+describe.runIf(villageServed())("the floating village's models", () => {
+  // The rafts' own models: of driftwood only (RAFT_AGE).
+  {
+    const age = RAFT_AGE;
     it(`age ${age}: every raft fills its room and no more, floats with its deck at ${VILLAGE_DECK}, at most 1,000 triangles (the shipyard's 1,100) and 100 kB`, () => {
       for (const name of [...DECKS(age), `raft-yard-age${age}`]) {
         const p = points(name);
@@ -146,25 +149,6 @@ describe.runIf(hasVillage())("the floating village's models", () => {
       }
     });
 
-    it(`age ${age}: every building on a raft, at its three levels, stands on its deck's middle, clear of the damage mark, in budget`, () => {
-      for (const id of IDS) {
-        let before = 0;
-        for (let level = 1; level <= RAFT_BUILDING_MAX_LEVEL; level++) {
-          const name = raftBuildingName(id, level, age);
-          const p = points(name);
-          expect(Math.min(...p.map((v) => v.y)), name).toBeGreaterThan(-0.02);
-          expect(Math.max(...p.map((v) => Math.abs(v.x))), name).toBeLessThanOrEqual(FOOT.x);
-          expect(Math.min(...p.map((v) => v.z)), name).toBeGreaterThanOrEqual(FOOT.back);
-          expect(Math.max(...p.map((v) => v.z)), name).toBeLessThanOrEqual(FOOT.front);
-          expect(Math.max(...p.map((v) => v.y)), name).toBeLessThan(1.8);
-          expect(CITY_MANIFEST[name]!.triangles, name).toBeLessThanOrEqual(1000);
-          // Each level adds to the one before.
-          expect(CITY_MANIFEST[name]!.triangles, name).toBeGreaterThan(before);
-          before = CITY_MANIFEST[name]!.triangles;
-        }
-      }
-    });
-
     it(`age ${age}: a walkway and a mooring at most 200 triangles, the free slot's buoys at most 400; all its models are served`, () => {
       expect(CITY_MANIFEST[`raft-walk-age${age}`]!.triangles).toBeLessThanOrEqual(200);
       expect(CITY_MANIFEST[`raft-moor-age${age}`]!.triangles).toBeLessThanOrEqual(200);
@@ -184,20 +168,30 @@ describe.runIf(hasVillage())("the floating village's models", () => {
       for (const name of villageNames(age)) expect(CITY_MANIFEST[name], name).toBeDefined();
     });
 
-    it(`age ${age}: ${age === 20 ? "the decks' lamps are lit, on their corners above the deck" : "no lamp is lit: the steel age's light"}`, () => {
-      for (const name of DECKS(age)) {
-        const lamps = CITY_MANIFEST[name]!.lamps ?? [];
-        if (age !== 20 || name.includes("damaged")) {
-          expect(lamps, name).toEqual([]);
-          continue;
-        }
-        expect(lamps.length, name).toBeGreaterThan(0);
-        for (const [x, y, z] of lamps) {
-          expect(hexReach(x!, z!), name).toBeLessThan(RAFT_FILL);
-          expect(y!, name).toBeGreaterThan(VILLAGE_DECK + 0.2);
-          expect(Math.abs(x!) < CORE.x && z! > CORE.back && z! < CORE.front, name).toBe(false);
+    it(`age ${age}: no lamp is lit (the steel age's light was the steel rafts')`, () => {
+      for (const name of DECKS(age)) expect(CITY_MANIFEST[name]!.lamps ?? [], name).toEqual([]);
+    });
+  }
+
+  for (const age of VILLAGE_AGES) {
+    it(`age ${age}: every building on a raft, at its three levels, stands on its deck's middle, clear of the damage mark, in budget`, () => {
+      for (const id of IDS) {
+        let before = 0;
+        for (let level = 1; level <= RAFT_BUILDING_MAX_LEVEL; level++) {
+          const name = raftBuildingName(id, level, age);
+          const p = points(name);
+          expect(Math.min(...p.map((v) => v.y)), name).toBeGreaterThan(-0.02);
+          expect(Math.max(...p.map((v) => Math.abs(v.x))), name).toBeLessThanOrEqual(FOOT.x);
+          expect(Math.min(...p.map((v) => v.z)), name).toBeGreaterThanOrEqual(FOOT.back);
+          expect(Math.max(...p.map((v) => v.z)), name).toBeLessThanOrEqual(FOOT.front);
+          expect(Math.max(...p.map((v) => v.y)), name).toBeLessThan(1.8);
+          expect(CITY_MANIFEST[name]!.triangles, name).toBeLessThanOrEqual(1000);
+          // Each level adds to the one before.
+          expect(CITY_MANIFEST[name]!.triangles, name).toBeGreaterThan(before);
+          before = CITY_MANIFEST[name]!.triangles;
         }
       }
     });
+
   }
 });

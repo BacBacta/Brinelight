@@ -1,5 +1,5 @@
 /**
- * The city's finish at full quality (style pass, with ?blender): what glows is only what shines brighter than the
+ * The city's finish at full quality (style pass): what glows is only what shines brighter than the
  * sunlit walls, the grade warms the lights and cools the shadows a little, and it is done in three.js's own output pass.
  */
 import { describe, expect, it } from "vitest";

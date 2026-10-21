@@ -551,78 +551,6 @@
    }
   ]
  },
- "ground-1": {
-  "kB": 56.3,
-  "triangles": 510,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 1530,
-    "height": 0.324,
-    "reach": 5.078
-   }
-  ]
- },
- "ground-10": {
-  "kB": 165.4,
-  "triangles": 2436,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 7308,
-    "height": 0.16,
-    "reach": 5.068
-   }
-  ]
- },
- "ground-15": {
-  "kB": 131.1,
-  "triangles": 1956,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 5868,
-    "height": 0.09,
-    "reach": 5.08
-   }
-  ]
- },
- "ground-20": {
-  "kB": 170.2,
-  "triangles": 2676,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 8028,
-    "height": 0.5,
-    "reach": 5.08
-   }
-  ]
- },
- "ground-25": {
-  "kB": 149.1,
-  "triangles": 2076,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 6228,
-    "height": 0.54,
-    "reach": 5.1
-   }
-  ]
- },
- "ground-5": {
-  "kB": 147.6,
-  "triangles": 2124,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 6372,
-    "height": 0.16,
-    "reach": 5.068
-   }
-  ]
- },
  "groves-garden": {
   "kB": 308.2,
   "triangles": 4688,
@@ -1184,18 +1112,6 @@
     "indices": 2712,
     "height": 0.713,
     "reach": 0.86
-   }
-  ]
- },
- "island": {
-  "kB": 170.8,
-  "triangles": 2656,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 7968,
-    "height": 0.006,
-    "reach": 6.283
    }
   ]
  },
@@ -2242,68 +2158,6 @@
    }
   ]
  },
- "raft-a-age10": {
-  "kB": 73.2,
-  "triangles": 902,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 2706,
-    "height": 1.29,
-    "reach": 0.796
-   }
-  ]
- },
- "raft-a-age10-lite": {
-  "kB": 56.5,
-  "triangles": 590,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 1770,
-    "height": 1.29,
-    "reach": 0.796
-   }
-  ]
- },
- "raft-a-age20": {
-  "kB": 74.9,
-  "triangles": 814,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 2442,
-    "height": 1.29,
-    "reach": 0.8
-   }
-  ],
-  "lamps": [
-   [
-    -0.56,
-    0.81,
-    -0.33
-   ]
-  ]
- },
- "raft-a-age20-lite": {
-  "kB": 63.3,
-  "triangles": 598,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 1794,
-    "height": 1.29,
-    "reach": 0.8
-   }
-  ],
-  "lamps": [
-   [
-    -0.56,
-    0.81,
-    -0.33
-   ]
-  ]
- },
  "raft-b-age1": {
   "kB": 76.6,
   "triangles": 908,
@@ -2326,68 +2180,6 @@
     "height": 0.87,
     "reach": 0.796
    }
-  ]
- },
- "raft-b-age10": {
-  "kB": 78.8,
-  "triangles": 984,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 2952,
-    "height": 0.87,
-    "reach": 0.796
-   }
-  ]
- },
- "raft-b-age10-lite": {
-  "kB": 59.0,
-  "triangles": 608,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 1824,
-    "height": 0.87,
-    "reach": 0.796
-   }
-  ]
- },
- "raft-b-age20": {
-  "kB": 82.2,
-  "triangles": 896,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 2688,
-    "height": 0.87,
-    "reach": 0.8
-   }
-  ],
-  "lamps": [
-   [
-    -0.56,
-    0.75,
-    -0.17
-   ]
-  ]
- },
- "raft-b-age20-lite": {
-  "kB": 66.0,
-  "triangles": 616,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 1848,
-    "height": 0.87,
-    "reach": 0.8
-   }
-  ],
-  "lamps": [
-   [
-    -0.56,
-    0.75,
-    -0.17
-   ]
   ]
  },
  "raft-c-age1": {
@@ -2414,78 +2206,6 @@
    }
   ]
  },
- "raft-c-age10": {
-  "kB": 79.3,
-  "triangles": 916,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 2748,
-    "height": 0.813,
-    "reach": 0.796
-   }
-  ]
- },
- "raft-c-age10-lite": {
-  "kB": 63.0,
-  "triangles": 604,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 1812,
-    "height": 0.813,
-    "reach": 0.796
-   }
-  ]
- },
- "raft-c-age20": {
-  "kB": 83.4,
-  "triangles": 868,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 2604,
-    "height": 0.85,
-    "reach": 0.8
-   }
-  ],
-  "lamps": [
-   [
-    -0.2,
-    0.79,
-    -0.6
-   ],
-   [
-    0.2,
-    0.79,
-    -0.6
-   ]
-  ]
- },
- "raft-c-age20-lite": {
-  "kB": 70.1,
-  "triangles": 640,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 1920,
-    "height": 0.85,
-    "reach": 0.8
-   }
-  ],
-  "lamps": [
-   [
-    -0.2,
-    0.79,
-    -0.6
-   ],
-   [
-    0.2,
-    0.79,
-    -0.6
-   ]
-  ]
- },
  "raft-d-age1": {
   "kB": 81.4,
   "triangles": 880,
@@ -2510,68 +2230,6 @@
    }
   ]
  },
- "raft-d-age10": {
-  "kB": 82.1,
-  "triangles": 956,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 2868,
-    "height": 0.9,
-    "reach": 0.796
-   }
-  ]
- },
- "raft-d-age10-lite": {
-  "kB": 62.9,
-  "triangles": 636,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 1908,
-    "height": 0.9,
-    "reach": 0.796
-   }
-  ]
- },
- "raft-d-age20": {
-  "kB": 84.0,
-  "triangles": 868,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 2604,
-    "height": 0.9,
-    "reach": 0.8
-   }
-  ],
-  "lamps": [
-   [
-    0.6,
-    0.75,
-    -0.14
-   ]
-  ]
- },
- "raft-d-age20-lite": {
-  "kB": 70.2,
-  "triangles": 644,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 1932,
-    "height": 0.9,
-    "reach": 0.8
-   }
-  ],
-  "lamps": [
-   [
-    0.6,
-    0.75,
-    -0.14
-   ]
-  ]
- },
  "raft-damaged-age1": {
   "kB": 66.8,
   "triangles": 736,
@@ -2593,54 +2251,6 @@
     "indices": 1452,
     "height": 0.606,
     "reach": 0.796
-   }
-  ]
- },
- "raft-damaged-age10": {
-  "kB": 66.8,
-  "triangles": 784,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 2352,
-    "height": 0.606,
-    "reach": 0.796
-   }
-  ]
- },
- "raft-damaged-age10-lite": {
-  "kB": 52.8,
-  "triangles": 532,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 1596,
-    "height": 0.606,
-    "reach": 0.796
-   }
-  ]
- },
- "raft-damaged-age20": {
-  "kB": 65.0,
-  "triangles": 628,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 1884,
-    "height": 0.606,
-    "reach": 0.8
-   }
-  ]
- },
- "raft-damaged-age20-lite": {
-  "kB": 55.7,
-  "triangles": 496,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 1488,
-    "height": 0.606,
-    "reach": 0.8
    }
   ]
  },
@@ -2668,56 +2278,8 @@
    }
   ]
  },
- "raft-moor-age10": {
-  "kB": 19.3,
-  "triangles": 108,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 324,
-    "height": 0.26,
-    "reach": 0.232
-   }
-  ]
- },
- "raft-moor-age20": {
-  "kB": 19.9,
-  "triangles": 116,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 348,
-    "height": 0.183,
-    "reach": 0.232
-   }
-  ]
- },
  "raft-walk-age1": {
   "kB": 20.1,
-  "triangles": 128,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 384,
-    "height": 0.135,
-    "reach": 0.513
-   }
-  ]
- },
- "raft-walk-age10": {
-  "kB": 19.8,
-  "triangles": 128,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 384,
-    "height": 0.135,
-    "reach": 0.513
-   }
-  ]
- },
- "raft-walk-age20": {
-  "kB": 14.1,
   "triangles": 128,
   "levels": [
    {
@@ -2737,30 +2299,6 @@
     "indices": 2928,
     "height": 1.05,
     "reach": 0.796
-   }
-  ]
- },
- "raft-yard-age10": {
-  "kB": 74.0,
-  "triangles": 1012,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 3036,
-    "height": 1.05,
-    "reach": 0.796
-   }
-  ]
- },
- "raft-yard-age20": {
-  "kB": 69.3,
-  "triangles": 908,
-  "levels": [
-   {
-    "level": 0,
-    "indices": 2724,
-    "height": 1.05,
-    "reach": 0.8
    }
   ]
  },

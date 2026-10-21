@@ -1,5 +1,5 @@
 /**
- * The city's finish at full quality only (style pass, after meeting 4, with ?blender): a soft bloom around what glows
+ * The city's finish at full quality only (style pass, after meeting 4): a soft bloom around what glows
  * (the lamps, the lanterns, the Lighthouse's light) and a color grade (golden lights, slightly blue shadows, A's
  * contrast). three.js's own example modules, no dependency. At quality steps 1 and 2 the city is drawn without it.
  */

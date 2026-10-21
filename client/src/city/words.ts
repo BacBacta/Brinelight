@@ -1,16 +1,15 @@
 /**
- * The words for the rafts (owner, after the land's target images): from the Lighthouse 5, with the look made in Blender,
- * the rafts are drawn as land won on the sea, and the game says so ("plot", "dike", "drain"); before, and with the old
- * look, they are rafts. The rules' refusals are neutral (shared/src/rules/rafts.ts): they fit both.
+ * The words for the rafts (owner, after the land's target images): from the Lighthouse 5 the rafts are drawn as land
+ * won on the sea, and the game says so ("plot", "dike", "drain"); before, they are rafts. The rules' refusals are
+ * neutral (shared/src/rules/rafts.ts): they fit both.
  */
 import { RAFT_BUILDING_MAX_COPIES } from "@brinelight/shared";
-import { blenderLook } from "../scene/cityLook.js";
 
 /** From this Lighthouse level on, the rafts are land (display only: the rules keep their rafts). */
 export const LAND_FROM = 5;
 
-/** Whether the rafts show as land: the look made in Blender, and the Lighthouse at LAND_FROM or more. */
-export const landShown = (lighthouse: number, look: boolean = blenderLook()): boolean => look && lighthouse >= LAND_FROM;
+/** Whether the rafts show as land: the Lighthouse at LAND_FROM or more. */
+export const landShown = (lighthouse: number): boolean => lighthouse >= LAND_FROM;
 
 const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
 

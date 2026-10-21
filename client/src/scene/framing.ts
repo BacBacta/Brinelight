@@ -129,15 +129,15 @@ function centered(view: View, points: readonly THREE.Vector3[], distance: number
   return at(s1);
 }
 
-/** With ?blender (owner, after the style pass): the city never spans less of the screen's width in the normal view. */
+/** The city never spans less of the screen's width in the normal view (owner, after the style pass). */
 export const CITY_FILL = 0.75;
 
-/** A framing by the city's width (?blender): the share of the screen's width its coast and rafts span, and its coast. */
+/** A framing by the city's width: the share of the screen's width its coast and rafts span, and its coast. */
 export type Fill = { share: number; coast: Coast };
 
 /**
  * The city's normal view on this screen: the shortest distance at which the island, the pier, the rafts and the `tops`
- * (the tallest tops; with ?blender, every building's top and foot, buildingPoints) fit in the band (to a hundredth), and
+ * (every building's top and foot, buildingPoints) fit in the band (to a hundredth), and
  * the point it looks at, which centers them in it.
  * With `fill` (owner, after the style pass), the city's coast and rafts never span less than that share of the screen's
  * width: when the band is too short for the whole city (the cards of the works under way, the quest card), the camera

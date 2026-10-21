@@ -1,6 +1,6 @@
 /**
  * How far the island's land reaches after the style pass (assets/blender/land.py, coast_radii, written by terrain.py in
- * land.json), in 72 directions: the normal view frames the city by it with ?blender.
+ * land.json), in 72 directions: the normal view frames the city by it.
  */
 import LAND from "../city/life/land.json";
 

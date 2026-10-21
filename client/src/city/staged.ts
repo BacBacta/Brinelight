@@ -29,21 +29,10 @@ export function levelShape(id: BuildingId, level: number): { indices: number; he
 }
 
 /**
- * The island's ground in the Lighthouse's era (assets/blender/ground.py): what lies between the plots and along the
- * coast, from earth paths to concrete quays. The Modern era's at 30 too.
- */
-export const groundName = (lighthouse: number): string => `ground-${Math.min(25, stageOf(lighthouse))}`;
-
-/** The island's ground is made for each era: shown with the look made in Blender. */
-export const hasGround = (): boolean => STAGES.every((s) => s === 30 || CITY_MANIFEST[`ground-${s}`]);
-
-/**
  * The island after the style pass (owner, after meeting 4; assets/blender/terrain.py): one continuous land in the
- * Lighthouse's look (wild to 9, gardens to 24, the Modern era's from 25), its ground painted on it. When it is made, it
- * replaces the grid's island and the eras' grounds.
+ * Lighthouse's look (wild to 9, gardens to 24, the Modern era's from 25), its ground painted on it.
  */
 export const terrainName = (lighthouse: number): string => `terrain-${lighthouse >= 25 ? "modern" : lighthouse >= 10 ? "garden" : "wild"}`;
-export const hasTerrain = (): boolean => ["wild", "garden", "modern"].every((l) => CITY_MANIFEST[`terrain-${l}`]);
 
 /**
  * The buildings remade stand a little larger on their plots after the style pass (owner, after meeting 4), on the
@@ -68,14 +57,12 @@ export const tallestHeight = (id: BuildingId): number => buildingScale(id) * Mat
 export const SITE_PARTS = ["site-frame", "site-mast", "site-arm", "site-crate"] as const;
 
 /**
- * The models a city shows at once: the current stage of each building remade, the island's ground in the Lighthouse's
- * era, and the building sites' parts when a site shows (a building at work, or not built yet). Nothing of the eras to
+ * The models a city shows at once: the current stage of each building (the terrain is fetched by the scene), and the
+ * building sites' parts when a site shows (a building at work, or not built yet). Nothing of the eras to
  * come.
  */
 export function shownModels(state: { buildings: Record<BuildingId, number>; queue: readonly { id: string }[] }): string[] {
   const out = BUILDING_IDS.filter((id) => isStaged(id) && state.buildings[id] > 0).flatMap((id) => [stageName(id, state.buildings[id]), extraName(id, state.buildings[id]) ?? []].flat());
-  // The terrain, when made, is fetched with the island (scene/index.ts); the eras' grounds are not.
-  if (hasGround() && !hasTerrain()) out.push(groundName(state.buildings.lighthouse));
   if (isStaged("lighthouse") && radarAt(state.buildings.lighthouse)) out.push("lighthouse-radar");
   const sites = state.queue.some((j) => (BUILDING_IDS as readonly string[]).includes(j.id)) || BUILDING_IDS.some((id) => state.buildings[id] === 0);
   return sites ? [...out, ...SITE_PARTS] : out;

@@ -15,16 +15,16 @@ export type WaterOptions = {
   radii: readonly [number, number];
   /** The sky it reflects: top, middle, horizon (as the scene's sky). */
   sky: readonly [string, string, string];
-  /** The most subdivisions of its grid, whatever the quality step (the city's water with ?blender, week 8, meeting 4). */
+  /** The most subdivisions of its grid, whatever the quality step (the city's water, week 8, meeting 4). */
   maxSegments?: number;
   /**
-   * The shallows' colors along the shore and around the rafts (the city's water with ?blender, the style pass): at the
+   * The shallows' colors along the shore and around the rafts (the city's water, the style pass): at the
    * shore, and a meter out; past two meters, the water's own.
    */
   shallows?: readonly [shore: string, out: string];
-  /** Where the water rests (the city's sea with ?blender stands higher: cityLook.ts, SEA_RISE). */
+  /** Where the water rests (the city's sea stands higher: cityLook.ts, SEA_RISE). */
   y?: number;
-  /** A ripple that laps against the shore and the rafts, coming and going (the city's water with ?blender, meeting 4). */
+  /** A ripple that laps against the shore and the rafts, coming and going (the city's water, meeting 4). */
   lapping?: boolean;
 };
 
@@ -137,7 +137,7 @@ if (uFoam > 0.) {
     float t = uT * uFoamMoves;
     float swell = .5 + .5 * sin(d * 9. - t * 2.2);
     float grain = sin(vWPos.x * 7.3 + sin(vWPos.z * 5.1)) * sin(vWPos.z * 6.7 + sin(vWPos.x * 4.3 + t * .4));
-    // With the shallows (?blender), a thinner foam: the coast and the rafts never bathe in a pale glow (owner).
+    // With the shallows (the city's water), a thinner foam: the coast and the rafts never bathe in a pale glow (owner).
     float reach = mix(.28 + .1 * swell, .12 + .05 * swell, uShallows);
     float f = (1. - smoothstep(.03, reach, d)) * smoothstep(-.5, .5, grain + swell * .8 - d * 2.) * (1. - .35 * uShallows);
     // The lapping: a thin line of foam that comes and goes against what floats and the shore.

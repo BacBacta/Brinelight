@@ -317,7 +317,9 @@ def free():
 
 
 EXTRAS = {"raft-free": free}
-for _age in AGES:
+# The rafts float only before the Lighthouse 5 (the land replaces them): driftwood only. The tarred and steel ages
+# (10, 20) stay in AGES for the buildings on rafts (raft_buildings.py).
+for _age in (1,):
     for _v in "abcd":
         EXTRAS[f"raft-{_v}-age{_age}"] = (lambda a, v: lambda: raft(a, v))(_age, _v)
     EXTRAS[f"raft-damaged-age{_age}"] = (lambda a: lambda: damaged(a))(_age)

@@ -2,7 +2,8 @@ import * as THREE from "three";
 import { RAFT_BUILD_TIME, RAFT_MAX, RAFT_MAX_HP, RAFT_SLOTS, applyAction, newPlayerState, raftCap, type PlayerState } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
 import { RAFT_TEXT, raftSheetHtml } from "../src/city/raftSheet.js";
-import { DECK_VARIANTS, RAFT_FILL, RAFT_WIDTH, WALKWAY_GRIP, cornerMarks, createCityRafts, markedSlots, raftGeometry, raftSlots, raftVariant, raftWalkways } from "../src/city/rafts.js";
+import { DECK_VARIANTS, RAFT_FILL, WALKWAY_GRIP, cornerMarks, createCityRafts, markedSlots, raftSlots, raftVariant, raftWalkways } from "../src/city/rafts.js";
+import type { Placed, Village } from "../src/city/village.js";
 import { hexX, hexZ } from "../src/scene/island.js";
 import { hexReach } from "../src/scene/buildings.js";
 import { SAVE_KEY, openSave, saveGame, type KeyValueStore } from "../src/state/save.js";
@@ -16,13 +17,11 @@ const lit = (lighthouse = 4): PlayerState => {
   const s = newPlayerState();
   return { ...s, buildings: { ...s.buildings, lighthouse }, stock: { oil: 9000, fish: 9000, wood: 9000, rope: 50 } };
 };
-/** A stand-in for the raft model: a flat box off center, as a loaded model may be. */
-const raftModel = () => {
-  const g = new THREE.Group();
-  const deck = new THREE.Mesh(new THREE.BoxGeometry(4, 0.5, 3), new THREE.MeshStandardMaterial());
-  deck.position.set(2, -1, 0);
-  g.add(deck);
-  return g;
+/** A stand-in for the village (village.ts): it keeps what it is asked to lay. */
+const fakeVillage = () => {
+  const laid: { items: Placed[] } = { items: [] };
+  const village = { meshes: [], show: (items: Placed[]) => void (laid.items = items), animate() {}, prefetch() {}, setDimness() {}, setCloseness() {} } as unknown as Village;
+  return { village, laid };
 };
 const raft = (hp = RAFT_MAX_HP) => ({ hp, building: null, level: 0 });
 /** As main.ts does without an account: the shared rules, and no id, since nothing is sent. */
@@ -46,51 +45,22 @@ describe("raft slots around the island", () => {
     ]);
   });
 
-  it(`up to ${RAFT_MAX} rafts are drawn with the same few meshes`, () => {
+  it(`up to ${RAFT_MAX} rafts: the village lays them, here two meshes in all (the free slots' marks, the tap shapes)`, () => {
     const added: THREE.Object3D[] = [];
-    const rafts = createCityRafts({}, raftModel(), (o) => added.push(o));
-    const full = { ...lit(10), rafts: Object.fromEntries(RAFT_SLOTS.slice(0, RAFT_MAX).map((s) => [s.key, raft()])) };
+    const { village, laid } = fakeVillage();
+    const rafts = createCityRafts((o) => added.push(o), () => 4.6, village);
+    const full = { ...lit(4), rafts: Object.fromEntries(RAFT_SLOTS.slice(0, RAFT_MAX).map((s) => [s.key, raft()])) };
     rafts.refresh(full);
     rafts.animate(1.5);
-    const meshes = rafts.meshes as THREE.InstancedMesh[];
-    // The rafts (one mesh per model), the free slots' glow and rim, the tap shapes, and the walkways.
-    expect(meshes).toHaveLength(5);
-    expect(meshes.every((m) => m instanceof THREE.InstancedMesh)).toBe(true);
-    expect(meshes[0]!.count).toBe(RAFT_MAX);
-    expect(meshes[4]!.count).toBe(raftWalkways(RAFT_SLOTS.slice(0, RAFT_MAX).map((s) => s.key), () => 0).length);
-    // One scaffolding model aside; nothing else is added, whatever the number of rafts.
-    expect(added).toHaveLength(6);
+    const [ring, hit] = rafts.meshes as THREE.InstancedMesh[];
+    expect(added).toHaveLength(2);
+    expect(hit!.count).toBe(RAFT_MAX);
+    // A deck per raft, the walkways from ring 4 and the moorings of ring 3.
+    expect(laid.items.filter((it) => it.name.startsWith("raft-") && it.bob !== undefined)).toHaveLength(RAFT_MAX);
     rafts.refresh(lit(4));
-    expect(meshes[0]!.count).toBe(0);
-    expect(meshes[1]!.count).toBe(raftSlots(lit(4)).length);
-  });
-});
-
-describe("the raft model", () => {
-  it("one geometry with the model's texture, centered on its slot, standing on its bottom, as large as its room", () => {
-    const { geometry, material, deck } = raftGeometry(raftModel());
-    geometry.computeBoundingBox();
-    const box = geometry.boundingBox!;
-    expect(box.min.y).toBeCloseTo(0, 6);
-    expect((box.min.x + box.max.x) / 2).toBeCloseTo(0, 6);
-    // Its farthest point touches its room's hexagon (RAFT_FILL), never past it.
-    const pos = geometry.getAttribute("position");
-    let reach = 0;
-    for (let i = 0; i < pos.count; i++) reach = Math.max(reach, hexReach(pos.getX(i), pos.getZ(i)));
-    expect(reach).toBeCloseTo(RAFT_FILL, 5);
-    expect(Math.max(box.max.x - box.min.x, box.max.z - box.min.z)).toBeLessThanOrEqual(RAFT_WIDTH);
-    expect(deck).toBeGreaterThan(0);
-    expect(material).toBeInstanceOf(THREE.MeshStandardMaterial);
-  });
-
-  it("a model in several parts becomes a single geometry, its parts where they were", () => {
-    const two = raftModel();
-    const top = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial());
-    top.position.set(0, 3, 0);
-    two.add(top);
-    const { geometry } = raftGeometry(two);
-    expect(geometry.getAttribute("position").count).toBe(48);
-    expect(geometry.boundingBox!.max.y).toBeGreaterThan(geometry.boundingBox!.max.x);
+    expect(ring!.count).toBe(markedSlots(lit(4), false).size);
+    expect(ring!.count).toBeGreaterThan(0);
+    expect(added).toHaveLength(2);
   });
 });
 
@@ -162,12 +132,11 @@ describe("the floating village", () => {
   };
 
   it("two rafts side by side never show the same deck, the four decks mixed around the ring (no stripes)", () => {
-    for (const models of [DECK_VARIANTS, 3])
-      for (const a of RAFT_SLOTS)
-        for (const b of RAFT_SLOTS) {
-          if (Math.hypot(hexX(a.q, a.r) - hexX(b.q, b.r), hexZ(a.r) - hexZ(b.r)) > 2.01 || a.key === b.key) continue;
-          expect(raftVariant(a.key, models), `${a.key} ${b.key}`).not.toBe(raftVariant(b.key, models));
-        }
+    for (const a of RAFT_SLOTS)
+      for (const b of RAFT_SLOTS) {
+        if (Math.hypot(hexX(a.q, a.r) - hexX(b.q, b.r), hexZ(a.r) - hexZ(b.r)) > 2.01 || a.key === b.key) continue;
+        expect(raftVariant(a.key), `${a.key} ${b.key}`).not.toBe(raftVariant(b.key));
+      }
     // Each deck on at least six of the 39 slots, on both rings.
     for (let v = 0; v < DECK_VARIANTS; v++) {
       expect(all.filter((k) => raftVariant(k) === v).length, `deck ${v}`).toBeGreaterThanOrEqual(6);
@@ -176,8 +145,6 @@ describe("the floating village", () => {
     // Not the old rule's diagonal stripes: (q − r) mod 3 no longer tells a slot's deck.
     const stripes = RAFT_SLOTS.filter((s) => raftVariant(s.key) === ((((s.q - s.r) % 3) + 3) % 3)).length;
     expect(stripes).toBeLessThan(RAFT_SLOTS.length * 0.6);
-    // With one model, every raft shows it.
-    expect(new Set(all.map((k) => raftVariant(k, 1)))).toEqual(new Set([0]));
   });
 
   it("with the village, the free slots show their marks only when a raft can be moored now, all of them while placing one", () => {

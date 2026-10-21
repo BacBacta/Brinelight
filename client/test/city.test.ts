@@ -1,29 +1,16 @@
 import { BUILDING_IDS } from "@brinelight/shared";
 import { describe, expect, it } from "vitest";
 import { formatDuration, formatTimeLeft } from "../src/city/format.js";
-import { PLOTS, buildingModel, hasTower } from "../src/city/plots.js";
+import { ERA_PLOTS } from "../src/city/plots.js";
 import { buildBadge } from "../src/city/queue.js";
 import { progress, suggestedUpgrades } from "../src/city/suggest.js";
 import { newPlayerState, upgrade } from "@brinelight/shared";
 
-describe("plots and models (prototype values)", () => {
-  it("every building has its own plot", () => {
-    const keys = BUILDING_IDS.map((id) => PLOTS[id].join(","));
+describe("plots", () => {
+  it("every building has its own plot, the Lighthouse in the middle", () => {
+    const keys = BUILDING_IDS.map((id) => ERA_PLOTS[id].join(","));
     expect(new Set(keys).size).toBe(9);
-    expect(PLOTS.lighthouse).toEqual([0, 0]);
-    expect(PLOTS.refinery).toEqual([1, -1]);
-  });
-
-  it("models from phare.glb, blue look", () => {
-    expect(buildingModel("refinery", 1)).toBe("building_blacksmith_blue");
-    expect(buildingModel("shelters", 3)).toBe("building_home_A_blue");
-    expect(buildingModel("shelters", 4)).toBe("building_home_B_blue");
-  });
-
-  it("a small tower from level 5, never on the Observatory", () => {
-    expect(hasTower("refinery", 4)).toBe(false);
-    expect(hasTower("refinery", 5)).toBe(true);
-    expect(hasTower("observatory", 9)).toBe(false);
+    expect(ERA_PLOTS.lighthouse).toEqual([0, 0]);
   });
 });
 

@@ -6,7 +6,7 @@ export type QualityStep = 0 | 1 | 2;
 
 /**
  * What each step keeps, to hold 30 FPS on an entry-level phone (week 6, task 4): the screen's pixel density, the
- * shadows' map (0: none), and the water's sky reflection, small ripples, moving foam and grid; with ?blender, the city's
+ * shadows' map (0: none), and the water's sky reflection, small ripples, moving foam and grid; the city's
  * finish too (post.ts: the lamps' glow and the color grade), at full quality only.
  */
 export const QUALITY_STEPS: Record<

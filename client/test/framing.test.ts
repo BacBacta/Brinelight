@@ -71,7 +71,7 @@ describe("the city's normal view", () => {
   });
 });
 
-describe("with ?blender, the city never spans less than three quarters of the screen's width (owner, after the style pass)", () => {
+describe("the city never spans less than three quarters of the screen's width (owner, after the style pass)", () => {
   const fill = { share: CITY_FILL, coast: terrainCoast };
   const sizes = [
     { name: "a new city", rafts: [] },
@@ -108,9 +108,9 @@ describe("with ?blender, the city never spans less than three quarters of the sc
   });
 });
 
-describe("with ?blender, on the owner's S22 too (384 × 699 px), no building passes under a card", () => {
+describe("on the owner's S22 too (384 × 699 px), no building passes under a card", () => {
   const fill = { share: CITY_FILL, coast: terrainCoast };
-  // The bands main.ts measures with ?blender (360, 384 and 412 px wide): below the Tasks button, or below the cards of
+  // The bands main.ts measures (360, 384 and 412 px wide): below the Tasks button, or below the cards of
   // two works under way; above the tab bar, or above the quest card.
   const screens = [
     { width: 360, height: 800, tops: [154, 202], bottoms: [725, 652] },
