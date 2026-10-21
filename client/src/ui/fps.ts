@@ -7,7 +7,8 @@ const VIEW_NAMES = { city: "City", sea: "Sea" } as const;
 /**
  * The ?fps counter: a small box in the bottom left corner, just above the bottom menu, refreshed every second. It catches no tap.
  * One capture of it tells everything (owner, before the S22's test): the frame rate now, the minimum and the mean of the
- * last 10 seconds, the quality step, the screen's size and pixel ratio, the draw calls and triangles.
+ * last 10 seconds, the quality step, the screen's size and pixel ratio, the draw calls and triangles, and how long the
+ * city's first image took from the page's start (owner, to read on the S22).
  */
 export function createFpsCounter(root: HTMLElement, scene: SceneHandle) {
   const el = document.createElement("div");
@@ -39,6 +40,7 @@ export function createFpsCounter(root: HTMLElement, scene: SceneHandle) {
     // The longest frame of the last 10 s; the land won on the sea's last rebuild: built aside (the display goes on),
     // then put in place on the display's thread (owner, to read on the S22).
     `\nLongest frame ${longest().toFixed(1)} ms` +
+    (s.firstImage !== null ? `\nFirst image in ${(s.firstImage / 1000).toFixed(1)} s` : "") +
     (landClock.last !== null ? `\nLand built in ${landClock.last.aside.toFixed(1)} ms aside, shown in ${landClock.last.shown.toFixed(1)} ms` : "");
   });
 

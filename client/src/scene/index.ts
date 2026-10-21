@@ -41,6 +41,8 @@ export type RenderStats = {
   triangles: number;
   /** The draw calls of the full quality's finish (post.ts), when it drew the last frame. */
   post?: number;
+  /** When the city's first image was drawn, in ms from the page's start (its navigation), or null before. */
+  firstImage: number | null;
 };
 
 /** A point on screen; `depth` grows with the distance from the camera (normalized device depth). */
@@ -146,6 +148,8 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions): Sc
   let post: Post | null = null;
   let posted = false;
   let shownAt: number | null = null;
+  let firstImage: number | null = null;
+  let cityDrawn = false;
   const FINISH_AFTER = 4;
   /** The finish fades in over this many seconds: it never pops in. */
   const FINISH_FADE = 1;
@@ -361,6 +365,8 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions): Sc
   const clock = new THREE.Clock();
   let frame = 0;
   const loop = () => {
+    // The city's first image is on screen once the frame after it starts (its drawing done, on a slow graphics chip too).
+    if (cityDrawn && firstImage === null) firstImage = performance.now();
     frame = requestAnimationFrame(loop);
     const dt = Math.min(0.1, clock.getDelta());
     const now = clock.elapsedTime;
@@ -415,6 +421,8 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions): Sc
       post.setStrength(Math.min(1, (now - shownAt! - FINISH_AFTER) / FINISH_FADE));
       post.render(v.scene, v.camera);
     } else renderer.render(v.scene, v.camera);
+    // The city's first image: the first frame drawn once it is loaded (performance.now counts from the page's start).
+    if (shownAt !== null && view === "city") cityDrawn = true;
   };
 
   const handle: SceneHandle = {
@@ -513,8 +521,8 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions): Sc
       if (changed) layout();
     },
     stats() {
-      if (posted && post) return { step, forced: forced !== null, mood, ...post.scene, post: post.passes };
-      return { step, forced: forced !== null, mood, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles };
+      if (posted && post) return { step, forced: forced !== null, mood, ...post.scene, post: post.passes, firstImage };
+      return { step, forced: forced !== null, mood, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, firstImage };
     },
     add(object, v = "city") {
       (v === "city" ? scene : sea.scene).add(object);
