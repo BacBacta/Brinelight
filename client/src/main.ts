@@ -21,6 +21,7 @@ import { watchWallets } from "./account/wallets.js";
 import { createCity, type City } from "./city/index.js";
 import { demoAllowed, demoCity, demoWanted, memoryStore } from "./demo.js";
 import { LAND_NEWS, landNewsDue, landShown } from "./city/words.js";
+import { hasLand, landModels } from "./city/land/index.js";
 import { hasTerrain, isStaged, loadStage, shownModels, tallestHeight, terrainName } from "./city/staged.js";
 import { raftSlots, raftVariant } from "./city/rafts.js";
 import { hasVillage, villageShown } from "./city/village.js";
@@ -311,7 +312,8 @@ if (new URLSearchParams(location.search).has("rules")) {
   // The floating village made in Blender: its models of the Lighthouse's age that the city shows, also before its first image.
   const village = blenderLook() && hasVillage();
   const slots = raftSlots(state).map((s) => ({ ...s, variant: raftVariant(s.key) }));
-  const afloat = village ? villageShown(slots, state.rafts, state.buildings.lighthouse) : [];
+  // From the Lighthouse 5 the rafts are land (city/land): its ground's texture instead of the rafts' decks.
+  const afloat = village ? (hasLand() && landShown(state.buildings.lighthouse) ? landModels(state) : villageShown(slots, state.rafts, state.buildings.lighthouse)) : [];
   const ready = blenderLook() ? Promise.all([...shownModels(state), ...afloat].map(loadStage)) : undefined;
   const scene = startScene(canvas, {
     home: HOME,

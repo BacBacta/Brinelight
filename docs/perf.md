@@ -10,6 +10,7 @@ Goal of week 2 (task 6): **30 FPS or more on the low-end Android test phone**, i
   - the quality step (`0`, `1` or `2`), `auto` or `forced`;
   - the view (City or Sea);
   - the draw calls and triangles of the last frame (`renderer.info`).
+  - with `?blender` from the Lighthouse 5, "Land built in X ms": the time the last rebuild of the land took (it is built again only when a slot or the era changes).
 - The minimum ignores the 5 seconds after the 3D models load, and starts over after a change of view or a return to the tab.
 - `?quality=0`, `?quality=1` or `?quality=2` forces a quality step, to compare steps on the same phone. The automatic tuning is then off.
   - `0`: full quality.
@@ -17,7 +18,7 @@ Goal of week 2 (task 6): **30 FPS or more on the low-end Android test phone**, i
   - `2`: pixel ratio 1, no shadows, and the water without its sky reflection, small ripples and moving foam, on a coarser grid (week 6, task 4).
 - Without `?quality`, the game starts at step 0 and lowers the step by itself when it stays under 30 FPS for 3 seconds, as the prototype did.
 - `?mist` shows the Mist's look (its mood only, no rule): the banner says "Mist", and the counter adds "Mist" after the view.
-- `?demo=phare30` shows a demonstration city for measuring the worst case: Lighthouse 30, the other buildings at 30, 39 rafts (each raft building type on two rafts at level 3), the Refinery's building site, 106 survivors. `?demo=phare15`: Lighthouse 15, 15 rafts, the same site, 46 survivors. It lives in memory only: nothing is sent to the server, nothing is written on the device, and your own city stays as it was. Only in development and on the branch previews (`*.brinelight.pages.dev` built from a branch other than `main`); the production build does not even contain it (`client/test/demo.test.ts`).
+- `?demo=phare30` shows a demonstration city for measuring the worst case: Lighthouse 30, the other buildings at 30, 39 rafts (each raft building type on two rafts at level 3), the Refinery's building site, 106 survivors. `?demo=phare15`: Lighthouse 15, 15 rafts, the same site, 46 survivors. Phare 30 has 38 rafts and fills the last slot at the shipyard; in both, the eighth raft is damaged (hp 40). With `?blender` they show the land: a flooded plot and a landfill under way. It lives in memory only: nothing is sent to the server, nothing is written on the device, and your own city stays as it was. Only in development and on the branch previews (`*.brinelight.pages.dev` built from a branch other than `main`); the production build does not even contain it (`client/test/demo.test.ts`).
 - They can be combined: `?fps&quality=1`, `?fps&mist&quality=2`, `?blender&demo=phare30&fps`.
 
 ## Protocol (5 steps)
@@ -524,3 +525,29 @@ Time to the first image (10 Mbit/s, 40 ms, cache off, five runs, median), before
 | Lighthouse 30, 39 rafts | 7.07 s | 3.95 s | 4.09 s | 3.17 s |
 
 - All under 5 s. Quality 0 still trails quality 1 by 0.7 to 0.9 s here: its first image itself (4 times the pixels, 2048 shadows) takes the processor that long in the container.
+
+### The land won on the sea, step 2 (owner, 21 October)
+
+With `?blender` from the Lighthouse 5, the rafts are land: one mesh built in the game from the slots taken (`client/src/city/land/`), its dike in instances, a flooded plot, a landfill. Draw calls and triangles read on the `?fps` counter, the life loaded, quality 1 (quality 0 gives the same at 384 × 699; at 412 × 915 its counter had not drawn enough frames in the container to count the life):
+
+| City | Draw calls, triangles | Land built in (container) |
+| --- | --- | --- |
+| Lighthouse 4, 3 rafts (no land yet) | 28, 30.7 k | – |
+| Lighthouse 5, 3 plots | 29, 34.6 k | 97 to 102 ms |
+| Lighthouse 15, 15 plots (one flooded), a landfill | 39, 51.3 k | 131 to 141 ms |
+| Lighthouse 30, 38 plots (one flooded), a landfill | 40, 54.5 k | 146 to 154 ms |
+
+- The worst city goes from 43 draw calls and 65.9 k triangles (the floating village) to 40 and 54.5 k: the decks, walkways and moorings are gone, the land itself is one mesh of about 10 k triangles at most (tested on 200 random cities) and its dike two to four instanced meshes.
+- "Land built in" is the whole rebuild: the mesh (13 to 17 ms in Node on this machine, whatever the slots), the dike and its props, and the shore's distances for the water's foam. It happens once at load and again only when a slot or the era changes. The container has no graphics chip and a shared processor; the S22 must say the real figure.
+
+Time to the first image (10 Mbit/s, 40 ms, cache off, five runs, median), before (33a13c5) and after:
+
+| City | Quality 0 before | Quality 0 after | Quality 1 before | Quality 1 after | Downloaded before → after |
+| --- | --- | --- | --- | --- | --- |
+| New player | 3.12 s | 3.09 s | 2.28 s | 2.30 s | 1,641 → 1,649 kB |
+| Lighthouse 30 | 3.42 s | 4.05 s | 2.64 s | 3.05 s | 1,682 → 1,817 kB |
+| Lighthouse 30, 39 rafts | 4.56 s, then 5.24 s | 5.80 s, then 5.05 s and 5.22 s | 3.88 s | 3.94 s | 2,173 → 1,964 kB |
+
+- The 39-raft city was measured three times at quality 0: one run in five reached 7.7 to 8.2 s in two series, and the medians fall within each other's spread.
+- The Lighthouse 30 without rafts is 0.4 to 0.6 s slower: it fetches the land's texture (126 kB) on top of the island's, which the land hides. Dropping the island's texture once the land is the default (plan step B) saves its 86 to 92 kB again.
+- The 39-raft city downloads 209 kB fewer: the raft decks, walkways and moorings are no longer fetched.

@@ -54,12 +54,13 @@ describe("?demo, the demonstration cities for measuring on a phone", () => {
     expect(demoWanted("?blender", true)).toBe(null);
   });
 
-  it("phare30: Lighthouse 30, 39 rafts, a building site, 106 survivors; a city the rules accept", () => {
+  it("phare30: Lighthouse 30, 38 rafts and the 39th being filled (every slot), one flooded, a building site, 106 survivors; a city the rules accept", () => {
     const s = demoCity("phare30", 1_800_000_000);
     expect(s.buildings.lighthouse).toBe(30);
-    expect(Object.keys(s.rafts)).toHaveLength(39);
+    expect(Object.keys(s.rafts)).toHaveLength(38);
     expect(RAFT_SLOTS).toHaveLength(39);
-    expect(RAFT_SLOTS.every((x) => s.rafts[x.key])).toBe(true);
+    expect(RAFT_SLOTS.every((x) => s.rafts[x.key] || (s.yard?.kind === "raft" && s.yard.slot === x.key))).toBe(true);
+    expect(Object.values(s.rafts).filter((r) => r.hp < 60)).toHaveLength(1);
     expect(s.queue).toHaveLength(1);
     // Its time left reads as a game's would: two days and five hours, not years (owner, on the S22).
     expect(formatTimeLeft(s.queue[0]!.left)).toBe("2 d 05 h");
@@ -69,10 +70,12 @@ describe("?demo, the demonstration cities for measuring on a phone", () => {
     expect(parseState(JSON.parse(JSON.stringify(s)))).not.toBe(null);
   });
 
-  it("phare15: Lighthouse 15, 15 rafts, a building site; a city the rules accept", () => {
+  it("phare15: Lighthouse 15, 15 rafts (one flooded) and one more being filled, a building site; a city the rules accept", () => {
     const s = demoCity("phare15", 1_800_000_000);
     expect(s.buildings.lighthouse).toBe(DEMOS.phare15.lighthouse);
     expect(Object.keys(s.rafts)).toHaveLength(15);
+    expect(s.yard?.kind).toBe("raft");
+    expect(Object.values(s.rafts).filter((r) => r.hp < 60)).toHaveLength(1);
     expect(s.queue).toHaveLength(1);
     expect(s.survivors).toBeLessThanOrEqual(survivorCap(s.buildings.shelters));
     expect(parseState(JSON.parse(JSON.stringify(s)))).not.toBe(null);

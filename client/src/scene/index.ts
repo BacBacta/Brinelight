@@ -98,6 +98,12 @@ export type SceneHandle = {
   reframe(): void;
   /** The rafts moored around the island (and the shipyard at work): the foam goes around them, and the normal view keeps them on screen. */
   setMoored(discs: readonly Disc[]): void;
+  /**
+   * The land won on the sea (city/land, from the Lighthouse 5 with ?blender): its ground takes the island's place (the
+   * island's own model hidden) and the shore's foam is measured from it; null gives the island back. `edge`: points of
+   * its outline the normal view keeps on screen.
+   */
+  useLand(ground: THREE.Object3D | null, edge?: readonly { x: number; z: number }[]): void;
   /** Quality step and the last frame's draw calls and triangles (renderer.info). */
   stats(): RenderStats;
   /** Stops the loop and removes the listeners. */
@@ -222,7 +228,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
     const band = (options.cityBand ?? options.band)?.() ?? { top: 0, bottom: innerHeight };
     framedBand = band;
     // The Lighthouse made in Blender is taller: its top stays on screen too.
-    const tops = [...(lighthouseStaged ? [{ x: 0, y: lighthouseTop, z: 0 }] : []), ...volumes.flatMap(buildingPoints)];
+    const tops = [...(lighthouseStaged ? [{ x: 0, y: lighthouseTop, z: 0 }] : []), ...volumes.flatMap(buildingPoints), ...landEdge.map((p) => ({ x: p.x, y: 0, z: p.z }))];
     // With ?blender, the city spans three quarters of the screen's width (owner, after the style pass).
     return cityFraming({ width: innerWidth, height: innerHeight, ...band }, moored, tops, blenderLook() ? { share: CITY_FILL, coast: terrainCoast } : undefined);
   };
@@ -274,6 +280,9 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
   const terrain = blender && options.terrain && CITY_MANIFEST[options.terrain] ? options.terrain : null;
   let terrainShown = terrain;
   let land: THREE.Object3D | null = null;
+  // The land won on the sea, when it shows: its ground, and the edge the framing keeps on screen.
+  let wonLand: THREE.Object3D | null = null;
+  let landEdge: readonly { x: number; z: number }[] = [];
   const later = !!options.seaLater;
   let city: { kit: Kit; models: Models } | null = null;
   let cityLoaded = () => {};
@@ -502,6 +511,19 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
         glideTo(normal.target.clone().addScaledVector(CITY_ANGLE, normal.distance), normal.target.clone());
       } else controls.maxDistance = Math.max(40, normal.distance);
     },
+    useLand(ground, edge = []) {
+      wonLand = ground;
+      if (land) land.visible = !ground;
+      const nextEdge = ground ? edge : [];
+      const edgeChanged = nextEdge.length !== landEdge.length || nextEdge.some((p, i) => p.x !== landEdge[i]!.x || p.z !== landEdge[i]!.z);
+      landEdge = nextEdge;
+      const from = ground ?? land;
+      if (from) {
+        shore = createShore(from, SHORE.waterY + SEA_RISE);
+        water.setShore(shore.distances(moored));
+      }
+      if (edgeChanged) layout();
+    },
     setMoored(discs) {
       const changed = discs.length !== moored.length || discs.some((d, i) => d.x !== moored[i]!.x || d.z !== moored[i]!.z);
       moored = discs;
@@ -544,7 +566,8 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions = {}
         if (land) scene.remove(land);
         land = next;
         scene.add(next);
-        shore = createShore(next, SHORE.waterY + SEA_RISE);
+        next.visible = !wonLand;
+        shore = createShore(wonLand ?? next, SHORE.waterY + SEA_RISE);
         water.setShore(shore.distances(moored));
       });
     },

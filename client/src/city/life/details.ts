@@ -13,8 +13,9 @@ import { buildingScale, loadStage, stageName, stageOf } from "../staged.js";
 import { ERA_PLOTS } from "../plots.js";
 import { slotPosition } from "../rafts.js";
 import { raftBuildingName, villageAge } from "../village.js";
-import { DECK_Y } from "./cast.js";
+import { DECK_Y, LAND_Y } from "./cast.js";
 import SPOTS from "./spots.json";
+import { landShown } from "../words.js";
 
 type Spot = [number, number, number, number];
 const spots = SPOTS as unknown as Record<string, { smoke?: Spot[]; lamps?: Spot[] }>;
@@ -23,7 +24,7 @@ const spots = SPOTS as unknown as Record<string, { smoke?: Spot[]; lamps?: Spot[
 export type Source = { x: number; y: number; z: number; raft: string | null };
 
 /** The chimneys that smoke and the lanterns that light in a city: its buildings' at their level, its rafts' buildings'. */
-export function sources(state: PlayerState): { smoke: Source[]; lamps: Source[] } {
+export function sources(state: PlayerState, land = landShown(state.buildings.lighthouse)): { smoke: Source[]; lamps: Source[] } {
   const out = { smoke: [] as Source[], lamps: [] as Source[] };
   const put = (entry: { smoke?: Spot[]; lamps?: Spot[] } | undefined, level: number, at: { x: number; y: number; z: number }, raft: string | null, k = 1) => {
     for (const kind of ["smoke", "lamps"] as const) for (const [x, y, z, from] of entry?.[kind] ?? []) if (from <= level) out[kind].push({ x: at.x + x * k, y: at.y + y * k, z: at.z + z * k, raft });
@@ -38,7 +39,8 @@ export function sources(state: PlayerState): { smoke: Source[]; lamps: Source[] 
   for (const [key, raft] of Object.entries(state.rafts)) {
     if (!raft.building || raft.level < 1) continue;
     const c = slotPosition(key);
-    put(spots[raftBuildingName(raft.building, raft.level, villageAge(state.buildings.lighthouse))], raft.level, { x: c.x, y: DECK_Y, z: c.z }, key);
+    // On the land won (from the Lighthouse 5), on its ground and still; on a raft, on its deck, bobbing with it.
+    put(spots[raftBuildingName(raft.building, raft.level, villageAge(state.buildings.lighthouse))], raft.level, { x: c.x, y: land ? LAND_Y : DECK_Y, z: c.z }, land ? null : key);
   }
   return out;
 }

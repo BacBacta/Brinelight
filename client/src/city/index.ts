@@ -10,6 +10,8 @@ import { createRaftSheet } from "./raftSheet.js";
 import { RAFT_FILL, createCityRafts, raftSlots, slotPosition } from "./rafts.js";
 import { createVillage, hasVillage } from "./village.js";
 import { createLife } from "./life/index.js";
+import { createLand, hasLand, landClock } from "./land/index.js";
+import { landShown } from "./words.js";
 import { createSheet } from "./sheet.js";
 import { blenderLook } from "../scene/cityLook.js";
 import { groundName, hasGround, hasTerrain, terrainName, isStaged, shownShape, lanternHeight, levelShape, loadStage, radarAt, showLevel, stageName } from "./staged.js";
@@ -66,6 +68,26 @@ export function createCity(
   // The floating village made in Blender draws the rafts, their walkways and buildings, and the shipyard's raft.
   const village = blenderLook() && hasVillage() ? createVillage((o) => scene.add(o), RAFT_SLOTS.length) : undefined;
   const rafts = createCityRafts(kit, village ? [] : others.raft, (o) => scene.add(o), coastAt, village);
+  // From the Lighthouse 5, the rafts are land won on the sea, welded to the island (owner): one mesh, built in the game.
+  const land = village && hasLand() ? createLand((o) => scene.add(o)) : undefined;
+  let landOn = false;
+  // The "!" over each flooded plot (owner): it says the plot needs draining, as the raft's sheet does.
+  const marks = document.createElement("div");
+  marks.className = "labels city flood-marks";
+  marks.setAttribute("aria-hidden", "true");
+  root.appendChild(marks);
+  let flooded: { key: string; el: HTMLElement }[] = [];
+  const showMarks = (keys: readonly string[]) => {
+    if (keys.join() === flooded.map((f) => f.key).join()) return;
+    marks.textContent = "";
+    flooded = keys.map((key) => {
+      const el = document.createElement("div");
+      el.className = "flood";
+      el.textContent = "!";
+      marks.appendChild(el);
+      return { key, el };
+    });
+  };
   // The island's life (meeting 4): with the floating village, its survivors, animals and plants.
   const life = village ? createLife((o) => scene.add(o)) : undefined;
   // With the look made in Blender, the prototype's kit is not there: the shipyard's scaffolding is the building sites'.
@@ -144,6 +166,12 @@ export function createCity(
     life?.animate(now, scene.closeness(), scene.cityCamera, scene.dimness());
     buildings.animate(now);
     labels.place(sheet.current);
+    for (const f of flooded) {
+      const at = slotPosition(f.key);
+      const p = scene.project(at.x, 0.45, at.z);
+      f.el.style.display = p.visible ? "" : "none";
+      if (p.visible) f.el.style.transform = `translate(${p.x.toFixed(1)}px,${p.y.toFixed(1)}px)`;
+    }
   });
 
   // A tap opens a sheet; a drag turns the camera and opens nothing.
@@ -193,10 +221,26 @@ export function createCity(
       // With ?blender, every building stays whole in the normal view, between the cards (main.ts).
       if (blenderLook()) scene.setBuildings(Object.values(buildings.volumes(state)));
       rafts.refresh(state);
+      if (land) {
+        const on = landShown(state.buildings.lighthouse);
+        const t = performance.now();
+        const built = land.update(state, on);
+        if (built || on !== landOn) {
+          landOn = on;
+          // Its outline stays on screen in the normal view, as the rafts did.
+          const edge = (land.slots?.won ?? []).flatMap((c) => Array.from({ length: 8 }, (_, i) => ({ x: c.x + Math.cos((i * Math.PI) / 4) * 1.25, z: c.z + Math.sin((i * Math.PI) / 4) * 1.25 })));
+          scene.useLand(on ? land.object : null, edge);
+          // The whole of it: the land, its dike and plants, and the shore's foam measured again.
+          if (built) landClock.last = performance.now() - t;
+        }
+        showMarks(on ? raftSlots(state).filter((x) => x.view === "damaged").map((x) => x.key) : []);
+      }
       life?.update(state);
       // The foam goes around the rafts afloat and the shipyard at work.
       // The foam hugs the raft (inside its room), so the water between two rafts shows.
-      scene.setMoored(raftSlots(state).filter((s) => s.view !== "free").map((s) => ({ ...slotPosition(s.key), r: RAFT_FILL * 0.8 })));
+      // On the land won, a flooded plot is still water (no foam over it); the land itself is the shore.
+      const asLand = !!land && landShown(state.buildings.lighthouse);
+      scene.setMoored(raftSlots(state).filter((s) => s.view !== "free").map((s) => (asLand && s.view === "damaged" ? { ...slotPosition(s.key), r: 0.8, still: true } : { ...slotPosition(s.key), r: RAFT_FILL * 0.8 })));
       raftSheet.update(state, game.speed());
       labels.update(state, game.speed());
       queue.update(state, game.speed());

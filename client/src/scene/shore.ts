@@ -16,8 +16,14 @@ export const SHORE = {
   waterY: -0.42,
 } as const;
 
-/** A round thing in the water the foam goes around: a raft, the shipyard at work. */
-export type Disc = { x: number; z: number; r: number };
+/**
+ * A round thing in the water the foam goes around: a raft, the shipyard at work. `still`: still water instead (a flooded
+ * plot of the land won, city/land): shallow, without foam, its rim only lapping.
+ */
+export type Disc = { x: number; z: number; r: number; still?: boolean };
+
+/** How far from the shore still water counts (no foam there, the shallows' color). */
+const STILL = 0.5;
 
 const cell = (2 * SHORE.extent) / SHORE.size;
 
@@ -72,6 +78,7 @@ export function shoreDistances(land: Uint8Array, discs: readonly Disc[]): Uint8A
   const far = 1e9;
   for (let k = 0; k < n * n; k++) d[k] = land[k] ? 0 : far;
   for (const s of discs) {
+    if (s.still) continue;
     const i0 = Math.max(0, Math.floor((s.x - s.r + SHORE.extent) / cell));
     const i1 = Math.min(n - 1, Math.floor((s.x + s.r + SHORE.extent) / cell));
     const j0 = Math.max(0, Math.floor((s.z - s.r + SHORE.extent) / cell));
@@ -94,6 +101,17 @@ export function shoreDistances(land: Uint8Array, discs: readonly Disc[]): Uint8A
     }
   const out = new Uint8Array(n * n);
   for (let k = 0; k < n * n; k++) out[k] = Math.round((Math.min(d[k]! * cell, SHORE.reach) / SHORE.reach) * 255);
+  const still = Math.round((STILL / SHORE.reach) * 255);
+  for (const s of discs) {
+    if (!s.still) continue;
+    const i0 = Math.max(0, Math.floor((s.x - s.r + SHORE.extent) / cell));
+    const i1 = Math.min(n - 1, Math.floor((s.x + s.r + SHORE.extent) / cell));
+    const j0 = Math.max(0, Math.floor((s.z - s.r + SHORE.extent) / cell));
+    const j1 = Math.min(n - 1, Math.floor((s.z + s.r + SHORE.extent) / cell));
+    for (let j = j0; j <= j1; j++)
+      for (let i = i0; i <= i1; i++)
+        if (Math.hypot(-SHORE.extent + (i + 0.5) * cell - s.x, -SHORE.extent + (j + 0.5) * cell - s.z) <= s.r) out[j * n + i] = Math.max(out[j * n + i]!, still);
+  }
   return out;
 }
 
@@ -106,7 +124,7 @@ export function createShore(island: THREE.Object3D, waterY: number = SHORE.water
   return {
     /** The distances with these discs; the same array as before when they did not change. */
     distances(discs: readonly Disc[]): Uint8Array {
-      const next = discs.map((s) => `${s.x.toFixed(2)},${s.z.toFixed(2)},${s.r}`).join(";");
+      const next = discs.map((s) => `${s.x.toFixed(2)},${s.z.toFixed(2)},${s.r}${s.still ? "s" : ""}`).join(";");
       if (next !== key) {
         key = next;
         last = shoreDistances(land, discs);

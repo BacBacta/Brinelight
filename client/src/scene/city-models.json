@@ -1199,6 +1199,42 @@
    }
   ]
  },
+ "land-garden": {
+  "kB": 126.6,
+  "triangles": 2,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 6,
+    "height": 0.0,
+    "reach": 14.343
+   }
+  ]
+ },
+ "land-modern": {
+  "kB": 126.3,
+  "triangles": 2,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 6,
+    "height": 0.0,
+    "reach": 14.343
+   }
+  ]
+ },
+ "land-wild": {
+  "kB": 126.0,
+  "triangles": 2,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 6,
+    "height": 0.0,
+    "reach": 14.343
+   }
+  ]
+ },
  "life-cat": {
   "kB": 9.8,
   "triangles": 68,

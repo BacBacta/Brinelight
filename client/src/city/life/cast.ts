@@ -18,6 +18,7 @@ import { VILLAGE_DECK } from "../village.js";
 import type { Anim, Tool } from "./body.js";
 import LAND from "./land.json";
 import { SEA_RISE } from "../../scene/cityLook.js";
+import { landShown } from "../words.js";
 
 /** The most survivors shown at once, and how many show for a city of `survivors`. */
 export const PEOPLE_MAX = 24;
@@ -54,11 +55,17 @@ const onPlot = (id: BuildingId, x: number, z: number, y: number, turn: number) =
   return { way: [{ x: c.x + x, y, z: c.z + z, raft: null }], turn };
 };
 
-/** A figure standing on a raft's deck at (x, z) from its center (rafts are never turned), facing `turn`. */
+/**
+ * A figure standing on a raft's deck at (x, z) from its center (rafts are never turned), facing `turn`; on the land won
+ * from the Lighthouse 5 (words.ts, landShown), on its ground, still.
+ */
+let onLand = false;
 const onRaft = (key: string, x: number, z: number, turn: number, above = 0) => {
   const c = slotPosition(key);
-  return { way: [{ x: c.x + x, y: DECK_Y + above, z: c.z + z, raft: key }], turn };
+  return { way: [{ x: c.x + x, y: (onLand ? LAND_Y : DECK_Y) + above, z: c.z + z, raft: onLand ? null : key }], turn };
 };
+/** The land won's ground (city/land/field.ts: nearly flat at the meadow's height). */
+export const LAND_Y = 0;
 
 /** The front of a plot, where its builders and some trades stand: off the era's floor (z beyond 0.6, buildings ×1.15), on the meadow. */
 export const FRONT = { x: 0.42 * BUILDING_SCALE, z: 0.74 * BUILDING_SCALE } as const;
@@ -159,7 +166,8 @@ function builders(state: PlayerState): Omit<Figure, "phase" | "role">[] {
 }
 
 /** Everyone the city shows: the trades, then the builders, then the passers-by, as many as `peopleShown` allows. */
-export function cast(state: PlayerState): Figure[] {
+export function cast(state: PlayerState, land = landShown(state.buildings.lighthouse)): Figure[] {
+  onLand = land;
   const n = peopleShown(state.survivors);
   const out: Figure[] = [];
   const add = (role: Figure["role"], f: Omit<Figure, "phase" | "role">) => out.length < n && out.push({ ...f, role, phase: hash(out.length + 1) * 20 });
@@ -167,7 +175,7 @@ export function cast(state: PlayerState): Figure[] {
   for (const f of builders(state)) add("builder", f);
   for (let i = 0; out.length < n; i++) {
     // One passer-by in three on the walkways, while there are some.
-    const across = i % 3 === 2 ? walkwayWay(state, Math.floor(i / 3)) : null;
+    const across = i % 3 === 2 && !land ? walkwayWay(state, Math.floor(i / 3)) : null;
     add("passer", { anim: "walk", tool: null, speed: 0.16, turn: 0, way: across ?? trailWay(i + 1) });
   }
   return out;

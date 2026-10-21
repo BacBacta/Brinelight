@@ -1,5 +1,6 @@
 import type { SceneHandle } from "../scene/index.js";
 import { MIN_WINDOW, fpsAvg, fpsFrame, fpsMin, modelsLoaded, newFpsMeter, screenLine } from "./fpsMeter.js";
+import { landClock } from "../city/land/index.js";
 
 const VIEW_NAMES = { city: "City", sea: "Sea" } as const;
 
@@ -27,7 +28,9 @@ export function createFpsCounter(root: HTMLElement, scene: SceneHandle) {
       `${round(meter.avg)} FPS · ${MIN_WINDOW} s: min ${round(fpsMin(meter))} · mean ${round(fpsAvg(meter))}\n` +
       `Quality ${s.step} ${s.forced ? "forced" : "auto"} · ${VIEW_NAMES[view]}${s.mood === "mist" ? " · Mist" : ""}\n` +
       `${screenLine(innerWidth, innerHeight, devicePixelRatio || 1)}\n` +
-      `${s.calls} calls · ${(s.triangles / 1000).toFixed(1)} k tris${s.post ? ` · finish +${s.post}` : ""}`;
+      `${s.calls} calls · ${(s.triangles / 1000).toFixed(1)} k tris${s.post ? ` · finish +${s.post}` : ""}` +
+    // The land won on the sea: how long it took to build the last time (owner, to read on the S22).
+    (landClock.last !== null ? `\nLand built in ${landClock.last.toFixed(1)} ms` : "");
   });
 
   return {

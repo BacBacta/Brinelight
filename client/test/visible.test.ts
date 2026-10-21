@@ -8,6 +8,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import * as THREE from "three";
 import { BUILDING_IDS, RAFT_SLOTS, type BuildingId } from "@brinelight/shared";
 import { CITY_ANGLE, CITY_FILL, CITY_FOV, cityFraming } from "../src/scene/framing.js";
+import { LAND_FROM } from "../src/city/words.js";
 import { terrainCoast } from "../src/scene/terrainCoast.js";
 import { hexX, hexZ } from "../src/scene/island.js";
 import { BUILDING_FIX, LIGHTHOUSE_FIT, TILE_FIT, normalizeBuilding } from "../src/scene/buildings.js";
@@ -74,8 +75,10 @@ function tallest(id: BuildingId, cap: number): number {
 function camera(rafts: number, lighthouse: number): THREE.PerspectiveCamera {
   const slots = RAFT_SLOTS.slice(0, rafts).map((s) => ({ x: hexX(s.q, s.r), z: hexZ(s.r) }));
   const top = isStaged("lighthouse") ? [{ x: 0, y: levelShape("lighthouse", lighthouse).height * buildingScale("lighthouse"), z: 0 }] : [];
+  // From the Lighthouse 5 the rafts are land (city/land): its outline stays on screen, as the game frames it (city/index.ts).
+  const edge = lighthouse >= LAND_FROM ? slots.flatMap((c) => Array.from({ length: 8 }, (_, i) => ({ x: c.x + Math.cos((i * Math.PI) / 4) * 1.25, y: 0, z: c.z + Math.sin((i * Math.PI) / 4) * 1.25 }))) : [];
   // The normal view with ?blender: the city across three quarters of the screen's width (owner, after the style pass).
-  const { distance, target } = cityFraming(VIEW, slots, top, { share: CITY_FILL, coast: terrainCoast });
+  const { distance, target } = cityFraming(VIEW, slots, [...top, ...edge], { share: CITY_FILL, coast: terrainCoast });
   const cam = new THREE.PerspectiveCamera(CITY_FOV, VIEW.width / VIEW.height, 0.1, 400);
   cam.position.copy(target).addScaledVector(CITY_ANGLE, distance);
   cam.lookAt(target);

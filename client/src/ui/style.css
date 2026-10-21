@@ -93,6 +93,9 @@ body.at-sea .build-badge:not([hidden]){display:inline-flex}
 /* Labels over the buildings */
 .labels{position:fixed;inset:0;pointer-events:none;z-index:2;overflow:hidden}
 .labels>div{position:absolute;left:0;top:0;will-change:transform}
+/* The land won: the "!" over a flooded plot (owner) */
+.flood{translate:-50% -50%;width:26px;height:26px;border-radius:50%;background:#E2572F;border:2.5px solid #fff;color:#fff;font:900 16px/21px var(--f-b);text-align:center;box-shadow:0 2px 0 rgba(0,0,0,.25)}
+body.at-sea .flood-marks{display:none}
 .bl{translate:-50% -100%;display:flex;flex-direction:column;align-items:center;gap:2px}
 .bl b{font-family:var(--f-d);font-weight:400;font-size:12.5px;background:rgba(6,16,36,.8);border:2px solid rgba(255,255,255,.25);border-radius:99px;padding:1px 8px;white-space:nowrap}
 .bl b i{font-style:normal;color:var(--gold)}

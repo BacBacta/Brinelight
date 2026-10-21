@@ -13,6 +13,9 @@ import { RAFT_FILL } from "../scene/coast.js";
 import type { PlayerState } from "../state/index.js";
 import { VILLAGE_DECK, VILLAGE_SEA, raftMoorings, villageAge, villageModels, villageNormalNames, type Placed, type Village } from "./village.js";
 import { SEA_RISE } from "../scene/cityLook.js";
+import { landShown } from "./words.js";
+import { landSlotsOf } from "./land/index.js";
+import { ground as groundAt } from "./land/field.js";
 
 export type RaftSlotView = "raft" | "damaged" | "building" | "free";
 
@@ -403,7 +406,9 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
       last = state;
       const slots = raftSlots(state);
       const marked = village ? markedSlots(state, placing) : new Set(slots.filter((x) => x.view === "free").map((x) => x.key));
-      const k = JSON.stringify([slots, raftBuildingsShown(state), [...marked]]);
+      // From the Lighthouse 5 with the village made in Blender, the rafts are land (city/land): no deck, walkway nor mooring.
+      const land = !!village && landShown(state.buildings.lighthouse);
+      const k = JSON.stringify([slots, raftBuildingsShown(state), [...marked], land]);
       if (k === key) return;
       key = k;
       standBuildings(state);
@@ -451,18 +456,25 @@ export function createCityRafts(kit: Kit, models: THREE.Object3D | readonly THRE
           lighthouse,
         );
         const items: Placed[] = [];
+        const ground = land ? landSlotsOf(state) : null;
         for (const s of slots) {
           // A free slot nobody can fill now shows nothing on the water.
           if (s.view === "free" && !marked.has(s.key)) continue;
           const { x, z } = slotPosition(s.key);
+          if (ground && s.view !== "free") {
+            // The land won draws the plot, the flood and the landfill; its building stands on its ground, still.
+            const b = shown.buildings.get(s.key);
+            if (b) items.push({ name: b, x, z, y: groundAt(x, z, ground).y - 0.005 });
+            continue;
+          }
           const bob = s.view === "free" ? undefined : afloat.find((r) => r.key === s.key)?.bob;
           items.push({ name: shown.slots.get(s.key)!, x, z, y: s.view === "free" ? RAFT_BOTTOM + VILLAGE_SEA : RAFT_BOTTOM, bob });
           const b = shown.buildings.get(s.key);
           if (b) items.push({ name: b, x, z, y: RAFT_BOTTOM + VILLAGE_DECK, bob });
         }
         // A raft of ring 3 lies too close to the shore for a walkway: it is moored to a stake on the beach instead.
-        for (const w of ways) if (!w.shore) items.push({ name: shown.walk, x: w.x, z: w.z, y: RAFT_BOTTOM + VILLAGE_DECK - 0.01, turn: w.turn, length: w.length });
-        for (const m of raftMoorings(moored)) items.push({ name: shown.moor, x: m.x, z: m.z, y: 0, turn: m.turn });
+        if (!land) for (const w of ways) if (!w.shore) items.push({ name: shown.walk, x: w.x, z: w.z, y: RAFT_BOTTOM + VILLAGE_DECK - 0.01, turn: w.turn, length: w.length });
+        if (!land) for (const m of raftMoorings(moored)) items.push({ name: shown.moor, x: m.x, z: m.z, y: 0, turn: m.turn });
         village.show(items);
         // The next age's models, while the Lighthouse's upgrade toward it runs.
         const next = villageAge(lighthouse + 1);

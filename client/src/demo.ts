@@ -1,16 +1,22 @@
 /**
  * Demonstration cities, to measure the worst case on a phone (?demo=phare30, ?demo=phare15): a city at Lighthouse 30
- * (or 15) with its rafts, a building site and its survivors. Only in development and on the branch previews, never in
+ * (or 15) with its rafts (one flooded, one more being filled), a building site and its survivors. Only in development and on the branch previews, never in
  * production. Played from memory only: no request to the server, nothing written on the device, your city untouched.
  */
-import { BUILDING_IDS, RAFT_SLOTS, newPlayerState, upgradeTime, type PlayerState } from "@brinelight/shared";
+import { BUILDING_IDS, RAFT_BUILD_TIME, RAFT_SLOTS, newPlayerState, upgradeTime, type PlayerState } from "@brinelight/shared";
 import type { KeyValueStore } from "./state/index.js";
 import { previewHost } from "./preview.js";
 
+/**
+ * The demos (owner): their Lighthouse, their rafts (one more slot is being filled by the shipyard: phare30 takes all 39),
+ * their survivors. One raft is flooded (under 60): the land won shows its breach.
+ */
 export const DEMOS = {
-  phare30: { lighthouse: 30, rafts: 39, survivors: 106 },
+  phare30: { lighthouse: 30, rafts: 38, survivors: 106 },
   phare15: { lighthouse: 15, rafts: 15, survivors: 46 },
 } as const;
+/** The raft of each demo that is flooded: a bare one, in front. */
+const FLOODED = 7;
 export type DemoName = keyof typeof DEMOS;
 
 /** The demo asked for in the address, when demos are allowed here; null otherwise (production: always null). */
@@ -39,10 +45,13 @@ export function demoCity(name: DemoName, clock: number): PlayerState {
   const base = newPlayerState(clock);
   const buildings = Object.fromEntries(BUILDING_IDS.map((id) => [id, id === "refinery" ? d.lighthouse - 1 : d.lighthouse])) as PlayerState["buildings"];
   // The slots nearest the island first, ring 3 then ring 4.
-  const slots = [...RAFT_SLOTS].sort((a, b) => a.ring - b.ring || Math.atan2(a.q, a.r) - Math.atan2(b.q, b.r)).slice(0, d.rafts);
-  const rafts = Object.fromEntries(slots.map((s, i) => [s.key, { hp: 100, building: RAFT_BUILDINGS[i] ?? null, level: RAFT_BUILDINGS[i] ? 3 : 0 }]));
+  const order = [...RAFT_SLOTS].sort((a, b) => a.ring - b.ring || Math.atan2(a.q, a.r) - Math.atan2(b.q, b.r));
+  const slots = order.slice(0, d.rafts);
+  const rafts = Object.fromEntries(slots.map((s, i) => [s.key, { hp: i === FLOODED ? 40 : 100, building: RAFT_BUILDINGS[i] ?? null, level: RAFT_BUILDINGS[i] ? 3 : 0 }]));
   const duration = upgradeTime("refinery", buildings.refinery);
-  return { ...base, buildings, rafts, survivors: d.survivors, queue: [{ id: "refinery", left: Math.min(SITE_LEFT, duration), duration }] };
+  // The shipyard fills the next slot: its landfill shows (a raft being built, by the rules).
+  const yard = { slot: order[d.rafts]!.key, kind: "raft" as const, left: RAFT_BUILD_TIME * 0.6, duration: RAFT_BUILD_TIME };
+  return { ...base, buildings, rafts, yard, survivors: d.survivors, queue: [{ id: "refinery", left: Math.min(SITE_LEFT, duration), duration }] };
 }
 
 /** A store in memory: the demo's city and the sounds' setting live there, and go with the page. */
