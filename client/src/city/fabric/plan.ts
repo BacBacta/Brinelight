@@ -143,11 +143,16 @@ const HARBOR_COAST: [number, number, number, number][] = (() => {
   const [hq, hr] = ERA_PLOTS.harbor;
   const [hx, hz] = [hexX(hq, hr), hexZ(hr)];
   const out: [number, number, number, number][] = [];
-  for (let a = -Math.PI; a < Math.PI; a += 0.02) {
-    // Along each direction from the Harbor, the last point of land.
+  const land = (a: number, r: number) => islandDepth(hx + Math.cos(a) * r, hz + Math.sin(a) * r) > 0;
+  for (let a = -Math.PI; a < Math.PI; a += 0.04) {
+    // Along each direction from the Harbor, the last point of land: found every 0.1, then to 0.01 between.
     let last = -1;
-    for (let r = 0.9; r < 2.4; r += 0.02) if (islandDepth(hx + Math.cos(a) * r, hz + Math.sin(a) * r) > 0) last = r;
-    if (last < 0 || last > 2.35) continue;
+    for (let r = 0.9; r < 2.4; r += 0.1) if (land(a, r)) last = r;
+    if (last < 0) continue;
+    let [lo, hi] = [last, last + 0.1];
+    while (hi - lo > 0.01) [lo, hi] = land(a, (lo + hi) / 2) ? [(lo + hi) / 2, hi] : [lo, (lo + hi) / 2];
+    last = lo;
+    if (last > 2.35) continue;
     const [x, z] = [hx + Math.cos(a) * last, hz + Math.sin(a) * last];
     const e = 0.02;
     const nx = islandDepth(x - e, z) - islandDepth(x + e, z);
