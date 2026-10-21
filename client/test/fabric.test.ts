@@ -20,7 +20,7 @@ import { mergeFabric, readFabric, type FabricModels, type Merged } from "../src/
 import { createFabric } from "../src/city/fabric/index.js";
 import { SIZES } from "../src/city/fabric/sight.js";
 import { FIELD_SIZE, fieldTexels } from "../src/city/fabric/paint.js";
-import { PATH_HALF, fieldFrame, inField } from "../src/city/fabric/fields.js";
+import { BEDS, bedAt, fieldFrame, inField } from "../src/city/fabric/fields.js";
 import { IN_SIGHT, camera, inSight, shown } from "./sight.js";
 import { readGlb } from "./glb.js";
 
@@ -137,7 +137,7 @@ describe("the city fabric's plan", () => {
     }
   });
 
-  it("the gardens' and the kelp's rows: inside their field's outline, on its own bed, on a plot won; varied vegetables", () => {
+  it("the gardens' and the kelp's rows: inside their field's outline, on its own bed, on a plot won; varied vegetables, in several directions", () => {
     for (const lh of [9, 19, 30]) {
       const state = city(lh, RAFT_SLOTS.length);
       const plan = fabricPlan(state, landOf(state));
@@ -150,11 +150,36 @@ describe("the city fabric's plan", () => {
           const r = Math.round(field.z / 1.732);
           const frame = fieldFrame(Math.round(field.x / 2 - r / 2), r);
           expect(inField(frame, x - field.x, z - field.z, 0.05), `a row at (${x.toFixed(2)}, ${z.toFixed(2)})`).toBe(true);
-          // Never on the garden's path.
-          if (row.kind === "garden") expect(Math.abs((x - field.x) * frame.n[0] + (z - field.z) * frame.n[1] - frame.offset)).toBeGreaterThan(PATH_HALF);
+          // Never on the grass between the beds.
+          expect(bedAt(frame, BEDS[row.kind], x - field.x, z - field.z).depth, `a row at (${x.toFixed(2)}, ${z.toFixed(2)})`).toBeGreaterThan(0);
         }
+      // Each garden's rows in more than one direction.
+      for (const f of rowed.filter((f) => f.kind === "garden")) {
+        const turns = plan.rows
+          .filter((row) => Math.hypot(row.points[0]![0] - f.x, row.points[0]![1] - f.z) < 1)
+          .map((row) => {
+            const [[ax, az], [bx, bz]] = [row.points[0]!, row.points.at(-1)!];
+            return Math.round(((Math.atan2(bz - az, bx - ax) + Math.PI) % Math.PI) * 4);
+          });
+        expect(new Set(turns).size, `the garden at (${f.x.toFixed(1)}, ${f.z.toFixed(1)})`).toBeGreaterThan(1);
+      }
       if (lh === 9) expect(new Set(plan.rows.map((r) => r.color)).size).toBeGreaterThanOrEqual(4);
     }
+  });
+
+  it("a field's outline is never its plot's hexagon: it swells and narrows, and stays inside its plot", () => {
+    for (let q = -4; q <= 4; q++)
+      for (let r = -4; r <= 4; r++) {
+        const f = fieldFrame(q, r);
+        const reach = Array.from({ length: 36 }, (_, i) => {
+          const a = (i * Math.PI) / 18;
+          let d = 0;
+          while (inField(f, d * Math.cos(a), d * Math.sin(a))) d += 0.005;
+          return d;
+        });
+        expect(Math.max(...reach) - Math.min(...reach), `plot ${q}, ${r}`).toBeGreaterThan(0.1);
+        expect(Math.max(...reach), `plot ${q}, ${r}`).toBeLessThan(0.9);
+      }
   });
 
   it("the ground reads each plot's field in one texel: every field on its own plot's, its kind as the shader turns it back", () => {

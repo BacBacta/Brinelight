@@ -7,7 +7,7 @@
  */
 import * as THREE from "three";
 import type { FabricPlan, FieldKind } from "./plan.js";
-import { FIELD_REACH, FIELD_SIDES, KELP, PATH_HALF, ROW_SPACING, VEG, fieldBytes } from "./fields.js";
+import { BEDS, BED_GAP, FIELD_BORDER, FIELD_REACH, GRASS, KELP, ROW_SPACING, VEG, fieldBytes } from "./fields.js";
 
 /** The ground the texture covers: a square of 2 × SPAN around the Lighthouse, at SIZE pixels a side. */
 export const SPAN = 10;
@@ -89,39 +89,60 @@ const PAINT = /* glsl */ `
   vec4 ft = texture2D(uFieldKinds, (rc.xy + ${FIELD_AT}.5) / ${FIELD_SIZE}.);
   float kind = floor(ft.r * ${(255 / FIELD_STEP).toFixed(4)} + .5);
   if (kind > .5) {
-    // The plot's field (fields.ts): its outline, its path and its beds of rows, from its bytes.
+    // The plot's field (fields.ts): its rounded outline, its beds and the grass around them, each bed's rows.
     vec2 fp = p - vec2(2. * (rc.x + rc.y * .5), 1.732 * rc.y);
-    float ang = ft.g * 3.14159265;
-    vec2 fn = vec2(cos(ang), sin(ang));
-    vec2 fm = vec2(-fn.y, fn.x);
-    float off = (ft.b - .5) * .3;
-    // Its outline: six sides, each turned and set back from a hexagon's (fields.ts, outsideField).
+    float turn = ft.g * 6.28318531;
     float seed = floor(ft.a * 255. + .5);
-    float outside = -1e3;
-    for (int k = 0; k < ${FIELD_SIDES}; k++) {
-      float fk = float(k);
-      float a = ft.a * 3.14159265 + fk * 1.04719755 + (fract(seed / 255. * (fk + 1.) * .618) - .5) * .5;
-      outside = max(outside, dot(fp, vec2(cos(a), sin(a))) - (${num(FIELD_REACH - 0.12)} + .2 * fract(seed / 255. * (fk + 1.) * 1.37)));
-    }
-    float inside = clamp(-outside / .04, 0., 1.);
+    float s = seed / 255.;
+    float th = atan(fp.y, fp.x);
+    float outside = length(fp) - ${num(FIELD_REACH)} * (1. + .13 * cos(2. * th + ft.b * 6.28318531) + .07 * cos(3. * th + s * 6.28318531));
+    float inside = clamp(-outside / .03, 0., 1.);
     float grain = .88 + .12 * sin(p.x * 53. + p.y * 31.) * sin(p.x * 17. - p.y * 23.);
     vec3 c;
-    if (kind < 1.5) {
-      float side = dot(fp, fn) - off;
-      float bed = side > 0. ? 0. : 1.;
-      float t = (bed < .5 ? dot(fp, fn) : dot(fp, fm)) / ${num(ROW_SPACING.garden)};
+    if (kind < 1.5 || (kind > 2.5 && kind < 3.5)) {
+      // The beds (fields.ts, bedOf and bedAt): the nearest bed's middle, and how far to the line halfway to the others.
+      float n = kind < 1.5 ? ${BEDS.garden}. : ${BEDS.kelp}.;
+      float bed = 0.;
+      vec2 at = vec2(0.);
+      float best = 1e3;
+      for (int k = 0; k < 3; k++) {
+        float fk = float(k);
+        if (fk >= n) break;
+        float a = turn + fk * 6.28318531 / n + (fract(s * (fk + 1.) * .618) - .5) * .9;
+        vec2 b = (.22 + .16 * fract(s * (fk + 1.) * 1.37)) * vec2(cos(a), sin(a));
+        float d = length(fp - b);
+        if (d < best) { best = d; bed = fk; at = b; }
+      }
+      float edge = 1e3;
+      for (int k = 0; k < 3; k++) {
+        float fk = float(k);
+        if (fk >= n) break;
+        if (fk == bed) continue;
+        float a = turn + fk * 6.28318531 / n + (fract(s * (fk + 1.) * .618) - .5) * .9;
+        vec2 b = (.22 + .16 * fract(s * (fk + 1.) * 1.37)) * vec2(cos(a), sin(a));
+        edge = min(edge, dot((at + b) * .5 - fp, normalize(b - at)));
+      }
+      float depth = min(-outside - ${num(FIELD_BORDER)}, edge - ${num(BED_GAP / 2)});
+      float a = turn + bed * 6.28318531 / n + (fract(s * (bed + 1.) * .618) - .5) * .9;
+      float dir = a + mod(bed, 2.) * 1.57079633 + (fract(ft.b * (bed + 1.) * .41) - .5) * .6;
+      float t = dot(fp - at, vec2(-sin(dir), cos(dir))) / (kind < 1.5 ? ${num(ROW_SPACING.garden)} : ${num(ROW_SPACING.kelp)});
       float row = floor(t);
       float fr = fract(t);
-      float leaf = smoothstep(.18, .3, fr) * (1. - smoothstep(.7, .82, fr));
-      float v = mod(seed + row * 3. + bed * 2., ${VEG.length}.);
-      vec3 veg = v < .5 ? ${vec3(VEG[0])} : v < 1.5 ? ${vec3(VEG[1])} : v < 2.5 ? ${vec3(VEG[2])} : v < 3.5 ? ${vec3(VEG[3])} : ${vec3(VEG[4])};
-      c = mix(vec3(.10, .062, .03) * grain, veg * .85 * grain, leaf);
-      c = mix(c, vec3(.30, .23, .14) * grain, 1. - smoothstep(${num(PATH_HALF)}, ${num(PATH_HALF + 0.015)}, abs(side)));
+      float leaf = smoothstep(.08, .2, fr) * (1. - smoothstep(.8, .92, fr));
+      vec3 bc;
+      vec3 rim;
+      if (kind < 1.5) {
+        float v = mod(seed + row * 3. + bed * 2., ${VEG.length}.);
+        vec3 veg = v < .5 ? ${vec3(VEG[0])} : v < 1.5 ? ${vec3(VEG[1])} : v < 2.5 ? ${vec3(VEG[2])} : v < 3.5 ? ${vec3(VEG[3])} : v < 4.5 ? ${vec3(VEG[4])} : v < 5.5 ? ${vec3(VEG[5])} : ${vec3(VEG[6])};
+        bc = mix(vec3(.16, .10, .05) * grain, veg * grain, leaf);
+        rim = ${vec3(GRASS)} * grain;
+      } else {
+        bc = mix(vec3(.52, .46, .32) * grain, ${vec3(KELP)} * grain, leaf * .85);
+        rim = vec3(.60, .55, .40) * grain;
+      }
+      c = mix(rim, bc, clamp(depth / .025 + .5, 0., 1.));
     } else if (kind < 2.5) c = vec3(.235, .42, .095) * grain;
-    else if (kind < 3.5) {
-      float fr = fract(dot(fp, fn) / ${num(ROW_SPACING.kelp)});
-      c = mix(vec3(.46, .40, .27) * grain, ${vec3(KELP)} * 1.1, smoothstep(.25, .35, fr) * (1. - smoothstep(.65, .75, fr)));
-    } else c = mix(vec3(.38, .63, .16), vec3(.72, .66, .55), clamp((.045 - abs(length(fp) - .45)) / .015, 0., 1.));
+    else c = mix(vec3(.38, .63, .16), vec3(.72, .66, .55), clamp((.045 - abs(length(fp) - .45)) / .015, 0., 1.));
     fc = mix(fc, c, inside);
   }
   diffuseColor.rgb = fc;
