@@ -4,6 +4,7 @@ import { storeCap } from "./economy.js";
 import { HUNT_SHARDS, HUNT_XP, LEVIATHAN_SITE, huntAt, huntPearls, huntShare, leviathanHealth, type LeviathanState } from "./leviathan.js";
 import { raftEffect, type Rafts } from "./rafts.js";
 import { techLevel, type Techs } from "./research.js";
+import type { ServerId } from "./servers.js";
 import { HOUR, protoSeconds } from "./time.js";
 import { OK, emptyTroops, refuse, totalTroops, type Buildings, type Check, type Rarity, type Stock, type Troops } from "./types.js";
 
@@ -208,8 +209,9 @@ export type SeaState = {
   shards: Shards;
   fleets: Fleet[];
   world: SeaWorld;
-  /** The city's clock (seconds since 1970, UTC): the Leviathan's hunts follow it. */
+  /** The city's clock (seconds since 1970, UTC): the Leviathan's hunts follow it, at its server's hours. */
   clock: number;
+  server: ServerId;
   leviathan: LeviathanState;
 };
 
@@ -243,7 +245,7 @@ export type Sight = { reach: number; lit: boolean };
 export const CLEAR_SIGHT: Sight = { reach: Infinity, lit: false };
 
 /** What a check before sailing reads. */
-export type SendCheck = Pick<SeaState, "buildings" | "troops" | "veterans" | "fleets" | "techs" | "lead" | "clock" | "leviathan" | "world">;
+export type SendCheck = Pick<SeaState, "buildings" | "troops" | "veterans" | "fleets" | "techs" | "lead" | "clock" | "server" | "leviathan" | "world">;
 
 /**
  * Can you send a fleet there now? In the Mist, only within the Lighthouse's light; the Leviathan only while it is at
@@ -254,7 +256,7 @@ export function canSendFleet(siteId: string, s: SendCheck, sight: Sight = CLEAR_
   const site = seaSite(siteId);
   if (!site || (site.kind !== "camp" && site.kind !== "wreck" && site.kind !== "leviathan")) return refuse("You cannot send a fleet there yet");
   if (site.kind === "leviathan") {
-    const w = huntAt(s.clock);
+    const w = huntAt(s.clock, s.server);
     if (!w.on) return refuse("The Leviathan is not at sea. Wait for it to rise.");
     if (s.leviathan.hunt === w.start && s.leviathan.over) return refuse("The Leviathan has dived. Wait for it to rise again.");
     if (s.clock + travelTime(site, s.techs, s.lead) >= w.end) return refuse("Your fleet would get there after the Leviathan dives");
@@ -502,7 +504,7 @@ export function advanceFleets(state: SeaState, seconds: number): { state: SeaSta
         }
         if (f.kind === "hunt") {
           // It stays until the hunt ends; it turns back if the Leviathan has already dived or been killed.
-          const w = huntAt(s.clock);
+          const w = huntAt(s.clock, s.server);
           const l = s.leviathan;
           const over = !w.on || (l.hunt === w.start && l.over);
           if (!over && l.hunt !== w.start) s = { ...s, leviathan: { level: l.level, hunt: w.start, damage: 0, over: false } };

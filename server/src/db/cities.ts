@@ -1,4 +1,4 @@
-import { CITY_SHAPE, catchUp, migrateCity, newPlayerState, parseState, type MigrationContext, type PlayerState } from "@brinelight/shared";
+import { CITY_SHAPE, DEFAULT_SERVER, catchUp, migrateCity, newPlayerState, parseState, type MigrationContext, type PlayerState } from "@brinelight/shared";
 import { eq } from "drizzle-orm";
 import type { Db } from "./index.js";
 import { cities } from "./schema.js";
@@ -38,11 +38,11 @@ export async function loadCity(db: Db, playerId: string, log?: DbLog): Promise<L
 
 /**
  * Creates the player's city if it is missing: a new city made by the server from the shared starting values,
- * with its clock at `now`, at version 1. Does nothing when the city exists. The only place a city is created for a player who has none
+ * with its clock at `now`, on the server's game server (s1, the only one), at version 1. Does nothing when the city exists. The only place a city is created for a player who has none
  * (GET /city, or an action).
  */
 export async function ensureCity(db: Db, playerId: string, now: Date): Promise<void> {
-  await db.insert(cities).values({ playerId, state: newPlayerState(now.getTime() / 1000), version: 1, shape: CITY_SHAPE, savedAt: now }).onConflictDoNothing();
+  await db.insert(cities).values({ playerId, state: newPlayerState(now.getTime() / 1000, DEFAULT_SERVER), version: 1, shape: CITY_SHAPE, savedAt: now }).onConflictDoNothing();
 }
 
 /** What migrateCity needs of a stored row: its last save, as the city's clock for a city from before the Mist. */

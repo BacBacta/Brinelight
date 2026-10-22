@@ -34,14 +34,14 @@ export function questHtml(state: PlayerState): string {
 
 /** Today's points, and whether a chest can be opened now: for the Tasks button. */
 export function dailyStatus(state: PlayerState): { points: number; chest: boolean } {
-  const today = dailyOn(state.daily, state.clock);
+  const today = dailyOn(state.daily, state.clock, state.server);
   const points = dailyPoints(today);
   return { points, chest: CHESTS.some((c) => points >= c && !today.chests.includes(c)) };
 }
 
 /** The Daily Tasks sheet: today's points, the five chests, and the tasks. Pure: tested without a browser. */
 export function dailyHtml(state: PlayerState): string {
-  const today = dailyOn(state.daily, state.clock);
+  const today = dailyOn(state.daily, state.clock, state.server);
   const points = dailyPoints(today);
   const chests = CHESTS.map((c) => {
     const got = today.chests.includes(c);

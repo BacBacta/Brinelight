@@ -1,15 +1,14 @@
 /**
- * The Leviathan (week 7, task 3). It rises at sea at fixed hours, the same for every city, read on the city's clock:
+ * The Leviathan (week 7, task 3). It rises at sea at fixed hours, the same for every city of a server, read on the city's clock:
  * no randomness. You hunt it alone this week (the alliance's hunt comes with multiplayer): a fleet sails to it with
  * all your troops and veterans, stays until the hunt ends and deals its attack, as against a camp, every hour on
  * site. The Leviathan dives; it never sinks a fleet, so no troop is lost. Rewards are fixed and published, and
  * never anything for sale.
  */
 import { dailyWindow, type MistWindow } from "./mist.js";
+import { calendarOf, type ServerId } from "./servers.js";
 import { HOUR } from "./time.js";
 
-/** The hours a hunt starts, in UTC. Provisional, as the Mist's: hours per server with multiplayer (docs/decisions.md). */
-export const LEVIATHAN_HOURS_UTC = [13, 19] as const;
 /** How long a hunt lasts, in real seconds, unless the Leviathan is killed sooner. */
 export const HUNT_DURATION = 2 * HOUR;
 /** The Leviathan's health at level 1, and how much each level multiplies it. */
@@ -25,8 +24,8 @@ export const HUNT_XP = 30;
 /** Its place on the sea map (`SEA_SITES`). */
 export const LEVIATHAN_SITE = "leviathan";
 
-/** The hunt at `clock`: the one going on (`start` ≤ clock < `end`), or else the next one. */
-export const huntAt = (clock: number): MistWindow => dailyWindow(clock, LEVIATHAN_HOURS_UTC, HUNT_DURATION);
+/** The hunt at `clock` on a server: the one going on (`start` ≤ clock < `end`), or else the next one (servers.ts). */
+export const huntAt = (clock: number, server: ServerId): MistWindow => dailyWindow(clock, calendarOf(server).huntHours, HUNT_DURATION);
 
 /** The Leviathan's health at a level: 4,000, then ×1.5 a level. */
 export const leviathanHealth = (level: number): number => Math.round(LEVIATHAN_HEALTH * LEVIATHAN_GROWTH ** (level - 1));
@@ -47,7 +46,7 @@ export const huntShare = (damage: number, level: number): number => Math.min(1, 
 export const huntPearls = (share: number): number => Math.round(HUNT_PEARLS + HUNT_SHARE_PEARLS * Math.min(1, Math.max(0, share)));
 
 /** Is the Leviathan at sea for your city: a hunt going on, and not yet killed or dived for you? */
-export function leviathanUp(clock: number, l: LeviathanState): boolean {
-  const w = huntAt(clock);
+export function leviathanUp(clock: number, server: ServerId, l: LeviathanState): boolean {
+  const w = huntAt(clock, server);
   return w.on && !(l.hunt === w.start && l.over);
 }

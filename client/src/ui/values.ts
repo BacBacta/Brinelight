@@ -45,7 +45,7 @@ export const mistPreview = (search: string): boolean => new URLSearchParams(sear
 
 /** The sea's mood the game shows, read by the banner and the 3D view alike: the Mist when the rules say it is on. */
 export function seaMood(state: PlayerState, preview = false): SeaMood {
-  return preview || mistAt(state.clock).on ? "mist" : "calm";
+  return preview || mistAt(state.clock, state.server).on ? "mist" : "calm";
 }
 
 /** A time from now, rounded up to the minute: "52 min", "3 h 05", then "3 d 04 h" from 48 hours. */
@@ -63,8 +63,8 @@ export function inMinutes(seconds: number): string {
  * With `?mist` and no Mist on, how long your oil lasts stoked, as the preview of week 6.
  */
 export function mistText(state: PlayerState, preview = false): string {
-  const w = mistAt(state.clock);
-  if (w.on) return `Mist · ${inMinutes(w.end - state.clock)} left · ${isLit(state.clock, state.mist) ? "Lighthouse stoked" : "Lighthouse dark"}`;
+  const w = mistAt(state.clock, state.server);
+  if (w.on) return `Mist · ${inMinutes(w.end - state.clock)} left · ${isLit(state.clock, state.server, state.mist) ? "Lighthouse stoked" : "Lighthouse dark"}`;
   const autonomy = oilAutonomy(state, state.stock.oil);
   if (preview) return Number.isFinite(autonomy) ? `Mist · oil for ${inMinutes(autonomy)}` : "Mist · your oil holds";
   const until = `Mist in ${inMinutes(w.start - state.clock)}`;
@@ -74,9 +74,9 @@ export function mistText(state: PlayerState, preview = false): string {
 
 /** The Leviathan's label on the sea map, from the rules: how long its hunt has left, or when it rises next. */
 export function leviathanText(state: PlayerState): string {
-  const w = huntAt(state.clock);
-  if (leviathanUp(state.clock, state.leviathan)) return `Leviathan · ${inMinutes(w.end - state.clock)} left`;
-  const next = w.on ? huntAt(w.end).start : w.start;
+  const w = huntAt(state.clock, state.server);
+  if (leviathanUp(state.clock, state.server, state.leviathan)) return `Leviathan · ${inMinutes(w.end - state.clock)} left`;
+  const next = w.on ? huntAt(w.end, state.server).start : w.start;
   return `Leviathan in ${inMinutes(next - state.clock)}`;
 }
 

@@ -35,7 +35,7 @@ describe("the current objective", () => {
 describe("the daily tasks", () => {
   const busy = (chests: (20 | 40 | 60 | 80 | 100)[] = []): PlayerState => ({
     ...city(),
-    daily: { ...startingDaily(NINE), counts: { upgrades: 3, gathers: 1, camps: 2, trains: 0, mists: 1, research: 0 }, chests },
+    daily: { ...startingDaily(NINE, "s1"), counts: { upgrades: 3, gathers: 1, camps: 2, trains: 0, mists: 1, research: 0 }, chests },
   });
 
   it("the points, the five chests, the tasks with their progress", () => {

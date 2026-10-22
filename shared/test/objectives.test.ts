@@ -146,7 +146,7 @@ describe("the daily tasks", () => {
   });
 
   it("chests: once a day each, with enough points; no resource for the Lighthouse", () => {
-    const s = { ...city(), daily: { ...startingDaily(at(9)), counts: { upgrades: 3, gathers: 3, camps: 0, trains: 1, mists: 1, research: 0 } } };
+    const s = { ...city(), daily: { ...startingDaily(at(9), "s1"), counts: { upgrades: 3, gathers: 3, camps: 0, trains: 1, mists: 1, research: 0 } } };
     expect(dailyPoints(s.daily)).toBe(80);
     const opened = ok(openChest(s, 20));
     expect(opened.stock).toEqual({ ...s.stock, rope: s.stock.rope + 1 });
@@ -166,7 +166,7 @@ describe("the daily tasks", () => {
 
   it("chests 40 and 100: experience and a shard for your lead captain, none with no lead", () => {
     const full = { upgrades: 3, gathers: 3, camps: 2, trains: 1, mists: 1, research: 1 };
-    const s = { ...city(), daily: { ...startingDaily(at(9)), counts: full } };
+    const s = { ...city(), daily: { ...startingDaily(at(9), "s1"), counts: full } };
     expect(s.lead).toBe("tom");
     const xp = ok(openChest(s, 40));
     expect(xp.captains.tom).toEqual({ ...s.captains.tom!, xp: s.captains.tom!.xp + 40 });
@@ -186,17 +186,17 @@ describe("the daily tasks", () => {
   });
 
   it("everything resets at 00:00 UTC, an advance across midnight included", () => {
-    const d = countDaily(startingDaily(at(23)), at(23), "upgrades", 3);
-    expect(dailyOn(d, at(23, 59))).toBe(d);
-    expect(dailyOn(d, at(24))).toEqual(startingDaily(at(24)));
+    const d = countDaily(startingDaily(at(23), "s1"), at(23), "s1", "upgrades", 3);
+    expect(dailyOn(d, at(23, 59), "s1")).toBe(d);
+    expect(dailyOn(d, at(24), "s1")).toEqual(startingDaily(at(24), "s1"));
     // A chest opened yesterday can be opened again today, with today's points.
     const s: PlayerState = { ...city(at(23)), daily: { ...d, counts: { ...d.counts, gathers: 3 }, chests: [20, 40] } };
-    expect(canOpenChest(s.daily, at(23, 30), 20)).toEqual({ ok: false, reason: "You already opened this chest today" });
-    expect(canOpenChest(s.daily, at(24, 30), 20)).toEqual({ ok: false, reason: "Not enough points yet" });
+    expect(canOpenChest(s.daily, at(23, 30), "s1", 20)).toEqual({ ok: false, reason: "You already opened this chest today" });
+    expect(canOpenChest(s.daily, at(24, 30), "s1", 20)).toEqual({ ok: false, reason: "Not enough points yet" });
     // An advance from 23:00 to 01:00: yesterday's counts are gone, and the day is the new one.
     const after = advance(s, 2 * HOUR);
-    expect(after.daily).toEqual(startingDaily(at(25)));
-    expect(dayOf(after.clock)).toBe(dayOf(MIDNIGHT) + 1);
+    expect(after.daily).toEqual(startingDaily(at(25), "s1"));
+    expect(dayOf(after.clock, "s1")).toBe(dayOf(MIDNIGHT, "s1") + 1);
     // One long advance equals many short ones, across midnight and the Mist of 04:00 (it lifts at 06:00).
     let many = s;
     for (let i = 0; i < 60; i++) many = advance(many, 8 * 60);
@@ -204,7 +204,7 @@ describe("the daily tasks", () => {
     expect(many.daily).toEqual(once.daily);
     expect(many.clock).toBe(once.clock);
     expect(once.daily.counts.mists).toBe(1);
-    expect(once.daily.day).toBe(dayOf(at(31)));
+    expect(once.daily.day).toBe(dayOf(at(31), "s1"));
     expect(DAY).toBe(24 * HOUR);
   });
 });
@@ -214,7 +214,7 @@ describe("in the city", () => {
     const s = newPlayerState(at(9));
     expect(s.objective).toBe(0);
     expect(s.progress).toEqual({ gathers: 0, trained: 0, camps: 0 });
-    expect(s.daily).toEqual(startingDaily(at(9)));
+    expect(s.daily).toEqual(startingDaily(at(9), "s1"));
   });
 
   it("actions: claimObjective has no field, claimChest only a chest that exists", () => {
@@ -226,14 +226,14 @@ describe("in the city", () => {
   });
 
   it("parseState keeps them, and refuses a day from the future, a chest twice or beyond the day's points", () => {
-    const s: PlayerState = { ...city(at(9)), objective: 3, progress: { gathers: 2, trained: 1, camps: 4 }, daily: { ...startingDaily(at(9)), counts: { upgrades: 3, gathers: 0, camps: 0, trains: 1, mists: 0, research: 0 }, chests: [20, 40] } };
+    const s: PlayerState = { ...city(at(9)), objective: 3, progress: { gathers: 2, trained: 1, camps: 4 }, daily: { ...startingDaily(at(9), "s1"), counts: { upgrades: 3, gathers: 0, camps: 0, trains: 1, mists: 0, research: 0 }, chests: [20, 40] } };
     const json = JSON.parse(JSON.stringify(s));
     expect(parseState(json)).toEqual(s);
     for (const bad of [
       { objective: 19 },
       { objective: -1 },
       { progress: { gathers: 1, trained: 0 } },
-      { daily: { ...json.daily, day: dayOf(at(9)) + 1 } },
+      { daily: { ...json.daily, day: dayOf(at(9), "s1") + 1 } },
       { daily: { ...json.daily, chests: [20, 20] } },
       { daily: { ...json.daily, chests: [60] } },
       { daily: { ...json.daily, chests: [30] } },

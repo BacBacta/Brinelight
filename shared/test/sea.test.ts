@@ -42,6 +42,7 @@ const start = (): SeaState => ({
   fleets: [],
   world: startingSeaWorld(),
   clock: 0,
+  server: "s1",
   leviathan: startingLeviathan(),
 });
 

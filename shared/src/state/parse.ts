@@ -1,6 +1,7 @@
 import { BUILDERS, BUILDING_IDS, LIGHTHOUSE_MAX, type UpgradeJob } from "../rules/buildings.js";
 import { CAPTAINS, CAPTAIN_MAX_LEVEL, CAPTAIN_MAX_STARS, xpNeeded, type CaptainId } from "../rules/captains.js";
 import { CHESTS, DAILY_TASKS, dailyPoints, dayOf, type DailyState } from "../rules/daily.js";
+import { isServerId, type ServerId } from "../rules/servers.js";
 import type { HealingJob } from "../rules/healing.js";
 import { HUNT_DURATION, type LeviathanState } from "../rules/leviathan.js";
 import { OBJECTIVES, type Progress } from "../rules/objectives.js";
@@ -90,8 +91,8 @@ const isProgress = (p: unknown): p is Progress =>
  * A day of daily tasks: a day no later than the city's clock, a whole count for each task, and the chests opened that
  * day, each once and none beyond the day's points.
  */
-function isDaily(d: unknown, clock: number): d is DailyState {
-  if (!isObj(d) || Object.keys(d).sort().join() !== "chests,counts,day" || !isWhole(d.day, 0, dayOf(clock))) return false;
+function isDaily(d: unknown, clock: number, server: ServerId): d is DailyState {
+  if (!isObj(d) || Object.keys(d).sort().join() !== "chests,counts,day" || !isWhole(d.day, 0, dayOf(clock, server))) return false;
   const counts = d.counts;
   if (!isObj(counts) || Object.keys(counts).sort().join() !== DAILY_TASKS.map((t) => t.id).sort().join() || !Object.values(counts).every((v) => isWhole(v))) return false;
   const chests = d.chests;
@@ -345,11 +346,12 @@ export function parseState(raw: unknown): PlayerState | null {
       !isWhole(s.reportSeq, 0, MAX_REPORT_SEQ) ||
       !isNum(s.clock) ||
       s.clock < 0 ||
+      !isServerId(s.server) ||
       !isMist(s.mist) ||
       !isLeviathan(s.leviathan) ||
       !isWhole(s.objective, 0, OBJECTIVES.length) ||
       !isProgress(s.progress) ||
-      !isDaily(s.daily, s.clock)
+      !isDaily(s.daily, s.clock, s.server)
     ) {
       return null;
     }
@@ -393,6 +395,7 @@ export function parseState(raw: unknown): PlayerState | null {
       reports: s.reports.map((r) => ({ ...r })),
       reportSeq: s.reportSeq,
       clock: s.clock,
+      server: s.server,
       mist: { ...(s.mist as MistState) },
       leviathan: { ...(s.leviathan as LeviathanState) },
       objective: s.objective,

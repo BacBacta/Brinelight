@@ -36,7 +36,7 @@ export function createSeaLabels(root: HTMLElement, scene: SceneHandle) {
       for (const { s, el } of els) {
         el.classList.toggle("hid", (s.kind === "camp" || s.kind === "wreck") && distance(s) > reach);
         const text = s.kind === "leviathan" ? leviathanText(state) : siteLabel(s.id, state);
-        if (s.kind === "leviathan") el.classList.toggle("up", leviathanUp(state.clock, state.leviathan));
+        if (s.kind === "leviathan") el.classList.toggle("up", leviathanUp(state.clock, state.server, state.leviathan));
         if (el.textContent !== text) el.textContent = text;
         if (s.kind === "camp") el.dataset.d = odds(attackInput(state, pirateCamp(state.world.camps[s.id] ?? s.level ?? 1)));
       }

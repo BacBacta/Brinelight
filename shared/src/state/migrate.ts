@@ -6,6 +6,7 @@ import { startingDaily } from "../rules/daily.js";
 import { startingLeviathan } from "../rules/leviathan.js";
 import { startingProgress } from "../rules/objectives.js";
 import { startingMist } from "../rules/mist.js";
+import { DEFAULT_SERVER } from "../rules/servers.js";
 import { emptyTroops } from "../rules/types.js";
 import { parseState } from "./parse.js";
 import type { PlayerState } from "./types.js";
@@ -14,8 +15,9 @@ import type { PlayerState } from "./types.js";
  * The current shape of a city. Shape 4: the city of week 4. Shape 5: week 5 (training, healing, veterans, shards).
  * Shape 6: week 7, the Mist (the city's clock, the order to stoke). Shape 7: week 7, the Leviathan (its level, the hunt).
  * Shape 8: week 7, the objectives and the daily tasks. Shape 9: week 7, the wrecks that wait before they fill again.
+ * Shape 10: week 8, the city's server (its Mist and Leviathan hours).
  */
-export const CITY_SHAPE = 9;
+export const CITY_SHAPE = 10;
 /** The oldest shape a stored city can have: nothing was stored before week 4. */
 export const MIN_CITY_SHAPE = 4;
 
@@ -57,11 +59,13 @@ const STEPS: Record<number, (s: Raw, ctx: MigrationContext) => Raw> = {
     const out = { ...s };
     if (!("objective" in out)) out.objective = 0;
     if (!("progress" in out)) out.progress = startingProgress();
-    if (!("daily" in out)) out.daily = startingDaily(typeof out.clock === "number" ? out.clock : ctx.clock);
+    if (!("daily" in out)) out.daily = startingDaily(typeof out.clock === "number" ? out.clock : ctx.clock, DEFAULT_SERVER);
     return out;
   },
   // Week 7: no wreck waits to fill again (until now, an emptied wreck filled again at once).
   8: (s) => (isObj(s.world) && !("refill" in s.world) ? { ...s, world: { ...s.world, refill: {} } } : s),
+  // Week 8: every city stored before belongs to the only server, s1.
+  9: (s) => ("server" in s ? s : { ...s, server: DEFAULT_SERVER }),
 };
 
 /** Adds the fields of every step from `shape` to the current shape. Does not check the city: parseState does. */

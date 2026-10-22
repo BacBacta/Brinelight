@@ -40,7 +40,7 @@ export function createSea(
   scene.onFrame((now, view) => {
     if (view !== "sea") return;
     const state = game.state();
-    map.setLeviathan(leviathanUp(state.clock, state.leviathan));
+    map.setLeviathan(leviathanUp(state.clock, state.server, state.leviathan));
     map.animate(now, scene.beams);
     marks.place(state.fleets, now);
     labels.place();
