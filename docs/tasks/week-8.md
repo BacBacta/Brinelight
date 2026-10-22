@@ -783,7 +783,7 @@ How it is tested: the checklist above. Each step has its expected output, and Cl
 
 ## Task 4 · How many players one CX23 holds (the load test)
 
-**The script is done (`9db6892`); its run on the CX23 waits for task 3.**
+**Done on 22 October 2026, on the CX23 in production before it opened: 100, 250, 500 and 1,000 players, no error, the processor at 23 % and a p99 of 17 ms on the server at 1,000. The CX23 stays. Results and the steps as done in `docs/perf.md`.** The script itself was `9db6892`.
 
 What it does:
 
