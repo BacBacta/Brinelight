@@ -27,6 +27,11 @@ export type FakeSolana = {
   refuse: string | null;
   /** The balances, in lamports, by address. */
   balances: Map<string, number>;
+  /**
+   * False: a node without history. It knows the statuses of the last 300 blocks only (as Solana's status cache), and
+   * refuses getTransaction with the error a real one gives.
+   */
+  history: boolean;
   /** Moves the chain on by `n` blocks; landed transactions older than 32 blocks become finalized. */
   advance(n: number): void;
   /** Finalizes every landed transaction at once. */
@@ -50,6 +55,7 @@ export function fakeSolana(cluster: Cluster = "devnet", options: { genesis?: str
     drop: false,
     refuse: null,
     balances: new Map(),
+    history: true,
     advance(n) {
       height += n;
       for (const t of state.landed) if (t.slot <= height - 32) t.finalized = true;
@@ -101,12 +107,13 @@ export function fakeSolana(cluster: Cluster = "devnet", options: { genesis?: str
           return ok({
             context: { slot: height },
             value: sigs.map((s) => {
-              const t = state.landed.find((l) => l.signature === s);
+              const t = state.landed.find((l) => l.signature === s && (state.history || l.slot > height - 300));
               return t ? { slot: t.slot, confirmations: t.finalized ? null : 1, err: null, confirmationStatus: t.finalized ? "finalized" : "confirmed" } : null;
             }),
           });
         }
         case "getTransaction": {
+          if (!state.history) return fail(-32011, "Transaction history is not available from this node");
           const t = state.landed.find((l) => l.signature === p[0]);
           if (!t || !t.finalized) return ok(null);
           return ok({ slot: t.slot, blockTime: 0, transaction: [Buffer.from(t.bytes).toString("base64"), "base64"], meta: { err: null, fee: 5000 } });

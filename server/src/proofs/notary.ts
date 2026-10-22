@@ -1,13 +1,13 @@
 /**
  * What the notary does on Solana (week 9, task 3; protected): build and sign a seal's transaction, send it, follow it
- * until it is finalized or can no longer land, read it back from the chain, and know its own balance. The key signs
- * only the Memo transaction of `transaction.ts`; nothing else is ever signed.
+ * until it is finalized or can no longer land, read it back from the chain, and know its own balance. The key can sign
+ * only the Memo transaction of `transaction.ts` (`NotaryKey.signSeal`): nothing else can be signed with it.
  */
 import { verifyEd25519 } from "../auth/ed25519.js";
 import { base58Decode } from "../auth/base58.js";
 import type { NotaryKey } from "./key.js";
 import type { Rpc } from "./rpc.js";
-import { memoMessage, readMemoTransaction, signedTransaction, transactionId } from "./transaction.js";
+import { readMemoTransaction, transactionId } from "./transaction.js";
 
 /** Lamports in one SOL. */
 export const LAMPORTS_PER_SOL = 1_000_000_000;
@@ -29,9 +29,7 @@ export async function prepareSeal(rpc: Rpc, key: NotaryKey, memo: string): Promi
   const latest = await rpc.call<{ value: { blockhash: string; lastValidBlockHeight: number } }>("getLatestBlockhash", [{ commitment: "finalized" }]);
   const blockhash = base58Decode(latest.value.blockhash);
   if (!blockhash || blockhash.length !== 32 || !Number.isSafeInteger(latest.value.lastValidBlockHeight)) throw new Error("The network gave a blockhash that cannot be read");
-  const message = memoMessage(key.publicKey, blockhash, memo);
-  const signature = key.sign(message);
-  const tx = signedTransaction(message, signature);
+  const { signature, tx } = key.signSeal(blockhash, memo);
   return { signature: transactionId(signature), tx: Buffer.from(tx).toString("base64"), blockhash: latest.value.blockhash, lastValidBlockHeight: latest.value.lastValidBlockHeight };
 }
 
@@ -46,15 +44,24 @@ export async function sendSeal(rpc: Rpc, txBase64: string): Promise<string> {
 /** Where a sent transaction is: finalized, still on its way, failed on chain, or never landing (its blockhash is too old). */
 export type SealState = "finalized" | "pending" | "failed" | "expired";
 
+/**
+ * A transaction is `expired` only when three things hold: the node does not know its signature, the finalized chain is
+ * well past its blockhash (so it can never land), and the node's history, asked directly, does not hold it either. A
+ * node without history refuses that last question with an error, never a "not found": nothing is then given up on a
+ * seal that may have landed. `failed` is believed only once finalized: an error on a minority fork is not the end.
+ */
 export async function sealState(rpc: Rpc, signature: string, lastValidBlockHeight: number): Promise<SealState> {
   const statuses = await rpc.call<{ value: ({ confirmationStatus?: string; err: unknown } | null)[] }>("getSignatureStatuses", [[signature], { searchTransactionHistory: true }]);
   const s = statuses.value[0] ?? null;
   if (s) {
-    if (s.err) return "failed";
-    return s.confirmationStatus === "finalized" ? "finalized" : "pending";
+    if (s.confirmationStatus !== "finalized") return "pending";
+    return s.err ? "failed" : "finalized";
   }
   const height = await rpc.call<number>("getBlockHeight", [{ commitment: "finalized" }]);
-  return height > lastValidBlockHeight + EXPIRY_MARGIN_BLOCKS ? "expired" : "pending";
+  if (height <= lastValidBlockHeight + EXPIRY_MARGIN_BLOCKS) return "pending";
+  const got = await rpc.call<{ meta: { err: unknown } | null } | null>("getTransaction", [signature, { encoding: "base64", commitment: "finalized", maxSupportedTransactionVersion: 0 }]);
+  if (got) return got.meta?.err ? "failed" : "finalized";
+  return "expired";
 }
 
 /** A finalized seal as the chain holds it: its signer and memo, read from the transaction's own bytes. */

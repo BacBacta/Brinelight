@@ -13,6 +13,7 @@ import { base58Decode, base58Encode } from "../src/auth/base58.js";
 import { verifyEd25519 } from "../src/auth/ed25519.js";
 import { loadNotary } from "../src/proofs/key.js";
 import { keygenOutput, makeNotaryKey } from "../src/proofs/keygen.js";
+import { readMemoTransaction } from "../src/proofs/transaction.js";
 
 const run = promisify(execFile);
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -68,12 +69,16 @@ describe("the notary's key in the environment", () => {
     }
   });
 
-  it("signs like the key it was made from, and shows nothing of the key when printed", () => {
+  it("signs a seal, and only a seal, like the key it was made from, and shows nothing of the key when printed", () => {
     const k = makeNotaryKey();
     const loaded = loadNotary({ SOLANA_CLUSTER: "devnet", NOTARY_KEY_DEVNET: k.secret });
     if (loaded.status !== "on") throw new Error(loaded.reason);
-    const message = new TextEncoder().encode("brinelight proof v1 2026-10-22 00");
-    expect(verifyEd25519(base58Decode(k.address)!, message, loaded.key.sign(message))).toBe(true);
+    const sealed = loaded.key.signSeal(new Uint8Array(32).fill(9), "brinelight proof v1 2026-10-22 00");
+    const tx = readMemoTransaction(sealed.tx)!;
+    expect([tx.signer, tx.memo]).toEqual([k.address, "brinelight proof v1 2026-10-22 00"]);
+    expect(verifyEd25519(base58Decode(k.address)!, tx.message, sealed.signature)).toBe(true);
+    // It signs nothing else: the key has no other way out.
+    expect(Object.keys(loaded.key).sort()).toEqual(["address", "cluster", "publicKey", "signSeal"]);
     const seed = Buffer.from(base58Decode(k.secret)!.subarray(0, 32));
     for (const shown of [JSON.stringify(loaded), inspect(loaded, { depth: 10, showHidden: true }), String(loaded.key)]) {
       expect(shown).not.toContain(k.secret);
@@ -165,6 +170,30 @@ describe("deploy/notary-key.sh", () => {
     expect(envOf(s).match(/^NOTARY_KEY_DEVNET=/gm)).toHaveLength(1);
     expect(envOf(s)).toMatch(/^NOTARY_KEY_DEVNET=[1-9A-HJ-NP-Za-km-z]{80,90}$/m);
     expect(envOf(s)).toContain("POSTGRES_PASSWORD=abc\n");
+  }, 30_000);
+
+  it("a last line without its end of line, or a file of the empty line alone: the key gets a line of its own", async () => {
+    const glued = setUp("POSTGRES_PASSWORD=abc");
+    expect((await go(glued, "devnet")).code).toBe(0);
+    expect(envOf(glued)).toMatch(/^POSTGRES_PASSWORD=abc\nNOTARY_KEY_DEVNET=[1-9A-HJ-NP-Za-km-z]{80,90}\n$/);
+    const alone = setUp("NOTARY_KEY_DEVNET=\n");
+    expect((await go(alone, "devnet")).code).toBe(0);
+    expect(envOf(alone)).toMatch(/^NOTARY_KEY_DEVNET=[1-9A-HJ-NP-Za-km-z]{80,90}\n$/);
+    expect(statSync(join(alone.dir, ".env")).mode & 0o777).toBe(0o600);
+  }, 30_000);
+
+  it("run with bash -x, it still never shows the key", async () => {
+    const s = setUp("POSTGRES_PASSWORD=abc\n");
+    let out = "";
+    try {
+      const r = await run("bash", ["-x", s.script, "devnet"], { env: s.env });
+      out = r.stdout + r.stderr;
+    } catch (e) {
+      const err = e as { stdout: string; stderr: string };
+      out = err.stdout + err.stderr;
+    }
+    const secret = envOf(s).match(/^NOTARY_KEY_DEVNET=(.+)$/m)![1]!;
+    expect(out).not.toContain(secret);
   }, 30_000);
 
   it("writes nothing when something is wrong", async () => {

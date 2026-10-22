@@ -122,7 +122,7 @@ It moves no SOL (only the fee is paid: 5,000 lamports, no priority fee), creates
 1. Sur le serveur, `./notary-key.sh devnet` a affiché une adresse, et rien d'autre de long ni de secret.
 2. Le relancer répond « A devnet key is already in deploy/.env: nothing was changed. »
 3. `ls -l ~/brinelight/deploy/.env` commence par `-rw-------` (lisible par toi seul).
-4. Tu n'as jamais ouvert `.env` pour regarder la clé, ni copié ce fichier hors du serveur, ni collé son contenu nulle part (ni dans une conversation, ni dans GitHub).
+4. Tu n'as jamais ouvert `.env` pour regarder la clé, ni copié ce fichier hors du serveur, ni collé son contenu nulle part (ni dans une conversation, ni dans GitHub). Tu n'as jamais collé non plus la sortie de `docker inspect` ou de `docker compose config` : elles montrent la clé.
 5. Dans GitHub, une recherche de `NOTARY_KEY_DEVNET=` dans le dépôt ne trouve qu'une ligne vide (dans `deploy/.env.example`), jamais une clé.
 
 **Le réseau**

@@ -103,7 +103,7 @@ How it is tested:
 - the independent review, then once, by hand, on devnet from the server: a real transaction, its signature and its link on `explorer.solana.com` sent to the owner.
 
 **Done (22 October), owner's go of 22 October for tasks 3 to 5 on devnet.**
-- `deploy/notary-key.sh devnet|mainnet` runs `server/src/proofs/keygen.ts` in the server's container (Node is not on the machine). The two lines it prints are read into a bash variable, never onto the screen, with no other program and no temporary file. The key goes into `deploy/.env` (mode 600) as `NOTARY_KEY_DEVNET` or `NOTARY_KEY_MAINNET`. Only the address is shown. An existing key is never replaced, and nothing is written when anything fails. `keygen.ts` refuses to print to a terminal.
+- `deploy/notary-key.sh devnet|mainnet` runs `server/src/proofs/keygen.ts` in a throwaway container of the server's image, with no network and no Docker log (Node is not on the machine). The two lines it prints are read into a bash variable, never onto the screen, with no other program and no temporary file. The key goes into `deploy/.env` (mode 600) as `NOTARY_KEY_DEVNET` or `NOTARY_KEY_MAINNET`. Only the address is shown. An existing key is never replaced, and nothing is written when anything fails. `keygen.ts` refuses to print to a terminal.
 - `server/src/proofs/key.ts`: `SOLANA_CLUSTER` picks the only variable read. Both key variables leave the environment as soon as they are read. The same key on both networks is refused. A malformed key turns the notary off, with a reason that names the variable, never its value. The key lives only in a Node key object, and printing the notary shows its network and address.
 - `transaction.ts`: the Memo transaction, byte by byte. It is identical, to the byte, to the one Solana's own SDK builds (solders 0.27.1, run once outside the repository: `server/test/fixtures/memo-tx-solders.json`). It follows the field table of Solana's documentation and RFC 8032's signature. A real devnet node simulated it and verified its signature (`AccountNotFound` only, as the throwaway key had no SOL). One byte changed in the signature or the memo gives `SignatureFailure`. The devnet faucet refused this session's address (its daily limit), so the first real transaction is the server's.
 - `rpc.ts`: the public endpoints, 4 tries 1, 3 and 9 s apart on the next endpoint. Each endpoint's genesis hash is checked before use, and one of another network is never used again. Errors name the endpoint's host only.
@@ -167,9 +167,31 @@ How it is tested:
 - `npm run proof:check -- <file>` (`tools/proof/`).
 - Tests: `client/test/proofs.test.ts`, `tools/proof/check.test.ts`, `shared/test/proofs.test.ts`, and one e2e: Lighthouse 5 recorded, sealed by the harness's fake notary, shown, checked, saved, and the file holds against the chain. Captures `shot-profile-proofs-412` and `-360` are in the e2e artifact, not references.
 
+## The independent review of tasks 3 and 4 (22 October)
+
+A separate agent, which had not written the code, read it to find flaws: the key leaking, the wrong network, a seal sent twice, the money spent, the transaction's exact content. It ran the tests and a scratch test of its own. What it found, and what was done:
+
+| # | Finding | Done |
+| --- | --- | --- |
+| H1 (high) | A seal that landed could be judged lost by an endpoint without transaction history, and then sealed again with no limit, every 5 minutes. Its own test showed 6 transactions for one night. | Fixed. A seal is given up only if the node's history, asked directly, confirms the transaction is not there. A node without history answers with an error, and nothing is given up. Lost seals now count in the cap of 3 tries a night. Tested with a fake node without history: one transaction. |
+| M1 | The key went through Docker's log file on disk while it was made. | Fixed. The key is made with `docker run --log-driver none --network none` on the server's image: no log, no network, no setting from `.env` in that container. |
+| M2 | Once the server runs, the key is in the container's environment: `docker inspect`, `docker compose config`, `/proc/1/environ`. | **A question for the owner.** It follows the owner's choice of `deploy/.env`. Docker's secrets would mount it as a file instead, out of the container's environment. Warned in `docs/deploy.md` and in the checklist. |
+| M3 | Moving from devnet to mainnet would leave the milestones sealed on devnet unsealed on mainnet, and `/health` blind to it. | `/health` now counts as waiting a milestone sealed on another network. Sealing them again on mainnet, with new salts, is task 6's job (below). |
+| M4 | A player deleted would break the proofs of the others in the same seal (not reachable yet: there is no deletion). | Fixed. Each seal keeps its list of leaves (`seals.leaf_hashes`), and `GET /proofs` builds the paths from it. Tested. |
+| L1 | Giving up or finalizing a seal was not guarded against a second server process. | Fixed. Both act only on a seal still `sent`. |
+| L2 | A failure was believed before it was finalized. | Fixed: only once finalized. |
+| L3 | One seal that could not be followed stopped all sealing. | Fixed. Each seal is followed on its own, and an error is logged. |
+| L4 | Pitfalls in the script: the file rewritten in place, `chmod` after the key, a missing last end of line, `.env` holding only the empty line, `bash -x`. | Fixed and tested, each one. |
+| L5 | `/health` and `GET /proofs` could load the database. | `/health` asks the notary's state at most once a minute. `GET /proofs` reads the leaves from the seal, with no query per leaf. |
+| Note | The key could sign any bytes. | Fixed. It can sign only a seal (`NotaryKey.signSeal`): it builds the Memo transaction itself. |
+
+Found sound by the review: the transaction's bytes; the wrong network made impossible; no key in `ps`, the shell's history, the terminal, logs, errors, the database or its backups; one seal a night on the normal paths; SQL with parameters only; `GET /proofs` limited to your own rows; nothing personal in the memo; the seal on real UTC time.
+
 ## Task 6 · On mainnet
 
 What it does:
+
+- **The milestones sealed on devnet, sealed again on mainnet:** a migration gives each a new salt and a new leaf, and takes it out of its devnet seal. The first mainnet night seals them all. The devnet seals stay in the table, as a record.
 
 - **Before:** the owner goes through the checklist in plain French of `docs/proofs.md` (task 3 and 4's review), and says yes.
 - **Then:**

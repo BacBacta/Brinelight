@@ -15,7 +15,7 @@ import { loadNotary, type NotaryKey } from "../src/proofs/key.js";
 import { makeNotaryKey } from "../src/proofs/keygen.js";
 import { leafHash, merkleRoot } from "../src/proofs/merkle.js";
 import { createRpc } from "../src/proofs/rpc.js";
-import { MAX_FAILED_A_NIGHT, createNotaryService, nightAt, notaryHealth, type SealLog } from "../src/proofs/seal.js";
+import { MAX_TRIES_A_NIGHT, createNotaryService, nightAt, notaryHealth, type SealLog } from "../src/proofs/seal.js";
 import { fakeSolana, type FakeSolana } from "./fakeSolana.js";
 import { checkTestDatabaseUrl } from "./testDatabase.js";
 
@@ -221,10 +221,10 @@ describe("the nightly seal", () => {
     expect(await notaryHealth(db, service, at("2026-10-23T00:20:00Z"))).toBe("low");
   });
 
-  it(`after ${MAX_FAILED_A_NIGHT} failed seals a night, it waits for the next night`, async () => {
+  it(`after ${MAX_TRIES_A_NIGHT} tries a night that did not end finalized, it waits for the next night`, async () => {
     const { chain, service } = setUp();
     await milestones([at("2026-10-22T10:00:00Z")]);
-    for (let i = 0; i < MAX_FAILED_A_NIGHT; i++) {
+    for (let i = 0; i < MAX_TRIES_A_NIGHT; i++) {
       expect(await service.tick(at("2026-10-23T00:15:00Z"))).toBe("sent");
       // The seal landed with an error on chain.
       await db.update(schema.seals).set({ status: "failed" }).where(eq(schema.seals.status, "sent"));
@@ -233,7 +233,89 @@ describe("the nightly seal", () => {
       chain.advance(1);
     }
     expect(await service.tick(at("2026-10-23T00:20:00Z"))).toBe("gave up");
-    expect(chain.landed).toHaveLength(MAX_FAILED_A_NIGHT);
+    expect(chain.landed).toHaveLength(MAX_TRIES_A_NIGHT);
+  });
+});
+
+describe("what the independent review found (week 9)", () => {
+  it("a seal that landed is never given up because a node has no history: the night is sealed once", async () => {
+    const { chain, service } = setUp();
+    await milestones([at("2026-10-22T10:00:00Z")]);
+    chain.history = false;
+    expect(await service.tick(at("2026-10-23T00:15:00Z"))).toBe("sent");
+    // Five minutes later the signature has left the node's recent statuses, and the chain is far past its blockhash.
+    chain.advance(750);
+    const log = logs();
+    for (const t of ["00:20", "00:25", "00:30", "01:30", "06:00"]) {
+      expect(await service.tick(at(`2026-10-23T${t}:00Z`), log)).toBe("waiting");
+      chain.advance(750);
+    }
+    expect(chain.landed).toHaveLength(1);
+    expect((await allSeals()).map((s) => s.status)).toEqual(["sent"]);
+    expect(log.lines.some((l) => l.startsWith("The seal could not be followed"))).toBe(true);
+    // A node with history: finalized, still one transaction.
+    chain.history = true;
+    expect(await service.tick(at("2026-10-23T06:05:00Z"))).toBe("done");
+    expect(chain.landed).toHaveLength(1);
+  });
+
+  it(`lost transactions count too: at most ${MAX_TRIES_A_NIGHT} a night`, async () => {
+    const { chain, service } = setUp();
+    await milestones([at("2026-10-22T10:00:00Z")]);
+    chain.drop = true;
+    const outcomes: string[] = [];
+    for (let i = 0; i < 6; i++) {
+      outcomes.push(await service.tick(at(`2026-10-23T0${i}:20:00Z`)));
+      chain.advance(400);
+    }
+    expect(outcomes.filter((o) => o === "sent")).toHaveLength(MAX_TRIES_A_NIGHT);
+    expect(outcomes.at(-1)).toBe("gave up");
+    expect(chain.sent).toBeGreaterThanOrEqual(MAX_TRIES_A_NIGHT);
+  });
+
+  it("a seal another process finalized first is left as it is", async () => {
+    const { chain, service, key, rpc } = setUp();
+    await milestones([at("2026-10-22T10:00:00Z")]);
+    await service.tick(at("2026-10-23T00:15:00Z"));
+    chain.advance(40);
+    // Another process finalized it first.
+    await createNotaryService(db, key, rpc).tick(at("2026-10-23T00:20:00Z"));
+    const [s] = await allSeals();
+    expect(s!.status).toBe("finalized");
+    expect((await allProofs()).every((p) => p.sealId === s!.id)).toBe(true);
+    expect(await service.tick(at("2026-10-23T00:25:00Z"))).toBe("done");
+    expect(chain.landed).toHaveLength(1);
+  });
+
+  it("a player deleted leaves every other proof of the same seal as it was", async () => {
+    const { chain, service } = setUp();
+    const me = await milestones([at("2026-10-22T08:00:00Z")]);
+    const other = await milestones([at("2026-10-22T09:00:00Z")]);
+    await milestones([at("2026-10-22T10:00:00Z")]);
+    await service.tick(at("2026-10-23T00:15:00Z"));
+    chain.advance(40);
+    await service.tick(at("2026-10-23T00:20:00Z"));
+    const token = randomBytes(32).toString("base64url");
+    await createSession(db, token, me.id, at("2026-10-22T00:00:00Z"), at("2026-11-22T00:00:00Z"));
+    const app = await buildApp({ db, notary: service, now: () => at("2026-10-23T08:00:00Z") });
+    const get = async () => ((await app.inject({ method: "GET", url: "/proofs", headers: { authorization: `Bearer ${token}` } })).json() as { proofs: PlayerProof[] }).proofs[0]!;
+    const before = await get();
+    await db.delete(schema.players).where(eq(schema.players.id, other.id));
+    const after = await get();
+    expect(after).toEqual(before);
+    expect(await checkProofHashes({ ...after, seal: after.seal! }, sha256)).toBeNull();
+  });
+
+  it("/health: a milestone sealed on another network still waits", async () => {
+    const { service, chain, key } = setUp();
+    await milestones([at("2026-10-22T10:00:00Z")]);
+    await service.tick(at("2026-10-23T00:15:00Z"));
+    chain.advance(40);
+    await service.tick(at("2026-10-23T00:20:00Z"));
+    const official: NotaryAddress[] = [{ cluster: "devnet", address: key.address, from: "2026-10-01", until: null }];
+    expect(await notaryHealth(db, service, at("2026-10-24T12:00:00Z"), official)).toBe("ok");
+    await db.update(schema.seals).set({ cluster: "mainnet" });
+    expect(await notaryHealth(db, service, at("2026-10-24T12:00:00Z"), official)).toBe("late");
   });
 });
 

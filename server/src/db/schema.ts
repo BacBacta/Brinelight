@@ -89,6 +89,11 @@ export const seals = pgTable(
     root: text("root").notNull(),
     memo: text("memo").notNull(),
     leaves: integer("leaves").notNull(),
+    /**
+     * The seal's leaves (hex, 64 characters each), in their order: the tree is kept whole with the seal, so a proof's
+     * path never depends on other players' rows (a player deleted leaves the others' proofs as they were).
+     */
+    leafHashes: text("leaf_hashes").notNull(),
     signer: text("signer").notNull(),
     signature: text("signature").notNull().unique(),
     /** The signed transaction, in base64: sent again as it is (same signature) until it lands or expires. */

@@ -468,7 +468,7 @@ One step at a time, as `brinelight`, in `~/brinelight/deploy`. Send what each st
    ./notary-key.sh devnet
    ```
 
-   It makes the key inside the server's container, writes it into `deploy/.env` as `NOTARY_KEY_DEVNET` (the file stays readable by you only), and prints only its public address: `Its public address (you can share it): …`. Send that line. Never open `deploy/.env` to look at the key, never paste it anywhere. Run twice, it refuses: a key is never replaced by the script.
+   It makes the key in a throwaway container of the server's image (no network, no log), writes it into `deploy/.env` as `NOTARY_KEY_DEVNET` (the file stays readable by you only), and prints only its public address: `Its public address (you can share it): …`. Send that line. Never open `deploy/.env` to look at the key, never paste it anywhere. Run twice, it refuses: a key is never replaced by the script.
 3. **Devnet SOL, from the faucet, never from Phantom:** open `https://faucet.solana.com`, choose **devnet**, paste the address, ask for 1 SOL (devnet SOL is free and worth nothing). Check it arrived: `https://explorer.solana.com/address/<the address>?cluster=devnet`.
 4. **The address published:** Claude Code adds it to the official list (`shared/src/rules/notary.ts` and `docs/proofs.md`), then: `~/brinelight/deploy/update.sh` again.
 5. **Turn the notary on, on devnet:**
@@ -484,7 +484,7 @@ One step at a time, as `brinelight`, in `~/brinelight/deploy`. Send what each st
 
 **If the key is lost or leaked:** stop the notary (`SOLANA_CLUSTER=` empty in `.env`, then `docker compose up -d`), take the old `NOTARY_KEY_DEVNET` line out of `.env` (or `NOTARY_KEY_MAINNET`), and tell Claude Code. Its address stays in the official list with its last day (and the day it leaked, if it did): the proofs it already sealed stay checkable. Then steps 2 to 5 again with a new key.
 
-**What to never do:** run `docker compose config` where someone can see the screen (it prints every setting of `.env`, the key included); copy `deploy/.env` off the server; set the same key for devnet and mainnet (the server refuses).
+**What to never do:** run `docker compose config` or `docker inspect` where someone can see the screen, or paste what they print (they show every setting of `.env`, the key included); copy `deploy/.env` off the server; set the same key for devnet and mainnet (the server refuses).
 
 ## Later: everyday tasks
 

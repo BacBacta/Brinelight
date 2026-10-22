@@ -9,8 +9,8 @@
  * - a seal sent is followed until it is finalized; while it may still land it is only sent again as it is (same
  *   signature: it can land once at most);
  * - only a seal that can no longer land (its blockhash is well past, `expired`) or that landed with an error
- *   (`failed`) gives its milestones back, to be sealed by a new transaction. After 3 failures a night, it waits for the
- *   next night.
+ *   (`failed`) gives its milestones back, to be sealed by a new transaction. After 3 tries a night that did not end
+ *   finalized, it waits for the next night.
  */
 import { NOTARIES, fromHex, isOfficialNotary, proofDay, sealMemo, toHex, type Cluster, type NotaryAddress } from "@brinelight/shared";
 import { and, asc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
@@ -30,8 +30,8 @@ export const SEAL_EVERY_MS = 5 * 60_000;
 export const BALANCE_EVERY_MS = 3600_000;
 /** A milestone waiting for its seal longer than this makes the notary `late` (a missed night, with margin). */
 export const LATE_HOURS = 26;
-/** Failed seals a night before waiting for the next night. */
-export const MAX_FAILED_A_NIGHT = 3;
+/** Tries a night (seals given up, `expired` or `failed`) before waiting for the next night. */
+export const MAX_TRIES_A_NIGHT = 3;
 
 export type SealLog = { info(fields: Record<string, unknown>, message: string): void; error(fields: Record<string, unknown>, message: string): void };
 
@@ -69,34 +69,46 @@ export function createNotaryService(db: Db, key: NotaryKey, rpc: Rpc): NotarySer
     return balance;
   };
 
-  /** Gives a seal's milestones back and marks it, in one transaction. */
+  /** Gives a seal's milestones back and marks it, in one transaction; only a seal still `sent` (another process may have moved it). */
   const release = (id: number, status: "expired" | "failed") =>
     db.transaction(async (tx) => {
-      await tx.update(seals).set({ status }).where(and(eq(seals.id, id), eq(seals.status, "sent")));
-      await tx.update(proofs).set({ sealId: null, position: null }).where(eq(proofs.sealId, id));
+      const moved = await tx
+        .update(seals)
+        .set({ status })
+        .where(and(eq(seals.id, id), eq(seals.status, "sent")))
+        .returning({ id: seals.id });
+      if (moved.length) await tx.update(proofs).set({ sealId: null, position: null }).where(eq(proofs.sealId, id));
     });
 
   /** Each seal sent and not finalized yet: finalized, sent again, or given up. */
   async function follow(now: Date, log?: SealLog): Promise<void> {
     const sent = await db.select().from(seals).where(and(eq(seals.cluster, cluster), eq(seals.status, "sent"))).orderBy(asc(seals.id));
     for (const s of sent) {
-      const state = await sealState(rpc, s.signature, s.lastValidHeight);
-      if (state === "finalized") {
-        const onChain = await readSeal(rpc, s.signature);
-        if (!onChain) continue;
-        if (onChain.memo !== s.memo || onChain.signer !== s.signer) {
-          log?.error({ cluster, day: s.day, signature: s.signature }, "The seal on chain is not the one written: given up");
-          await release(s.id, "failed");
-          continue;
+      // One seal that cannot be followed now (an endpoint down, a node without history) never stops the others.
+      try {
+        const state = await sealState(rpc, s.signature, s.lastValidHeight);
+        if (state === "finalized") {
+          const onChain = await readSeal(rpc, s.signature);
+          if (!onChain) continue;
+          if (onChain.memo !== s.memo || onChain.signer !== s.signer) {
+            // Never expected: the chain holds this signature with another memo or signer. Nothing is sealed again for it.
+            log?.error({ cluster, day: s.day, signature: s.signature }, "The seal on chain is not the one written: look at it by hand");
+            continue;
+          }
+          await db
+            .update(seals)
+            .set({ status: "finalized", finalizedAt: now })
+            .where(and(eq(seals.id, s.id), eq(seals.status, "sent")));
+          log?.info({ cluster, day: s.day, leaves: s.leaves, signature: s.signature }, "Seal finalized on Solana");
+        } else if (state === "pending") {
+          // Sent again as it is: the same signature lands once at most. A refusal here changes nothing.
+          await sendSeal(rpc, s.tx).catch(() => undefined);
+        } else {
+          await release(s.id, state);
+          log?.error({ cluster, day: s.day, signature: s.signature, state }, "The seal did not land: its milestones wait for a new one");
         }
-        await db.update(seals).set({ status: "finalized", finalizedAt: now }).where(eq(seals.id, s.id));
-        log?.info({ cluster, day: s.day, leaves: s.leaves, signature: s.signature }, "Seal finalized on Solana");
-      } else if (state === "pending") {
-        // Sent again as it is: the same signature lands once at most. A refusal here changes nothing.
-        await sendSeal(rpc, s.tx).catch(() => undefined);
-      } else {
-        await release(s.id, state);
-        log?.error({ cluster, day: s.day, signature: s.signature, state }, "The seal did not land: its milestones wait for a new one");
+      } catch (err) {
+        log?.error({ cluster, day: s.day, signature: s.signature, reason: err instanceof Error ? err.message : String(err) }, "The seal could not be followed: tried again in 5 minutes");
       }
     }
   }
@@ -108,7 +120,7 @@ export function createNotaryService(db: Db, key: NotaryKey, rpc: Rpc): NotarySer
     const tonight = await db.select({ status: seals.status }).from(seals).where(and(eq(seals.cluster, cluster), eq(seals.day, night.day)));
     if (tonight.some((s) => s.status === "finalized")) return "done";
     if (tonight.some((s) => s.status === "sent")) return "waiting";
-    if (tonight.filter((s) => s.status === "failed").length >= MAX_FAILED_A_NIGHT) return "gave up";
+    if (tonight.filter((s) => s.status === "failed" || s.status === "expired").length >= MAX_TRIES_A_NIGHT) return "gave up";
     const rows = await db
       .select({ id: proofs.id, leaf: proofs.leaf })
       .from(proofs)
@@ -132,6 +144,7 @@ export function createNotaryService(db: Db, key: NotaryKey, rpc: Rpc): NotarySer
             root: toHex(root),
             memo,
             leaves: rows.length,
+            leafHashes: rows.map((r) => r.leaf).join(""),
             signer: key.address,
             signature: prepared.signature,
             tx: prepared.tx,
@@ -188,18 +201,34 @@ const isUniqueViolation = (err: unknown): boolean => {
 /** How the notary is, for /health. `off`: no notary. The others but `ok` make /health say something is wrong. */
 export type NotaryHealth = "ok" | "late" | "low" | "unlisted" | "off";
 
+/**
+ * A milestone waits while it is in no finalized seal of the notary's own network: one sealed on devnet still waits
+ * once the notary is on mainnet (week 9, task 6, seals them again).
+ */
 export async function notaryHealth(db: Db, notary: NotaryService | null, now: Date, official: readonly NotaryAddress[] = NOTARIES): Promise<NotaryHealth> {
   if (!notary) return "off";
+  const cluster = notary.key.cluster;
   const [oldest] = await db
     .select({ at: sql<Date | string | null>`min(${proofs.recordedAt})` })
     .from(proofs)
     .leftJoin(seals, eq(seals.id, proofs.sealId))
-    .where(sql`${seals.id} is null or ${seals.status} <> 'finalized'`);
+    .where(sql`${seals.id} is null or ${seals.status} <> 'finalized' or ${seals.cluster} <> ${cluster}`);
   const at = oldest?.at ? new Date(oldest.at) : null;
   if (at && now.getTime() - at.getTime() > LATE_HOURS * 3600_000) return "late";
   if (notary.balance !== null && notary.balance < LOW_BALANCE_LAMPORTS) return "low";
-  if (!isOfficialNotary(notary.key.cluster, notary.key.address, proofDay(now.getTime() / 1000), official)) return "unlisted";
+  if (!isOfficialNotary(cluster, notary.key.address, proofDay(now.getTime() / 1000), official)) return "unlisted";
   return "ok";
+}
+
+/** notaryHealth asked at most once a minute: /health is open to anyone, and Docker asks it every 30 seconds. */
+export function cachedNotaryHealth(db: Db, notary: NotaryService | null, everyMs = 60_000): (now: Date) => Promise<NotaryHealth> {
+  let last: { at: number; value: NotaryHealth } | null = null;
+  return async (now) => {
+    if (last && now.getTime() - last.at < everyMs && now.getTime() >= last.at) return last.value;
+    const value = await notaryHealth(db, notary, now);
+    last = { at: now.getTime(), value };
+    return value;
+  };
 }
 
 /**

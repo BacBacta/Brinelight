@@ -1,5 +1,5 @@
 {
-  "id": "927cb7e0-b087-481b-aa3d-0b4eb76bd6a6",
+  "id": "920b7f8c-97b3-40be-b0c3-2597c5897069",
   "prevId": "490626b9-08a3-45b2-ad6c-8cfd82040852",
   "version": "7",
   "dialect": "postgresql",
@@ -422,6 +422,12 @@
         "leaves": {
           "name": "leaves",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "leaf_hashes": {
+          "name": "leaf_hashes",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },

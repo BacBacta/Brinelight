@@ -43,16 +43,13 @@ export async function proofRoutes(app: FastifyInstance, { db, now, notary }: { d
         .leftJoin(seals, eq(seals.id, proofs.sealId))
         .where(eq(proofs.playerId, req.playerId))
         .orderBy(asc(proofs.id));
-      // The leaves of each finalized seal met, in their order, read once.
+      // The leaves of each finalized seal met, in their order, as the seal keeps them.
       const leavesOf = new Map<number, Uint8Array[]>();
       const out: PlayerProof[] = [];
       for (const { proof, seal } of rows) {
         let sealed: PlayerProof["seal"] = null;
         if (seal && seal.status === "finalized" && proof.position !== null) {
-          if (!leavesOf.has(seal.id)) {
-            const leaves = await db.select({ leaf: proofs.leaf }).from(proofs).where(eq(proofs.sealId, seal.id)).orderBy(asc(proofs.position));
-            leavesOf.set(seal.id, leaves.map((l) => fromHex(l.leaf)!));
-          }
+          if (!leavesOf.has(seal.id)) leavesOf.set(seal.id, seal.leafHashes.match(/.{64}/g)!.map((h) => fromHex(h)!));
           const path = merklePath(leavesOf.get(seal.id)!, proof.position).map((s) => ({ side: s.side, hash: toHex(s.hash) }));
           sealed = { cluster: seal.cluster as Cluster, day: seal.day, root: seal.root, signature: seal.signature, path };
         }

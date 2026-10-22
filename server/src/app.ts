@@ -13,7 +13,7 @@ import { cityRoutes } from "./city/routes.js";
 import { loadConfig, type Config } from "./config.js";
 import type { Db } from "./db/index.js";
 import { health } from "./health.js";
-import { notaryHealth, type NotaryService } from "./proofs/seal.js";
+import { cachedNotaryHealth, type NotaryService } from "./proofs/seal.js";
 import { proofRoutes } from "./proofs/routes.js";
 import { INVALID_LEVEL, INVALID_REQUEST, SERVER_ERROR, TOO_MANY_REQUESTS, UNKNOWN_BUILDING } from "./refusals.js";
 
@@ -59,10 +59,11 @@ export async function buildApp(options: AppOptions = {}) {
   });
 
   // The database, the nightly backup and the weekly test restore (health.ts); 503 when one fails, for the down alert.
+  const notaryNow = options.db ? cachedNotaryHealth(options.db, options.notary ?? null) : null;
   app.get("/health", async (_req, reply) => {
     const now = (options.now ?? (() => new Date()))();
     const db = options.db;
-    const notary = db ? () => notaryHealth(db, options.notary ?? null, now) : undefined;
+    const notary = notaryNow ? () => notaryNow(now) : undefined;
     const status = await health({ db, statusDir: config.statusDir, now, version: "0.1.0", notary });
     return reply.code(status.ok ? 200 : 503).send(status);
   });

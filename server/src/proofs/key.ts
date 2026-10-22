@@ -11,18 +11,22 @@
 import { createPrivateKey, createPublicKey, sign, type KeyObject } from "node:crypto";
 import { isCluster, type Cluster } from "@brinelight/shared";
 import { base58Decode, base58Encode } from "../auth/base58.js";
+import { memoMessage, signedTransaction } from "./transaction.js";
 
 export const KEY_VARIABLES: Record<Cluster, string> = { devnet: "NOTARY_KEY_DEVNET", mainnet: "NOTARY_KEY_MAINNET" };
 
 /** DER header of an Ed25519 private key (PKCS #8); the 32-byte seed follows it. */
 const PKCS8_PREFIX = Buffer.from("302e020100300506032b657004220420", "hex");
 
-/** The notary as the server holds it: its network, its public address, and a way to sign that never shows the key. */
+/**
+ * The notary as the server holds it: its network, its public address, and one thing it can sign: a seal, the Memo
+ * transaction of `transaction.ts`, built here from a blockhash and a memo. No other bytes can be signed with the key.
+ */
 export type NotaryKey = {
   readonly cluster: Cluster;
   readonly address: string;
   readonly publicKey: Uint8Array;
-  sign(message: Uint8Array): Uint8Array;
+  signSeal(blockhash: Uint8Array, memo: string): { signature: Uint8Array; tx: Uint8Array };
 };
 
 export type LoadedNotary = { status: "on"; key: NotaryKey } | { status: "off"; reason: string };
@@ -77,7 +81,11 @@ export function loadNotary(env: Record<string, string | undefined> = process.env
     cluster,
     address: base58Encode(publicKey),
     publicKey,
-    sign: (message) => new Uint8Array(sign(null, message, privateKey)),
+    signSeal: (blockhash, memo) => {
+      const message = memoMessage(publicKey, blockhash, memo);
+      const signature = new Uint8Array(sign(null, message, privateKey));
+      return { signature, tx: signedTransaction(message, signature) };
+    },
   };
   // Nothing enumerable holds the key: printing the object shows its network and address only.
   return { status: "on", key: Object.freeze(key) };

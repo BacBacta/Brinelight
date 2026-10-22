@@ -5,6 +5,7 @@ CREATE TABLE "seals" (
 	"root" text NOT NULL,
 	"memo" text NOT NULL,
 	"leaves" integer NOT NULL,
+	"leaf_hashes" text NOT NULL,
 	"signer" text NOT NULL,
 	"signature" text NOT NULL,
 	"tx" text NOT NULL,
