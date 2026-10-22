@@ -142,13 +142,20 @@ jobs:
           for c in brinelight-db-1 brinelight-caddy-1; do
             if docker inspect "$c" --format '{{range .Mounts}}{{.Destination}}{{println}}{{end}}' | grep /run/secrets > /dev/null; then echo "The key is mounted in $c"; exit 1; fi
           done
-          # Never in what Docker shows, in the container's environment, nor in any log (grep reads everything: no -q, so
-          # no broken pipe hides a match).
+          # Never in what Docker shows, in the container's environment, nor in any log. Each output is read first, and
+          # must hold what it should (a command that failed would hide nothing), then searched for the key.
+          inspect="$(docker inspect brinelight-server-1)"
+          config="$(docker compose config)"
+          environ="$(docker compose exec -T server cat /proc/1/environ | tr '\0' '\n')"
+          logs="$(docker compose logs)"
+          grep -F '"Name": "/brinelight-server-1"' <<< "$inspect" > /dev/null
+          grep -F "notary-devnet.key" <<< "$config" > /dev/null
+          grep -Fx "SOLANA_CLUSTER=devnet" <<< "$environ" > /dev/null
+          grep -F "The notary seals every night" <<< "$logs" > /dev/null
           leaks=0
-          docker inspect brinelight-server-1 | grep -F "$secret" > /dev/null && { echo "docker inspect shows the key"; leaks=1; }
-          docker compose config | grep -F "$secret" > /dev/null && { echo "docker compose config shows the key"; leaks=1; }
-          docker compose exec -T server cat /proc/1/environ | tr '\0' '\n' | grep -F "$secret" > /dev/null && { echo "The key is in the server's environment"; leaks=1; }
-          docker compose logs | grep -F "$secret" > /dev/null && { echo "A log shows the key"; leaks=1; }
+          for what in inspect config environ logs; do
+            if grep -F "$secret" <<< "${!what}" > /dev/null; then echo "The key shows in $what"; leaks=1; else echo "Not in $what: checked"; fi
+          done
           exit "$leaks"
       - if: failure()
         working-directory: deploy
