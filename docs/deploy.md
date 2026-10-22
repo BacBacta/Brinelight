@@ -2,7 +2,13 @@
 
 This guide takes you from nothing to a game server online at `https://api.brinelight.xyz`, with the game at `https://play.brinelight.xyz`. It is written for a first time: copy each command, and compare with what you should see.
 
-**The server is not rented yet**: steps 1 to 11 wait until week 8 at the latest. To test with a real wallet meanwhile, see "Test with a real wallet without a server" just below.
+**The server is online since 22 October 2026** (steps 1 to 9 done by the owner, step 11 on): a CX23 in Germany, Ubuntu 24.04, SSH by key only. This guide is kept as it was really done, for a new server or a second one. The notes below come from that first installation (owner, 22 October):
+
+- **A key for this server only**, `~/.ssh/brinelight`, never your everyday key: every `ssh` command below has `-i ~/.ssh/brinelight`.
+- **It can all be done from an Android phone, in Termux** (step 1 says how).
+- **Always look at the prompt before typing a command.** Your phone or computer, the server as root, or the server as `brinelight` each have their own (step 5.1 shows them). A command typed in the wrong place does nothing good.
+- **After the setup script, restart the server if it says `System restart required`** (step 5.1).
+- **Never run `do-release-upgrade`**, even when Ubuntu suggests it at each login: the server stays on Ubuntu 24.04 until a move is planned on purpose (step 5.1).
 
 The domain `brinelight.xyz` was bought at Vercel, and its DNS stays at Vercel. Everywhere below, replace `203.0.113.10` with your server's IPv4 address.
 
@@ -61,7 +67,7 @@ By hand (the terminals below), the same is `DEV_SPEED=1000` before `npm run dev:
 
 On an Android phone, the whole test can run in Termux, with no computer: `deploy/local-test/start-test-termux.sh` does the same as `START-TEST.bat`, then opens the game in Phantom's browser. Once: `pkg install -y git nodejs-lts cloudflared`, then `git clone https://github.com/BacBacta/Brinelight.git ~/Brinelight` (one line at a time: a line pasted while `pkg` is still running is lost). Each test: `cd ~/Brinelight && git pull --ff-only && bash deploy/local-test/start-test-termux.sh 1000` (`1000`: the account's city 1000 times faster; without it, real time). Ctrl+C stops everything (in Termux: Volume down + C). The script keeps the phone awake while you are in Phantom (`termux-wake-lock`); if Android still closes Termux, set its battery use to "Unrestricted". The same script works on Linux and macOS.
 
-The server is not rented yet: it waits until it is really needed (week 8 at the latest, see `docs/decisions.md`). Until then, you can test signing in with Phantom on your phone from your own computer, for free, through two temporary Cloudflare tunnels. A tunnel gives a local program a public `https://….trycloudflare.com` address, with no account and nothing to configure.
+This test runs everything on your own machine, without the real server (online since 22 October 2026). You can test signing in with Phantom on your phone from your own computer, for free, through two temporary Cloudflare tunnels. A tunnel gives a local program a public `https://….trycloudflare.com` address, with no account and nothing to configure.
 
 Everything stays on your computer: the database is in memory (PGlite) and is lost when you stop the server. That is fine for a test.
 
@@ -138,26 +144,29 @@ Send Claude Code:
 
 Never send your wallet's recovery phrase or private key: neither Claude Code nor the game ever needs them.
 
-## 1. Create your SSH key (on your computer)
+## 1. Create your SSH key (on your computer or phone)
 
 An SSH key is a pair of files. The **private key** stays on your computer and proves it is you. The **public key** goes on the server. Never share, copy or send the private key: not by mail, not to a chat, not to Claude, not into the repository.
 
-On macOS or Linux, open the Terminal. On Windows 10 or 11, open PowerShell. Then:
+Make a key **for this server only**, named `brinelight`, rather than using your everyday key: if it is ever lost, you replace this one alone.
+
+On macOS or Linux, open the Terminal. On Windows 10 or 11, open PowerShell. On an Android phone, install **Termux** (from F-Droid), then once: `pkg install -y openssh` (wait until it ends before typing the next line). Then, in each case:
 
 ```
-ssh-keygen -t ed25519 -C "brinelight"
+ssh-keygen -t ed25519 -f ~/.ssh/brinelight -C "brinelight"
 ```
 
-- Press Enter to accept the place it suggests (`~/.ssh/id_ed25519`).
-- Choose a **passphrase** and keep it in your password manager. It protects the key if your computer is stolen.
+- Choose a **passphrase** and keep it in your password manager. It protects the key if your computer or phone is stolen.
 
-You now have two files: `id_ed25519` (private, keep it) and `id_ed25519.pub` (public). Show the public one:
+You now have two files: `~/.ssh/brinelight` (private, keep it) and `~/.ssh/brinelight.pub` (public). Show the public one:
 
 ```
-cat ~/.ssh/id_ed25519.pub
+cat ~/.ssh/brinelight.pub
 ```
 
 You should see one line starting with `ssh-ed25519 AAAA…` and ending with `brinelight`. This line is the one you give to Hetzner.
+
+Every `ssh` command of this guide names this key with `-i ~/.ssh/brinelight`. Without it, `ssh` tries your other keys, and the server, which accepts only this one, answers `Permission denied (publickey)`.
 
 ## 2. The domain (Vercel)
 
@@ -203,13 +212,23 @@ It must print the server's IPv4, and only it. Without `dig` (Windows), use `nslo
 
 ### 5.1 Run the setup script, as root
 
-From your computer:
+From your computer or phone:
 
 ```
-ssh root@203.0.113.10
+ssh -i ~/.ssh/brinelight root@203.0.113.10
 ```
 
-The first time, it asks whether you trust the server: type `yes`. Then, on the server:
+The first time, it asks whether you trust the server: type `yes`.
+
+**Look at the prompt (the text before your cursor) before each command.** It tells you where the command will run:
+
+| The prompt looks like | You are on |
+| --- | --- |
+| `you@laptop ~ %`, `PS C:\Users\you>`, or `~ $` in Termux | your computer or phone |
+| `root@brinelight:~#` | the server, as root (steps 5.1 only) |
+| `brinelight@brinelight:~$` | the server, as `brinelight` (everything after step 5) |
+
+Every command below says where it goes. When a connection closes (a restart, a timeout, `exit`), you are back on your computer or phone: check before going on. Then, on the server, as root:
 
 ```
 curl -fsSLO https://raw.githubusercontent.com/BacBacta/Brinelight/main/deploy/setup-server.sh
@@ -228,6 +247,16 @@ The script:
 
 At the end you should see `Status: active` with `22/tcp LIMIT IN`, `80/tcp ALLOW IN`, `443/tcp ALLOW IN`, `443/udp ALLOW IN`, and `System clock synchronized: yes`.
 
+**If it also says `*** System restart required ***`** (the system update replaced the kernel), restart the server once the next command (`mv harden-ssh.sh …`) is done, still as root:
+
+```
+reboot
+```
+
+The connection closes: you are back on your computer or phone. Wait one minute, then connect again with `ssh -i ~/.ssh/brinelight root@203.0.113.10` and go on with step 5.2.
+
+**Never run `do-release-upgrade`**, even when the server says at login that a new Ubuntu release is available. The server stays on Ubuntu 24.04: everything in this guide (Docker's repository, the scripts) is written and tested for it, and a release upgrade on a running server can leave it unable to start. Security updates still come every day by themselves.
+
 Move the second script to your user:
 
 ```
@@ -236,10 +265,10 @@ mv harden-ssh.sh /home/brinelight/ && chown brinelight: /home/brinelight/harden-
 
 ### 5.2 Check your key, then close SSH
 
-**Keep the root terminal open.** Open a **second** terminal on your computer:
+**Keep the root terminal open.** Open a **second** terminal on your computer (in Termux: swipe from the left edge, **New session**):
 
 ```
-ssh brinelight@203.0.113.10
+ssh -i ~/.ssh/brinelight brinelight@203.0.113.10
 ```
 
 It must log you in without asking the server for a password (only your key's passphrase, if your computer asks for it). Then, in this second terminal:
@@ -258,7 +287,7 @@ kbdinteractiveauthentication no
 allowusers brinelight
 ```
 
-Check from a **third** terminal that it still works (`ssh brinelight@203.0.113.10`), and that root is refused (`ssh root@203.0.113.10` must say `Permission denied`). Only then close the root terminal. From now on, always connect as `brinelight`.
+Check from a **third** terminal that it still works (`ssh -i ~/.ssh/brinelight brinelight@203.0.113.10`), and that root is refused (`ssh -i ~/.ssh/brinelight root@203.0.113.10` must say `Permission denied`). Only then close the root terminal. From now on, always connect as `brinelight`.
 
 If something goes wrong, the Hetzner console (**Server → Console**) always lets you in, even without SSH.
 
@@ -294,7 +323,7 @@ Save with `Ctrl+O`, Enter, then quit with `Ctrl+X`. This file stays on the serve
 
 ## 7. Start, and check
 
-Log out and back in once, so your user can use Docker (`exit`, then `ssh brinelight@203.0.113.10`). Then:
+Log out and back in once, so your user can use Docker (`exit`, then `ssh -i ~/.ssh/brinelight brinelight@203.0.113.10`). Then:
 
 ```
 cd ~/brinelight/deploy
@@ -414,7 +443,7 @@ A GitHub Actions workflow of the repository (`.github/workflows/watch.yml`) open
    - Name: `API_URL`
    - Value: `https://api.brinelight.xyz`
 
-   The workflow is off until this variable exists.
+   The workflow is off until this variable exists. It must be in the **Variables** tab, not in **Secrets**: the workflow reads a variable, and a secret of the same name leaves it off (every run then says "skipped").
 2. Check that GitHub e-mails you on failures: your avatar → **Settings → Notifications → Actions**: "Only notify for failed workflows" ticked, with e-mail.
 3. Test it once: the repository → **Actions → watch → Run workflow**, and in "Another address" type `https://brinelight-test.invalid`. The run fails and you get an e-mail. Run it again with the field empty: it checks `API_URL` and passes.
 
