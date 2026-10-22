@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  CLUSTERS,
   HOUR,
+  NOTARIES,
+  checkProofHashes,
+  currentNotary,
+  explorerTx,
+  isOfficialNotary,
+  parseProofFile,
+  proofFile,
   LIGHTHOUSE_MILESTONES,
   PROOF_VERSION,
   catchUp,
@@ -170,5 +178,77 @@ describe("the Lighthouse's milestones a saved city reached", () => {
   it("a new city gives nothing", () => {
     const c = newPlayerState(MIDNIGHT);
     expect(milestonesReached(c, c, new Set(), "2026-10-18")).toEqual([]);
+  });
+});
+
+describe("a proof file, and its check with no network", () => {
+  const two = vectors.trees[1]!;
+  const file = {
+    format: "brinelight proof v1",
+    fact: ex.fact,
+    when: ex.when,
+    day: ex.day,
+    salt: ex.salt,
+    wallet: ex.wallet,
+    leaf: ex.leaf,
+    seal: { cluster: "devnet", day: "2026-10-22", root: two.root, signature: "5".repeat(87), path: two.paths["0"] },
+  };
+  const sha256 = async (b: Uint8Array) => new Uint8Array(await crypto.subtle.digest("SHA-256", b));
+
+  it("is read strictly: every field in its format, nothing else", () => {
+    expect(parseProofFile(file)).toEqual(file);
+    expect(parseProofFile(proofFile({ ...file, when: "on", seal: parseProofFile(file)!.seal }))).toEqual(file);
+    const broken: unknown[] = [
+      { ...file, extra: 1 },
+      { ...file, format: "brinelight proof v2" },
+      { ...file, salt: ex.salt.toUpperCase() },
+      { ...file, leaf: ex.leaf.slice(1) },
+      { ...file, day: "2026-02-30" },
+      { ...file, when: "at" },
+      { ...file, seal: { ...file.seal, cluster: "testnet" } },
+      { ...file, seal: { ...file.seal, extra: 1 } },
+      { ...file, seal: { ...file.seal, path: [{ side: "up", hash: "00".repeat(32) }] } },
+      { ...file, seal: { ...file.seal, path: [{ side: "left", hash: "00".repeat(32), more: 1 }] } },
+      { ...file, seal: { ...file.seal, signature: "0OIl" } },
+      [file],
+      null,
+    ];
+    for (const b of broken) expect(parseProofFile(b), JSON.stringify(b)).toBeNull();
+  });
+
+  it("a true proof holds; its reasons when it does not", async () => {
+    const p = parseProofFile(file)!;
+    expect(await checkProofHashes(p, sha256)).toBeNull();
+    expect(await checkProofHashes({ ...p, wallet: vectors.wallet.replace(/.$/, "1") }, sha256)).toBe("This proof's details do not match its leaf.");
+    expect(await checkProofHashes({ ...p, seal: { ...p.seal, path: [] } }, sha256)).toBe("This proof's path does not lead to the seal's root.");
+    expect(await checkProofHashes({ ...p, seal: { ...p.seal, path: [{ side: "right", hash: "00" }] } }, sha256)).toBe("This proof's path is not in the right format.");
+    expect(await checkProofHashes({ ...p, salt: "00" }, sha256)).toBe("This proof is not in the right format.");
+    // The 1,000-leaf tree: 10 steps for the first leaf; fewer for the last, which goes up alone where its level is odd.
+    const big = vectors.trees[4]!;
+    expect((big.paths["0"] as unknown[]).length).toBe(10);
+    expect((big.paths["999"] as unknown[]).length).toBe(8);
+  });
+});
+
+describe("the notary's official addresses", () => {
+  const list = [
+    { cluster: "devnet" as const, address: "A".repeat(43), from: "2026-10-22", until: "2026-12-31" },
+    { cluster: "devnet" as const, address: "B".repeat(43), from: "2027-01-01", until: null, leaked: "2027-03-01" },
+    { cluster: "mainnet" as const, address: "C".repeat(43), from: "2027-01-01", until: null },
+  ];
+  it("an address is official on its network, from its first day to its last, and never from the day it leaked", () => {
+    expect(NOTARIES.every((n) => isWalletText(n.address) && isProofDay(n.from))).toBe(true);
+    expect(currentNotary("devnet", list)!.address).toBe("B".repeat(43));
+    expect(currentNotary("mainnet", [])).toBeNull();
+    expect(isOfficialNotary("devnet", "A".repeat(43), "2026-10-22", list)).toBe(true);
+    expect(isOfficialNotary("devnet", "A".repeat(43), "2026-10-21", list)).toBe(false);
+    expect(isOfficialNotary("devnet", "A".repeat(43), "2027-01-01", list)).toBe(false);
+    expect(isOfficialNotary("mainnet", "A".repeat(43), "2026-11-01", list)).toBe(false);
+    expect(isOfficialNotary("devnet", "B".repeat(43), "2027-02-28", list)).toBe(true);
+    expect(isOfficialNotary("devnet", "B".repeat(43), "2027-03-01", list)).toBe(false);
+    expect(explorerTx("devnet", "sig")).toBe("https://explorer.solana.com/tx/sig?cluster=devnet");
+    expect(explorerTx("mainnet", "sig")).toBe("https://explorer.solana.com/tx/sig");
+    expect(CLUSTERS.devnet.genesis).toBe("EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG");
+    expect(CLUSTERS.mainnet.genesis).toBe("5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d");
   });
 });

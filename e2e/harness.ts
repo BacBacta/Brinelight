@@ -11,6 +11,11 @@ import { loadConfig } from "../server/src/config.js";
 import { CITY_SHAPE } from "@brinelight/shared";
 import { sql } from "drizzle-orm";
 import { openDatabase, schema, type Database } from "../server/src/db/index.js";
+import { loadNotary } from "../server/src/proofs/key.js";
+import { makeNotaryKey } from "../server/src/proofs/keygen.js";
+import { createRpc } from "../server/src/proofs/rpc.js";
+import { createNotaryService } from "../server/src/proofs/seal.js";
+import { fakeSolana, type FakeSolana } from "../server/test/fakeSolana.js";
 
 export const API = "http://127.0.0.1:8797";
 const API_BEHIND = 8798;
@@ -27,6 +32,11 @@ export type Harness = {
    * one version up. Never a server route, option or setting: nothing of it can exist in production.
    */
   putCity(playerId: string, state: unknown): Promise<void>;
+  /**
+   * Tests only: the server's notary signs with a throwaway key on a fake Solana network (server/test/fakeSolana.ts),
+   * never a real one. `seal` plays the night that follows `day` (00:15 UTC the next day), then finalizes it.
+   */
+  notary: { address: string; chain: FakeSolana; seal(day: Date): Promise<void> };
   close(): Promise<void>;
 };
 
@@ -39,7 +49,12 @@ export const holdActions = (ms: number): void => {
 export async function startHarness(): Promise<Harness> {
   const database: Database = await openDatabase(undefined);
   const config = loadConfig({ ALLOWED_ORIGINS: GAME });
-  const server = await buildApp({ db: database.db, config });
+  const chain = fakeSolana("devnet");
+  const loaded = loadNotary({ SOLANA_CLUSTER: "devnet", NOTARY_KEY_DEVNET: makeNotaryKey().secret });
+  if (loaded.status !== "on") throw new Error(loaded.reason);
+  chain.balances.set(loaded.key.address, 20_000_000);
+  const notary = createNotaryService(database.db, loaded.key, createRpc("devnet", { urls: ["https://api.devnet.solana.com"], fetch: chain.fetch, wait: async () => {} }));
+  const server = await buildApp({ db: database.db, config, notary });
   await server.listen({ port: API_BEHIND, host: "127.0.0.1" });
   const relay = slowPreflightRelay();
   await new Promise<void>((resolve) => relay.listen(8797, "127.0.0.1", resolve));
@@ -52,6 +67,16 @@ export async function startHarness(): Promise<Harness> {
   const browser = await chromium.launch();
   return {
     browser,
+    notary: {
+      address: loaded.key.address,
+      chain,
+      async seal(day) {
+        const next = Math.floor(day.getTime() / 86_400_000 + 1) * 86_400_000;
+        await notary.tick(new Date(next + 15 * 60_000));
+        chain.advance(40);
+        await notary.tick(new Date(next + 20 * 60_000));
+      },
+    },
     async putCity(playerId, state) {
       const savedAt = new Date();
       await database.db

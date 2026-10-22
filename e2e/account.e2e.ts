@@ -2,11 +2,13 @@
  * Sign in from the game, end to end: the real server (PGlite), the built client in Chromium, and a test wallet.
  * Signed in, every action goes to the server, which decides; the city shown is the server's.
  */
+import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { cpus } from "node:os";
 import type { BrowserContext, Locator, Page } from "playwright-core";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import * as THREE from "three";
+import { parseProofFile } from "@brinelight/shared";
 import { BUILDINGS, BUILDING_IDS, HOUR, PROMOTE_TIME, RAFT_INSTALL_TIME, RAFT_SLOTS, advance, heal, installOnRaft, newPlayerState, promote, raftUpgradeTime, research, sail, upgrade, type ActionResult, type PlayerState, type RaftBuildingId } from "@brinelight/shared";
 import { CITY_ANGLE, CITY_FILL, CITY_FOV, cityFraming } from "../client/src/scene/framing.js";
 import { ERA_PLOTS } from "../client/src/city/plots.js";
@@ -14,6 +16,9 @@ import { terrainCoast } from "../client/src/scene/terrainCoast.js";
 import { CITY_KEY_PREFIX } from "../client/src/account/actions.js";
 import { PROFILE_TEXT } from "../client/src/account/profile.js";
 import { TEXT } from "../client/src/account/index.js";
+import { PROOFS_TEXT } from "../client/src/account/proofs.js";
+import { createRpc } from "../server/src/proofs/rpc.js";
+import { checkProof } from "../tools/proof/check.js";
 import { installFakeWallet, type TestWallet } from "./fakeWallet.js";
 import { comparePixels, decodePng } from "./png.js";
 import { API, GAME, holdActions, startHarness, type Harness } from "./harness.js";
@@ -2092,3 +2097,54 @@ async function shoreOn(page: Page): Promise<{ x: number; y: number }[]> {
     return at(terrainCoast(a) * Math.cos(a), 0, terrainCoast(a) * Math.sin(a));
   });
 }
+
+describe("your proofs on Solana", () => {
+  it("Lighthouse 5 is recorded by the server, sealed at night, shown in the Profile, checked in the browser, and its saved file holds against the chain", async () => {
+    const p = await signedInPlayer();
+    const base = newPlayerState(Date.now() / 1000);
+    // The Lighthouse's level 5 ends in a second; the next action saves the city, and the server records the milestone.
+    await h.putCity(p.playerId, { ...base, buildings: { ...base.buildings, lighthouse: 4, refinery: 3 }, stock: { oil: 9000, fish: 9000, wood: 9000, rope: 10 }, queue: [{ id: "lighthouse", left: 1, duration: 60 }] });
+    await new Promise((r) => setTimeout(r, 1500));
+    const sent = await fetch(`${API}/city/actions`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${p.token}`, "content-type": "application/json" },
+      body: JSON.stringify({ action: { id: randomUUID(), type: "upgrade", building: "refinery" } }),
+    });
+    expect(sent.status).toBe(200);
+
+    // Before the night: waiting for its seal.
+    await p.page.locator(".hud .lvl").click();
+    const section = p.page.locator(".profile .proofs");
+    await section.waitFor({ timeout: 15_000 });
+    expect(await section.textContent()).toContain(`Lighthouse 5${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date())} · ${PROOFS_TEXT.waiting}`);
+    expect(await section.locator('[data-act="proof-check"]').count()).toBe(0);
+    await p.page.locator('.profile [data-act="close"]').click();
+
+    // The night, on the fake network; then the Profile again.
+    await h.notary.seal(new Date());
+    await p.page.locator(".hud .lvl").click();
+    await expect.poll(async () => (await section.textContent()) ?? "", NET).toContain(PROOFS_TEXT.sealed);
+    expect(await section.textContent()).toContain(PROOFS_TEXT.title);
+    const link = await section.locator("a.b").getAttribute("href");
+    expect(link).toMatch(/^https:\/\/explorer\.solana\.com\/tx\/[1-9A-HJ-NP-Za-km-z]{64,90}\?cluster=devnet$/);
+    await section.locator('[data-act="proof-check"]').click();
+    await section.locator(".ok", { hasText: PROOFS_TEXT.holds }).waitFor();
+    mkdirSync("e2e/.shots", { recursive: true });
+    await p.page.screenshot({ path: "e2e/.shots/shot-profile-proofs-412.png" });
+    await p.page.setViewportSize({ width: 360, height: 800 });
+    await p.page.waitForTimeout(300);
+    await p.page.screenshot({ path: "e2e/.shots/shot-profile-proofs-360.png" });
+
+    // Save the proof: the file the player gets holds on its own, against the chain.
+    const [download] = await Promise.all([p.page.waitForEvent("download"), section.locator('[data-act="proof-save"]').click()]);
+    expect(download.suggestedFilename()).toBe("brinelight-proof-lighthouse-5.json");
+    const file = parseProofFile(JSON.parse(readFileSync((await download.path())!, "utf8")));
+    expect(file).not.toBeNull();
+    expect(file!.wallet).toBe(p.wallet!.address);
+    const rpc = createRpc("devnet", { urls: ["https://api.devnet.solana.com"], fetch: h.notary.chain.fetch, wait: async () => {} });
+    const lines = await checkProof(file!, rpc, [{ cluster: "devnet", address: h.notary.address, from: "2020-01-01", until: null }]);
+    expect(lines.filter((l) => !l.ok)).toEqual([]);
+    expect(h.notary.chain.landed).toHaveLength(1);
+    expect(p.problems).toEqual([]);
+  });
+});

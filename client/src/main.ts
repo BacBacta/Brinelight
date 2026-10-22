@@ -410,6 +410,7 @@ if (new URLSearchParams(location.search).has("rules")) {
       void account?.signOut();
       profile.refresh();
     },
+    proofs: async () => (account ? account.proofs() : null),
   });
   if (account) {
     watchWallets((w) => {

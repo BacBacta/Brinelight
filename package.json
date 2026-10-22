@@ -22,7 +22,8 @@
     "check": "npm run typecheck && npm test && npm run build",
     "e2e": "vitest run --config e2e/vitest.config.ts",
     "balance": "tsx tools/balance/run.ts",
-    "load": "tsx tools/load/run.ts"
+    "load": "tsx tools/load/run.ts",
+    "proof:check": "tsx tools/proof/run.ts"
   },
   "devDependencies": {
     "@types/node": "22.10.1",
