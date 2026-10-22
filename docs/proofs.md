@@ -120,34 +120,36 @@ It moves no SOL (only the fee is paid: 5,000 lamports, no priority fee), creates
 **La clé**
 
 1. Sur le serveur, `./notary-key.sh devnet` a affiché une adresse, et rien d'autre de long ni de secret.
-2. Le relancer répond « A devnet key is already in deploy/.env: nothing was changed. »
-3. `ls -l ~/brinelight/deploy/.env` commence par `-rw-------` (lisible par toi seul).
-4. Tu n'as jamais ouvert `.env` pour regarder la clé, ni copié ce fichier hors du serveur, ni collé son contenu nulle part (ni dans une conversation, ni dans GitHub). Tu n'as jamais collé non plus la sortie de `docker inspect` ou de `docker compose config` : elles montrent la clé.
-5. Dans GitHub, une recherche de `NOTARY_KEY_DEVNET=` dans le dépôt ne trouve qu'une ligne vide (dans `deploy/.env.example`), jamais une clé.
+2. Le relancer répond « A devnet key is already in deploy/secrets/notary-devnet.key: nothing was changed. »
+3. `ls -l ~/brinelight/deploy/secrets/` montre `notary-devnet.key` en `-rw-------` et au nom de `brinelight` (lisible par toi seul).
+4. `grep -c NOTARY_KEY ~/brinelight/deploy/.env` répond `0` : aucune clé dans `.env`.
+5. `docker inspect brinelight-server-1 | grep -cFf ~/brinelight/deploy/secrets/notary-devnet.key` répond `0` : Docker ne montre pas la clé. (`grep` lit la clé dans son fichier sans l'afficher ; tape la commande telle quelle.)
+6. Tu n'as jamais ouvert le fichier de clé pour la regarder, ni copié `deploy/secrets/` hors du serveur, ni collé son contenu nulle part (ni dans une conversation, ni dans GitHub).
+7. Dans GitHub, le dépôt ne contient dans `deploy/secrets/` que `README.md`.
 
 **Le réseau**
 
-6. `.env` contient `SOLANA_CLUSTER=devnet`, et aucune ligne `NOTARY_KEY_MAINNET`.
-7. Le journal du serveur (`docker compose logs server | grep -i notary`) dit `"cluster":"devnet"` et l'adresse de l'étape 1.
-8. Sur `explorer.solana.com`, l'adresse du notaire n'existe que sur **Devnet** (le sélecteur en haut à droite) : sur **Mainnet Beta**, elle est vide.
+8. `.env` contient `SOLANA_CLUSTER=devnet`, et `deploy/secrets/notary-mainnet.key` est vide (`ls -l` montre une taille de 0).
+9. Le journal du serveur (`docker compose logs server | grep -i notary`) dit `"cluster":"devnet"` et l'adresse de l'étape 1.
+10. Sur `explorer.solana.com`, l'adresse du notaire n'existe que sur **Devnet** (le sélecteur en haut à droite) : sur **Mainnet Beta**, elle est vide.
 
 **Le sceau**
 
-9. Le lendemain d'un palier, après 00:15 UTC : sur la page de l'adresse (devnet), **une seule** transaction pour cette nuit.
-10. En l'ouvrant : un seul signataire (l'adresse du notaire), un seul programme (« Memo Program »), un texte `brinelight proof v1 <jour> <64 caractères>`, des frais de 0.000005 SOL, et aucun transfert de SOL.
-11. Le solde de l'adresse n'a baissé que de 0.000005 SOL par nuit scellée.
-12. Dans le jeu, Profil → « Your proofs » : ton palier dit « Sealed on Solana », et **Check** répond « This proof matches the seal. »
-13. « Save the proof », puis le fichier envoyé à Claude Code : `npm run proof:check` répond « This proof holds. »
-14. `curl -s https://api.brinelight.xyz/health` dit `"notary":"ok"`.
+11. Le lendemain d'un palier, après 00:15 UTC : sur la page de l'adresse (devnet), **une seule** transaction pour cette nuit.
+12. En l'ouvrant : un seul signataire (l'adresse du notaire), un seul programme (« Memo Program »), un texte `brinelight proof v1 <jour> <64 caractères>`, des frais de 0.000005 SOL, et aucun transfert de SOL.
+13. Le solde de l'adresse n'a baissé que de 0.000005 SOL par nuit scellée.
+14. Dans le jeu, Profil → « Your proofs » : ton palier dit « Sealed on Solana », et **Check** répond « This proof matches the seal. »
+15. « Save the proof », puis le fichier envoyé à Claude Code : `npm run proof:check` répond « This proof holds. »
+16. `curl -s https://api.brinelight.xyz/health` dit `"notary":"ok"`.
 
 **Les pannes**
 
-15. Le serveur redémarré (`docker compose restart server`) pendant la journée : la nuit suivante, toujours une seule transaction.
-16. L'alerte : si le notaire n'a plus assez de SOL ou si un sceau a plus de 26 heures de retard, GitHub t'envoie un e-mail (le workflow watch).
+17. Le serveur redémarré (`docker compose restart server`) pendant la journée : la nuit suivante, toujours une seule transaction.
+18. L'alerte : si le notaire n'a plus assez de SOL ou si un sceau a plus de 26 heures de retard, GitHub t'envoie un e-mail (le workflow watch).
 
 **La relecture**
 
-17. La relecture indépendante de la semaine 9 a été faite, et ce qu'elle a trouvé est corrigé (`docs/tasks/week-9.md`).
-18. Avant les paiements USDC (semaine 14) : une relecture par un développeur Solana humain, obligatoire (`docs/decisions.md`).
+19. La relecture indépendante de la semaine 9 a été faite, et ce qu'elle a trouvé est corrigé (`docs/tasks/week-9.md`).
+20. Avant les paiements USDC (semaine 14) : une relecture par un développeur Solana humain, obligatoire (`docs/decisions.md`).
 
 Alors seulement : ton accord pour mainnet (tâche 6).

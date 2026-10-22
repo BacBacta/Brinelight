@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Makes the notary's key for one Solana network and writes it into deploy/.env (docs/deploy.md, "The notary on
+# Makes the notary's key for one Solana network and writes it into deploy/secrets/notary-<network>.key, a file of its
+# own that Docker Compose mounts read-only in the game server's container only (docs/deploy.md, "The notary on
 # Solana"). It shows only the key's public address. It never replaces a key already there.
 # Run as brinelight on the server:  ~/brinelight/deploy/notary-key.sh devnet   (mainnet only with the owner's yes)
 set -euo pipefail
@@ -11,29 +12,33 @@ cd "$DEPLOY_DIR"
 
 cluster="${1:-}"
 case "$cluster" in
-  devnet) var=NOTARY_KEY_DEVNET ;;
-  mainnet) var=NOTARY_KEY_MAINNET ;;
+  devnet | mainnet) ;;
   *)
     echo "Say which network: ./notary-key.sh devnet   (or mainnet)" >&2
     exit 2
     ;;
 esac
+file="secrets/notary-$cluster.key"
 
-if [ ! -f .env ]; then
-  echo "deploy/.env is missing: the server is not installed here (docs/deploy.md)." >&2
+# The game server runs as the user 1000 in its container: the key file must be theirs, mode 600, to be read there.
+server_uid="${SERVER_UID:-1000}"
+if [ "$(id -u)" != "$server_uid" ]; then
+  echo "Run this as the user whose id is $server_uid (brinelight on the server): the game server reads the key as that user." >&2
   exit 1
 fi
-if grep -qE "^${var}=.+" .env; then
-  echo "A $cluster key is already in deploy/.env ($var): nothing was changed." >&2
+if [ -s "$file" ]; then
+  echo "A $cluster key is already in deploy/$file: nothing was changed." >&2
   echo "A key is never replaced by this script. If it is lost or leaked, read docs/deploy.md first." >&2
   exit 1
 fi
 
 # Everything this script writes is readable by its owner only.
 umask 077
+mkdir -p secrets
+chmod 700 secrets
 
 # The key is made by Node in a throwaway container of the server's image (Node is not installed on the machine): no
-# network, no settings from .env, and no Docker log (the default log would write the container's output to disk).
+# network, no settings, and no Docker log (the default log would write the container's output to disk).
 # Its two lines come back here, into a variable, never onto the screen.
 if ! out="$(docker run --rm --network none --log-driver none --workdir /app/server brinelight-server node --import tsx src/proofs/keygen.ts)"; then
   echo "The key could not be made: is the server built (docker compose build server)?" >&2
@@ -55,20 +60,12 @@ if [ -z "$address" ] || [ -z "$secret" ]; then
   exit 1
 fi
 
-# Readable by its owner only, before the key goes in.
-chmod 600 .env
-# An empty "$var=" line (from .env.example) is taken out first, so the file holds one line for it. The new file
-# replaces the old one in one step: a stop half-way leaves the old one whole.
-if grep -qE "^${var}=$" .env; then
-  { grep -vE "^${var}=$" .env || true; } > .env.new
-  chmod 600 .env.new
-  mv .env.new .env
-fi
-# A last line without its end of line would glue the key onto it.
-if [ -s .env ] && [ "$(tail -c 1 .env)" != "" ]; then echo >> .env; fi
+# Written beside the file, then put in its place in one step: a stop half-way leaves no half key.
 # printf is part of bash: the key never appears in the list of running commands.
-printf '%s=%s\n' "$var" "$secret" >> .env
+printf '%s\n' "$secret" > "$file.new"
 unset secret
+chmod 600 "$file.new"
+mv "$file.new" "$file"
 
-echo "The $cluster notary's key is in deploy/.env ($var)."
+echo "The $cluster notary's key is in deploy/$file (yours only, mode 600; never copy it anywhere)."
 echo "Its public address (you can share it): $address"

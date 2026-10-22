@@ -9,12 +9,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildApp } from "../../server/src/app.js";
 import { base58Encode } from "../../server/src/auth/base58.js";
 import { createSession, findOrCreatePlayer, openDatabase, schema, type Database } from "../../server/src/db/index.js";
-import { loadNotary } from "../../server/src/proofs/key.js";
-import { makeNotaryKey } from "../../server/src/proofs/keygen.js";
 import { leafHash } from "../../server/src/proofs/merkle.js";
 import { createRpc } from "../../server/src/proofs/rpc.js";
 import { createNotaryService } from "../../server/src/proofs/seal.js";
-import { fakeSolana, type FakeSolana } from "../../server/test/fakeSolana.js";
+import { fakeSolana, throwawayNotary, type FakeSolana } from "../../server/test/fakeSolana.js";
 import { checkProof } from "./check.js";
 
 let database: Database;
@@ -28,9 +26,7 @@ beforeAll(async () => {
   const db = database.db;
   await db.execute(sql`truncate players, proofs, seals cascade`);
   chain = fakeSolana("devnet");
-  const k = makeNotaryKey();
-  const loaded = loadNotary({ SOLANA_CLUSTER: "devnet", NOTARY_KEY_DEVNET: k.secret });
-  if (loaded.status !== "on") throw new Error(loaded.reason);
+  const loaded = { key: throwawayNotary("devnet").key };
   notaryAddress = loaded.key.address;
   chain.balances.set(notaryAddress, 20_000_000);
   // Three players' milestones on 22 October; the first is "you".

@@ -11,11 +11,9 @@ import { loadConfig } from "../server/src/config.js";
 import { CITY_SHAPE } from "@brinelight/shared";
 import { sql } from "drizzle-orm";
 import { openDatabase, schema, type Database } from "../server/src/db/index.js";
-import { loadNotary } from "../server/src/proofs/key.js";
-import { makeNotaryKey } from "../server/src/proofs/keygen.js";
 import { createRpc } from "../server/src/proofs/rpc.js";
 import { createNotaryService } from "../server/src/proofs/seal.js";
-import { fakeSolana, type FakeSolana } from "../server/test/fakeSolana.js";
+import { fakeSolana, throwawayNotary, type FakeSolana } from "../server/test/fakeSolana.js";
 
 export const API = "http://127.0.0.1:8797";
 const API_BEHIND = 8798;
@@ -50,8 +48,7 @@ export async function startHarness(): Promise<Harness> {
   const database: Database = await openDatabase(undefined);
   const config = loadConfig({ ALLOWED_ORIGINS: GAME });
   const chain = fakeSolana("devnet");
-  const loaded = loadNotary({ SOLANA_CLUSTER: "devnet", NOTARY_KEY_DEVNET: makeNotaryKey().secret });
-  if (loaded.status !== "on") throw new Error(loaded.reason);
+  const loaded = throwawayNotary("devnet");
   chain.balances.set(loaded.key.address, 20_000_000);
   const notary = createNotaryService(database.db, loaded.key, createRpc("devnet", { urls: ["https://api.devnet.solana.com"], fetch: chain.fetch, wait: async () => {} }));
   const server = await buildApp({ db: database.db, config, notary });

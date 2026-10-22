@@ -4,20 +4,14 @@
  */
 import { describe, expect, it } from "vitest";
 import { base58Decode } from "../src/auth/base58.js";
-import { loadNotary, type NotaryKey } from "../src/proofs/key.js";
-import { makeNotaryKey } from "../src/proofs/keygen.js";
+import type { NotaryKey } from "../src/proofs/key.js";
 import { balanceOf, prepareSeal, readSeal, sealState, sendSeal } from "../src/proofs/notary.js";
 import { RpcError, createRpc, endpointName, rpcUrls } from "../src/proofs/rpc.js";
 import { readMemoTransaction } from "../src/proofs/transaction.js";
-import { fakeSolana } from "./fakeSolana.js";
+import { fakeSolana, throwawayNotary } from "./fakeSolana.js";
 
 const noWait = async () => {};
-function notary(): { key: NotaryKey; secret: string } {
-  const k = makeNotaryKey();
-  const loaded = loadNotary({ SOLANA_CLUSTER: "devnet", NOTARY_KEY_DEVNET: k.secret });
-  if (loaded.status !== "on") throw new Error(loaded.reason);
-  return { key: loaded.key, secret: k.secret };
-}
+const notary = (): { key: NotaryKey; secret: string } => throwawayNotary("devnet");
 const MEMO = `brinelight proof v1 2026-10-22 ${"ab".repeat(32)}`;
 
 describe("the RPC client", () => {

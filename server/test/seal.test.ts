@@ -11,12 +11,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
 import { base58Encode } from "../src/auth/base58.js";
 import { createSession, findOrCreatePlayer, openDatabase, schema, type Database, type Db } from "../src/db/index.js";
-import { loadNotary, type NotaryKey } from "../src/proofs/key.js";
-import { makeNotaryKey } from "../src/proofs/keygen.js";
+import type { NotaryKey } from "../src/proofs/key.js";
 import { leafHash, merkleRoot } from "../src/proofs/merkle.js";
 import { createRpc } from "../src/proofs/rpc.js";
 import { MAX_TRIES_A_NIGHT, createNotaryService, nightAt, notaryHealth, type SealLog } from "../src/proofs/seal.js";
-import { fakeSolana, type FakeSolana } from "./fakeSolana.js";
+import { fakeSolana, throwawayNotary, type FakeSolana } from "./fakeSolana.js";
 import { checkTestDatabaseUrl } from "./testDatabase.js";
 
 const TEST_URL = process.env.TEST_DATABASE_URL || undefined;
@@ -39,12 +38,7 @@ const at = (iso: string) => new Date(iso);
 const sha256 = async (b: Uint8Array) => new Uint8Array(await crypto.subtle.digest("SHA-256", b));
 
 /** A throwaway devnet notary, its secret kept only to look for it where it must never be. */
-function notary(): { key: NotaryKey; secret: string } {
-  const k = makeNotaryKey();
-  const loaded = loadNotary({ SOLANA_CLUSTER: "devnet", NOTARY_KEY_DEVNET: k.secret });
-  if (loaded.status !== "on") throw new Error(loaded.reason);
-  return { key: loaded.key, secret: k.secret };
-}
+const notary = (): { key: NotaryKey; secret: string } => throwawayNotary("devnet");
 
 /** Everything the seal logged, to look for the key in it. */
 function logs(): SealLog & { lines: string[] } {

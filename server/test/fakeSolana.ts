@@ -4,9 +4,14 @@
  * landing once) and lets a test break it: endpoint down, transactions dropped, blocks moving on, another network.
  * Tests only: never used by the server.
  */
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { CLUSTERS, type Cluster } from "@brinelight/shared";
 import { base58Decode, base58Encode } from "../src/auth/base58.js";
 import { verifyEd25519 } from "../src/auth/ed25519.js";
+import { KEY_FILES, loadNotary, type NotaryKey } from "../src/proofs/key.js";
+import { makeNotaryKey } from "../src/proofs/keygen.js";
 import { readMemoTransaction, transactionId } from "../src/proofs/transaction.js";
 
 type Landed = { signature: string; bytes: Uint8Array; slot: number; finalized: boolean; signer: string; memo: string };
@@ -124,4 +129,21 @@ export function fakeSolana(cluster: Cluster = "devnet", options: { genesis?: str
     },
   };
   return state;
+}
+
+/**
+ * A throwaway notary for the tests: a new key written into a temporary secrets folder, read by the server's own
+ * loader, then the folder deleted. The secret is returned only so the tests can look for it where it must never be.
+ */
+export function throwawayNotary(cluster: Cluster = "devnet"): { key: NotaryKey; secret: string } {
+  const k = makeNotaryKey();
+  const dir = mkdtempSync(join(tmpdir(), "notary-"));
+  try {
+    writeFileSync(join(dir, KEY_FILES[cluster]), `${k.secret}\n`, { mode: 0o600 });
+    const loaded = loadNotary({ SOLANA_CLUSTER: cluster }, dir);
+    if (loaded.status !== "on") throw new Error(loaded.reason);
+    return { key: loaded.key, secret: k.secret };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
