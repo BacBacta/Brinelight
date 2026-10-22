@@ -18,4 +18,5 @@ export * from "./rules/mist.js";
 export * from "./rules/leviathan.js";
 export * from "./rules/objectives.js";
 export * from "./rules/daily.js";
+export * from "./rules/proofs.js";
 export * from "./state/index.js";
