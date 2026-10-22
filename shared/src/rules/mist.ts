@@ -1,15 +1,12 @@
 /**
- * The Mist (week 7, task 1). It comes at fixed hours, the same for every city, read on the city's clock: no
+ * The Mist (week 7, task 1). It comes at fixed hours, the same for every city of a server, read on the city's clock: no
  * randomness. While it is on, it hides the sea beyond the Lighthouse's light and slows the city unless the
  * Lighthouse is stoked; a Mist the Lighthouse held to its end gives Pearls, one it did not damages the rafts.
  * Stoking is an order that stays (on for a new city): the Mist punishes a lack of oil, never an absence.
  */
+import { calendarOf, type ServerId } from "./servers.js";
 import { HOUR } from "./time.js";
 
-/**
- * The hours a Mist starts, in UTC. Provisional: they become hours per server with multiplayer (docs/decisions.md).
- */
-export const MIST_HOURS_UTC = [4, 12, 20] as const;
 /** How long a Mist lasts, in real seconds. */
 export const MIST_DURATION = 2 * HOUR;
 /** How long before a Mist the city is warned, in real seconds. */
@@ -46,18 +43,18 @@ export function dailyWindow(clock: number, hours: readonly number[], duration: n
   return next!;
 }
 
-/** The Mist at `clock`: the one going on, or else the next one. */
-export const mistAt = (clock: number): MistWindow => dailyWindow(clock, MIST_HOURS_UTC, MIST_DURATION);
+/** The Mist at `clock` on a server: the one going on, or else the next one. Its hours are the server's (servers.ts). */
+export const mistAt = (clock: number, server: ServerId): MistWindow => dailyWindow(clock, calendarOf(server).mistHours, MIST_DURATION);
 
 /** Seconds from `clock` to the next time the Mist starts or lifts: always more than 0. */
-export function untilMistChange(clock: number): number {
-  const w = mistAt(clock);
+export function untilMistChange(clock: number, server: ServerId): number {
+  const w = mistAt(clock, server);
   return (w.on ? w.end : w.start) - clock;
 }
 
 /** Is the city warned of a coming Mist? From MIST_WARNING before it starts, until it does. */
-export function mistWarned(clock: number): boolean {
-  const w = mistAt(clock);
+export function mistWarned(clock: number, server: ServerId): boolean {
+  const w = mistAt(clock, server);
   return !w.on && w.start - clock <= MIST_WARNING;
 }
 
@@ -78,9 +75,9 @@ export type MistState = { stoke: boolean; dark: boolean; held: number; missed: n
 export const startingMist = (): MistState => ({ stoke: true, dark: false, held: 0, missed: 0, damaged: 0 });
 
 /** Is the Lighthouse stoked right now? Only during a Mist, with the order on, while it has not gone dark. */
-export const isLit = (clock: number, mist: MistState): boolean => mistAt(clock).on && mist.stoke && !mist.dark;
+export const isLit = (clock: number, server: ServerId, mist: MistState): boolean => mistAt(clock, server).on && mist.stoke && !mist.dark;
 
 /** The sea a fleet can reach right now: everywhere in calm weather, the Lighthouse's light in the Mist. */
-export function seaReach(clock: number, lighthouse: number, mist: MistState): number {
-  return mistAt(clock).on ? lightReach(lighthouse, isLit(clock, mist)) : Infinity;
+export function seaReach(clock: number, server: ServerId, lighthouse: number, mist: MistState): number {
+  return mistAt(clock, server).on ? lightReach(lighthouse, isLit(clock, server, mist)) : Infinity;
 }

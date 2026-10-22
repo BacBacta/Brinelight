@@ -15,7 +15,7 @@ export function stokeHtml(state: PlayerState, land = landShown(state.buildings.l
   const on = state.mist.stoke;
   const level = state.buildings.lighthouse;
   const note = on ? `In the Mist it burns ${STOKE_MULTIPLIER} times the oil. Your city keeps working.` : raftWords(land).mist;
-  const now = mistAt(state.clock).on ? `<p class="p" style="font-size:12.5px">${state.mist.dark ? "The Mist is here and your Lighthouse is dark until it lifts." : on ? "The Mist is here. Your Lighthouse is stoked." : ""}</p>` : "";
+  const now = mistAt(state.clock, state.server).on ? `<p class="p" style="font-size:12.5px">${state.mist.dark ? "The Mist is here and your Lighthouse is dark until it lifts." : on ? "The Mist is here. Your Lighthouse is stoked." : ""}</p>` : "";
   return box(
     "In the Mist",
     `<div class="list">${listRow("Stoke the Lighthouse", `<small>${note}</small>`, button(on ? "On" : "Off", "sm", "stoke", ` data-on="${on}"`, undefined, ` aria-pressed="${on}"`), "", ' data-stoke=""')}</div>` +

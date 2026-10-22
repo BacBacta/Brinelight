@@ -8,6 +8,7 @@ import type { ResearchJob, Techs } from "../rules/research.js";
 import type { HealingJob } from "../rules/healing.js";
 import type { TrainingJob } from "../rules/training.js";
 import type { CombatReport, Fleet, SeaWorld } from "../rules/sea.js";
+import type { ServerId } from "../rules/servers.js";
 import type { OwnedCaptain } from "../rules/start.js";
 import type { UpgradeJob } from "../rules/buildings.js";
 import type { Buildings, Stock, Troops } from "../rules/types.js";
@@ -52,6 +53,8 @@ export type PlayerState = {
   reportSeq: number;
   /** The city's game time, in seconds since 1 January 1970 (UTC): set by the server, moved on by `advance` only. */
   clock: number;
+  /** The game server the city belongs to: its Mists, hunts and daily reset follow that server's hours (servers.ts). Set by the server when the city is made. */
+  server: ServerId;
   /** The order to stoke the Lighthouse, whether it went dark in the Mist going on, and the Mists held and not held. */
   mist: MistState;
   /** The Leviathan's level for your city, and the hunt your fleets took part in. */

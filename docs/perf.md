@@ -283,23 +283,23 @@ Note each FPS and min, with the draw calls and triangles the counter shows, in t
 
 It reports, for each stage: the answers a second, the median and the slowest 1 % (p99), the refusals by the rules, the "too many" (429) and the errors. It exits with 1 at the first 429 or error. The CI runs it with 20 players for 30 seconds against the whole stack (job `deploy`).
 
-### On the real server, before it opens (owner, with Claude Code)
+### On the real server, before it opens (done on 22 October 2026, owner and Claude Code)
 
-1. **A backup just before** (on the server): `sudo systemctl start brinelight-backup.service`, and note the file name it prints (`journalctl -u brinelight-backup.service -n 3`).
-2. **The machine's processor and memory**, in a second SSH window on the server, until the test ends (`Ctrl+C`):
+As it was really done, from 10:03 to 11:37 UTC, on the CX23 in production, before any player came (2 accounts then: the owner's).
+
+1. **A backup just before**, on the server: `sudo systemctl start brinelight-backup.service`, then `sudo journalctl -u brinelight-backup.service -n 5 --no-pager` for its name; and the accounts counted (`select count(*) from players`, from `cities`), to check the restore at the end.
+2. **The measures, on the server**, while the test runs:
+   - in a second SSH window, `vmstat -n -t 5 | tee ~/load-vmstat.log`: the whole machine's processor (100 − `id`), watched live;
+   - in the first, in the background: `docker compose logs -f --no-log-prefix --since 1s server > ~/load-server.log`, whose `request completed` lines give each answer's time on the server (`responseTime`), and the `docker stats` loop into `~/load-stats.csv`, each container's processor (100 % is one core).
+3. **The test, from Claude Code's session** (never from the server, never from the CI), 100, 250, 500 then 1,000 players, 10 minutes each:
 
    ```
-   while true; do docker stats --no-stream --format '{{.Name}},{{.CPUPerc}},{{.MemUsage}}' | sed "s/^/$(date -u +%T),/" >> ~/load-stats.csv; sleep 5; done
+   npm run load -- --url https://api.brinelight.xyz --origin https://play.brinelight.xyz --stages 100,250,500,1000 --stage-seconds 600
    ```
 
-3. **The test**, from your computer (not from the server: it would take the server's processor), about an hour:
-
-   ```
-   npm run load -- --url https://api.brinelight.xyz --origin https://play.brinelight.xyz --stages 100,250,500 --stage-seconds 600
-   ```
-
-4. **The database put back as it was**: `sudo ./restore.sh replace` with the backup of step 1 (it removes the test's players and cities).
-5. The results go in the table below, with `~/load-stats.csv`'s highest processor and memory for each stage; then delete `~/load-stats.csv`.
+   The 1,000 stage only if the 500 one stayed under 35 % of processor and 250 ms of p99 on the server (owner). Stopped at once if `/health` was not ok, the processor over 90 % for a minute, 5xx in a row, or a p99 over 2 s.
+4. **For each stage**, on the server: the p50 and p99 of the `responseTime` of the stage's minutes, and the highest and mean processor of `vmstat`. **These decide**: the p99 the script sees also counts the trip from where it runs (about 125 ms from Claude Code's session, through its proxy).
+5. **The database put back exactly as it was**: `sudo ./restore.sh replace` with the backup of step 1 (it said `Restored: 2 players, 2 cities`); then the backup `restore.sh` makes just before (the test's 1,000 accounts) and the three measure files deleted.
 
 ### When to move to the CX33
 
@@ -307,12 +307,21 @@ When, at the busy hour, the processor stays over 70 %, or the p99 of the actions
 
 ### Results
 
-| Where | Players | Answers a second | p50 (ms) | p99 (ms) | Processor (server, db) | Memory (server, db) | Refused by the rules | 429 / errors |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| This machine's container, the whole stack in Docker (19 October; not a measure of the CX23) | 20 | 0.37 | 17 | 25 | 2.5 %, 0.8 % | 58 MB, 38 MB | 6 | 0 / 0 |
-| CX23 | 100 | | | | | | | |
-| CX23 | 250 | | | | | | | |
-| CX23 | 500 | | | | | | | |
+**On the CX23 (22 October 2026):** no error, no 429, no sign-in refused, at any stage. The p50 and p99 are each answer's time on the server; "seen by the script" adds the trip from Claude Code's session.
+
+| Players | Answers a second | p50 on the server (ms) | p99 on the server (ms) | p99 seen by the script (ms) | Machine's processor: highest (mean) | Refused by the rules | 429 / errors |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 100 | 2.8 | 8 | 23 | 423 | 9 % (5 %) | 1,369 | 0 / 0 |
+| 250 | 7.0 | 8 | 17 | 376 | 12 % (7 %) | 3,585 | 0 / 0 |
+| 500 | 14.0 | 8 | 16 | 370 | 15 % (11 %) | 7,193 | 0 / 0 |
+| 1,000 | 28.0 | 8 | 17 | 211 | 23 % (18 %) | 14,479 | 0 / 0 |
+
+- At 1,000 players, each container's highest (`docker stats`, 100 % is one core of two): the game server 39 % (96 MB), PostgreSQL 38 % (71 MB), Caddy 8 % (22 MB). The memory stays under 200 MB of 3.7 GB.
+- The 1,000 sign-ins (2,000 answers, 18 a minute): p50 129 ms, p99 377 ms seen by the script, none refused.
+- The refusals by the rules are the simulated players' random upgrades and fleets, refused as a new player's would be: they are answers, not errors.
+- **Decision: the CX23 stays.** At 1,000 players playing at once (about 28 answers a second), the machine uses under a quarter of its processor and answers in 17 ms at the p99: far from the 70 % and 500 ms of the move to the CX33. The processor grows by about 1.5 points per 100 players: 70 % would be near 4,000 players at once, more than this test measured.
+
+The container of 19 October (the whole stack in Docker on this machine, 20 players for 30 seconds; not a measure of the CX23): 0.37 answers a second, p50 17 ms, p99 25 ms, processor 2.5 % (server) and 0.8 % (db), memory 58 MB and 38 MB, 6 refusals by the rules, no 429 or error.
 
 ## The city remade in Blender (week 8): meeting 1, the island, the Lighthouse and the Refinery
 

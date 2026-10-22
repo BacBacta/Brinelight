@@ -1,6 +1,7 @@
 /** Game rules shared between the client (display) and the server (decision). */
 export * from "./rules/types.js";
 export * from "./rules/time.js";
+export * from "./rules/servers.js";
 export * from "./rules/buildings.js";
 export * from "./rules/research.js";
 export * from "./rules/rafts.js";

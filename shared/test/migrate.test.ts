@@ -9,8 +9,8 @@ const json = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 const SAVED = { clock: 1_792_310_400 };
 
 describe("the shapes", () => {
-  it("shape 9 is today's, shape 4 the oldest stored", () => {
-    expect(CITY_SHAPE).toBe(9);
+  it("shape 10 is today's, shape 4 the oldest stored", () => {
+    expect(CITY_SHAPE).toBe(10);
     expect(MIN_CITY_SHAPE).toBe(4);
   });
 
@@ -20,7 +20,7 @@ describe("the shapes", () => {
 });
 
 describe("from shape 4 to today's", () => {
-  it("adds exactly the fields of weeks 5 and 7, and changes nothing else", () => {
+  it("adds exactly the fields of weeks 5, 7 and 8, and changes nothing else", () => {
     const raw = week4();
     const city = migrateCity(raw, 4, SAVED)!;
     expect(city).not.toBeNull();
@@ -37,11 +37,13 @@ describe("from shape 4 to today's", () => {
     // And the first objective, nothing counted, the daily tasks of the day of its last save.
     expect(city.objective).toBe(0);
     expect(city.progress).toEqual({ gathers: 0, trained: 0, camps: 0 });
-    expect(city.daily).toEqual(startingDaily(SAVED.clock));
+    expect(city.daily).toEqual(startingDaily(SAVED.clock, "s1"));
     // And no wreck waiting to fill again.
     expect(city.world.refill).toEqual({});
+    // Week 8: the only server, s1.
+    expect(city.server).toBe("s1");
     // Everything the city had is there, unchanged; the fleets only gain their veterans.
-    const { training: _t, healing: _h, veterans: _v, shards: _s, clock: _c, mist: _m, leviathan: _l, objective: _o, progress: _p, daily: _d, fleets, world, ...rest } = city;
+    const { training: _t, healing: _h, veterans: _v, shards: _s, clock: _c, mist: _m, leviathan: _l, objective: _o, progress: _p, daily: _d, server: _sv, fleets, world, ...rest } = city;
     const { fleets: rawFleets, world: rawWorld, ...rawRest } = raw;
     expect(rest).toEqual(rawRest);
     expect(world).toEqual({ ...(rawWorld as object), refill: {} });
@@ -120,6 +122,15 @@ describe("from shape 4 to today's", () => {
     expect(migrateCity(json(emptied), 8, SAVED)).toEqual(emptied);
   });
 
+  it("from shape 9: only the server is added, s1; a city with a server keeps it, an unknown one is refused", () => {
+    const { server: _sv, ...shape9 } = json(newPlayerState(SAVED.clock));
+    expect(migrateCity(shape9, 9, SAVED)).toEqual(newPlayerState(SAVED.clock, "s1"));
+    expect(parseState(shape9)).toBeNull();
+    expect(migrateCity({ ...shape9, server: "s1" }, 9, SAVED)?.server).toBe("s1");
+    expect(migrateCity({ ...shape9, server: "s2" }, 9, SAVED)).toBeNull();
+    expect(parseState({ ...shape9, server: "toString" })).toBeNull();
+  });
+
   it("never adds a field to a fleet that has it", () => {
     const raw = week4() as { fleets: Record<string, unknown>[] };
     raw.fleets[0]!.veterans = { boarders: 2, harpooners: 0, crossbowmen: 0 };
@@ -128,8 +139,8 @@ describe("from shape 4 to today's", () => {
 });
 
 describe("cities that cannot be read", () => {
-  it("a shape older than 4, newer than 9, or not a whole number", () => {
-    for (const shape of [0, 3, 10, 99, 4.5, NaN]) expect(migrateCity(week4(), shape, SAVED), String(shape)).toBeNull();
+  it("a shape older than 4, newer than 10, or not a whole number", () => {
+    for (const shape of [0, 3, 11, 99, 4.5, NaN]) expect(migrateCity(week4(), shape, SAVED), String(shape)).toBeNull();
   });
 
   it("a city of shape 4 with a field parseState refuses, once the missing fields are added", () => {

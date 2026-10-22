@@ -175,9 +175,9 @@ export function createSeaSheet(root: HTMLElement, actions: { sail(site: string):
     }
     if (s.kind === "leviathan") {
       const l = state.leviathan;
-      const w = huntAt(state.clock);
-      const up = leviathanUp(state.clock, l);
-      const next = w.on ? huntAt(w.end).start : w.start;
+      const w = huntAt(state.clock, state.server);
+      const up = leviathanUp(state.clock, state.server, l);
+      const next = w.on ? huntAt(w.end, state.server).start : w.start;
       const mineNow = up && l.hunt === w.start;
       const leader = lead ? CAPTAINS[lead.id].name : null;
       const last = lastFleetText(state, w.end - state.clock + travelTime(s, state.techs, lead));

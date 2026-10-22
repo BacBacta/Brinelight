@@ -5,7 +5,8 @@
  * hour: the Mist's is held by the order to stoke, which works offline.
  */
 import type { Reward } from "./objectives.js";
-import { DAY } from "./time.js";
+import { calendarOf, type ServerId } from "./servers.js";
+import { DAY, HOUR } from "./time.js";
 import { OK, refuse, type Check } from "./types.js";
 
 export type DailyTaskId = "upgrades" | "gathers" | "camps" | "trains" | "mists" | "research";
@@ -43,25 +44,25 @@ export function chestReward(chest: Chest): Reward {
   }
 }
 
-/** A day of daily tasks: its number (days since 1970, UTC), what was done that day, the chests opened. */
+/** A day of daily tasks: its number (days since 1970, from the server's reset hour), what was done that day, the chests opened. */
 export type DailyState = { day: number; counts: Record<DailyTaskId, number>; chests: Chest[] };
 
-/** The day of a clock: whole days since 1 January 1970, UTC. */
-export const dayOf = (clock: number): number => Math.floor(clock / DAY);
+/** The day of a clock on a server: whole days since 1 January 1970, each one starting at the server's reset hour (UTC). */
+export const dayOf = (clock: number, server: ServerId): number => Math.floor((clock - calendarOf(server).resetHour * HOUR) / DAY);
 
-/** Seconds from `clock` to the next 00:00 UTC: always more than 0. */
-export const untilMidnight = (clock: number): number => (dayOf(clock) + 1) * DAY - clock;
+/** Seconds from `clock` to the server's next reset of the daily tasks: always more than 0. */
+export const untilReset = (clock: number, server: ServerId): number => (dayOf(clock, server) + 1) * DAY + calendarOf(server).resetHour * HOUR - clock;
 
-export function startingDaily(clock: number): DailyState {
-  return { day: dayOf(clock), counts: { upgrades: 0, gathers: 0, camps: 0, trains: 0, mists: 0, research: 0 }, chests: [] };
+export function startingDaily(clock: number, server: ServerId): DailyState {
+  return { day: dayOf(clock, server), counts: { upgrades: 0, gathers: 0, camps: 0, trains: 0, mists: 0, research: 0 }, chests: [] };
 }
 
 /** The daily tasks as they stand at `clock`: a new day starts empty. */
-export const dailyOn = (d: DailyState, clock: number): DailyState => (d.day === dayOf(clock) ? d : startingDaily(clock));
+export const dailyOn = (d: DailyState, clock: number, server: ServerId): DailyState => (d.day === dayOf(clock, server) ? d : startingDaily(clock, server));
 
 /** Counts `n` more of a task at `clock`, on that day. */
-export function countDaily(d: DailyState, clock: number, task: DailyTaskId, n = 1): DailyState {
-  const today = dailyOn(d, clock);
+export function countDaily(d: DailyState, clock: number, server: ServerId, task: DailyTaskId, n = 1): DailyState {
+  const today = dailyOn(d, clock, server);
   return n > 0 ? { ...today, counts: { ...today.counts, [task]: today.counts[task] + n } } : today;
 }
 
@@ -69,8 +70,8 @@ export function countDaily(d: DailyState, clock: number, task: DailyTaskId, n = 
 export const dailyPoints = (d: DailyState): number => DAILY_TASKS.reduce((p, t) => p + (d.counts[t.id] >= t.goal ? t.points : 0), 0);
 
 /** Can you open this chest now? Enough points today, and not opened yet today. */
-export function canOpenChest(d: DailyState, clock: number, chest: Chest): Check {
-  const today = dailyOn(d, clock);
+export function canOpenChest(d: DailyState, clock: number, server: ServerId, chest: Chest): Check {
+  const today = dailyOn(d, clock, server);
   if (today.chests.includes(chest)) return refuse("You already opened this chest today");
   if (dailyPoints(today) < chest) return refuse("Not enough points yet");
   return OK;

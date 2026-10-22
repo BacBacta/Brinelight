@@ -42,27 +42,27 @@ describe("the Mist's calendar (fixed UTC hours, provisional)", () => {
   it("three Mists a day, 2 hours each, at 04:00, 12:00 and 20:00 UTC", () => {
     expect(MIST_DURATION).toBe(2 * HOUR);
     for (const h of [4, 12, 20]) {
-      expect(mistAt(at(h) - 1).on, `${h}:00 minus 1 s`).toBe(false);
-      expect(mistAt(at(h))).toEqual({ on: true, start: at(h), end: at(h + 2) });
-      expect(mistAt(at(h + 2) - 1).on).toBe(true);
-      expect(mistAt(at(h + 2)).on, `${h + 2}:00`).toBe(false);
+      expect(mistAt(at(h) - 1, "s1").on, `${h}:00 minus 1 s`).toBe(false);
+      expect(mistAt(at(h), "s1")).toEqual({ on: true, start: at(h), end: at(h + 2) });
+      expect(mistAt(at(h + 2) - 1, "s1").on).toBe(true);
+      expect(mistAt(at(h + 2), "s1").on, `${h + 2}:00`).toBe(false);
     }
   });
 
   it("the next Mist: later today, or tomorrow at 04:00", () => {
-    expect(mistAt(at(0))).toEqual({ on: false, start: at(4), end: at(6) });
-    expect(mistAt(at(7))).toEqual({ on: false, start: at(12), end: at(14) });
-    expect(mistAt(at(22))).toEqual({ on: false, start: at(28), end: at(30) });
-    expect(untilMistChange(at(22))).toBe(6 * HOUR);
-    expect(untilMistChange(at(21, 30))).toBe(30 * 60);
+    expect(mistAt(at(0), "s1")).toEqual({ on: false, start: at(4), end: at(6) });
+    expect(mistAt(at(7), "s1")).toEqual({ on: false, start: at(12), end: at(14) });
+    expect(mistAt(at(22), "s1")).toEqual({ on: false, start: at(28), end: at(30) });
+    expect(untilMistChange(at(22), "s1")).toBe(6 * HOUR);
+    expect(untilMistChange(at(21, 30), "s1")).toBe(30 * 60);
   });
 
   it("the city is warned one hour before, until the Mist starts", () => {
     expect(MIST_WARNING).toBe(HOUR);
-    expect(mistWarned(at(3) - 1)).toBe(false);
-    expect(mistWarned(at(3))).toBe(true);
-    expect(mistWarned(at(4) - 1)).toBe(true);
-    expect(mistWarned(at(4))).toBe(false);
+    expect(mistWarned(at(3) - 1, "s1")).toBe(false);
+    expect(mistWarned(at(3), "s1")).toBe(true);
+    expect(mistWarned(at(4) - 1, "s1")).toBe(true);
+    expect(mistWarned(at(4), "s1")).toBe(false);
   });
 });
 
@@ -215,7 +215,7 @@ describe("the clock", () => {
     const s = city(at(4) - 0.3);
     const a = advance(s, 0.3);
     expect(a.clock).toBe(at(4));
-    expect(mistAt(a.clock).on).toBe(true);
+    expect(mistAt(a.clock, "s1").on).toBe(true);
     const b = advance(city(at(5, 59, 59.7)), 0.5);
     expect(b.clock).toBeCloseTo(at(6) + 0.2, 6);
     expect(b.mist.held).toBe(1);

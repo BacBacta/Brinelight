@@ -262,9 +262,9 @@ export function simulate(profile: Profile, days: number): Run {
     if (action.type === "claimChest") (run.pearls.chests += pearls), run.claims.chests++;
     if (action.type === "logbook") run.pearls.logbook -= pearls;
     if (action.type === "repairRafts") (run.oilSpent.repairs += s.stock.oil - r.state.stock.oil), run.oilSpent.repairsMade++;
-    if (action.type === "sail" && action.site === LEVIATHAN_SITE && huntAt(s.clock).start !== huntJoined) {
+    if (action.type === "sail" && action.site === LEVIATHAN_SITE && huntAt(s.clock, s.server).start !== huntJoined) {
       run.hunts.joined++;
-      huntJoined = huntAt(s.clock).start;
+      huntJoined = huntAt(s.clock, s.server).start;
     }
     s = r.state;
     // Salvages repeat at every session: counted, not listed.
@@ -324,7 +324,7 @@ export function simulate(profile: Profile, days: number): Run {
     // The Leviathan first, when it is at sea and a fleet stays free for the wrecks (owner's decision, 18 October): all
     // the troops sail to it, and no camp is attacked meanwhile.
     const spare = fleetsMax(s.buildings.harbor) - s.fleets.length >= 2;
-    if (!profile.skip?.hunts && spare && leviathanUp(s.clock, s.leviathan)) any = act({ type: "sail", site: LEVIATHAN_SITE }, "hunt the Leviathan") || any;
+    if (!profile.skip?.hunts && spare && leviathanUp(s.clock, s.server, s.leviathan)) any = act({ type: "sail", site: LEVIATHAN_SITE }, "hunt the Leviathan") || any;
     const army = totalTroops(s.troops) + totalTroops(s.veterans);
     if (army >= MIN_ATTACK_TROOPS) {
       // The lowest camp, if the odds are "easy"; all the troops sail.
@@ -433,7 +433,7 @@ export function simulate(profile: Profile, days: number): Run {
       const reports = s.reportSeq;
       const mist = { ...s.mist };
       // What the stoked Lighthouse burns above its usual oil, for the hour it is lit.
-      if (isLit(s.clock, s.mist)) run.oilSpent.stoking += ((netRates(s).oil - netRates(s, { mist: true, stoked: true }).oil) * step) / HOUR;
+      if (isLit(s.clock, s.server, s.mist)) run.oilSpent.stoking += ((netRates(s).oil - netRates(s, { mist: true, stoked: true }).oil) * step) / HOUR;
       s = advance(s, step);
       t += step;
       run.mists.held += s.mist.held - mist.held;

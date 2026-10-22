@@ -159,7 +159,7 @@ describe("a modified client cannot change the rules", () => {
     await expectRules(server, p);
   });
 
-  it("an unknown action type, fields the server does not expect (a city, a time, another player, __proto__), a huge body", async () => {
+  it("an unknown action type, fields the server does not expect (a city, a time, a server, another player, __proto__), a huge body", async () => {
     const server = await buildApp({ db, now: () => clock });
     const p = await player();
     const other = await player();
@@ -174,6 +174,10 @@ describe("a modified client cannot change the rules", () => {
       { action: { ...a, at: clock.getTime() + 86_400_000 } },
       { action: a, now: "2030-01-01T00:00:00.000Z" },
       { action: { ...a, speed: 1000 } },
+      // The city's server (its Mist and Leviathan hours) is the server's to set, never the client's.
+      { action: { ...a, server: "s2" } },
+      { action: a, server: "s1" },
+      { action: { type: "setServer", id: a.id, server: "s1" } },
       { action: a, playerId: other.id },
       { action: { ...a, playerId: other.id } },
       `{"action":${JSON.stringify(a)},"__proto__":{"admin":true}}`,

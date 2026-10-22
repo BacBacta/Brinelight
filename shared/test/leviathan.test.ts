@@ -45,12 +45,12 @@ const reportOf = (s: PlayerState) => s.reports.at(-1)!;
 
 describe("the Leviathan's calendar", () => {
   it("rises at 13:00 and 19:00 UTC for 2 hours, the same for every city", () => {
-    expect(huntAt(at(12, 59))).toEqual({ on: false, start: at(13), end: at(15) });
-    expect(huntAt(at(13))).toEqual({ on: true, start: at(13), end: at(15) });
-    expect(huntAt(at(14, 59))).toEqual({ on: true, start: at(13), end: at(15) });
-    expect(huntAt(at(15))).toEqual({ on: false, start: at(19), end: at(21) });
-    expect(huntAt(at(20, 30))).toEqual({ on: true, start: at(19), end: at(21) });
-    expect(huntAt(at(21))).toEqual({ on: false, start: at(24 + 13), end: at(24 + 15) });
+    expect(huntAt(at(12, 59), "s1")).toEqual({ on: false, start: at(13), end: at(15) });
+    expect(huntAt(at(13), "s1")).toEqual({ on: true, start: at(13), end: at(15) });
+    expect(huntAt(at(14, 59), "s1")).toEqual({ on: true, start: at(13), end: at(15) });
+    expect(huntAt(at(15), "s1")).toEqual({ on: false, start: at(19), end: at(21) });
+    expect(huntAt(at(20, 30), "s1")).toEqual({ on: true, start: at(19), end: at(21) });
+    expect(huntAt(at(21), "s1")).toEqual({ on: false, start: at(24 + 13), end: at(24 + 15) });
     expect(HUNT_DURATION).toBe(2 * HOUR);
   });
 
