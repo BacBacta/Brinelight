@@ -2,7 +2,7 @@
 
 Goal of the week: a moment of a player's game becomes a proof anyone can check on Solana, without trusting Brinelight. Every night, the server seals the day's milestones in one Solana transaction: a single fingerprint (a Merkle root) that says nothing about anyone. Each player can see their proofs in the game and check them, alone, against the chain. This is the "notary" of `CLAUDE.md`, at its smallest: nothing is sold, nothing is sent to a player's wallet, nothing personal goes on chain. The same notary will later seal the titles of Guardians of the Great Lighthouse and the seasons of the Tides (week 13), and the daily recruitment's draw (week 15).
 
-**Status: the plan is accepted with the owner's answers of 22 October (at the end). Tasks 1 and 2 first; stop before task 3, the notary's key, to show them.**
+**Status: the plan is accepted with the owner's answers of 22 October (at the end). Tasks 1 and 2 are done; stop before task 3, the notary's key, to show them.**
 
 Do the tasks in order, one per session. For each one: read CLAUDE.md, say what you will do and what you will not do, wait for approval, write the code, run `npm run check` (and `npm run e2e` when the client changes), commit, push. One pull request for the whole week.
 
@@ -48,6 +48,8 @@ How it is tested:
 - a fact, a day or a wallet that does not follow the format is refused;
 - the same leaves always give the same root.
 
+**Done (22 October).** `shared/src/rules/proofs.ts` (pure, with no `Date`: the UTC days are counted by hand and checked against the platform's calendar over 60 years), `server/src/proofs/merkle.ts`, the frozen vectors `shared/test/fixtures/proofs-v1.json` and `docs/proofs.md`, whose hand-worked leaf was checked with `sha256sum` apart from Node. Tests: `shared/test/proofs.test.ts`, `server/test/merkle.test.ts`.
+
 ## Task 2 · Recording the milestones
 
 What it does:
@@ -70,6 +72,8 @@ How it is tested:
 - an action replayed, a city saved twice, a refused action or an action that changes nothing records nothing more;
 - the cheat cases: an action carrying a `proof`, a `fact`, a `day` or a `milestone` field, or a body with one beside the action, is refused as invalid and records nothing;
 - the migration on PGlite and on PostgreSQL (the `postgres` job).
+
+**Done (22 October).** The table `proofs` (migration `0004_proofs`; the column of `when` is named `dated`, as `when` is a word of SQL), `milestonesReached` in `shared/src/state/milestones.ts`, and `server/src/proofs/record.ts`, called in the transaction that writes the city. Below Lighthouse 5, no query is added. A wallet that does not fit the format records nothing and is logged with the player id only; the action still goes through. Tests: `server/test/proofs.test.ts`, on PGlite, and on PostgreSQL in the CI's `postgres` job (also run here on PostgreSQL 16).
 
 ## Task 3 · The notary: its key and its transaction (protected)
 

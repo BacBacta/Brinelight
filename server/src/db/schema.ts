@@ -1,4 +1,4 @@
-import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, primaryKey, serial, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 /** A player: one per Solana wallet. */
 export const players = pgTable("players", {
@@ -71,4 +71,29 @@ export const appliedActions = pgTable(
     error: text("error"),
   },
   (t) => [primaryKey({ columns: [t.playerId, t.actionId] }), index("applied_actions_at_idx").on(t.appliedAt)],
+);
+
+/**
+ * The facts of a player's game to be sealed on Solana (week 9, `docs/proofs.md`): today the Lighthouse's milestones.
+ * Each row keeps what its player needs to check it: the fact, `on` or `by` its day, the salt (hex, random, the only
+ * thing that ties the leaf to the player) and the leaf (hex). Never the wallet: the leaf already holds it, hashed.
+ * A fact is recorded once per player; a player deleted takes their rows with them, and their leaves can then be tied
+ * to no one. The seal each row goes into comes with task 4.
+ */
+export const proofs = pgTable(
+  "proofs",
+  {
+    id: serial("id").primaryKey(),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    fact: text("fact").notNull(),
+    /** `on` or `by` (`when` is a word of SQL). */
+    when: text("dated").notNull(),
+    day: text("day").notNull(),
+    salt: text("salt").notNull(),
+    leaf: text("leaf").notNull(),
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [unique("proofs_player_fact").on(t.playerId, t.fact)],
 );
