@@ -36,6 +36,13 @@
       "when": 1792673451717,
       "tag": "0004_proofs",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792676350563,
+      "tag": "0005_seals",
+      "breakpoints": true
     }
   ]
 }

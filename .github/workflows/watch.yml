@@ -1,4 +1,6 @@
 # The down alert (docs/deploy.md, "Be warned if the server goes down"): every 10 minutes, /health must say "ok":true.
+# It is false when the database is down, a backup is late, the test restore failed, or the notary on Solana is late
+# (a milestone waits more than 26 hours for its seal), low (under 0.005 SOL) or unlisted (docs/proofs.md).
 # A failed run makes GitHub send you an e-mail. Off until the repository variable API_URL is set (for instance
 # https://api.brinelight.xyz). GitHub may start a scheduled run several minutes late at busy times, and turns the
 # schedule off after 60 days without activity on a public repository (it e-mails you; docs/deploy.md says how to turn

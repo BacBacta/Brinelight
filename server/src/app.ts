@@ -13,6 +13,8 @@ import { cityRoutes } from "./city/routes.js";
 import { loadConfig, type Config } from "./config.js";
 import type { Db } from "./db/index.js";
 import { health } from "./health.js";
+import { notaryHealth, type NotaryService } from "./proofs/seal.js";
+import { proofRoutes } from "./proofs/routes.js";
 import { INVALID_LEVEL, INVALID_REQUEST, SERVER_ERROR, TOO_MANY_REQUESTS, UNKNOWN_BUILDING } from "./refusals.js";
 
 export type AppOptions = {
@@ -20,6 +22,8 @@ export type AppOptions = {
   db?: Db;
   config?: Config;
   now?: () => Date;
+  /** The notary on Solana (week 9); none (the default) seals nothing and /health says "off". */
+  notary?: NotaryService | null;
   /** Pino options; the Authorization header is always redacted. False (the default) logs nothing. */
   logger?: false | Exclude<FastifyServerOptions["logger"], boolean | undefined>;
 };
@@ -56,7 +60,10 @@ export async function buildApp(options: AppOptions = {}) {
 
   // The database, the nightly backup and the weekly test restore (health.ts); 503 when one fails, for the down alert.
   app.get("/health", async (_req, reply) => {
-    const status = await health({ db: options.db, statusDir: config.statusDir, now: (options.now ?? (() => new Date()))(), version: "0.1.0" });
+    const now = (options.now ?? (() => new Date()))();
+    const db = options.db;
+    const notary = db ? () => notaryHealth(db, options.notary ?? null, now) : undefined;
+    const status = await health({ db, statusDir: config.statusDir, now, version: "0.1.0", notary });
     return reply.code(status.ok ? 200 : 503).send(status);
   });
 
@@ -77,6 +84,7 @@ export async function buildApp(options: AppOptions = {}) {
     await authRoutes(app, { db: options.db, config, now });
     await cityRoutes(app, { db: options.db, now, speed });
     await actionRoutes(app, { db: options.db, now, speed });
+    await proofRoutes(app, { db: options.db, now, notary: options.notary ?? null });
   }
 
   return app;

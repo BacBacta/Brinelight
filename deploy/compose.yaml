@@ -44,6 +44,12 @@ services:
       TRUSTED_PROXY: 172.30.0.10
       # Where /health reads the last backup's time and the last test restore's result (backup.sh, restore.sh).
       HEALTH_STATUS_DIR: /status
+      # The notary on Solana (docs/proofs.md): its network, and one key per network, made by notary-key.sh. The server
+      # reads only the key of SOLANA_CLUSTER and takes both out of its environment at start. Empty: no notary.
+      SOLANA_CLUSTER: ${SOLANA_CLUSTER:-}
+      NOTARY_KEY_DEVNET: ${NOTARY_KEY_DEVNET:-}
+      NOTARY_KEY_MAINNET: ${NOTARY_KEY_MAINNET:-}
+      SOLANA_RPC_URLS: ${SOLANA_RPC_URLS:-}
     volumes:
       # Read-only, and only the status folder: two one-line files, never a dump.
       - ${STATUS_DIR:-/var/lib/brinelight/status}:/status:ro

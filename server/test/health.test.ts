@@ -32,7 +32,7 @@ describe("/health tells the truth", () => {
   it("all well: the database answers, last night's backup, the last test restore passed", async () => {
     await writeFile(join(dir, BACKUP_FILE), `${hoursAgo(5)}\n`);
     await writeFile(join(dir, RESTORE_FILE), `ok ${hoursAgo(30)}\n`);
-    expect(await get()).toEqual({ code: 200, body: { ok: true, service: "brinelight", version: "0.1.0", database: "ok", backup: "ok", restore: "ok" } });
+    expect(await get()).toEqual({ code: 200, body: { ok: true, service: "brinelight", version: "0.1.0", database: "ok", backup: "ok", restore: "ok", notary: "off" } });
   });
 
   it("the database stopped: 503, database down", async () => {
@@ -69,6 +69,6 @@ describe("/health tells the truth", () => {
   });
 
   it("without a status folder (development), only the database is checked", async () => {
-    expect(await get(null)).toEqual({ code: 200, body: { ok: true, service: "brinelight", version: "0.1.0", database: "ok" } });
+    expect(await get(null)).toEqual({ code: 200, body: { ok: true, service: "brinelight", version: "0.1.0", database: "ok", notary: "off" } });
   });
 });

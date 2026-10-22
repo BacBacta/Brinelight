@@ -44,7 +44,7 @@ jobs:
           cache: npm
       - run: npm ci
       # One file after the other: they empty the same database, and the migration test rebuilds it as week 4 left it.
-      - run: npx vitest run --no-file-parallelism server/test/concurrency.test.ts server/test/migration.test.ts server/test/proofs.test.ts
+      - run: npx vitest run --no-file-parallelism server/test/concurrency.test.ts server/test/migration.test.ts server/test/proofs.test.ts server/test/seal.test.ts
         env:
           TEST_DATABASE_URL: postgres://postgres@localhost:5432/brinelight_test
 

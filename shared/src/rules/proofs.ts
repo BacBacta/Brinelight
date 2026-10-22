@@ -8,6 +8,8 @@
  * Guardians of the Great Lighthouse, the seasons of the Tides) needs no new version.
  */
 
+import { isCluster, type Cluster } from "./notary.js";
+
 /** The text every leaf and every memo starts with. A new version would be a new format, checked apart. */
 export const PROOF_VERSION = "brinelight proof v1";
 
@@ -107,4 +109,72 @@ export function fromHex(hex: string): Uint8Array | null {
   const out = new Uint8Array(hex.length / 2);
   for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.slice(2 * i, 2 * i + 2), 16);
   return out;
+}
+
+/** One step of a proof's path: the sibling's hash (hex), on the left or the right of the hash being built. */
+export type ProofStep = { side: "left" | "right"; hash: string };
+
+/** The night's seal a proof is in: the network, the day sealed, the root (hex), the transaction, the path to the root. */
+export type SealedIn = { cluster: Cluster; day: string; root: string; signature: string; path: ProofStep[] };
+
+/** A player's proof as the server gives it: what the leaf holds, the leaf (hex), and its seal once there is one. */
+export type PlayerProof = { fact: string; when: ProofWhen; day: string; salt: string; wallet: string; leaf: string; seal: SealedIn | null };
+
+/** A proof saved to a file: everything needed to check it alone, against the chain. */
+export type ProofFile = { format: typeof PROOF_VERSION; fact: string; when: ProofWhen; day: string; salt: string; wallet: string; leaf: string; seal: SealedIn };
+
+const HASH_HEX = /^[0-9a-f]{64}$/;
+const SIGNATURE = /^[1-9A-HJ-NP-Za-km-z]{64,90}$/;
+const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+const onlyKeys = (o: Record<string, unknown>, keys: string[]) => Object.keys(o).length === keys.length && keys.every((k) => Object.hasOwn(o, k));
+
+/** The file of a sealed proof. */
+export const proofFile = (p: PlayerProof & { seal: SealedIn }): ProofFile => ({
+  format: PROOF_VERSION,
+  fact: p.fact,
+  when: p.when,
+  day: p.day,
+  salt: p.salt,
+  wallet: p.wallet,
+  leaf: p.leaf,
+  seal: { cluster: p.seal.cluster, day: p.seal.day, root: p.seal.root, signature: p.seal.signature, path: p.seal.path.map((s) => ({ side: s.side, hash: s.hash })) },
+});
+
+/** Reads a proof file strictly: every field, in its format, and nothing else. Null otherwise. */
+export function parseProofFile(v: unknown): ProofFile | null {
+  if (!isObj(v) || !onlyKeys(v, ["format", "fact", "when", "day", "salt", "wallet", "leaf", "seal"])) return null;
+  if (v.format !== PROOF_VERSION || !isFact(v.fact) || !isProofWhen(v.when) || !isProofDay(v.day)) return null;
+  if (typeof v.salt !== "string" || !/^[0-9a-f]{32}$/.test(v.salt) || !isWalletText(v.wallet) || typeof v.leaf !== "string" || !HASH_HEX.test(v.leaf)) return null;
+  const s = v.seal;
+  if (!isObj(s) || !onlyKeys(s, ["cluster", "day", "root", "signature", "path"])) return null;
+  if (!isCluster(s.cluster) || !isProofDay(s.day) || typeof s.root !== "string" || !HASH_HEX.test(s.root) || typeof s.signature !== "string" || !SIGNATURE.test(s.signature)) return null;
+  if (!Array.isArray(s.path) || s.path.length > 64) return null;
+  const path: ProofStep[] = [];
+  for (const step of s.path) {
+    if (!isObj(step) || !onlyKeys(step, ["side", "hash"]) || (step.side !== "left" && step.side !== "right") || typeof step.hash !== "string" || !HASH_HEX.test(step.hash)) return null;
+    path.push({ side: step.side, hash: step.hash });
+  }
+  return { format: PROOF_VERSION, fact: v.fact, when: v.when, day: v.day, salt: v.salt, wallet: v.wallet, leaf: v.leaf, seal: { cluster: s.cluster, day: s.day, root: s.root, signature: s.signature, path } };
+}
+
+/** SHA-256, given by whoever checks: Web Crypto in the browser and in Node. */
+export type Sha256 = (bytes: Uint8Array) => Promise<Uint8Array>;
+
+/**
+ * Checks a proof's hashes, with no network: its fields give its leaf, and its leaf with its path gives its seal's
+ * root. Null when it holds; otherwise the reason, for the player. That the root is on chain, signed by the notary, is
+ * checked apart (`npm run proof:check`, or the explorer).
+ */
+export async function checkProofHashes(p: Pick<PlayerProof, "fact" | "when" | "day" | "salt" | "wallet" | "leaf"> & { seal: Pick<SealedIn, "root" | "path"> }, sha256: Sha256): Promise<string | null> {
+  const salt = fromHex(p.salt);
+  const bytes = salt ? leafBytes({ salt, wallet: p.wallet, fact: p.fact, when: p.when, day: p.day }) : null;
+  if (!bytes) return "This proof is not in the right format.";
+  let hash = await sha256(bytes);
+  if (toHex(hash) !== p.leaf) return "This proof's details do not match its leaf.";
+  for (const step of p.seal.path) {
+    const sibling = fromHex(step.hash);
+    if (!sibling || sibling.length !== HASH_BYTES) return "This proof's path is not in the right format.";
+    hash = await sha256(step.side === "left" ? nodeBytes(sibling, hash) : nodeBytes(hash, sibling));
+  }
+  return toHex(hash) === p.seal.root ? null : "This proof's path does not lead to the seal's root.";
 }
