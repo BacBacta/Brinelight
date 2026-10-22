@@ -2,7 +2,7 @@
 
 Goal of the week: a moment of a player's game becomes a proof anyone can check on Solana, without trusting Brinelight. Every night, the server seals the day's milestones in one Solana transaction: a single fingerprint (a Merkle root) that says nothing about anyone. Each player can see their proofs in the game and check them, alone, against the chain. This is the "notary" of `CLAUDE.md`, at its smallest: nothing is sold, nothing is sent to a player's wallet, nothing personal goes on chain. The same notary will later seal the titles of Guardians of the Great Lighthouse and the seasons of the Tides (week 13), and the daily recruitment's draw (week 15).
 
-**Status: the plan is accepted with the owner's answers of 22 October (at the end). Tasks 1 and 2 are done; stop before task 3, the notary's key, to show them.**
+**Status: tasks 1 to 5 are done (22 October), on devnet only; tasks 3 and 4 had their independent review (below). Stop before task 6 (mainnet): nothing on mainnet without the owner's yes.**
 
 Do the tasks in order, one per session. For each one: read CLAUDE.md, say what you will do and what you will not do, wait for approval, write the code, run `npm run check` (and `npm run e2e` when the client changes), commit, push. One pull request for the whole week.
 
@@ -102,6 +102,13 @@ How it is tested:
 - the key never appears in a log line, an error or an answer;
 - the independent review, then once, by hand, on devnet from the server: a real transaction, its signature and its link on `explorer.solana.com` sent to the owner.
 
+**Done (22 October), owner's go of 22 October for tasks 3 to 5 on devnet.**
+- `deploy/notary-key.sh devnet|mainnet` runs `server/src/proofs/keygen.ts` in the server's container (Node is not on the machine). The two lines it prints are read into a bash variable, never onto the screen, with no other program and no temporary file. The key goes into `deploy/.env` (mode 600) as `NOTARY_KEY_DEVNET` or `NOTARY_KEY_MAINNET`. Only the address is shown. An existing key is never replaced, and nothing is written when anything fails. `keygen.ts` refuses to print to a terminal.
+- `server/src/proofs/key.ts`: `SOLANA_CLUSTER` picks the only variable read. Both key variables leave the environment as soon as they are read. The same key on both networks is refused. A malformed key turns the notary off, with a reason that names the variable, never its value. The key lives only in a Node key object, and printing the notary shows its network and address.
+- `transaction.ts`: the Memo transaction, byte by byte. It is identical, to the byte, to the one Solana's own SDK builds (solders 0.27.1, run once outside the repository: `server/test/fixtures/memo-tx-solders.json`). It follows the field table of Solana's documentation and RFC 8032's signature. A real devnet node simulated it and verified its signature (`AccountNotFound` only, as the throwaway key had no SOL). One byte changed in the signature or the memo gives `SignatureFailure`. The devnet faucet refused this session's address (its daily limit), so the first real transaction is the server's.
+- `rpc.ts`: the public endpoints, 4 tries 1, 3 and 9 s apart on the next endpoint. Each endpoint's genesis hash is checked before use, and one of another network is never used again. Errors name the endpoint's host only.
+- Tests: `server/test/transaction.test.ts`, `notaryKey.test.ts` (the script run for real with a fake `docker`), `notary.test.ts`, against a fake Solana network (`server/test/fakeSolana.ts`).
+
 ## Task 4 · The nightly seal (protected)
 
 What it does:
@@ -124,6 +131,11 @@ How it is tested:
 - in every case: one root on chain a night at most, and each milestone sealed exactly once;
 - `/health` in each state;
 - the independent review of the diff.
+
+**Done (22 October).**
+- `server/src/proofs/seal.ts` and migration `0005_seals` (`seals`; `proofs.seal_id` and `position`). Every 5 minutes, on real time, the server follows the seals sent. From 00:15 UTC it seals the milestones recorded before midnight. The seal and its signed transaction are written before the sending. The index `seals_one_a_night` allows one `sent` or `finalized` seal a night per network. A seal still able to land is only sent again as it is. Its milestones go back only once its blockhash is 150 blocks past its last valid height (`expired`), or if it landed with an error (`failed`, 3 a night at most). A finalized seal is read back from the chain and compared with what was written.
+- `/health` gets `notary`: `ok`, `late`, `low`, `unlisted` or `off` (only `off` leaves `ok` true). `watch.yml` alerts on the others. `compose.yaml` passes `SOLANA_CLUSTER`, the two key variables and `SOLANA_RPC_URLS`. `GET /proofs` (task 5) is in this commit too.
+- Tests: `server/test/seal.test.ts`, on PGlite and on PostgreSQL in the CI. It covers a quiet night, a night with nothing, the network down 3 hours, a sending that fails, a restart, a lost transaction, two processes at once, an empty notary, 3 failures, `/health`, `GET /proofs`, and the key looked for through a whole night in the logs, errors, HTTP answers and every table.
 
 ## Task 5 · Your proofs, in the game
 
@@ -149,6 +161,11 @@ How it is tested:
 - `proof:check` against the fake RPC, with a transaction signed by an address that is not the notary's (refused);
 - an e2e: a Lighthouse that ends, the night sealed by the fake notary, the line in the Profile, "Check" green;
 - look captures of the Profile (412 and 360), shown before their references are made again.
+
+**Done (22 October).**
+- "Your proofs" shows only once you have a proof. Before that, the Profile is exactly as it was, and its look references do not move. The notary's address comes from the game's own list (`NOTARIES`, `shared/src/rules/notary.ts`). Until it is published there, the section says so in red. **Check** uses Web Crypto, **See it on Solana** opens `explorer.solana.com` (`?cluster=devnet`), **Save the proof** gives a JSON file.
+- `npm run proof:check -- <file>` (`tools/proof/`).
+- Tests: `client/test/proofs.test.ts`, `tools/proof/check.test.ts`, `shared/test/proofs.test.ts`, and one e2e: Lighthouse 5 recorded, sealed by the harness's fake notary, shown, checked, saved, and the file holds against the chain. Captures `shot-profile-proofs-412` and `-360` are in the e2e artifact, not references.
 
 ## Task 6 · On mainnet
 

@@ -350,8 +350,9 @@ The first certificate can take a minute. If it does not come, see "Solving probl
 | `database` | The database answers within 2 seconds | `down` |
 | `backup` | The last nightly backup succeeded less than 26 hours ago | `late` (a night missed), `none` (never made) |
 | `restore` | The last weekly test restore succeeded | `failed`. Before the first one: `none`, which does not count |
+| `notary` | The notary on Solana (step 12) sealed every milestone recorded more than 26 hours ago, has 0.005 SOL or more, and its address is in the official list (`docs/proofs.md`) | `late`, `low`, `unlisted`. Without a notary: `off`, which does not count |
 
-`ok` is `true` only when all three are fine; otherwise the answer comes with the status 503, and the down alert (step 11) warns you. The backup and the test restore each write one line (a time, and "ok" or "failed") in `/var/lib/brinelight/status/`, which the game server reads, read-only: never a dump.
+`ok` is `true` only when all of them are fine; otherwise the answer comes with the status 503, and the down alert (step 11) warns you. The backup and the test restore each write one line (a time, and "ok" or "failed") in `/var/lib/brinelight/status/`, which the game server reads, read-only: never a dump.
 
 Docker's own check (`server (healthy)` in `docker compose ps`) only says the game server answers: restarting it would not mend a late backup.
 
@@ -454,6 +455,37 @@ What to know:
 
 ---
 
+## 12. The notary on Solana (devnet)
+
+Every night at 00:15 UTC, the server seals the Lighthouse milestones of the day in one Solana transaction (`docs/proofs.md`). It needs a key of its own, made on the server and never copied anywhere else, and a little SOL to pay one fee a night (about 0.000005 SOL). **Devnet only for now: mainnet waits for the owner's yes (week 9, task 6).** The key is in the protected areas of `CLAUDE.md`.
+
+One step at a time, as `brinelight`, in `~/brinelight/deploy`. Send what each step prints, except where it says not to.
+
+1. **The game with the notary** (week 9's code, merged into `main`): `~/brinelight/deploy/update.sh`. The notary stays off: `/health` says `"notary":"off"`.
+2. **The devnet key:**
+
+   ```
+   ./notary-key.sh devnet
+   ```
+
+   It makes the key inside the server's container, writes it into `deploy/.env` as `NOTARY_KEY_DEVNET` (the file stays readable by you only), and prints only its public address: `Its public address (you can share it): …`. Send that line. Never open `deploy/.env` to look at the key, never paste it anywhere. Run twice, it refuses: a key is never replaced by the script.
+3. **Devnet SOL, from the faucet, never from Phantom:** open `https://faucet.solana.com`, choose **devnet**, paste the address, ask for 1 SOL (devnet SOL is free and worth nothing). Check it arrived: `https://explorer.solana.com/address/<the address>?cluster=devnet`.
+4. **The address published:** Claude Code adds it to the official list (`shared/src/rules/notary.ts` and `docs/proofs.md`), then: `~/brinelight/deploy/update.sh` again.
+5. **Turn the notary on, on devnet:**
+
+   ```
+   echo "SOLANA_CLUSTER=devnet" >> .env
+   docker compose up -d
+   docker compose logs --tail 20 server | grep -i notary
+   ```
+
+   The log says `The notary seals every night at 00:15 UTC` with `"cluster":"devnet"` and the address of step 2. Then `curl -s https://api.brinelight.xyz/health` says `"notary":"ok"`.
+6. **The first seal:** after 00:15 UTC, if a milestone was recorded the day before. Its transaction appears on the address's page of step 3.
+
+**If the key is lost or leaked:** stop the notary (`SOLANA_CLUSTER=` empty in `.env`, then `docker compose up -d`), take the old `NOTARY_KEY_DEVNET` line out of `.env` (or `NOTARY_KEY_MAINNET`), and tell Claude Code. Its address stays in the official list with its last day (and the day it leaked, if it did): the proofs it already sealed stay checkable. Then steps 2 to 5 again with a new key.
+
+**What to never do:** run `docker compose config` where someone can see the screen (it prints every setting of `.env`, the key included); copy `deploy/.env` off the server; set the same key for devnet and mainnet (the server refuses).
+
 ## Later: everyday tasks
 
 All as `brinelight`, in `~/brinelight/deploy`.
@@ -544,6 +576,7 @@ In the Hetzner console: **Server → Backups → (a day) → Restore**. The serv
 - Members of the `docker` group can do anything on the server through Docker: only `brinelight` is in it.
 - Ports opened by Docker skip the `ufw` firewall. That is why only Caddy opens ports (80 and 443, already allowed), and the database and the game server have none. Never add a `ports:` line to `db` or `server` in `compose.yaml`.
 - The database is on a Docker network with no way out to the Internet.
+- The notary's key is in `deploy/.env` (readable by `brinelight` only) and, once the server runs, in the game server's container: `docker inspect` and `docker compose config` show it to anyone who can run Docker on the server. Hetzner Backups copy the whole disk, `deploy/.env` with it; the nightly database dumps never hold it.
 
 ## Annex: if the repository becomes private
 
