@@ -83,11 +83,11 @@ export type Profile = {
   /** Never sends a fleet: no salvage, no camp, no hunt; the island alone (docs/studies/resources.md). */
   noSea?: boolean;
   /**
-   * Keeps the Lighthouse's reserve only on the resources a spending uses: an upgrade paid in fish and oil goes ahead
-   * while the Lighthouse waits for wood (docs/studies/resources.md). Without it, any spending waits for the whole
-   * reserve.
+   * Holds the Lighthouse's whole reserve: no spending at all while the Lighthouse waits for any resource. The balance's
+   * players before 23 October played so; since, they keep the reserve only on the resources a spending uses, and an
+   * upgrade paid in fish and oil goes ahead while the Lighthouse waits for wood (docs/studies/resources.md).
    */
-  reserveOnSpent?: boolean;
+  holdWholeReserve?: boolean;
 };
 
 const at = (hours: number, minutes = 0) => hours * HOUR + minutes * 60;
@@ -276,7 +276,7 @@ export function simulate(profile: Profile, days: number): Run {
   /** Applies an action; `keep`: only if what is left still covers the Lighthouse's next level. */
   const act = (action: Intent, label: string, keep = false): boolean => {
     const r = applyAction(s, { ...action, id: actionId(ids + 1) } as GameAction);
-    if (!r.ok || (keep && !keeps(s.stock, r.state.stock, reserve(s)))) return false;
+    if (!r.ok || (keep && !keeps(s.stock, r.state.stock, held()))) return false;
     ids++;
     const pearls = r.state.pearls - s.pearls;
     if (action.type === "claimObjective") (run.pearls.objectives += pearls), run.claims.objectives++;
@@ -294,9 +294,22 @@ export function simulate(profile: Profile, days: number): Run {
     return true;
   };
 
-  /** What a spending leaves still covers the Lighthouse's reserve: all of it, or only what it spends (`reserveOnSpent`). */
+  /** What a spending leaves still covers the Lighthouse's reserve, on what it spends (all of it: `holdWholeReserve`). */
   const keeps = (before: Record<Resource, number>, after: Record<Resource, number>, held: Cost) =>
-    profile.reserveOnSpent ? RESOURCES.every((k) => after[k] >= before[k] || after[k] >= (held[k] ?? 0)) : covers(after, held);
+    profile.holdWholeReserve ? covers(after, held) : RESOURCES.every((k) => after[k] >= before[k] || after[k] >= (held[k] ?? 0));
+
+  /**
+   * What every other spending leaves untouched: the Lighthouse's reserve, and for a player who follows the quests, also
+   * what the current quest's upgrade costs.
+   */
+  const held = (): Cost => {
+    const lighthouse = reserve(s);
+    const o = profile.questFirst ? OBJECTIVES[s.objective] : undefined;
+    const building = o && !o.done(s) && /^(Upgrade|Build|Bring)/.test(o.text) ? BUILDING_IDS.find((id) => o.text.includes(BUILDINGS[id].name)) : undefined;
+    if (!building || s.queue.some((j) => j.id === building)) return lighthouse;
+    const quest = upgradeCost(building, s.buildings[building]);
+    return Object.fromEntries(RESOURCES.map((k) => [k, Math.max(lighthouse[k] ?? 0, quest[k] ?? 0)]));
+  };
 
   /** A player who follows the quests keeps one builder and one fleet for them, until the last quest is claimed. */
   const keepForQuests = () => (profile.questFirst && s.objective < OBJECTIVES.length ? 1 : 0);

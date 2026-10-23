@@ -1,5 +1,7 @@
 # Resources: the wood of the second day (study)
 
+**The owner chose E (A + C) on 23 October, with every value; it is in the game since, and the balance's players keep the reserve only on what a spending uses (`docs/decisions.md`).** This study was measured on the rules before, and is kept as it was: `resources-run.ts` stops on today's rules (its patches no longer find their text), as it should.
+
 A study only (owner's request, 23 October, the first point of week 10 in `docs/tasks/roadmap.md`). It changes no value: it measures why the builders wait on day 2 with A + C (about 44 hours of 48), what the storage and the sea do today, and four options, alone and together, played by the balance's simulator. **Nothing goes into the game without the owner's agreement, value by value.**
 
 ## How it is measured

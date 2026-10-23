@@ -97,16 +97,37 @@ export const seaSite = (id: string): SeaSite | undefined => SEA_SITES.find((s) =
 export const distance = (site: { x: number; z: number }): number => Math.hypot(site.x - HOME.x, site.z - HOME.z);
 
 /**
- * What changes on the map as you play: the level of each pirate camp, what is left in each wreck, and for each emptied
- * wreck, the real seconds before it fills again (`refill`: only the wrecks at 0 are in it).
+ * What changes on the map as you play: the level of each pirate camp, what is left in each wreck, what is left on each
+ * isle and shoal a fleet has harvested (`harvest`: one not in it is full), and for each emptied wreck, isle or shoal,
+ * the real seconds before it fills again (`refill`: only the ones at 0 are in it).
  */
-export type SeaWorld = { camps: Record<string, number>; wrecks: Record<string, number>; refill: Record<string, number> };
+export type SeaWorld = { camps: Record<string, number>; wrecks: Record<string, number>; harvest: Record<string, number>; refill: Record<string, number> };
 
 /** How long an emptied wreck waits before it fills again, in real seconds (owner's decision, 18 October). */
 export const WRECK_REFILL = 2 * HOUR;
 /** Past Lighthouse 24, a salvage brings 25 % more oil per Lighthouse level above 24 (owner's decision, 18 October). */
 export const RICH_WRECKS_FROM = 24;
 export const RICH_WRECK_BONUS = 0.25;
+
+/**
+ * The Wooded Isles and Fish Shoals (owner's decision, 23 October; docs/studies/resources.md): the fleets harvest them as
+ * the wrecks, with no troops. One holds its map amount, 10 % more a Lighthouse level, and fills again 8 hours after it
+ * is emptied. The wrecks stay the source of the oil.
+ */
+export const HARVEST_GROWTH = 0.1;
+export const HARVEST_REFILL = 8 * HOUR;
+
+/** What an isle or a shoal holds when full, at this Lighthouse level. */
+export const harvestAmount = (site: SeaSite, lighthouse: number): number => Math.round((site.amount ?? 0) * (1 + HARVEST_GROWTH * (lighthouse - 1)));
+
+/** A site the fleets gather from: a wreck (oil and rope), an isle (wood) or a shoal (fish). */
+export const gathers = (site: SeaSite): boolean => site.kind === "wreck" || site.kind === "isle" || site.kind === "fish";
+
+/** What is left to gather on a site now: a wreck's oil, or an isle's or a shoal's, full until a fleet harvests it. */
+export function siteLeft(world: SeaWorld, site: SeaSite, lighthouse: number): number {
+  if (site.kind === "wreck") return world.wrecks[site.id] ?? 0;
+  return world.harvest[site.id] ?? harvestAmount(site, lighthouse);
+}
 
 /** The oil a fleet brings back from `got` taken from a wreck, at this Lighthouse level. */
 export const wreckOil = (got: number, lighthouse: number): number => Math.round(got * (1 + RICH_WRECK_BONUS * Math.max(0, lighthouse - RICH_WRECKS_FROM)));
@@ -118,7 +139,7 @@ export function startingSeaWorld(): SeaWorld {
     if (s.kind === "camp") camps[s.id] = s.level ?? 1;
     if (s.kind === "wreck") wrecks[s.id] = s.amount ?? 0;
   }
-  return { camps, wrecks, refill: {} };
+  return { camps, wrecks, harvest: {}, refill: {} };
 }
 
 /* ================= Fleets ================= */
@@ -253,6 +274,13 @@ export const CLEAR_SIGHT: Sight = { reach: Infinity, lit: false };
 /** What a check before sailing reads. */
 export type SendCheck = Pick<SeaState, "buildings" | "troops" | "veterans" | "fleets" | "techs" | "lead" | "clock" | "server" | "leviathan" | "world">;
 
+/** Why an emptied site cannot be sailed to yet. */
+const EMPTY = {
+  wreck: "This wreck is empty. Wait for it to fill again.",
+  isle: "This isle is bare. Wait for it to grow back.",
+  fish: "This shoal is empty. Wait for the fish to come back.",
+} as const;
+
 /**
  * Can you send a fleet there now? In the Mist, only within the Lighthouse's light; the Leviathan only while it is at
  * sea, and only if your fleet gets there before it dives (the Mist never hides it); a wreck only once it has filled
@@ -260,7 +288,7 @@ export type SendCheck = Pick<SeaState, "buildings" | "troops" | "veterans" | "fl
  */
 export function canSendFleet(siteId: string, s: SendCheck, sight: Sight = CLEAR_SIGHT): Check {
   const site = seaSite(siteId);
-  if (!site || (site.kind !== "camp" && site.kind !== "wreck" && site.kind !== "leviathan")) return refuse("You cannot send a fleet there yet");
+  if (!site || (site.kind !== "camp" && !gathers(site) && site.kind !== "leviathan")) return refuse("You cannot send a fleet there yet");
   if (site.kind === "leviathan") {
     const w = huntAt(s.clock, s.server);
     if (!w.on) return refuse("The Leviathan is not at sea. Wait for it to rise.");
@@ -268,20 +296,23 @@ export function canSendFleet(siteId: string, s: SendCheck, sight: Sight = CLEAR_
     if (s.clock + travelTime(site, s.techs, s.lead) >= w.end) return refuse("Your fleet would get there after the Leviathan dives");
   } else if (distance(site) > sight.reach) {
     return refuse(sight.lit ? "The Mist hides this place. Wait for it to lift." : "The Mist hides this place. Stoke the Lighthouse or wait for it to lift.");
-  } else if (site.kind === "wreck" && (s.world.wrecks[siteId] ?? 0) <= 0) {
-    return refuse("This wreck is empty. Wait for it to fill again.");
+  } else if (gathers(site) && siteLeft(s.world, site, s.buildings.lighthouse) <= 0) {
+    return refuse(EMPTY[site.kind as "wreck" | "isle" | "fish"]);
   }
   if (s.fleets.length >= fleetsMax(s.buildings.harbor)) {
     return refuse(s.buildings.harbor < 1 ? "Build the Harbor to send more fleets" : "All your fleets are at sea");
   }
   // Veterans are troops too: they sail with the soldiers.
-  if (site.kind !== "wreck" && totalTroops(s.troops) + totalTroops(s.veterans) < MIN_ATTACK_TROOPS) return refuse("You do not have enough troops");
+  if (!gathers(site) && totalTroops(s.troops) + totalTroops(s.veterans) < MIN_ATTACK_TROOPS) return refuse("You do not have enough troops");
   return OK;
 }
 
 export type SendFleet = { ok: true; state: SeaState } | { ok: false; reason: string };
 
-/** Sends a fleet: to a camp or the Leviathan with all your troops and veterans, who leave the city; to a wreck to salvage it. */
+/**
+ * Sends a fleet: to a camp or the Leviathan with all your troops and veterans, who leave the city; to a wreck to
+ * salvage it, to an isle or a shoal to harvest it.
+ */
 export function sendFleet(siteId: string, s: SeaState, sight: Sight = CLEAR_SIGHT): SendFleet {
   const check = canSendFleet(siteId, s, sight);
   if (!check.ok) return check;
@@ -365,31 +396,43 @@ function fight(f: Fleet, s: SeaState): { fleet: Fleet; state: SeaState; report: 
 }
 
 /**
- * A fleet leaves a wreck with what its hold can carry, and more past Lighthouse 24 (wreckOil). The wreck it empties
- * waits WRECK_REFILL before it fills again. A wreck another fleet emptied first gives nothing.
+ * A fleet leaves a wreck with what its hold can carry, and more past Lighthouse 24 (wreckOil); an isle with its wood, a
+ * shoal with its fish. The site it empties waits before it fills again: a wreck WRECK_REFILL, an isle or a shoal
+ * HARVEST_REFILL. A site another fleet emptied first gives nothing.
  */
 function salvage(f: Fleet, s: SeaState): { fleet: Fleet; state: SeaState } {
-  const left = s.world.wrecks[f.site] ?? 0;
+  const site = seaSite(f.site)!;
+  const left = siteLeft(s.world, site, s.buildings.lighthouse);
   if (left <= 0) return { fleet: { ...f, cargo: {} }, state: s };
   const got = Math.min(left, f.hold);
   const rest = left - got;
-  const wrecks = { ...s.world.wrecks, [f.site]: rest };
-  const refill = rest > 0 ? s.world.refill : { ...s.world.refill, [f.site]: WRECK_REFILL };
-  return { fleet: { ...f, cargo: { oil: wreckOil(got, s.buildings.lighthouse), rope: WRECK_ROPE } }, state: { ...s, world: { ...s.world, wrecks, refill } } };
+  if (site.kind === "wreck") {
+    const wrecks = { ...s.world.wrecks, [f.site]: rest };
+    const refill = rest > 0 ? s.world.refill : { ...s.world.refill, [f.site]: WRECK_REFILL };
+    return { fleet: { ...f, cargo: { oil: wreckOil(got, s.buildings.lighthouse), rope: WRECK_ROPE } }, state: { ...s, world: { ...s.world, wrecks, refill } } };
+  }
+  const harvest = { ...s.world.harvest, [f.site]: rest };
+  const refill = rest > 0 ? s.world.refill : { ...s.world.refill, [f.site]: HARVEST_REFILL };
+  return { fleet: { ...f, cargo: site.kind === "isle" ? { wood: got } : { fish: got } }, state: { ...s, world: { ...s.world, harvest, refill } } };
 }
 
-/** The emptied wrecks after `dt` more seconds: each one whose wait is over fills again with what it held at the start. */
+/**
+ * The emptied sites after `dt` more seconds: each one whose wait is over fills again, a wreck with what it held at the
+ * start, an isle or a shoal in full (what it holds at the Lighthouse's level of its next harvest).
+ */
 function refillWrecks(world: SeaWorld, dt: number): SeaWorld {
   const ids = Object.keys(world.refill);
   if (ids.length === 0 || dt <= 0) return world;
   const refill: Record<string, number> = {};
   const wrecks = { ...world.wrecks };
+  const harvest = { ...world.harvest };
   for (const id of ids) {
     const left = world.refill[id]! - dt;
     if (left > 0) refill[id] = left;
-    else wrecks[id] = seaSite(id)?.amount ?? 0;
+    else if (seaSite(id)?.kind === "wreck") wrecks[id] = seaSite(id)?.amount ?? 0;
+    else delete harvest[id];
   }
-  return { ...world, wrecks, refill };
+  return { ...world, wrecks, harvest, refill };
 }
 
 /**
@@ -466,7 +509,7 @@ function endHunt(s: SeaState, killed: boolean): { state: SeaState; report: Comba
   return { state: { ...s, pearls: s.pearls + pearls, captains, shards, fleets, leviathan }, report };
 }
 
-/** Moves the clock, the fleets and the emptied wrecks on by `dt` seconds, the fleets at the Leviathan dealing their damage. */
+/** Moves the clock, the fleets and the emptied wrecks, isles and shoals on by `dt` seconds, the fleets at the Leviathan dealing their damage. */
 function elapse(s: SeaState, dt: number): SeaState {
   const rate = huntRate(s);
   return {

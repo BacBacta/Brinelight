@@ -99,7 +99,7 @@ describe("fleet rules", () => {
 
   it("refuses with a reason in the second person", () => {
     const s = start();
-    expect(sendFleet("fish-1", s)).toEqual({ ok: false, reason: "You cannot send a fleet there yet" });
+    expect(sendFleet("city-lierre", s)).toEqual({ ok: false, reason: "You cannot send a fleet there yet" });
     const busy = send("camp-1", s);
     expect(sendFleet("wreck-1", busy)).toEqual({ ok: false, reason: "Build the Harbor to send more fleets" });
     const harbor = { ...busy, buildings: { ...busy.buildings, harbor: 1 } };

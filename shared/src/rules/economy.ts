@@ -13,6 +13,12 @@ const PROTO = {
   survivorEats: 0.06,
   greenhouse: 0.45,
 };
+/**
+ * A producer (the Refinery, the Fishery, the Lumberyard) of level L makes what level L + min(L, 5) made: double up to
+ * level 5, then five levels ahead (owner's decision, 23 October; docs/studies/resources.md). Never for sale.
+ */
+export const producerLevel = (level: number): number => level + Math.min(level, 5);
+
 /** What a Kelp Greenhouse adds per level, in fish per real hour (prototype: 0.45 per prototype second). */
 export const GREENHOUSE_FISH_PER_HOUR = protoRatePerHour(PROTO.greenhouse);
 /** The share of fish eaten a Smokehouse saves per level (prototype: 10%), down to half at most. */
@@ -49,9 +55,9 @@ export function netRates(s: EconomyState, w: Weather = { mist: false, stoked: fa
   const mul = (s.morale >= HIGH_MORALE ? HIGH_MORALE_BONUS : 1) * (w.mist && !w.stoked ? MIST_PENALTY : 1);
   const t = (id: "refining" | "nets" | "saws") => 1 + 0.1 * techLevel(s.techs, id);
   const smoke = Math.max(0.5, 1 - SMOKEHOUSE_SAVES * raftEffect(s.rafts, "smokehouse"));
-  const oil = PROTO.refinery * s.buildings.refinery * mul * t("refining") - PROTO.lighthouseBurn * s.buildings.lighthouse * (w.stoked ? STOKE_MULTIPLIER : 1);
-  const fish = PROTO.fishery * s.buildings.fishery * mul * t("nets") + PROTO.greenhouse * raftEffect(s.rafts, "greenhouse") - s.survivors * PROTO.survivorEats * smoke;
-  const wood = PROTO.lumberyard * s.buildings.lumberyard * mul * t("saws");
+  const oil = PROTO.refinery * producerLevel(s.buildings.refinery) * mul * t("refining") - PROTO.lighthouseBurn * s.buildings.lighthouse * (w.stoked ? STOKE_MULTIPLIER : 1);
+  const fish = PROTO.fishery * producerLevel(s.buildings.fishery) * mul * t("nets") + PROTO.greenhouse * raftEffect(s.rafts, "greenhouse") - s.survivors * PROTO.survivorEats * smoke;
+  const wood = PROTO.lumberyard * producerLevel(s.buildings.lumberyard) * mul * t("saws");
   return { oil: protoRatePerHour(oil), fish: protoRatePerHour(fish), wood: protoRatePerHour(wood) };
 }
 

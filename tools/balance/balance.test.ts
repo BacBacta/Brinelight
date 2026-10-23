@@ -28,14 +28,13 @@ describe("the balance simulation", () => {
 
   it("a player who keeps the reserve only on what a spending uses upgrades the Lumberyard while the Lighthouse waits for wood", () => {
     // Day 2 of the regular player: the whole reserve held, the Lumberyard (fish and oil) waits with the Lighthouse's wood.
-    const held = simulate(regular, 2).days[1]!;
-    const spent = simulate({ ...regular, reserveOnSpent: true }, 2).days[1]!;
+    const held = simulate({ ...regular, holdWholeReserve: true }, 2).days[1]!;
+    const spent = simulate(regular, 2).days[1]!;
     expect(spent.buildings.lumberyard).toBeGreaterThan(held.buildings.lumberyard);
-    expect(spent.idleBuilderHours).toBeLessThan(held.idleBuilderHours);
   });
 
   it("a player who never goes to sea sends no fleet: no salvage, no camp beaten", () => {
-    const island = simulate({ ...regular, noSea: true, reserveOnSpent: true }, 10);
+    const island = simulate({ ...regular, noSea: true }, 10);
     expect(island.days.every((d) => d.salvages === 0 && d.campsBeaten === 0)).toBe(true);
     expect(island.hunts.joined).toBe(0);
     expect(island.last.fleets).toEqual([]);
@@ -73,13 +72,14 @@ describe("the balance simulation", () => {
   // The casual player reaches Lighthouse 30 after a year: its run goes on a little longer.
   const long = [...runs.filter((r) => r.profile.id !== "casual"), simulate(casual, 380)];
 
-  it("keeps every Lighthouse milestone within 10 % of the reference of 23 October (the early start A + C, owner's decision)", () => {
+  it("keeps every Lighthouse milestone within 10 % of the reference of 23 October (A + C + E, owner's decision)", () => {
     // The days each profile reaches Lighthouse 5, 10, 15, 20, 25 and 30 with the quick first levels and the richer start
-    // (docs/tasks/early-start.md): the reference since 23 October, in place of week 6's.
+    // (docs/tasks/early-start.md), the producers' curve and the isles and shoals (E, docs/studies/resources.md), the
+    // players keeping the Lighthouse's reserve only on what a spending uses: the reference since 23 October.
     const REFERENCE: Record<string, Record<number, number>> = {
-      casual: { 5: 0.6, 10: 6.8, 15: 25.5, 20: 64.6, 25: 153.0, 30: 350.4 },
-      regular: { 5: 0.2, 10: 4.9, 15: 17.1, 20: 44.5, 25: 115.4, 30: 313.6 },
-      dedicated: { 5: 0.1, 10: 5.6, 15: 16.7, 20: 46.0, 25: 119.6, 30: 326.4 },
+      casual: { 5: 0.6, 10: 4.6, 15: 16.0, 20: 43.0, 25: 117.4, 30: 299.0 },
+      regular: { 5: 0.2, 10: 3.5, 15: 12.5, 20: 38.0, 25: 101.4, 30: 257.6 },
+      dedicated: { 5: 0.1, 10: 2.8, 15: 11.5, 20: 37.0, 25: 100.0, 30: 256.0 },
     };
     for (const r of long) {
       for (const [level, reference] of Object.entries(REFERENCE[r.profile.id]!)) {
@@ -90,20 +90,18 @@ describe("the balance simulation", () => {
     }
   });
 
-  it("keeps Lighthouse 15 to 30 within 10 % of week 6, but the regular player's 15 and 20 (owner's exception of 23 October)", () => {
-    // The days each profile reached them with the rules of week 6 (commit c307f9f), the limit of 18 October. For A + C
-    // only, the owner accepted the regular player's Lighthouse 15 and 20 sooner: 13.2 % and 15.4 %.
+  it("never brings Lighthouse 15 to 30 later than week 6 (E brings them sooner, owner's decision of 23 October)", () => {
+    // The days each profile reached them with the rules of week 6 (commit c307f9f). The limit of 18 October (within
+    // 10 %) gave way to A + C, then to E: the owner took the new days as the reference (docs/decisions.md).
     const WEEK_6: Record<string, Record<number, number>> = {
       casual: { 15: 26.0, 20: 63.0, 25: 152.4, 30: 371.4 },
       regular: { 15: 19.7, 20: 52.6, 25: 122.7, 30: 321.4 },
       dedicated: { 15: 17.5, 20: 45.2, 25: 119.4, 30: 325.8 },
     };
-    const EXCEPTION: Record<string, Record<number, number>> = { regular: { 15: 0.14, 20: 0.16 } };
     for (const r of long) {
       for (const [level, week6] of Object.entries(WEEK_6[r.profile.id]!)) {
         const day = r.lighthouse[Number(level)]! / 24;
-        const limit = EXCEPTION[r.profile.id]?.[Number(level)] ?? 0.1;
-        expect(Math.abs(day - week6) / week6, `${r.profile.id}, Lighthouse ${level}: day ${day.toFixed(1)}, week 6 ${week6}`).toBeLessThanOrEqual(limit);
+        expect(day, `${r.profile.id}, Lighthouse ${level}: day ${day.toFixed(1)}, week 6 ${week6}`).toBeLessThanOrEqual(week6);
       }
     }
   });

@@ -22,8 +22,10 @@ const MARK_START = "<!-- resources:generated:start (npx tsx tools/balance/resour
 const MARK_END = "<!-- resources:generated:end -->";
 
 const at = (h: number, m = 0) => h * HOUR + m * 60;
-/** The study's players: the balance's, who keep the Lighthouse's reserve only on what a spending uses. */
-const study = (p: Profile): Profile => ({ ...p, reserveOnSpent: true });
+/** The study's players: the balance's, who keep the Lighthouse's reserve only on what a spending uses (the default since E). */
+const study = (p: Profile): Profile => p;
+/** The balance's players of before the study: the whole reserve held. */
+const before = (p: Profile): Profile => ({ ...p, holdWholeReserve: true });
 const FOLLOWER: Profile = { id: "regular", name: "Follows the quests", questFirst: true, sessions: Array.from({ length: 14 * 60 + 1 }, (_, i) => at(8, i)) };
 const ISLAND: Profile = { ...PROFILES[1]!, name: "Island only (6 sessions, never at sea)", noSea: true };
 const LONG = (p: Profile) => (p.id === "casual" ? 400 : 365);
@@ -72,7 +74,7 @@ const play = (v: Variant | null, p: Profile, days: number): Result => {
 
 // The rules first: the balance's players must play the balance's own runs (docs/balance.md, its milestones).
 const balance = readFileSync(`${docs}balance.md`, "utf8");
-const today = players((p) => p).map((x) => ({ ...x, result: play(null, x.profile, x.days) }));
+const today = players(before).map((x) => ({ ...x, result: play(null, x.profile, x.days) }));
 for (const x of today.filter((t) => t.key === "dedicated" || t.key === "regular" || t.key === "casual")) {
   const days = [5, 10, 15, 20, 25, 30].map((l) => `day ${(x.result.reached[l]! / 24).toFixed(1)}`);
   if (!balance.includes(`| ${x.profile.name} | ${days.join(" | ")} |`)) throw new Error(`${x.profile.name}: the run is not the balance's (${days.join(", ")})`);

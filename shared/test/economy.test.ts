@@ -29,30 +29,30 @@ describe("economy", () => {
     expect(survivorCap(1)).toBe(10);
   });
 
-  it("starting rates match the prototype", () => {
+  it("starting rates: the prototype's, each producer at level 1 making as level 2 (E, 23 October)", () => {
     const r = netRates(base);
-    // oil: 1.1 − 0.25 × 2 = 0.6 /proto s → 6 /h
-    expect(r.oil).toBeCloseTo(6, 6);
-    // fish: 1.4 − 8 × 0.06 = 0.92 → 9.2 /h
-    expect(r.fish).toBeCloseTo(9.2, 6);
-    // wood: 4.2 /proto s → 42 /h (the prototype's 1.4 tripled, docs/balance.md)
-    expect(r.wood).toBeCloseTo(42, 6);
+    // oil: 1.1 × 2 − 0.25 × 2 = 1.7 /proto s → 17 /h
+    expect(r.oil).toBeCloseTo(17, 6);
+    // fish: 1.4 × 2 − 8 × 0.06 = 2.32 → 23.2 /h
+    expect(r.fish).toBeCloseTo(23.2, 6);
+    // wood: 4.2 × 2 /proto s → 84 /h (the prototype's 1.4 tripled, docs/balance.md)
+    expect(r.wood).toBeCloseTo(84, 6);
   });
 
   it("morale at 90% or more gives +10% production", () => {
     const r = netRates({ ...base, morale: 95 });
-    expect(r.wood).toBeCloseTo(46.2, 6);
+    expect(r.wood).toBeCloseTo(92.4, 6);
   });
 
   it("the Mist, when not pushed back, cuts production by 30%", () => {
     const r = netRates(base, { mist: true, stoked: false });
-    expect(r.wood).toBeCloseTo(42 * 0.7, 6);
+    expect(r.wood).toBeCloseTo(84 * 0.7, 6);
   });
 
   it("stoking the Lighthouse multiplies its consumption by 1.5", () => {
     const r = netRates(base, { mist: true, stoked: true });
-    // 1.1 − 0.25 × 2 × 1.5 = 0.35 → 3.5 /h
-    expect(r.oil).toBeCloseTo(3.5, 6);
+    // 1.1 × 2 − 0.25 × 2 × 1.5 = 1.45 → 14.5 /h
+    expect(r.oil).toBeCloseTo(14.5, 6);
   });
 
   it("a level 2 Kelp Greenhouse adds 9 fish per hour", () => {
@@ -84,8 +84,8 @@ describe("economy", () => {
   });
 
   it("oil duration is computed when the Lighthouse burns more than it gets", () => {
-    const s = { ...base, buildings: { ...STARTING_BUILDINGS, lighthouse: 6 } };
-    // 1.1 − 0.25 × 6 × 1.5 = −1.15 /proto s → −11.5 /h; 115 oil = 10 h
-    expect(oilAutonomy(s, 115)).toBeCloseTo(10 * 3600, 3);
+    const s = { ...base, buildings: { ...STARTING_BUILDINGS, lighthouse: 10 } };
+    // 1.1 × 2 − 0.25 × 10 × 1.5 = −1.55 /proto s → −15.5 /h; 155 oil = 10 h
+    expect(oilAutonomy(s, 155)).toBeCloseTo(10 * 3600, 3);
   });
 });

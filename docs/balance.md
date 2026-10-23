@@ -18,14 +18,14 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 2. **Observatory:** the next research of a fixed list (Refining, Saws, Nets, Warehouses, then the sea, then war).
 3. **Barracks:** promotions once the Veteran Doctrine is researched, else a batch of soldiers, the three types in turn.
 4. **Infirmary:** heals the wounded.
-5. **Sea:** the Leviathan first, while it is at sea and a fleet stays free for the wrecks, with all the troops; otherwise the lowest pirate camp with all the troops if the odds are "easy"; every other fleet salvages the nearest wreck it can sail to, one fleet a wreck (an emptied wreck waits 2 hours before it fills again).
+5. **Sea:** the Leviathan first, while it is at sea and a fleet stays free for the wrecks, with all the troops; otherwise the lowest pirate camp with all the troops if the odds are "easy"; every other fleet gathers where the storage holds the least: a wreck (oil and rope), a Wooded Isle (wood) or a Fish Shoal (fish), the nearest it can sail to, one fleet a site (an emptied wreck waits 2 hours before it fills again, an isle or a shoal 8 hours).
 6. **Captains:** unlock and add stars as soon as there are shards; the rarest, then highest level, leads; a Logbook while 100 Pearls are left after it.
 7. **Rafts:** the rafts repaired as soon as one is below 60, keeping the reserve below; else a building on an empty raft (Greenhouse, Smokehouse, Watchtower, two of each), else the lowest raft building upgraded, else a new raft.
 8. **Claims:** every objective done, and every chest the day's points open.
 
-**The reserve:** while the Lighthouse waits, every other spending leaves untouched the cost of its next level, up to what the storage holds (no one can save more); while the Lighthouse is being built, or once it is at level 30, nothing is kept. A first try without this reserve for the other buildings gave a player who never researched nor trained in 60 days: they spent all the wood on buildings first.
+**The reserve:** while the Lighthouse waits, every other spending leaves untouched the cost of its next level, up to what the storage holds (no one can save more), on the resources it spends: an upgrade paid in fish and oil goes ahead while the Lighthouse waits for wood (since 23 October, `docs/studies/resources.md`: holding the whole reserve left the Lumberyard waiting for the Lighthouse's wood). While the Lighthouse is being built, or once it is at level 30, nothing is kept. A first try without this reserve for the other buildings gave a player who never researched nor trained in 60 days: they spent all the wood on buildings first.
 
-**Week 7 is played** (task 5): the Mist, three a day on the city's clock, the order to stoke left on, as for a new city; the repairs; the Leviathan; the objectives and the daily tasks. **Two more players**, with the regular player's sessions: one who turns the order to stoke off at the start and never back on, and one away from day 20 to day 22 (no session), back on day 23. **Not modeled:** other players, the daily recruitment, Fish Shoals and Wooded Isles (fleets cannot go there yet).
+**Week 7 is played** (task 5): the Mist, three a day on the city's clock, the order to stoke left on, as for a new city; the repairs; the Leviathan; the objectives and the daily tasks. **Two more players**, with the regular player's sessions: one who turns the order to stoke off at the start and never back on, and one away from day 20 to day 22 (no session), back on day 23. **Not modeled:** other players, the daily recruitment.
 
 ## Results
 
@@ -37,74 +37,74 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 
 | Profile | Lighthouse 5 | Lighthouse 10 | Lighthouse 15 | Lighthouse 20 | Lighthouse 25 | Lighthouse 30 | Refinery 2 | Barracks 1 | First camp beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | day 0.6 | day 6.8 | day 25.5 | day 64.6 | day 153.0 | day 350.4 | day 2.2 | day 0.0 | day 1.0 |
-| Regular (6 sessions) | day 0.2 | day 4.9 | day 17.1 | day 44.5 | day 115.4 | day 313.6 | day 2.1 | day 0.0 | day 1.4 |
-| Dedicated (10 sessions) | day 0.1 | day 5.6 | day 16.7 | day 46.0 | day 119.6 | day 326.4 | day 1.1 | day 0.0 | day 0.3 |
+| Casual (3 sessions) | day 0.6 | day 4.6 | day 16.0 | day 43.0 | day 117.4 | day 299.0 | day 2.0 | day 0.0 | day 1.0 |
+| Regular (6 sessions) | day 0.2 | day 3.5 | day 12.5 | day 38.0 | day 101.4 | day 257.6 | day 0.6 | day 0.0 | day 0.4 |
+| Dedicated (10 sessions) | day 0.1 | day 2.8 | day 11.5 | day 37.0 | day 100.0 | day 256.0 | day 0.4 | day 0.0 | day 0.3 |
 
 ### Day 30
 
 | Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 15 | 61,802 | 22,198 | 36,714 | 2,995 | 56,550 | 734 | 6 (mira, 9, 15★) | 28 | 6 | 32 |
-| Regular (6 sessions) | 17 | 99,353 | 86,528 | 20,518 | 45,407 | 85,768 | 413 | 6 (mira, 19, 30★) | 28 | 7 | 68 |
-| Dedicated (10 sessions) | 17 | 103,243 | 87,688 | 16,661 | 36,498 | 85,768 | 424 | 6 (mira, 20, 30★) | 28 | 7 | 102 |
+| Casual (3 sessions) | 18 | 109,297 | 43,692 | 83,077 | 85,622 | 111,505 | 1,550 | 6 (mira, 15, 30★) | 28 | 7 | 52 |
+| Regular (6 sessions) | 18 | 110,104 | 102,410 | 111,505 | 112,415 | 111,505 | 262 | 6 (mira, 20, 30★) | 28 | 7 | 87 |
+| Dedicated (10 sessions) | 18 | 114,746 | 127,459 | 111,505 | 120,925 | 111,505 | 1,069 | 6 (mira, 20, 30★) | 28 | 7 | 171 |
 
 ### Day 90
 
 | Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 21 | 138,295 | 114,913 | 192,895 | 73,035 | 244,978 | 292 | 6 (mira, 20, 30★) | 28 | 7 | 84 |
-| Regular (6 sessions) | 23 | 159,683 | 158,690 | 34,309 | 149,992 | 414,011 | 526 | 6 (mira, 20, 30★) | 28 | 7 | 130 |
-| Dedicated (10 sessions) | 23 | 163,025 | 282,863 | 75,669 | 84,122 | 414,011 | 495 | 6 (mira, 20, 30★) | 28 | 7 | 183 |
+| Casual (3 sessions) | 23 | 164,605 | 112,881 | 339,599 | 223,485 | 414,011 | 374 | 6 (mira, 20, 30★) | 28 | 7 | 121 |
+| Regular (6 sessions) | 24 | 172,786 | 141,556 | 498,473 | 273,052 | 538,222 | 580 | 6 (mira, 20, 30★) | 28 | 7 | 148 |
+| Dedicated (10 sessions) | 24 | 170,906 | 252,390 | 533,723 | 313,152 | 538,222 | 845 | 6 (mira, 20, 30★) | 28 | 7 | 241 |
 
 ### Day 365
 
 | Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 30 | 244,949 | 1,428,753 | 688,892 | 689,427 | 2,597,893 | 728 | 6 (mira, 20, 30★) | 28 | 7 | 186 |
-| Regular (6 sessions) | 30 | 255,849 | 2,461,442 | 481,759 | 785,155 | 2,597,893 | 856 | 6 (mira, 20, 30★) | 28 | 7 | 261 |
-| Dedicated (10 sessions) | 30 | 255,515 | 2,538,857 | 413,437 | 1,028,336 | 2,597,893 | 1,160 | 6 (mira, 20, 30★) | 28 | 7 | 345 |
+| Casual (3 sessions) | 30 | 263,107 | 2,053,737 | 2,183,459 | 2,056,075 | 2,597,893 | 907 | 6 (mira, 20, 30★) | 28 | 7 | 237 |
+| Regular (6 sessions) | 30 | 266,546 | 2,612,543 | 2,489,793 | 2,356,611 | 2,597,893 | 943 | 6 (mira, 20, 30★) | 28 | 7 | 293 |
+| Dedicated (10 sessions) | 30 | 270,354 | 2,558,438 | 2,345,396 | 2,463,268 | 2,597,893 | 1,196 | 6 (mira, 20, 30★) | 28 | 7 | 400 |
 
 ### Waiting and blocks
 
 | Profile | Builder hours free a day (days 1–30) | (days 31–90) | (days 91–365) | Sessions with a builder free and nothing to start | Sessions with nothing at all | Blocked by (sessions) | Hours full: oil, fish, wood |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 39.2 | 16.6 | 9.9 | 285 of 1095 (26 %) | 0 | wood 285 | 0, 0, 0 |
-| Regular (6 sessions) | 20.3 | 5.5 | 7.5 | 382 of 2190 (17 %) | 51 | wood 382 | 54, 0, 0 |
-| Dedicated (10 sessions) | 17.8 | 5.8 | 9.3 | 756 of 3650 (21 %) | 58 | wood 756 | 2193, 0, 0 |
+| Casual (3 sessions) | 19.3 | 2.5 | 2.5 | 63 of 1095 (6 %) | 0 | oil 23, wood 40 | 0, 27, 40 |
+| Regular (6 sessions) | 11.3 | 1.5 | 0.4 | 5 of 2190 (0 %) | 0 | oil 2, wood 3 | 805, 3716, 1987 |
+| Dedicated (10 sessions) | 8.3 | 1.1 | 0.4 | 11 of 3650 (0 %) | 1 | oil 8, wood 3 | 2029, 3756, 2215 |
 
 ### Oil, the Mist, the Leviathan and the claims (whole run)
 
 | Profile | Hours of full oil (days 1–90) | Oil spent stoking | Repairs (oil) | Mists held | Mists missed | Hunts joined | Leviathans killed | Objectives claimed | Chests opened |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 0 | 65,591 | 0 (0 oil) | 1094 | 0 | 364 | 0 | 18 | 759 |
-| Regular (6 sessions) | 54 | 68,928 | 0 (0 oil) | 1094 | 0 | 729 | 0 | 18 | 797 |
-| Dedicated (10 sessions) | 457 | 68,788 | 0 (0 oil) | 1094 | 0 | 709 | 0 | 18 | 819 |
-| Never stokes (6 sessions) | 139 | 0 | 406 (387,140 oil) | 0 | 1094 | 729 | 1 | 10 | 421 |
-| Away 3 days (6 sessions, none on days 20 to 22) | 0 | 68,848 | 0 (0 oil) | 1094 | 0 | 723 | 1 | 18 | 788 |
+| Casual (3 sessions) | 0 | 69,373 | 0 (0 oil) | 1094 | 0 | 364 | 1 | 18 | 761 |
+| Regular (6 sessions) | 45 | 71,126 | 0 (0 oil) | 1094 | 0 | 729 | 1 | 18 | 797 |
+| Dedicated (10 sessions) | 328 | 71,323 | 0 (0 oil) | 1094 | 0 | 707 | 0 | 18 | 811 |
+| Never stokes (6 sessions) | 0 | 0 | 535 (518,990 oil) | 0 | 1094 | 729 | 1 | 10 | 430 |
+| Away 3 days (6 sessions, none on days 20 to 22) | 71 | 70,921 | 0 (0 oil) | 1094 | 0 | 723 | 1 | 18 | 784 |
 
 ### Pearls a day, by source (average over the whole run)
 
 | Profile | Mist | Leviathan | Camps | Objectives | Chests | Earned | Spent on Logbooks | Pearls at the end |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 89.9 | 51.9 | 61.5 | 2.1 | 4.4 | 209.8 | 37.4 | 28,125 |
-| Regular (6 sessions) | 89.9 | 131.2 | 113.2 | 2.1 | 16.2 | 352.6 | 35.9 | 80,790 |
-| Dedicated (10 sessions) | 89.9 | 78.6 | 189.4 | 2.1 | 23.0 | 383.0 | 33.0 | 92,941 |
-| Never stokes (6 sessions) | 0.0 | 119.1 | 97.2 | 0.7 | 4.1 | 221.0 | 25.8 | 36,481 |
-| Away 3 days (6 sessions, none on days 20 to 22) | 89.9 | 116.8 | 110.8 | 2.1 | 15.1 | 334.6 | 36.3 | 74,092 |
+| Casual (3 sessions) | 89.9 | 53.3 | 95.0 | 2.1 | 4.9 | 245.2 | 36.6 | 41,336 |
+| Regular (6 sessions) | 89.9 | 107.3 | 139.9 | 2.1 | 16.7 | 355.9 | 34.4 | 82,549 |
+| Dedicated (10 sessions) | 89.9 | 91.8 | 249.7 | 2.1 | 21.9 | 455.4 | 31.4 | 119,983 |
+| Never stokes (6 sessions) | 0.0 | 112.6 | 158.1 | 0.7 | 3.3 | 274.6 | 24.7 | 56,443 |
+| Away 3 days (6 sessions, none on days 20 to 22) | 89.9 | 106.2 | 139.1 | 2.1 | 14.8 | 352.1 | 34.9 | 80,953 |
 
 ### Two more players: milestones
 
 | Profile | Lighthouse 5 | Lighthouse 10 | Lighthouse 15 | Lighthouse 20 | Lighthouse 25 | Lighthouse 30 |
 | --- | --- | --- | --- | --- | --- | --- |
-| Never stokes (6 sessions) | day 0.2 | day 6.1 | day 20.5 | day 51.1 | day 131.7 | day 354.5 |
-| Away 3 days (6 sessions, none on days 20 to 22) | day 0.2 | day 4.9 | day 17.1 | day 45.6 | day 115.7 | day 315.4 |
+| Never stokes (6 sessions) | day 0.2 | day 3.6 | day 12.5 | day 38.0 | day 105.4 | day 280.6 |
+| Away 3 days (6 sessions, none on days 20 to 22) | day 0.2 | day 3.5 | day 12.5 | day 40.0 | day 103.4 | day 260.4 |
 
 ### What a player away finds on return (before the first session)
 
 | Profile | Day | Rafts | Damaged | Lowest sturdiness | Mists missed so far | Oil (storage) | Repairing everything: oil, wood, time |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Away 3 days (6 sessions, none on days 20 to 22) | 23 | 7 | 0 | 100 | 0 | 47,076 (65,975) | 0, 0, 0.0 h |
+| Away 3 days (6 sessions, none on days 20 to 22) | 23 | 7 | 0 | 100 | 0 | 72,600 (85,768) | 0, 0, 0.0 h |
 
 ### The storage wall
 

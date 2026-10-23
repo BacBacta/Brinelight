@@ -1,15 +1,15 @@
-import { SEA_SITES, STOKE_MULTIPLIER, distance, lightReach, mistAt } from "@brinelight/shared";
+import { SEA_SITES, STOKE_MULTIPLIER, distance, gathers, lightReach, mistAt } from "@brinelight/shared";
 import type { PlayerState } from "../state/index.js";
 import { box, button, keyValues, kv, listRow } from "../ui/components.js";
 import { landShown, raftWords } from "./words.js";
 
-/** The camps and wrecks your fleets can reach in the Mist, with the light `reach`. */
-const PLACES = SEA_SITES.filter((s) => s.kind === "camp" || s.kind === "wreck");
+/** The camps, wrecks, isles and shoals your fleets can reach in the Mist, with the light `reach`. */
+const PLACES = SEA_SITES.filter((s) => s.kind === "camp" || gathers(s));
 const inLight = (reach: number) => PLACES.filter((s) => distance(s) <= reach).length;
 
 /**
  * The Lighthouse in the Mist, on its sheet: the order to stoke it (on until you turn it off, offline too) and how many
- * camps and wrecks its light reaches in the Mist. The rules decide; the button only sends the order.
+ * camps, wrecks, isles and shoals its light reaches in the Mist. The rules decide; the button only sends the order.
  */
 export function stokeHtml(state: PlayerState, land = landShown(state.buildings.lighthouse)): string {
   const on = state.mist.stoke;

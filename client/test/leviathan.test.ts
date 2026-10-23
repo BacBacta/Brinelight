@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { COLLECT_STAY, HOUR, LEVIATHAN_SITE, WRECK_REFILL, advance, newPlayerState, sail, seaSite, travelTime, type PlayerState } from "@brinelight/shared";
-import { huntReportHtml, lastFleetText, reportHtml, wreckOilText } from "../src/sea/sheet.js";
+import { COLLECT_STAY, HARVEST_REFILL, HOUR, LEVIATHAN_SITE, WRECK_REFILL, advance, newPlayerState, sail, seaSite, travelTime, type PlayerState } from "@brinelight/shared";
+import { fleetLabel } from "../src/city/queue.js";
+import { formatTimeLeft } from "../src/city/format.js";
+import { harvestText, huntReportHtml, lastFleetText, reportHtml, wreckOilText } from "../src/sea/sheet.js";
 import { leviathanText } from "../src/ui/values.js";
 
 /** 18 October 2026, 00:00 UTC: the hunts of that day start at 13:00 and 19:00. */
@@ -78,5 +80,33 @@ describe("an emptied wreck", () => {
     expect(wreckOilText(emptied, "wreck-1", 1)).toBe("Empty · fills again in 2 h 00");
     expect(wreckOilText(advance(emptied, 30 * 60), "wreck-1", 1)).toBe("Empty · fills again in 1 h 30");
     expect(wreckOilText(advance(emptied, WRECK_REFILL), "wreck-1", 1)).toBe("240");
+  });
+});
+
+describe("an isle and a shoal", () => {
+  it("full until a fleet harvests them; once emptied, the sheet says when they fill again", () => {
+    // Lighthouse 2: an isle of 600 holds 660, more than a fleet's hold brings back at once.
+    const s = newPlayerState(at(9));
+    expect(harvestText(s, "isle-1", 1)).toBe("660");
+    let t = s;
+    while ((t.world.harvest["isle-1"] ?? 660) > 0) {
+      const out = travelTime(seaSite("isle-1")!, t.techs, t.lead ? { id: t.lead, rarity: "officer", level: 1 } : null);
+      t = advance(ok(sail(t, "isle-1")), 2 * out + COLLECT_STAY);
+      expect(harvestText(t, "isle-1", 1)).not.toBe("660");
+    }
+    expect(harvestText(t, "isle-1", 1)).toBe(`Bare · grows back in ${formatTimeLeft(t.world.refill["isle-1"]!)}`);
+    expect(harvestText(advance(t, HARVEST_REFILL), "isle-1", 1)).toBe("660");
+    const shoal = { ...s, world: { ...s.world, harvest: { "fish-1": 0 }, refill: { "fish-1": HOUR } } };
+    expect(harvestText(shoal, "fish-1", 1)).toBe("Empty · the fish come back in 1 h 00");
+  });
+
+  it("a fleet on its way home says what it brings back", () => {
+    const s = newPlayerState(at(9));
+    const sent = ok(sail(s, "isle-1"));
+    expect(fleetLabel(sent.fleets[0]!)).toBe("Fleet · Wooded Isle");
+    const back = { ...sent.fleets[0]!, phase: "back" as const, cargo: { wood: 300 } };
+    expect(fleetLabel(back)).toBe("Fleet · home · 300 wood");
+    expect(fleetLabel({ ...back, cargo: { oil: 240, rope: 2 } })).toBe("Fleet · home · 240 oil");
+    expect(fleetLabel({ ...back, cargo: {} })).toBe("Fleet · home");
   });
 });

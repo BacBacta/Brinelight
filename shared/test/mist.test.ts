@@ -134,8 +134,8 @@ describe("in the Mist", () => {
 
   it("out of oil in the middle: the Lighthouse goes dark from that moment, and the Mist is not held", () => {
     const s0 = city(at(4));
-    // At Lighthouse 6 with one Refinery, a stoked Lighthouse burns more oil than it makes: 11.5 an hour, so 10 oil last 52 minutes.
-    const s = { ...s0, buildings: { ...s0.buildings, lighthouse: 6 }, stock: { ...s0.stock, oil: 10 } };
+    // At Lighthouse 10 with one Refinery, a stoked Lighthouse burns more oil than it makes: 15.5 an hour, so 10 oil last 39 minutes.
+    const s = { ...s0, buildings: { ...s0.buildings, lighthouse: 10 }, stock: { ...s0.stock, oil: 10 } };
     const burn = -netRates(s, { mist: true, stoked: true }).oil;
     expect(burn).toBeGreaterThan(0);
     const empty = (10 / burn) * HOUR;
