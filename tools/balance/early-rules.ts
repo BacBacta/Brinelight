@@ -1,0 +1,104 @@
+/**
+ * The rules of `shared/` as the early-game study plays them (docs/studies/early-game.md). The balance's simulator
+ * (`simulate.ts`) imports this module in place of `@brinelight/shared` when, and only when, `early.ts` runs it (through
+ * `early-hooks.mjs`): every rule is the shared one, word for word, except what a study variant changes, and nothing is
+ * changed in `shared/`. Without a variant, a run is the balance's own (checked by `early.ts` before anything else).
+ *
+ * It also writes down every try to start the Lighthouse, to say what held each level back: the player away, or the
+ * resources.
+ */
+import * as rules from "@brinelight/shared";
+import type { ActionResult, BuildingId, GameAction, PlayerState, Resource, ServerId } from "@brinelight/shared";
+
+export * from "@brinelight/shared";
+
+/** A study variant: what it changes in the rules, for the study's runs only. */
+export type Variant = {
+  id: string;
+  name: string;
+  /** The duration, in real seconds, of an upgrade of `id` to `level` (the level it reaches), from the rules' duration. */
+  duration?: (id: BuildingId, level: number, seconds: number) => number;
+  /** How many builders the city has, from its state (the rules: 2). */
+  builders?: (s: PlayerState) => number;
+  /** How many times the rules' production of oil, fish and wood the city makes, from its state (the rules: 1). */
+  production?: (s: PlayerState) => number;
+  /** The stock a new city starts with, in place of the rules' (only the resources given). */
+  start?: Partial<Record<Resource, number>>;
+};
+
+/** A try to start the Lighthouse's next level, at a session. */
+export type LighthouseTry = { clock: number; level: number; ok: boolean; reason: string | null; stock: Record<Resource, number> };
+
+/** A level finished: when, which building, the level it reached. */
+export type Finished = { clock: number; id: BuildingId; level: number };
+
+export type Study = { variant: Variant | null; tries: LighthouseTry[]; finished: Finished[] };
+
+/** Shared with `early.ts` through the global object: the two may load this module under two names. */
+const g = globalThis as { brinelightEarlyStudy?: Study };
+export const study: Study = (g.brinelightEarlyStudy ??= { variant: null, tries: [], finished: [] });
+
+/** The builders, as the simulator reads them: a live binding, set from the city at each step. */
+export let BUILDERS = rules.BUILDERS;
+const setBuilders = (s: PlayerState) => {
+  BUILDERS = study.variant?.builders?.(s) ?? rules.BUILDERS;
+};
+
+export function newPlayerState(clock?: number, server?: ServerId): PlayerState {
+  const made = rules.newPlayerState(clock, server);
+  const s = { ...made, stock: { ...made.stock, ...study.variant?.start } };
+  setBuilders(s);
+  return s;
+}
+
+/** An upgrade with every builder busy, started anyway when the variant gives one more: the rules see one job less. */
+function withMoreBuilders(state: PlayerState, action: GameAction & { type: "upgrade" }): ActionResult {
+  const more = study.variant?.builders?.(state) ?? rules.BUILDERS;
+  if (state.queue.length >= more || state.queue.length < rules.BUILDERS) return rules.applyAction(state, action);
+  const hidden = state.queue.findIndex((j) => j.id !== action.building);
+  const job = state.queue[hidden]!;
+  const r = rules.applyAction({ ...state, queue: state.queue.filter((_, i) => i !== hidden) }, action);
+  if (!r.ok) return r;
+  return { ...r, state: { ...r.state, queue: [job, ...r.state.queue] } };
+}
+
+export function applyAction(state: PlayerState, action: GameAction): ActionResult {
+  const v = study.variant;
+  let r = action.type === "upgrade" && v?.builders ? withMoreBuilders(state, action) : rules.applyAction(state, action);
+  if (r.ok && action.type === "upgrade" && v?.duration) {
+    const job = r.state.queue.at(-1)!;
+    const seconds = Math.max(1, Math.round(v.duration(action.building, state.buildings[action.building] + 1, job.duration)));
+    r = { ...r, state: { ...r.state, queue: [...r.state.queue.slice(0, -1), { ...job, left: seconds, duration: seconds }] } };
+  }
+  if (action.type === "upgrade" && action.building === "lighthouse") {
+    study.tries.push({ clock: state.clock, level: state.buildings.lighthouse + 1, ok: r.ok, reason: r.ok ? null : r.reason, stock: { ...state.stock } });
+  }
+  if (r.ok) setBuilders(r.state);
+  return r;
+}
+
+export function advance(state: PlayerState, seconds: number): PlayerState {
+  let s = rules.advance(state, seconds);
+  for (const id of rules.BUILDING_IDS) {
+    // A level finished in this step at the end of its job: the time it had left when the step began.
+    if (s.buildings[id] > state.buildings[id]) {
+      const job = state.queue.find((j) => j.id === id);
+      study.finished.push({ clock: state.clock + Math.min(seconds, job?.left ?? seconds), id, level: s.buildings[id] });
+    }
+  }
+  const times = study.variant?.production?.(state) ?? 1;
+  if (times !== 1) {
+    // What the city's buildings made in this step (before what the Lighthouse burns and the survivors eat; not the
+    // loot), made `times` times, in the storage. Out of the Mist: a little more than the rules in the Mist.
+    const cap = rules.storeCap(s.buildings.lighthouse, s.techs);
+    const made = rules.netRates({ ...state, buildings: { ...state.buildings, lighthouse: 0 }, survivors: 0 }, { mist: false, stoked: false });
+    const stock = { ...s.stock };
+    for (const k of ["oil", "fish", "wood"] as const) {
+      const extra = (Math.max(0, made[k]) * (times - 1) * seconds) / rules.HOUR;
+      if (stock[k] < cap) stock[k] = Math.min(cap, stock[k] + extra);
+    }
+    s = { ...s, stock };
+  }
+  setBuilders(s);
+  return s;
+}

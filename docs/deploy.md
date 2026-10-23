@@ -483,7 +483,14 @@ One step at a time, as `brinelight`, in `~/brinelight/deploy`. Send what each st
    It makes the key in a throwaway container of the server's image (no network, no log), writes it into `deploy/secrets/notary-devnet.key` (yours only), and prints only its public address: `Its public address (you can share it): …`. Send that line. Never open the key file, never copy it, never paste it anywhere. Run twice, it refuses: a key is never replaced by the script.
 3. **Devnet SOL, from the faucet, never from Phantom:** open `https://faucet.solana.com` in your browser, choose **devnet**, paste the address, ask for 1 SOL (devnet SOL is free and worth nothing). Check it arrived: `https://explorer.solana.com/address/<the address>?cluster=devnet`.
 4. **The address published:** Claude Code adds it to the official list (`shared/src/rules/notary.ts` and `docs/proofs.md`), then: `./update.sh` again.
-5. **Turn the notary on, on devnet:**
+5. **The test seal (devnet only):** one transaction marked `test`, to check the key, its SOL, the transaction and its page on the explorer before a milestone is sealed. It records nothing in the game and is never a night's seal; the notary may still be off.
+
+   ```
+   docker compose exec server npm run notary:test-seal
+   ```
+
+   Each line starts with ✓ or ✗; send them all (they hold no secret). The last ones say `Fee paid: 0.000005 SOL` and `See it: https://explorer.solana.com/tx/…?cluster=devnet`: open it. It shows one signer (the address of step 2), the Memo Program and the text `brinelight test v1 <day> 000…0` (64 zeros: a fixed test root, no player's data). It refuses mainnet. It can be run again: each run costs 0.000005 devnet SOL. If it says `No key in notary-devnet.key`, the server was started before the key was made: `docker compose up -d --force-recreate server`, then again.
+6. **Turn the notary on, on devnet:**
 
    ```
    echo "SOLANA_CLUSTER=devnet" >> .env
@@ -492,9 +499,9 @@ One step at a time, as `brinelight`, in `~/brinelight/deploy`. Send what each st
    ```
 
    The log says `The notary seals every night at 00:15 UTC` with `"cluster":"devnet"` and the address of step 2. Then `curl -s https://api.brinelight.xyz/health` says `"notary":"ok"`. If the log says `notary-devnet.key cannot be read by the server`, the file does not belong to the user 1000: tell Claude Code.
-6. **The first seal:** after 00:15 UTC, if a milestone was recorded the day before. Its transaction appears on the address's page of step 3.
+7. **The first seal:** after 00:15 UTC, if a milestone was recorded the day before. Its transaction appears on the address's page of step 3.
 
-**If the key is lost or leaked:** stop the notary (`SOLANA_CLUSTER=` empty in `.env`, then `docker compose up -d`), empty the key's file (`: > secrets/notary-devnet.key`), and tell Claude Code. Its address stays in the official list with its last day (and the day it leaked, if it did): the proofs it already sealed stay checkable. Then steps 2 to 5 again with a new key.
+**If the key is lost or leaked:** stop the notary (`SOLANA_CLUSTER=` empty in `.env`, then `docker compose up -d`), empty the key's file (`: > secrets/notary-devnet.key`), and tell Claude Code. Its address stays in the official list with its last day (and the day it leaked, if it did): the proofs it already sealed stay checkable. Then steps 2 to 6 again with a new key.
 
 **What to never do:** copy `deploy/secrets/` off the server or paste a key file's content anywhere; put a key in `.env` (the server refuses to seal while a `NOTARY_KEY_…` variable exists); use the same key for devnet and mainnet (the server refuses).
 

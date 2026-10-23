@@ -157,6 +157,22 @@ jobs:
             if grep -F "$secret" <<< "${!what}" > /dev/null; then echo "The key shows in $what"; leaks=1; else echo "Not in $what: checked"; fi
           done
           exit "$leaks"
+      - name: The test seal, in the server's container (devnet only, no network needed here)
+        working-directory: deploy
+        run: |
+          secret="$(sudo cat secrets/notary-devnet.key)"
+          address="$(docker compose logs server | sed -n 's/.*"address":"\([1-9A-HJ-NP-Za-km-z]*\)".*The notary seals.*/\1/p' | tail -1)"
+          test -n "$address"
+          # Mainnet: refused before any key or network.
+          if mainnet="$(docker compose exec -T -e SOLANA_CLUSTER=mainnet server npm run --silent notary:test-seal 2>&1)"; then echo "The test seal ran on mainnet"; exit 1; fi
+          echo "$mainnet"
+          grep -Fx '✗ The test seal runs on devnet only, and SOLANA_CLUSTER is "mainnet": nothing was sent.' <<< "$mainnet" > /dev/null
+          # Devnet, with an endpoint that cannot answer: the key is read, only its address is said, nothing is sent.
+          if devnet="$(docker compose exec -T -e SOLANA_RPC_URLS=https://127.0.0.1:9 server npm run --silent notary:test-seal 2>&1)"; then echo "The test seal held without a network"; exit 1; fi
+          echo "$devnet"
+          grep -Fx "Network: devnet. The notary's address: $address" <<< "$devnet" > /dev/null
+          grep '^✗ ' <<< "$devnet" | grep -F "127.0.0.1:9" > /dev/null
+          if grep -F "$secret" <<< "$mainnet$devnet" > /dev/null; then echo "The key shows in the test seal's output"; exit 1; else echo "Not in the test seal's output: checked"; fi
       - if: failure()
         working-directory: deploy
         run: docker compose logs --tail 100
