@@ -9,8 +9,8 @@ const json = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 const SAVED = { clock: 1_792_310_400 };
 
 describe("the shapes", () => {
-  it("shape 10 is today's, shape 4 the oldest stored", () => {
-    expect(CITY_SHAPE).toBe(10);
+  it("shape 11 is today's, shape 4 the oldest stored", () => {
+    expect(CITY_SHAPE).toBe(11);
     expect(MIN_CITY_SHAPE).toBe(4);
   });
 

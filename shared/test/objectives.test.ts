@@ -36,14 +36,18 @@ const city = (clock = at(9)): PlayerState => ({ ...newPlayerState(clock), stock:
 const act = (s: PlayerState, a: Record<string, unknown>) => applyAction(s, { id: ID, ...a } as Parameters<typeof applyAction>[1]);
 
 describe("the objectives", () => {
-  it("18 objectives, the prototype's without other players, payments, speedups or fixed hours", () => {
-    expect(OBJECTIVES).toHaveLength(18);
+  it("19 objectives, the prototype's without other players, payments, speedups or fixed hours", () => {
+    expect(OBJECTIVES).toHaveLength(19);
     expect(OBJECTIVES[11]).toMatchObject({ text: "Upgrade the Lumberyard to level 3", reward: { fish: 300 } });
+    // The Mist in the tutorial (owner's decision, 23 October): oil in store at once, the real Mist last.
+    expect(OBJECTIVES[10]).toMatchObject({ text: "Keep 500 oil in store for the Mist", reward: { oil: 250 } });
+    expect(OBJECTIVES[18]).toMatchObject({ text: "Keep the Lighthouse stoked through a Mist", reward: { oil: 250 } });
     expect(OBJECTIVES.map((o) => o.text).filter((t) => /alliance|Leviathan|recruit|Pact/i.test(t))).toEqual([]);
   });
 
   it("each condition, on a city that meets it and one that does not", () => {
-    const base = newPlayerState();
+    // Less oil than the eleventh asks: a new city's store holds more.
+    const base = { ...newPlayerState(), stock: { ...newPlayerState().stock, oil: 499 } };
     const b = (k: keyof PlayerState["buildings"], level: number) => ({ ...base, buildings: { ...base.buildings, [k]: level } });
     const raft = { hp: 100, building: null, level: 0 };
     const met: PlayerState[] = [
@@ -57,7 +61,7 @@ describe("the objectives", () => {
       { ...base, progress: { gathers: 0, trained: 1, camps: 0 } },
       { ...base, progress: { gathers: 0, trained: 0, camps: 1 } },
       b("infirmary", 1),
-      { ...base, mist: { ...base.mist, held: 1 } },
+      { ...base, stock: { ...base.stock, oil: 500 } },
       b("lumberyard", 3),
       b("shelters", 3),
       b("lighthouse", 4),
@@ -65,6 +69,7 @@ describe("the objectives", () => {
       { ...base, rafts: { "3,0": { hp: 100, building: "greenhouse", level: 1 } } },
       b("harbor", 3),
       b("lighthouse", 5),
+      { ...base, mist: { ...base.mist, held: 1 } },
     ];
     OBJECTIVES.forEach((o, i) => {
       expect(o.done(met[i]!), o.text).toBe(true);
@@ -98,7 +103,23 @@ describe("the objectives", () => {
   });
 
   it("after the last one, nothing is left to claim", () => {
-    expect(claimObjective({ ...city(), objective: 18 })).toEqual({ ok: false, reason: "You have finished every objective" });
+    expect(claimObjective({ ...city(), objective: 19 })).toEqual({ ok: false, reason: "You have finished every objective" });
+  });
+
+  it("the oil in store for the Mist counts when you claim: 500 or more, then 250 oil more", () => {
+    const at10 = { ...city(), objective: 10, stock: { oil: 499, fish: 0, wood: 0, rope: 0 } };
+    expect(claimObjective(at10)).toEqual({ ok: false, reason: "Finish your current objective first" });
+    const claimed = ok(claimObjective({ ...at10, stock: { ...at10.stock, oil: 500 } }));
+    expect(claimed).toMatchObject({ objective: 11, stock: { oil: 750 } });
+  });
+
+  it("an objective claimed ahead of its turn is skipped when its turn comes, and never pays twice", () => {
+    const s = { ...city(), objective: 17, claimedAhead: [18], buildings: { ...city().buildings, lighthouse: 5 }, mist: { ...city().mist, held: 3 } };
+    const last = ok(claimObjective(s));
+    expect(last.objective).toBe(19);
+    expect(last.pearls).toBe(s.pearls + 300);
+    expect(last.stock.oil).toBe(s.stock.oil);
+    expect(claimObjective(last)).toEqual({ ok: false, reason: "You have finished every objective" });
   });
 
   it("what the objectives count: gathers, trainings and camps beaten, by the rules", () => {
@@ -229,8 +250,14 @@ describe("in the city", () => {
     const s: PlayerState = { ...city(at(9)), objective: 3, progress: { gathers: 2, trained: 1, camps: 4 }, daily: { ...startingDaily(at(9), "s1"), counts: { upgrades: 3, gathers: 0, camps: 0, trains: 1, mists: 0, research: 0 }, chests: [20, 40] } };
     const json = JSON.parse(JSON.stringify(s));
     expect(parseState(json)).toEqual(s);
+    const ahead = { ...s, objective: 12, claimedAhead: [18] };
+    expect(parseState(JSON.parse(JSON.stringify(ahead)))).toEqual(ahead);
     for (const bad of [
-      { objective: 19 },
+      { objective: 20 },
+      { claimedAhead: [19] },
+      { claimedAhead: [18, 18] },
+      { claimedAhead: ["18"] },
+      { claimedAhead: 18 },
       { objective: -1 },
       { progress: { gathers: 1, trained: 0 } },
       { daily: { ...json.daily, day: dayOf(at(9), "s1") + 1 } },
@@ -241,6 +268,23 @@ describe("in the city", () => {
     ]) {
       expect(parseState({ ...json, ...bad }), JSON.stringify(bad)).toBeNull();
     }
+  });
+
+  it("from shape 10: a city that has claimed the Mist's objective (the eleventh then) gets the nineteenth as claimed", () => {
+    const stored = (objective: number) => JSON.parse(JSON.stringify({ ...newPlayerState(at(9)), objective }));
+    // Before the Mist's turn: the new eleventh, then the real Mist as the nineteenth.
+    for (const objective of [0, 10]) expect(migrateCity(stored(objective), 10, { clock: at(9) })).toEqual({ ...newPlayerState(at(9)), objective });
+    // The Mist claimed: the nineteenth is already claimed, its reward never paid again.
+    for (const objective of [11, 14, 17]) expect(migrateCity(stored(objective), 10, { clock: at(9) })).toEqual({ ...newPlayerState(at(9)), objective, claimedAhead: [18] });
+    // Every objective claimed: still nothing left to claim.
+    const done = migrateCity(stored(18), 10, { clock: at(9) })!;
+    expect(done.objective).toBe(19);
+    expect(claimObjective(done)).toEqual({ ok: false, reason: "You have finished every objective" });
+    // Its turn in a migrated city: skipped, with no second reward.
+    const city17 = { ...migrateCity(stored(17), 10, { clock: at(9) })!, buildings: { ...newPlayerState().buildings, lighthouse: 5 }, mist: { ...newPlayerState().mist, held: 1 } };
+    const after = ok(claimObjective(city17));
+    expect(after.objective).toBe(19);
+    expect(after.stock).toEqual(city17.stock);
   });
 
   it("from shape 7: only the objectives and the daily tasks are added, on the city's own clock", () => {

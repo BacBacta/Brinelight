@@ -41,7 +41,7 @@ describe("the balance simulation", () => {
     const reg = runs.find((r) => r.profile.id === "regular")!;
     expect(reg.mists.held).toBeGreaterThan(3 * (DAYS - 2));
     expect(reg.hunts.joined).toBeGreaterThan(DAYS);
-    expect(reg.claims.objectives).toBe(18);
+    expect(reg.claims.objectives).toBe(19);
     expect(reg.claims.chests).toBeGreaterThan(DAYS);
     expect(reg.pearls.mist).toBe(30 * reg.mists.held);
     const [never, away] = more as [(typeof more)[number], (typeof more)[number]];

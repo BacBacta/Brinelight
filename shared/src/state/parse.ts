@@ -87,6 +87,10 @@ const isLeviathan = (l: unknown): l is LeviathanState =>
 const isProgress = (p: unknown): p is Progress =>
   isObj(p) && Object.keys(p).sort().join() === "camps,gathers,trained" && isWhole(p.camps) && isWhole(p.gathers) && isWhole(p.trained);
 
+/** Objectives claimed ahead of their turn: each one an objective, once. */
+const isClaimedAhead = (a: unknown): a is number[] =>
+  Array.isArray(a) && a.every((i) => isWhole(i, 0, OBJECTIVES.length - 1)) && new Set(a).size === a.length;
+
 /**
  * A day of daily tasks: a day no later than the city's clock, a whole count for each task, and the chests opened that
  * day, each once and none beyond the day's points.
@@ -351,6 +355,7 @@ export function parseState(raw: unknown): PlayerState | null {
       !isMist(s.mist) ||
       !isLeviathan(s.leviathan) ||
       !isWhole(s.objective, 0, OBJECTIVES.length) ||
+      !(s.claimedAhead === undefined || isClaimedAhead(s.claimedAhead)) ||
       !isProgress(s.progress) ||
       !isDaily(s.daily, s.clock, s.server)
     ) {
@@ -400,6 +405,7 @@ export function parseState(raw: unknown): PlayerState | null {
       mist: { ...(s.mist as MistState) },
       leviathan: { ...(s.leviathan as LeviathanState) },
       objective: s.objective,
+      ...(s.claimedAhead === undefined ? {} : { claimedAhead: [...(s.claimedAhead as number[])] }),
       progress: { ...(s.progress as Progress) },
       daily: { day: (s.daily as DailyState).day, counts: { ...(s.daily as DailyState).counts }, chests: [...(s.daily as DailyState).chests] },
     };

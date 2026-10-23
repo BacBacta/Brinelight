@@ -45,7 +45,7 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 
 | Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 15 | 61,802 | 22,198 | 36,714 | 2,995 | 56,550 | 734 | 6 (mira, 9, 15★) | 28 | 6 | 32 |
+| Casual (3 sessions) | 15 | 61,802 | 22,448 | 36,714 | 2,995 | 56,550 | 734 | 6 (mira, 9, 15★) | 28 | 6 | 32 |
 | Regular (6 sessions) | 17 | 99,353 | 86,528 | 20,518 | 45,407 | 85,768 | 413 | 6 (mira, 19, 30★) | 28 | 7 | 68 |
 | Dedicated (10 sessions) | 17 | 103,243 | 87,688 | 16,661 | 36,498 | 85,768 | 424 | 6 (mira, 20, 30★) | 28 | 7 | 102 |
 
@@ -53,7 +53,7 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 
 | Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 21 | 138,295 | 114,913 | 192,895 | 73,035 | 244,978 | 292 | 6 (mira, 20, 30★) | 28 | 7 | 84 |
+| Casual (3 sessions) | 21 | 138,295 | 115,163 | 192,895 | 73,035 | 244,978 | 292 | 6 (mira, 20, 30★) | 28 | 7 | 84 |
 | Regular (6 sessions) | 23 | 159,683 | 158,690 | 34,309 | 149,992 | 414,011 | 526 | 6 (mira, 20, 30★) | 28 | 7 | 130 |
 | Dedicated (10 sessions) | 23 | 163,025 | 282,863 | 75,669 | 84,122 | 414,011 | 495 | 6 (mira, 20, 30★) | 28 | 7 | 183 |
 
@@ -61,7 +61,7 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 
 | Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 30 | 244,949 | 1,428,753 | 688,892 | 689,427 | 2,597,893 | 728 | 6 (mira, 20, 30★) | 28 | 7 | 186 |
+| Casual (3 sessions) | 30 | 244,949 | 1,429,003 | 688,892 | 689,427 | 2,597,893 | 728 | 6 (mira, 20, 30★) | 28 | 7 | 186 |
 | Regular (6 sessions) | 30 | 255,849 | 2,461,442 | 481,759 | 785,155 | 2,597,893 | 856 | 6 (mira, 20, 30★) | 28 | 7 | 261 |
 | Dedicated (10 sessions) | 30 | 255,515 | 2,538,857 | 413,437 | 1,028,336 | 2,597,893 | 1,160 | 6 (mira, 20, 30★) | 28 | 7 | 345 |
 
@@ -77,11 +77,11 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 
 | Profile | Hours of full oil (days 1–90) | Oil spent stoking | Repairs (oil) | Mists held | Mists missed | Hunts joined | Leviathans killed | Objectives claimed | Chests opened |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 0 | 65,591 | 0 (0 oil) | 1094 | 0 | 364 | 0 | 18 | 759 |
-| Regular (6 sessions) | 54 | 68,928 | 0 (0 oil) | 1094 | 0 | 729 | 0 | 18 | 797 |
-| Dedicated (10 sessions) | 457 | 68,788 | 0 (0 oil) | 1094 | 0 | 709 | 0 | 18 | 819 |
-| Never stokes (6 sessions) | 139 | 0 | 406 (387,140 oil) | 0 | 1094 | 729 | 1 | 10 | 421 |
-| Away 3 days (6 sessions, none on days 20 to 22) | 0 | 68,848 | 0 (0 oil) | 1094 | 0 | 723 | 1 | 18 | 788 |
+| Casual (3 sessions) | 0 | 65,591 | 0 (0 oil) | 1094 | 0 | 364 | 0 | 19 | 759 |
+| Regular (6 sessions) | 54 | 68,928 | 0 (0 oil) | 1094 | 0 | 729 | 0 | 19 | 797 |
+| Dedicated (10 sessions) | 457 | 68,788 | 0 (0 oil) | 1094 | 0 | 709 | 0 | 19 | 819 |
+| Never stokes (6 sessions) | 202 | 0 | 427 (407,000 oil) | 0 | 1094 | 729 | 0 | 18 | 424 |
+| Away 3 days (6 sessions, none on days 20 to 22) | 0 | 68,848 | 0 (0 oil) | 1094 | 0 | 723 | 1 | 19 | 788 |
 
 ### Pearls a day, by source (average over the whole run)
 
@@ -90,21 +90,21 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 | Casual (3 sessions) | 89.9 | 51.9 | 61.5 | 2.1 | 4.4 | 209.8 | 37.4 | 28,125 |
 | Regular (6 sessions) | 89.9 | 131.2 | 113.2 | 2.1 | 16.2 | 352.6 | 35.9 | 80,790 |
 | Dedicated (10 sessions) | 89.9 | 78.6 | 189.4 | 2.1 | 23.0 | 383.0 | 33.0 | 92,941 |
-| Never stokes (6 sessions) | 0.0 | 119.1 | 97.2 | 0.7 | 4.1 | 221.0 | 25.8 | 36,481 |
+| Never stokes (6 sessions) | 0.0 | 125.4 | 103.1 | 2.1 | 4.4 | 235.0 | 27.4 | 40,964 |
 | Away 3 days (6 sessions, none on days 20 to 22) | 89.9 | 116.8 | 110.8 | 2.1 | 15.1 | 334.6 | 36.3 | 74,092 |
 
 ### Two more players: milestones
 
 | Profile | Lighthouse 5 | Lighthouse 10 | Lighthouse 15 | Lighthouse 20 | Lighthouse 25 | Lighthouse 30 |
 | --- | --- | --- | --- | --- | --- | --- |
-| Never stokes (6 sessions) | day 0.2 | day 6.1 | day 20.5 | day 51.1 | day 131.7 | day 354.5 |
+| Never stokes (6 sessions) | day 0.2 | day 6.1 | day 20.5 | day 54.6 | day 131.0 | day 341.7 |
 | Away 3 days (6 sessions, none on days 20 to 22) | day 0.2 | day 4.9 | day 17.1 | day 45.6 | day 115.7 | day 315.4 |
 
 ### What a player away finds on return (before the first session)
 
 | Profile | Day | Rafts | Damaged | Lowest sturdiness | Mists missed so far | Oil (storage) | Repairing everything: oil, wood, time |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Away 3 days (6 sessions, none on days 20 to 22) | 23 | 7 | 0 | 100 | 0 | 47,076 (65,975) | 0, 0, 0.0 h |
+| Away 3 days (6 sessions, none on days 20 to 22) | 23 | 7 | 0 | 100 | 0 | 47,326 (65,975) | 0, 0, 0.0 h |
 
 ### The storage wall
 
