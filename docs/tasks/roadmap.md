@@ -18,6 +18,7 @@ The milestones of the day sealed every night in one Solana transaction, checked 
 
 - **The wood of the second day** (owner, 23 October): with A + C, the builders wait about 44 hours of 48 on day 2, short of wood. That figure is the measure to bring down (`docs/tasks/early-start.md`, "The second day"; `npx tsx tools/balance/start-run.ts`). Its causes and four options, measured: `docs/studies/resources.md` (a study; nothing in the game yet).
 - The Fish Shoals and Wooded Isles of the map, harvestable by the fleets, with amounts that follow the Lighthouse.
+- **The surplus of fish** (owner, 23 October): with A + C + E, the storage is full of fish 42 % of the time; it will feed the town that grows.
 - The late game's wall (the other buildings and the storage: task 7 of `week-8.md`).
 - The survivors' growth.
 - Review the curve of Lighthouse 10 to 20 after A + C (the early start, `docs/tasks/early-start.md`), with the late game.
@@ -47,3 +48,8 @@ The milestones of the day sealed every night in one Solana transaction, checked 
 
 - The seasons, the title of Guardians of the Great Lighthouse, and its seal on Solana.
 - Then the phone.
+
+## Later
+
+- **The late game's wall** (owner, 23 October): the Lighthouse's 25 to 30 is 156 days of building, and the other buildings' 29 to 30 takes years (8.8 to 11.7 years of building each). Measured in `docs/studies/resources.md`.
+- **Long expeditions for the casual player** (owner, 23 October): a fleet that harvests for several hours in a row, so that a player with three sessions a day draws at least 25 % of their wood and fish from the sea (13 % and 24 % with E).
