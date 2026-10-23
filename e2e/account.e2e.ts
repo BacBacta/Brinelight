@@ -1584,7 +1584,9 @@ describe("signed in", () => {
     // Shown again, the page takes the server's city: the edit is gone.
     await show(page);
     await expect.poll(async () => (await copyOf(page, playerId))?.server?.state.buildings.refinery, NET).toBe(1);
-    await expect.poll(() => shownJobs(page), NET).toEqual(["Refinery"]);
+    // The server's own work only, never the edited city's: the Refinery's level 2, under way, or already done by this
+    // page's clock 1000 times faster (1 minute since the early start).
+    await expect.poll(async () => (await shownJobs(page)).every((j) => j === "Refinery"), NET).toBe(true);
     await page.screenshot({ path: "e2e/.shots/shot-cheat.png" });
     await p.context.close();
   });
