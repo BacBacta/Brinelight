@@ -32,11 +32,68 @@ export type LighthouseTry = { clock: number; level: number; ok: boolean; reason:
 /** A level finished: when, which building, the level it reached. */
 export type Finished = { clock: number; id: BuildingId; level: number };
 
-export type Study = { variant: Variant | null; tries: LighthouseTry[]; finished: Finished[] };
+/**
+ * A work that A does not cap (research, training, healing, the shipyard, a fleet at sea), from when it began to the
+ * step it ended in (null while it runs); a fleet also arrives at its site, half-way.
+ */
+export type OtherJob = { kind: "research" | "training" | "healing" | "shipyard" | "sea"; what: string; start: number; end: number | null; arrive?: number };
+
+/** An objective claimed: when, and its index in OBJECTIVES. */
+export type Claim = { clock: number; objective: number };
+
+/** An upgrade started: when, which building, the level it goes to, and its time. */
+export type Started = { clock: number; id: BuildingId; level: number; seconds: number };
+
+export type Study = { variant: Variant | null; tries: LighthouseTry[]; finished: Finished[]; jobs: OtherJob[]; claims: Claim[]; started: Started[]; seen: Set<string> };
 
 /** Shared with `early.ts` through the global object: the two may load this module under two names. */
 const g = globalThis as { brinelightEarlyStudy?: Study };
-export const study: Study = (g.brinelightEarlyStudy ??= { variant: null, tries: [], finished: [] });
+export const study: Study = (g.brinelightEarlyStudy ??= { variant: null, tries: [], finished: [], jobs: [], claims: [], started: [], seen: new Set() });
+
+/**
+ * The works under way in a city the simulator kept (it tries some actions and drops them): an upgrade or an uncapped
+ * work not seen before began `duration - left` seconds before this clock.
+ */
+function observe(state: PlayerState): void {
+  const begun = (job: { left: number; duration: number }) => state.clock - (job.duration - job.left);
+  const open = (kind: OtherJob["kind"], what?: string) => study.jobs.some((j) => j.kind === kind && j.end === null && (what === undefined || j.what === what));
+  if (state.research && !open("research")) study.jobs.push({ kind: "research", what: `research ${state.research.id}`, start: begun(state.research), end: null });
+  if (state.training && !open("training")) study.jobs.push({ kind: "training", what: `${state.training.kind} ${state.training.count} ${state.training.troop}`, start: begun(state.training), end: null });
+  if (state.healing && !open("healing")) study.jobs.push({ kind: "healing", what: "heal the wounded", start: begun(state.healing), end: null });
+  if (state.yard && !open("shipyard")) study.jobs.push({ kind: "shipyard", what: `shipyard: ${state.yard.kind}`, start: begun(state.yard), end: null });
+  for (const f of state.fleets) {
+    const what = `fleet to ${f.site}`;
+    if (!open("sea", what)) {
+      // The way out: shorter than the trip to a camp in the early start (`out`).
+      const out = f.out ?? f.travel;
+      const start = state.clock - (f.phase === "out" ? out - f.left : out);
+      study.jobs.push({ kind: "sea", what, start, end: null, arrive: start + out });
+    }
+  }
+  for (const job of state.queue) {
+    const level = state.buildings[job.id] + 1;
+    const key = `${job.id} ${level}`;
+    if (!study.seen.has(key)) {
+      study.seen.add(key);
+      study.started.push({ clock: begun(job), id: job.id, level, seconds: job.duration });
+    }
+  }
+}
+
+/** The works of `study.jobs` that ended in a step from `before` to `after`. */
+function endJobs(before: PlayerState, after: PlayerState, seconds: number): void {
+  const at = (left: number | undefined) => before.clock + Math.min(seconds, Math.max(0, left ?? seconds));
+  const ended = (kind: OtherJob["kind"], when: number, what?: (j: OtherJob) => boolean) => {
+    const job = study.jobs.find((j) => j.kind === kind && j.end === null && (!what || what(j)));
+    if (job) job.end = when;
+  };
+  if (before.research && !after.research) ended("research", at(before.research.left));
+  if (before.training && !after.training) ended("training", at(before.training.left));
+  if (before.healing && !after.healing) ended("healing", at(before.healing.left));
+  if (before.yard && !after.yard) ended("shipyard", at(before.yard.left));
+  const home = new Set(after.fleets.map((f) => f.site));
+  for (const f of before.fleets) if (!home.has(f.site)) ended("sea", before.clock + seconds, (j) => j.what === `fleet to ${f.site}`);
+}
 
 /** The builders, as the simulator reads them: a live binding, set from the city at each step. */
 export let BUILDERS = rules.BUILDERS;
@@ -70,6 +127,8 @@ export function applyAction(state: PlayerState, action: GameAction): ActionResul
     const seconds = Math.max(1, Math.round(v.duration(action.building, state.buildings[action.building] + 1, job.duration)));
     r = { ...r, state: { ...r.state, queue: [...r.state.queue.slice(0, -1), { ...job, left: seconds, duration: seconds }] } };
   }
+  // A claim is never dropped by the simulator: written down here, at its session.
+  if (r.ok && action.type === "claimObjective") study.claims.push({ clock: state.clock, objective: state.objective });
   if (action.type === "upgrade" && action.building === "lighthouse") {
     study.tries.push({ clock: state.clock, level: state.buildings.lighthouse + 1, ok: r.ok, reason: r.ok ? null : r.reason, stock: { ...state.stock } });
   }
@@ -78,7 +137,9 @@ export function applyAction(state: PlayerState, action: GameAction): ActionResul
 }
 
 export function advance(state: PlayerState, seconds: number): PlayerState {
+  observe(state);
   let s = rules.advance(state, seconds);
+  endJobs(state, s, seconds);
   for (const id of rules.BUILDING_IDS) {
     // A level finished in this step at the end of its job: the time it had left when the step began.
     if (s.buildings[id] > state.buildings[id]) {

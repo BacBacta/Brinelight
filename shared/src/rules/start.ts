@@ -1,8 +1,13 @@
 import type { CaptainId, CaptainState } from "./captains.js";
 import type { Stock, Troops } from "./types.js";
 
-/** Starting values of a new city, taken from the prototype. */
-export const STARTING_STOCK: Stock = { oil: 380, fish: 420, wood: 520, rope: 3 };
+/**
+ * Starting values of a new city, taken from the prototype, except its stock.
+ *
+ * The richer start (owner's decision, 23 October; `docs/tasks/early-start.md`): enough for the Lighthouse's levels 3
+ * to 5 and a few buildings. It was 380 oil, 420 fish and 520 wood. Only a new city gets it: a stored city keeps its own.
+ */
+export const STARTING_STOCK: Stock = { oil: 1400, fish: 800, wood: 2000, rope: 3 };
 export const STARTING_TROOPS: Troops = { boarders: 25, harpooners: 25, crossbowmen: 25 };
 export const STARTING_SURVIVORS = 8;
 export const STARTING_MORALE = 84;

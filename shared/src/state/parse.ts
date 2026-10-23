@@ -135,6 +135,7 @@ function isFleet(f: unknown): f is Fleet {
     isNum(f.left) &&
     isNum(f.travel) &&
     f.travel > 0 &&
+    (f.out === undefined || (isNum(f.out) && f.out > 0 && f.out <= f.travel)) &&
     isTroops(f.troops) &&
     isTroops(f.veterans) &&
     isTechs(f.techs) &&
@@ -155,7 +156,7 @@ function isFleet(f: unknown): f is Fleet {
  */
 export function cleanFleets(raw: readonly unknown[], harbor: number): Fleet[] {
   const stay = { attack: ATTACK_STAY, collect: COLLECT_STAY, hunt: HUNT_DURATION };
-  const longest = (f: Fleet) => (f.phase === "stay" ? stay[f.kind] : f.travel);
+  const longest = (f: Fleet) => (f.phase === "stay" ? stay[f.kind] : f.phase === "out" ? (f.out ?? f.travel) : f.travel);
   return raw
     .filter(isFleet)
     .slice(0, fleetsMax(harbor))

@@ -36,7 +36,7 @@ describe("new city", () => {
   it("does not share objects with the shared constants", () => {
     const s = newPlayerState();
     s.stock.oil = 0;
-    expect(STARTING_STOCK.oil).toBe(380);
+    expect(STARTING_STOCK.oil).toBe(1400);
   });
 });
 

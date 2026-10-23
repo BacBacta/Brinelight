@@ -11,6 +11,7 @@
  */
 import {
   BUILDERS,
+  BUILDINGS,
   BUILDING_IDS,
   CHESTS,
   LEVIATHAN_SITE,
@@ -39,6 +40,7 @@ import {
   repairTime,
   distance,
   newPlayerState,
+  OBJECTIVES,
   odds,
   pirateCamp,
   power,
@@ -73,6 +75,11 @@ export type Profile = {
   away?: { from: number; to: number };
   /** What the player leaves out, to measure what each new rule changes (all played when absent). */
   skip?: { hunts?: boolean; objectives?: boolean; chests?: boolean; repairs?: boolean };
+  /**
+   * Does what the current objective asks first, at every session, without keeping the Lighthouse's wood, and attacks a
+   * camp at any odds it wins: a player who follows the quests, to measure their pace (docs/tasks/early-start.md).
+   */
+  questFirst?: boolean;
 };
 
 const at = (hours: number, minutes = 0) => hours * HOUR + minutes * 60;
@@ -273,9 +280,12 @@ export function simulate(profile: Profile, days: number): Run {
     return true;
   };
 
+  /** A player who follows the quests keeps one builder and one fleet for them, until the last quest is claimed. */
+  const keepForQuests = () => (profile.questFirst && s.objective < OBJECTIVES.length ? 1 : 0);
+
   const builders = (): Block | null => {
     for (;;) {
-      if (s.queue.length >= BUILDERS) return null;
+      if (s.queue.length >= BUILDERS - keepForQuests()) return null;
       const queued = s.queue.map((j) => j.id);
       const candidates: BuildingId[] = queued.includes("lighthouse") || s.buildings.lighthouse >= LIGHTHOUSE_MAX ? [] : ["lighthouse"];
       const others = BUILD_ORDER.filter((id) => !queued.includes(id) && s.buildings[id] < s.buildings.lighthouse);
@@ -318,9 +328,41 @@ export function simulate(profile: Profile, days: number): Run {
 
   const infirmary = () => !s.healing && totalTroops(s.wounded) > 0 && act({ type: "heal" }, "heal");
 
+  /** The odds of all your troops against a camp of this level. */
+  const campOdds = (level: number) => {
+    const lead = s.lead ? s.captains[s.lead] : undefined;
+    return odds({
+      troops: s.troops,
+      veterans: s.veterans,
+      enemy: pirateCamp(level),
+      captain: s.lead && lead ? { cls: CAPTAINS[s.lead].cls, rarity: CAPTAINS[s.lead].rarity, level: lead.level } : null,
+      techs: { blades: techLevel(s.techs, "blades"), hulls: techLevel(s.techs, "hulls"), stretchers: techLevel(s.techs, "stretchers") },
+      watchtowers: raftEffect(s.rafts, "watchtower"),
+    });
+  };
+
+  /** The current objective's own action, for a player who follows the quests (`questFirst`). */
+  const quest = () => {
+    const o = OBJECTIVES[s.objective];
+    if (!o || o.done(s)) return;
+    const text = o.text;
+    const building = BUILDING_IDS.find((id) => text.includes(BUILDINGS[id].name));
+    if (building && /^(Upgrade|Build|Bring)/.test(text)) act({ type: "upgrade", building }, `quest: ${building} ${s.buildings[building] + 1}`);
+    else if (text.startsWith("Start your first research")) RESEARCH_ORDER.some((tech) => act({ type: "research", tech }, `quest: research ${tech}`));
+    else if (text.startsWith("Send a fleet to gather")) WRECKS.some((w) => act({ type: "sail", site: w.id }, `quest: salvage ${w.id}`));
+    else if (text.startsWith("Train troops")) TROOP_ORDER.some((troop) => act({ type: "train", troop }, `quest: train ${troop}`));
+    else if (text.startsWith("Beat a pirate camp")) {
+      // The nearest camp it beats: a battle is decided by strength, so "close" odds win too.
+      const camps = [...CAMPS].sort((a, b) => distance(a) - distance(b));
+      camps.some((c) => campOdds(s.world.camps[c.id] ?? 1) !== "hard" && act({ type: "sail", site: c.id }, `quest: attack ${c.id}`));
+    } else if (text.startsWith("Moor your first raft")) RAFT_SLOTS.some((x) => act({ type: "dockRaft", slot: x.key }, `quest: raft at ${x.key}`));
+    else if (text.startsWith("Put a Kelp Greenhouse")) {
+      RAFT_SLOTS.some((x) => s.rafts[x.key] && !s.rafts[x.key]!.building && act({ type: "installOnRaft", slot: x.key, building: "greenhouse" }, `quest: greenhouse on ${x.key}`));
+    }
+  };
+
   const sea = () => {
     let any = false;
-    const lead = s.lead ? s.captains[s.lead] : undefined;
     // The Leviathan first, when it is at sea and a fleet stays free for the wrecks (owner's decision, 18 October): all
     // the troops sail to it, and no camp is attacked meanwhile.
     const spare = fleetsMax(s.buildings.harbor) - s.fleets.length >= 2;
@@ -330,19 +372,12 @@ export function simulate(profile: Profile, days: number): Run {
       // The lowest camp, if the odds are "easy"; all the troops sail.
       const camp = [...CAMPS].sort((a, b) => (s.world.camps[a.id] ?? 1) - (s.world.camps[b.id] ?? 1))[0]!;
       const level = s.world.camps[camp.id] ?? 1;
-      const chance = odds({
-        troops: s.troops,
-        veterans: s.veterans,
-        enemy: pirateCamp(level),
-        captain: s.lead && lead ? { cls: CAPTAINS[s.lead].cls, rarity: CAPTAINS[s.lead].rarity, level: lead.level } : null,
-        techs: { blades: techLevel(s.techs, "blades"), hulls: techLevel(s.techs, "hulls"), stretchers: techLevel(s.techs, "stretchers") },
-        watchtowers: raftEffect(s.rafts, "watchtower"),
-      });
-      if (chance === "easy") any = act({ type: "sail", site: camp.id }, `attack ${camp.id} (level ${level})`) || any;
+      if (campOdds(level) === "easy") any = act({ type: "sail", site: camp.id }, `attack ${camp.id} (level ${level})`) || any;
     }
     // Every other fleet salvages the nearest wreck it can sail to (oil and rope), one fleet a wreck: an emptied wreck
     // waits before it fills again.
     for (;;) {
+      if (fleetsMax(s.buildings.harbor) - s.fleets.length <= keepForQuests()) break;
       const w = WRECKS.find((x) => !s.fleets.some((f) => f.site === x.id) && fleetCheck(s, x.id).ok);
       if (!w || !act({ type: "sail", site: w.id }, `salvage ${w.id}`)) break;
       any = true;
@@ -398,6 +433,7 @@ export function simulate(profile: Profile, days: number): Run {
     let block: Block | null = null;
     for (let round = 0; round < 20; round++) {
       const mark = ids;
+      if (profile.questFirst) quest();
       block = builders();
       observatory();
       barracks();

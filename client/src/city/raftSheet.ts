@@ -9,9 +9,7 @@ import {
   RAFT_BUILDINGS,
   RAFT_BUILDING_MAX_COPIES,
   RAFT_BUILDING_MAX_LEVEL,
-  RAFT_BUILD_TIME,
   RAFT_DAMAGED_BELOW,
-  RAFT_INSTALL_TIME,
   RAFT_LEVEL_POWER,
   RAFT_MAX_HP,
   RAFT_SLOTS,
@@ -22,9 +20,11 @@ import {
   canRepair,
   canUpgradeRaft,
   damagedRafts,
+  installTime,
   raftBuildingCopies,
   raftBuildingCost,
   raftCap,
+  raftBuildTime,
   raftCost,
   raftUpgradeTime,
   repairCost,
@@ -138,7 +138,7 @@ export function raftSheetHtml(state: PlayerState, slot: string, speed: number, l
       return listRow(
         b.name,
         `<small>${raftEffectText(id, 1)} per level</small>` +
-          `<small>${costText(raftBuildingCost(id, 0))} · ${formatDuration(RAFT_INSTALL_TIME / speed)} · ${raftBuildingCopies(id, state.rafts, state.yard)}/${RAFT_BUILDING_MAX_COPIES}</small>`,
+          `<small>${costText(raftBuildingCost(id, 0))} · ${formatDuration(installTime(state.buildings.lighthouse) / speed)} · ${raftBuildingCopies(id, state.rafts, state.yard)}/${RAFT_BUILDING_MAX_COPIES}</small>`,
         // Still tappable when refused: the tap shows the reason in a toast, as for an upgrade.
         button("Install", "sm", "install", ` data-building="${id}"`, !check.ok),
         "",
@@ -162,7 +162,7 @@ export function raftSheetHtml(state: PlayerState, slot: string, speed: number, l
           kv("At next Lighthouse level", w.many(raftCap(lighthouse + 1))) +
           kv("Your rope", formatAmount(state.stock.rope)),
       ) +
-      box(w.moor, costLine(state.stock, raftCost(n)) + `<p class="p" style="font-size:12.5px;margin-top:6px">Time: ${formatDuration(RAFT_BUILD_TIME / speed)}. ${w.rope}</p>`) +
+      box(w.moor, costLine(state.stock, raftCost(n)) + `<p class="p" style="font-size:12.5px;margin-top:6px">Time: ${formatDuration(raftBuildTime(state.rafts, lighthouse) / speed)}. ${w.rope}</p>`) +
       // Still tappable when refused: the tap shows the reason in a toast too.
       actionButton(w.build, check, "gold xl", "dock"),
   };

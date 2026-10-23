@@ -10,7 +10,7 @@ describe("server", () => {
 
   it("serves the shared rules", async () => {
     const res = await (await buildApp()).inject({ method: "GET", url: "/rules/buildings/refinery/1" });
-    expect(res.json()).toEqual({ id: "refinery", level: 1, cost: { wood: 140, fish: 60 }, seconds: 3240 });
+    expect(res.json()).toEqual({ id: "refinery", level: 1, cost: { wood: 140, fish: 60 }, seconds: 60 });
   });
 
   it("rejects an unknown building", async () => {

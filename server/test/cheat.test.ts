@@ -5,7 +5,7 @@
  * applyAction for each accepted action), and the server's city is compared with it after every case.
  */
 import { randomBytes, randomUUID } from "node:crypto";
-import { PROMOTE_TIME, RAFT_BUILD_TIME, RAFT_INSTALL_TIME, RAFT_MAX_HP, RAFT_SLOTS, applyAction, catchUp, emptyTroops, healTime, newPlayerState, raftCap, raftUpgradeTime, totalTroops, trainTime, type GameAction, type PlayerState } from "@brinelight/shared";
+import { PROMOTE_TIME, RAFT_BUILD_TIME, RAFT_MAX_HP, RAFT_SLOTS, applyAction, catchUp, emptyTroops, healTime, installTime, newPlayerState, raftCap, raftUpgradeTime, totalTroops, trainDuration, type GameAction, type PlayerState } from "@brinelight/shared";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.js";
@@ -353,7 +353,8 @@ describe("a modified client cannot change the rules", () => {
     const slot = RAFT_SLOTS.find((s) => s.ring === 3)!.key;
     const p = await player({ ...base, buildings: { ...base.buildings, lighthouse: 4 }, stock: { oil: 9000, fish: 9000, wood: 9000, rope: 50 }, rafts: { [slot]: { hp: RAFT_MAX_HP, building: null, level: 0 } } });
     await expectApplied(server, p, action({ type: "installOnRaft", slot, building: "watchtower" }));
-    later(RAFT_INSTALL_TIME * 1000 - 1000);
+    // Lighthouse 4: the early start's 5 minutes (installTime), as the server's rules make it.
+    later(installTime(4) * 1000 - 1000);
     await expectRules(server, p);
     expect(p.ref.now().rafts[slot]).toMatchObject({ building: null, level: 0 });
     later(1000);
@@ -434,7 +435,8 @@ describe("a modified client cannot change the rules", () => {
     const p = await player({ ...base, buildings: { ...base.buildings, barracks: 1 }, troops: emptyTroops() });
     await expectRefused(server, p, action({ type: "sail", site: "camp-1" }), "You do not have enough troops");
     await expectApplied(server, p, action({ type: "train", troop: "crossbowmen" }));
-    later(trainTime(20) * 1000 - 1000);
+    // Lighthouse 2: the early start's 5 minutes (trainDuration), as the server's rules make it.
+    later(trainDuration(20, 2) * 1000 - 1000);
     await expectRules(server, p);
     expect(p.ref.now().troops).toEqual(emptyTroops());
     later(1000);

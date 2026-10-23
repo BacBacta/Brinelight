@@ -101,6 +101,26 @@ describe("POST /city/actions", () => {
     expect(after!.savedAt).toEqual(clock);
   });
 
+  it("the early start (owner's decision of 23 October): a stored city keeps its stock and its job under way; a new upgrade gets the quick time", async () => {
+    const server = await app();
+    const { id, token } = await player();
+    // A city stored before the update: the old start, and the Fishery's level 2 under way at its old time (54 min).
+    const before: PlayerState = { ...newPlayerState(T0.getTime() / 1000), stock: { oil: 380, fish: 420, wood: 520, rope: 3 }, queue: [{ id: "fishery", left: 3240, duration: 3240 }] };
+    await putCity(id, before, 4);
+    setClock(MINUTE);
+    const res = await send(server, token, { action: upgradeOf("refinery") });
+    expect(res.statusCode).toBe(200);
+    const { state } = res.json() as { state: PlayerState };
+    expect(state.queue).toEqual([
+      { id: "fishery", left: 3180, duration: 3240 },
+      { id: "refinery", left: upgradeTime("refinery", 1), duration: upgradeTime("refinery", 1) },
+    ]);
+    expect(upgradeTime("refinery", 1)).toBe(60);
+    // Its own stock, less the Refinery's 140 wood, plus a minute of work: never the new start's 2,000.
+    expect(state.stock.wood).toBeGreaterThan(370);
+    expect(state.stock.wood).toBeLessThan(400);
+  });
+
   it("a refused action: 422 with the rule's reason word for word, the city unchanged and sent back", async () => {
     const server = await app();
     const { id, token } = await player();

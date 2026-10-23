@@ -1,3 +1,4 @@
+import { EARLY_INSTALL, EARLY_RAFT, earlyCapped } from "./early.js";
 import { OK, canPay, payCost, refuse, roundCost, type Check, type Cost, type Stock } from "./types.js";
 import { protoSeconds } from "./time.js";
 
@@ -112,6 +113,10 @@ export const repairTime = (rafts: Rafts): number => (missingPoints(rafts) / MIST
 
 /** Real duration (seconds) of putting a building on a raft (prototype: 8 seconds). */
 export const RAFT_INSTALL_TIME = protoSeconds(8);
+/** The time a new raft takes: the city's first one at most 5 minutes while its Lighthouse is below level 6 (the early start). */
+export const raftBuildTime = (rafts: Rafts, lighthouse: number): number => (Object.keys(rafts).length === 0 ? earlyCapped(RAFT_BUILD_TIME, EARLY_RAFT, lighthouse) : RAFT_BUILD_TIME);
+/** The time a raft building's first level takes: at most 5 minutes while the Lighthouse is below level 6 (the early start). */
+export const installTime = (lighthouse: number): number => earlyCapped(RAFT_INSTALL_TIME, EARLY_INSTALL, lighthouse);
 /** Real duration (seconds) of taking a raft building from `level` to the next one (prototype: 8 × 1.5^level seconds). */
 export const raftUpgradeTime = (level: number): number => protoSeconds(8 * 1.5 ** level);
 
@@ -138,7 +143,7 @@ export function startRaft(slot: string, ctx: { rafts: Rafts; lighthouse: number;
   return {
     ok: true,
     stock: payCost(ctx.stock, raftCost(Object.keys(ctx.rafts).length)),
-    yard: { slot, kind: "raft", left: RAFT_BUILD_TIME, duration: RAFT_BUILD_TIME },
+    yard: { slot, kind: "raft", left: raftBuildTime(ctx.rafts, ctx.lighthouse), duration: raftBuildTime(ctx.rafts, ctx.lighthouse) },
   };
 }
 
@@ -159,14 +164,14 @@ export function canInstall(id: RaftBuildingId, ctx: { rafts: Rafts; slot: string
   return OK;
 }
 
-/** Puts a building on a free raft: checked with canInstall, paid at once, at level 1 after RAFT_INSTALL_TIME. */
-export function startInstall(id: RaftBuildingId, ctx: { rafts: Rafts; slot: string; stock: Stock; yard: YardJob | null }): StartYard {
+/** Puts a building on a free raft: checked with canInstall, paid at once, at level 1 after installTime. */
+export function startInstall(id: RaftBuildingId, ctx: { rafts: Rafts; slot: string; lighthouse: number; stock: Stock; yard: YardJob | null }): StartYard {
   const check = canInstall(id, ctx);
   if (!check.ok) return check;
   return {
     ok: true,
     stock: payCost(ctx.stock, raftBuildingCost(id, 0)),
-    yard: { slot: ctx.slot, kind: "install", building: id, left: RAFT_INSTALL_TIME, duration: RAFT_INSTALL_TIME },
+    yard: { slot: ctx.slot, kind: "install", building: id, left: installTime(ctx.lighthouse), duration: installTime(ctx.lighthouse) },
   };
 }
 

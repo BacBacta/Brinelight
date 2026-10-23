@@ -50,11 +50,19 @@ export function upgradeCost(id: BuildingId, level: number): Cost {
   return roundCost(raw);
 }
 
+/**
+ * The quick first levels (owner's decision, 23 October; `docs/tasks/early-start.md`): an upgrade to these levels, of
+ * any building of the island, takes at most this long, in real seconds, by the level it reaches. From level 6, the
+ * growth's own time. The same for every city; never a reward, never for sale.
+ */
+export const QUICK_LEVELS: Readonly<Record<number, number>> = { 1: 60, 2: 60, 3: 2 * 60, 4: 5 * 60, 5: 15 * 60 };
+
 /** Real duration (seconds) to go from level `level` to level `level + 1`. */
 export function upgradeTime(id: BuildingId, level: number): number {
   const d = BUILDINGS[id];
   const after = d.after && { level: d.after.level, growth: d.after.timeGrowth };
-  return Math.round(protoSeconds(d.baseTime * grown(d.timeGrowth, level, after)));
+  const grownTime = Math.round(protoSeconds(d.baseTime * grown(d.timeGrowth, level, after)));
+  return Math.min(grownTime, QUICK_LEVELS[level + 1] ?? grownTime);
 }
 
 /**

@@ -28,8 +28,8 @@ const lit = (lighthouse = 4): PlayerState => {
 };
 
 describe("rafts around the island", () => {
-  it("a raft is paid at once and built by the shipyard in RAFT_BUILD_TIME", () => {
-    const s = lit();
+  it("a raft is paid at once and built by the shipyard in RAFT_BUILD_TIME (from Lighthouse 6: below, the first one is capped)", () => {
+    const s = lit(6);
     const r = dockRaft(s, INNER[0]!);
     if (!r.ok) throw new Error(r.reason);
     const cost = raftCost(0);
@@ -40,7 +40,7 @@ describe("rafts around the island", () => {
   });
 
   it("its end is an event of advance: the raft is moored, new, and the shipyard is free", () => {
-    const r = dockRaft(lit(), INNER[0]!);
+    const r = dockRaft(lit(6), INNER[0]!);
     if (!r.ok) throw new Error(r.reason);
     expect(advance(r.state, RAFT_BUILD_TIME - 1).yard?.left).toBeCloseTo(1, 9);
     const done = advance(r.state, RAFT_BUILD_TIME + 3600);

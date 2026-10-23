@@ -9,7 +9,7 @@ import type { BrowserContext, Locator, Page } from "playwright-core";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import * as THREE from "three";
 import { parseProofFile } from "@brinelight/shared";
-import { BUILDINGS, BUILDING_IDS, HOUR, PROMOTE_TIME, RAFT_INSTALL_TIME, RAFT_SLOTS, advance, heal, installOnRaft, newPlayerState, promote, raftUpgradeTime, research, sail, upgrade, type ActionResult, type PlayerState, type RaftBuildingId } from "@brinelight/shared";
+import { BUILDINGS, BUILDING_IDS, HOUR, PROMOTE_TIME, RAFT_SLOTS, advance, heal, installOnRaft, installTime, newPlayerState, promote, raftUpgradeTime, research, sail, upgrade, type ActionResult, type PlayerState, type RaftBuildingId } from "@brinelight/shared";
 import { CITY_ANGLE, CITY_FILL, CITY_FOV, cityFraming } from "../client/src/scene/framing.js";
 import { ERA_PLOTS } from "../client/src/city/plots.js";
 import { terrainCoast } from "../client/src/scene/terrainCoast.js";
@@ -171,6 +171,8 @@ async function signOut(page: Page): Promise<void> {
 }
 
 const queued = (c: City | null) => (c?.queue ?? []).map((j) => j.id).sort();
+/** The device's own city upgraded its Refinery: still at work, or done (1 minute since the early start, sped up in development). */
+const refineryOnDevice = (c: City | null) => !!c && (c.queue.some((j) => j.id === "refinery") || c.buildings.refinery === 2);
 /** Until no celebration is on screen: one would take the next tap (a tap closes it). */
 const calm = (page: Page) => expect.poll(() => page.locator(".celebration").count(), { timeout: 15_000, interval: 100 }).toBe(0);
 /**
@@ -207,10 +209,10 @@ describe("playing without signing in", () => {
     const page = await openGame(p.context);
     await upgradeBuilding(page, "Refinery");
     await hide(page);
-    expect(queued(await localCity(page))).toEqual(["refinery"]);
+    expect(refineryOnDevice(await localCity(page))).toBe(true);
     await page.reload();
     await page.waitForSelector(".labels.city .bl", { state: "attached" });
-    expect(queued(await localCity(page))).toEqual(["refinery"]);
+    expect(refineryOnDevice(await localCity(page))).toBe(true);
     await page.locator(".hud .lvl").click();
     await expect(page.locator(".profile").textContent()).resolves.toContain(PROFILE_TEXT.noWallet);
     await page.screenshot({ path: "e2e/.shots/shot-profile-no-wallet.png" });
@@ -440,6 +442,10 @@ describe("the queue", () => {
     city = ok(promote(city, "crossbowmen"));
     city = ok(heal(city));
     city = ok(sail(city, "camp-1"));
+    // Levels up to 5 take minutes since the early start (23 October): the two upgrades keep the times they had before
+    // (2 h 42 and 1 h 03), so no work ends during the test and the queue looks as it did.
+    const before: Record<string, number> = { observatory: 9720, infirmary: 3780 };
+    city = { ...city, queue: city.queue.map((j) => ({ ...j, left: before[j.id] ?? j.left, duration: before[j.id] ?? j.duration })) };
     const names = ["Observatory Lv 4", "Infirmary Lv 2", "Research · Sealed Warehouses", "10 veteran crossbowmen", "Healing · 20 wounded", "Fleet · Mist Pirates"];
     const rowsOf = (page: Page) =>
       page.evaluate(() =>
@@ -1156,6 +1162,9 @@ describe("the look", () => {
         daily: { day: 0, counts: { upgrades: 3, gathers: 1, camps: 2, trains: 0, mists: 1, research: 0 }, chests: [20] },
       };
       town = ok(upgrade(town, "lumberyard"));
+      // The Lumberyard's level 3 keeps the time it had before the early start (1 h 21): at 2 minutes, it would end before
+      // the captures, and the top bar and its "working" sheet would no longer show a work under way.
+      town = { ...town, queue: town.queue.map((j) => (j.id === "lumberyard" ? { ...j, left: 4860, duration: 4860 } : j)) };
       town = ok(research(town, "nets"));
       town = ok(installOnRaft(town, clear[2]!.slot, "watchtower"));
       let page = await frozenGame(size, town);
@@ -1272,6 +1281,9 @@ describe("the look", () => {
       busy = ok(promote(busy, "crossbowmen"));
       busy = ok(heal(busy));
       busy = ok(sail(busy, "camp-1"));
+      // As in the queue's own test: the two upgrades keep the times they had before the early start, so the look stays.
+      const before: Record<string, number> = { observatory: 9720, infirmary: 3780 };
+      busy = { ...busy, queue: busy.queue.map((j) => ({ ...j, left: before[j.id] ?? j.left, duration: before[j.id] ?? j.duration })) };
       page = await frozenGame(size, busy);
       await look(page, page.locator(".queue"), `queue-folded-${w}`);
       await page.locator(".queue .more").click();
@@ -1339,13 +1351,13 @@ describe("signed in", () => {
     await upgradeBuilding(page, "Fishery");
     await expect.poll(() => shownJobs(page), NET).toEqual(["Fishery"]);
     await serverHas(token, ["fishery"]);
-    expect(queued(await localCity(page))).toEqual(["refinery"]);
+    expect(refineryOnDevice(await localCity(page))).toBe(true);
 
     await page.reload();
     await page.waitForSelector(".labels.city .bl", { state: "attached" });
     await expect.poll(() => shownJobs(page), NET).toEqual(["Fishery"]);
     expect((await copyOf(page, playerId))?.pending).toEqual([]);
-    expect(queued(await localCity(page))).toEqual(["refinery"]);
+    expect(refineryOnDevice(await localCity(page))).toBe(true);
     await page.screenshot({ path: "e2e/.shots/shot-signed-in.png" });
     expect(p.problems).toEqual([]);
     await p.context.close();
@@ -1558,7 +1570,8 @@ describe("signed in", () => {
     expect(sent.map((r) => r.status)).toEqual([400, 200]);
     for (const r of sent) {
       expect(r.body.state.buildings.refinery).toBeLessThan(30);
-      expect(r.body.state.stock.oil).toBeLessThan(1000);
+      // The server's own stock (a new city starts with 1,400 oil), never the edited one (× 100).
+      expect(r.body.state.stock.oil).toBeLessThan(5000);
     }
 
     // A few real seconds later, by a clock 1000 times faster: the server's upgrade has moved by those seconds only.
@@ -1567,11 +1580,13 @@ describe("signed in", () => {
     const job = server.state.queue[0] as Job & { left: number; duration: number };
     expect(job.duration - job.left).toBeLessThan(60);
     expect(server.state.buildings.refinery).toBe(1);
-    expect(Math.max(...Object.values(server.state.stock))).toBeLessThan(1000);
+    expect(Math.max(...Object.values(server.state.stock))).toBeLessThan(5000);
     // Shown again, the page takes the server's city: the edit is gone.
     await show(page);
     await expect.poll(async () => (await copyOf(page, playerId))?.server?.state.buildings.refinery, NET).toBe(1);
-    await expect.poll(() => shownJobs(page), NET).toEqual(["Refinery"]);
+    // The server's own work only, never the edited city's: the Refinery's level 2, under way, or already done by this
+    // page's clock 1000 times faster (1 minute since the early start).
+    await expect.poll(async () => (await shownJobs(page)).every((j) => j === "Refinery"), NET).toBe(true);
     await page.screenshot({ path: "e2e/.shots/shot-cheat.png" });
     await p.context.close();
   });
@@ -1986,7 +2001,8 @@ describe("signed in", () => {
 
     // 3 seconds from its end: the server puts the building on the raft on its own clock.
     const now = (await serverCity(p.token))!.state as unknown as PlayerState;
-    expect(now.yard!.duration).toBe(RAFT_INSTALL_TIME);
+    // Its own time: 5 minutes below Lighthouse 6 since the early start, else the rules' 48 minutes.
+    expect(now.yard!.duration).toBe(installTime(now.buildings.lighthouse));
     await h.putCity(p.playerId, { ...now, yard: { ...now.yard!, left: 3 } });
     await show(p.page);
     await p.page.waitForTimeout(4000);

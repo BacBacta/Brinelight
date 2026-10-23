@@ -1,5 +1,6 @@
 import { OK, canPay, payCost, refuse, type Check, type Cost, type Stock, type TroopType, type Troops } from "./types.js";
 import { techLevel, type Techs } from "./research.js";
+import { EARLY_TRAINING, earlyCapped } from "./early.js";
 import { protoSeconds } from "./time.js";
 
 /** Soldiers in one batch, per Barracks level (prototype: level × 20). */
@@ -13,6 +14,8 @@ export const trainBatch = (barracks: number): number => Math.max(0, barracks) * 
 export const trainCost = (count: number): Cost => ({ fish: TRAIN_COST.fish! * count, wood: TRAIN_COST.wood! * count });
 /** Real duration (seconds) of a batch of `count` soldiers (prototype: n × 0.25 + 3 seconds). */
 export const trainTime = (count: number): number => protoSeconds(count * 0.25 + 3);
+/** The time a batch takes in a city: at most 5 minutes while its Lighthouse is below level 6 (the early start). */
+export const trainDuration = (count: number, lighthouse: number): number => earlyCapped(trainTime(count), EARLY_TRAINING, lighthouse);
 
 /** Soldiers promoted at once (prototype: 10). */
 export const PROMOTE_COUNT = 10;
@@ -71,11 +74,11 @@ export function canTrain(ctx: { barracks: number; busy: boolean; stock: Stock })
 export type StartTraining = { ok: true; stock: Stock; training: TrainingJob } | { ok: false; reason: string };
 
 /** Starts a batch of soldiers of one type: checked with canTrain, paid at once. The batch is set by the Barracks' level now. */
-export function startTraining(troop: TroopType, ctx: { barracks: number; stock: Stock; training: TrainingJob | null }): StartTraining {
+export function startTraining(troop: TroopType, ctx: { barracks: number; lighthouse: number; stock: Stock; training: TrainingJob | null }): StartTraining {
   const check = canTrain({ barracks: ctx.barracks, busy: ctx.training !== null, stock: ctx.stock });
   if (!check.ok) return check;
   const count = trainBatch(ctx.barracks);
-  const duration = trainTime(count);
+  const duration = trainDuration(count, ctx.lighthouse);
   return { ok: true, stock: payCost(ctx.stock, trainCost(count)), training: { kind: "train", troop, count, left: duration, duration } };
 }
 

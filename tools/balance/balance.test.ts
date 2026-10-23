@@ -55,19 +55,40 @@ describe("the balance simulation", () => {
     expect(away.returned?.day).toBe(23);
   });
 
-  it("keeps every Lighthouse milestone within 10 % of week 6 with all of week 7 played (owner's decision, 18 October)", () => {
-    // The days each profile reached Lighthouse 5, 10, 15, 20, 25 and 30 with the rules of week 6 (commit c307f9f).
-    const WEEK_6: Record<string, Record<number, number>> = {
-      casual: { 5: 1.1, 10: 7.6, 15: 26.0, 20: 63.0, 25: 152.4, 30: 371.4 },
-      regular: { 5: 1.1, 10: 5.8, 15: 19.7, 20: 52.6, 25: 122.7, 30: 321.4 },
-      dedicated: { 5: 1.1, 10: 5.7, 15: 17.5, 20: 45.2, 25: 119.4, 30: 325.8 },
+  // The casual player reaches Lighthouse 30 after a year: its run goes on a little longer.
+  const long = [...runs.filter((r) => r.profile.id !== "casual"), simulate(casual, 380)];
+
+  it("keeps every Lighthouse milestone within 10 % of the reference of 23 October (the early start A + C, owner's decision)", () => {
+    // The days each profile reaches Lighthouse 5, 10, 15, 20, 25 and 30 with the quick first levels and the richer start
+    // (docs/tasks/early-start.md): the reference since 23 October, in place of week 6's.
+    const REFERENCE: Record<string, Record<number, number>> = {
+      casual: { 5: 0.6, 10: 6.8, 15: 25.5, 20: 64.6, 25: 153.0, 30: 350.4 },
+      regular: { 5: 0.2, 10: 4.9, 15: 17.1, 20: 44.5, 25: 115.4, 30: 313.6 },
+      dedicated: { 5: 0.1, 10: 5.6, 15: 16.7, 20: 46.0, 25: 119.6, 30: 326.4 },
     };
-    // The casual player reaches Lighthouse 30 after a year: its run goes on a little longer.
-    const long = [...runs.filter((r) => r.profile.id !== "casual"), simulate(casual, 380)];
+    for (const r of long) {
+      for (const [level, reference] of Object.entries(REFERENCE[r.profile.id]!)) {
+        const day = r.lighthouse[Number(level)]! / 24;
+        // Lighthouse 5 comes within the first day: there, 10 % of a day.
+        expect(Math.abs(day - reference) / Math.max(reference, 1), `${r.profile.id}, Lighthouse ${level}: day ${day.toFixed(1)}, reference ${reference}`).toBeLessThanOrEqual(0.1);
+      }
+    }
+  });
+
+  it("keeps Lighthouse 15 to 30 within 10 % of week 6, but the regular player's 15 and 20 (owner's exception of 23 October)", () => {
+    // The days each profile reached them with the rules of week 6 (commit c307f9f), the limit of 18 October. For A + C
+    // only, the owner accepted the regular player's Lighthouse 15 and 20 sooner: 13.2 % and 15.4 %.
+    const WEEK_6: Record<string, Record<number, number>> = {
+      casual: { 15: 26.0, 20: 63.0, 25: 152.4, 30: 371.4 },
+      regular: { 15: 19.7, 20: 52.6, 25: 122.7, 30: 321.4 },
+      dedicated: { 15: 17.5, 20: 45.2, 25: 119.4, 30: 325.8 },
+    };
+    const EXCEPTION: Record<string, Record<number, number>> = { regular: { 15: 0.14, 20: 0.16 } };
     for (const r of long) {
       for (const [level, week6] of Object.entries(WEEK_6[r.profile.id]!)) {
         const day = r.lighthouse[Number(level)]! / 24;
-        expect(Math.abs(day - week6) / week6, `${r.profile.id}, Lighthouse ${level}: day ${day.toFixed(1)}, week 6 ${week6}`).toBeLessThanOrEqual(0.1);
+        const limit = EXCEPTION[r.profile.id]?.[Number(level)] ?? 0.1;
+        expect(Math.abs(day - week6) / week6, `${r.profile.id}, Lighthouse ${level}: day ${day.toFixed(1)}, week 6 ${week6}`).toBeLessThanOrEqual(limit);
       }
     }
   });
