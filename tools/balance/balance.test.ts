@@ -26,6 +26,21 @@ describe("the balance simulation", () => {
     expect(newPlayerState()).toEqual(newPlayerState());
   });
 
+  it("a player who keeps the reserve only on what a spending uses upgrades the Lumberyard while the Lighthouse waits for wood", () => {
+    // Day 2 of the regular player: the whole reserve held, the Lumberyard (fish and oil) waits with the Lighthouse's wood.
+    const held = simulate(regular, 2).days[1]!;
+    const spent = simulate({ ...regular, reserveOnSpent: true }, 2).days[1]!;
+    expect(spent.buildings.lumberyard).toBeGreaterThan(held.buildings.lumberyard);
+    expect(spent.idleBuilderHours).toBeLessThan(held.idleBuilderHours);
+  });
+
+  it("a player who never goes to sea sends no fleet: no salvage, no camp beaten", () => {
+    const island = simulate({ ...regular, noSea: true, reserveOnSpent: true }, 10);
+    expect(island.days.every((d) => d.salvages === 0 && d.campsBeaten === 0)).toBe(true);
+    expect(island.hunts.joined).toBe(0);
+    expect(island.last.fleets).toEqual([]);
+  });
+
   it("3, 6 and 10 sessions a day; the city is founded on day 1 at 8:00, in the first one", () => {
     expect(FOUNDED).toBe(8 * HOUR);
     for (const [profile, count] of [[casual, 3], [regular, 6], [dedicated, 10]] as const) {
