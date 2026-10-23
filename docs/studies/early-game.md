@@ -1,5 +1,7 @@
 # The early game: Lighthouse 1 to 10
 
+**The owner chose A + C on 23 October: it is in the game since (`docs/tasks/early-start.md`).** This study was measured on the rules before, and is kept as it was; run again, `early-run.ts` would play today's rules.
+
 A study only (owner's request, 23 October: "my city is at Lighthouse 2, and the start feels too slow"). It changes no value: it measures what the rules of `shared/` give a new city up to Lighthouse 10, what holds each level back, and three options to speed the start up, played by the balance's simulator. The owner decides; nothing goes into the game without that.
 
 ## How it is measured

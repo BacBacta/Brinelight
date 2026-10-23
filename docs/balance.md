@@ -1,6 +1,6 @@
 # Balance
 
-What the rules of `shared/` give over a year of play (365 days), measured by `npm run balance` (`tools/balance/`, week 6, task 5). The tables are written by the script; `npm test` fails when they no longer match the rules. The CSV of every day is `docs/balance/days.csv`. The script changes no value: the rules it plays are those of `shared/`, rebalanced on 18 October by the owner's decisions (options I and J below, then the gentler curve after Lighthouse 15; `docs/decisions.md`).
+What the rules of `shared/` give over a year of play (365 days), measured by `npm run balance` (`tools/balance/`, week 6, task 5). The tables are written by the script; `npm test` fails when they no longer match the rules. The CSV of every day is `docs/balance/days.csv`. The script changes no value: the rules it plays are those of `shared/`, rebalanced on 18 October by the owner's decisions (options I and J below, then the gentler curve after Lighthouse 15; `docs/decisions.md`), then on 23 October by the early start (A + C, `docs/tasks/early-start.md`).
 
 ## How the players play
 
@@ -37,74 +37,74 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 
 | Profile | Lighthouse 5 | Lighthouse 10 | Lighthouse 15 | Lighthouse 20 | Lighthouse 25 | Lighthouse 30 | Refinery 2 | Barracks 1 | First camp beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | day 1.1 | day 7.6 | day 26.5 | day 62.0 | day 147.0 | day 369.6 | day 4.0 | day 0.0 | day 2.0 |
-| Regular (6 sessions) | day 1.1 | day 5.6 | day 18.1 | day 48.6 | day 119.5 | day 318.0 | day 2.4 | day 0.0 | day 2.0 |
-| Dedicated (10 sessions) | day 1.1 | day 5.7 | day 17.1 | day 43.0 | day 115.0 | day 324.8 | day 1.5 | day 0.0 | day 1.1 |
+| Casual (3 sessions) | day 0.6 | day 6.8 | day 25.5 | day 64.6 | day 153.0 | day 350.4 | day 2.2 | day 0.0 | day 1.0 |
+| Regular (6 sessions) | day 0.2 | day 4.9 | day 17.1 | day 44.5 | day 115.4 | day 313.6 | day 2.1 | day 0.0 | day 1.4 |
+| Dedicated (10 sessions) | day 0.1 | day 5.6 | day 16.7 | day 46.0 | day 119.6 | day 326.4 | day 1.1 | day 0.0 | day 0.4 |
 
 ### Day 30
 
 | Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 15 | 64,112 | 16,842 | 34,113 | 3,135 | 56,550 | 678 | 6 (mira, 9, 17★) | 28 | 7 | 34 |
-| Regular (6 sessions) | 17 | 95,681 | 62,951 | 29,176 | 16,346 | 85,768 | 283 | 6 (mira, 19, 30★) | 28 | 7 | 68 |
-| Dedicated (10 sessions) | 17 | 101,223 | 87,688 | 16,033 | 60,023 | 85,768 | 416 | 6 (mira, 20, 30★) | 28 | 7 | 92 |
+| Casual (3 sessions) | 15 | 61,802 | 22,198 | 36,714 | 2,995 | 56,550 | 734 | 6 (mira, 9, 15★) | 28 | 6 | 32 |
+| Regular (6 sessions) | 17 | 99,353 | 86,528 | 20,518 | 45,407 | 85,768 | 413 | 6 (mira, 19, 30★) | 28 | 7 | 68 |
+| Dedicated (10 sessions) | 17 | 103,243 | 87,688 | 16,661 | 36,498 | 85,768 | 424 | 6 (mira, 20, 30★) | 28 | 7 | 102 |
 
 ### Day 90
 
 | Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 22 | 144,479 | 115,650 | 183,048 | 193,829 | 318,474 | 373 | 6 (mira, 20, 30★) | 28 | 7 | 85 |
-| Regular (6 sessions) | 23 | 158,297 | 118,325 | 36,343 | 78,614 | 414,011 | 436 | 6 (mira, 20, 30★) | 28 | 7 | 129 |
-| Dedicated (10 sessions) | 23 | 162,659 | 375,131 | 66,627 | 186,371 | 414,011 | 800 | 6 (mira, 20, 30★) | 28 | 7 | 213 |
+| Casual (3 sessions) | 21 | 138,295 | 114,913 | 192,895 | 73,035 | 244,978 | 292 | 6 (mira, 20, 30★) | 28 | 7 | 84 |
+| Regular (6 sessions) | 23 | 159,683 | 158,690 | 34,309 | 149,992 | 414,011 | 526 | 6 (mira, 20, 30★) | 28 | 7 | 130 |
+| Dedicated (10 sessions) | 23 | 163,025 | 282,863 | 75,669 | 84,122 | 414,011 | 495 | 6 (mira, 20, 30★) | 28 | 7 | 183 |
 
 ### Day 365
 
 | Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 29 | 234,041 | 1,578,195 | 766,515 | 850,183 | 1,998,372 | 759 | 6 (mira, 20, 30★) | 28 | 7 | 182 |
-| Regular (6 sessions) | 30 | 255,193 | 2,355,763 | 468,304 | 676,717 | 2,597,893 | 804 | 6 (mira, 20, 30★) | 28 | 7 | 261 |
-| Dedicated (10 sessions) | 30 | 256,811 | 2,597,893 | 393,322 | 1,058,294 | 2,597,893 | 1,132 | 6 (mira, 20, 30★) | 28 | 7 | 353 |
+| Casual (3 sessions) | 30 | 244,949 | 1,428,753 | 688,892 | 689,427 | 2,597,893 | 728 | 6 (mira, 20, 30★) | 28 | 7 | 186 |
+| Regular (6 sessions) | 30 | 255,849 | 2,461,442 | 481,759 | 785,155 | 2,597,893 | 856 | 6 (mira, 20, 30★) | 28 | 7 | 261 |
+| Dedicated (10 sessions) | 30 | 255,515 | 2,538,857 | 413,437 | 1,028,336 | 2,597,893 | 1,160 | 6 (mira, 20, 30★) | 28 | 7 | 345 |
 
 ### Waiting and blocks
 
 | Profile | Builder hours free a day (days 1–30) | (days 31–90) | (days 91–365) | Sessions with a builder free and nothing to start | Sessions with nothing at all | Blocked by (sessions) | Hours full: oil, fish, wood |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 36.5 | 15.6 | 13.0 | 341 of 1095 (31 %) | 0 | oil 29, wood 312 | 0, 0, 0 |
-| Regular (6 sessions) | 22.4 | 6.8 | 7.5 | 399 of 2190 (18 %) | 49 | wood 399 | 125, 0, 0 |
-| Dedicated (10 sessions) | 15.8 | 4.9 | 9.1 | 741 of 3650 (20 %) | 68 | wood 741 | 2151, 0, 0 |
+| Casual (3 sessions) | 39.2 | 16.6 | 9.9 | 285 of 1095 (26 %) | 0 | wood 285 | 0, 0, 0 |
+| Regular (6 sessions) | 20.3 | 5.5 | 7.5 | 382 of 2190 (17 %) | 51 | wood 382 | 54, 0, 0 |
+| Dedicated (10 sessions) | 17.8 | 5.8 | 9.3 | 756 of 3650 (21 %) | 57 | wood 756 | 2192, 0, 0 |
 
 ### Oil, the Mist, the Leviathan and the claims (whole run)
 
 | Profile | Hours of full oil (days 1–90) | Oil spent stoking | Repairs (oil) | Mists held | Mists missed | Hunts joined | Leviathans killed | Objectives claimed | Chests opened |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 0 | 65,561 | 0 (0 oil) | 1093 | 1 | 362 | 0 | 18 | 755 |
-| Regular (6 sessions) | 125 | 68,441 | 0 (0 oil) | 1094 | 0 | 726 | 0 | 18 | 791 |
-| Dedicated (10 sessions) | 314 | 69,005 | 0 (0 oil) | 1094 | 0 | 704 | 0 | 18 | 826 |
-| Never stokes (6 sessions) | 254 | 0 | 411 (391,470 oil) | 0 | 1094 | 726 | 0 | 10 | 424 |
-| Away 3 days (6 sessions, none on days 20 to 22) | 26 | 68,675 | 0 (0 oil) | 1094 | 0 | 720 | 1 | 18 | 791 |
+| Casual (3 sessions) | 0 | 65,591 | 0 (0 oil) | 1094 | 0 | 364 | 0 | 18 | 759 |
+| Regular (6 sessions) | 54 | 68,928 | 0 (0 oil) | 1094 | 0 | 729 | 0 | 18 | 797 |
+| Dedicated (10 sessions) | 456 | 68,788 | 0 (0 oil) | 1094 | 0 | 709 | 0 | 18 | 819 |
+| Never stokes (6 sessions) | 139 | 0 | 406 (387,140 oil) | 0 | 1094 | 729 | 1 | 10 | 421 |
+| Away 3 days (6 sessions, none on days 20 to 22) | 0 | 68,848 | 0 (0 oil) | 1094 | 0 | 723 | 1 | 18 | 788 |
 
 ### Pearls a day, by source (average over the whole run)
 
 | Profile | Mist | Leviathan | Camps | Objectives | Chests | Earned | Spent on Logbooks | Pearls at the end |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 89.8 | 51.5 | 59.2 | 2.1 | 4.4 | 207.0 | 37.7 | 27,007 |
-| Regular (6 sessions) | 89.9 | 130.1 | 113.2 | 2.1 | 15.1 | 350.3 | 36.7 | 79,673 |
-| Dedicated (10 sessions) | 89.9 | 81.3 | 197.6 | 2.1 | 24.1 | 395.0 | 33.3 | 97,225 |
-| Never stokes (6 sessions) | 0.0 | 123.3 | 100.9 | 0.7 | 4.9 | 229.8 | 25.8 | 39,689 |
-| Away 3 days (6 sessions, none on days 20 to 22) | 89.9 | 118.3 | 111.6 | 2.1 | 16.7 | 338.6 | 37.0 | 75,302 |
+| Casual (3 sessions) | 89.9 | 51.9 | 61.5 | 2.1 | 4.4 | 209.8 | 37.4 | 28,125 |
+| Regular (6 sessions) | 89.9 | 131.2 | 113.2 | 2.1 | 16.2 | 352.6 | 35.9 | 80,790 |
+| Dedicated (10 sessions) | 89.9 | 78.6 | 189.4 | 2.1 | 23.0 | 383.0 | 33.0 | 92,941 |
+| Never stokes (6 sessions) | 0.0 | 119.1 | 97.2 | 0.7 | 4.1 | 221.0 | 25.8 | 36,481 |
+| Away 3 days (6 sessions, none on days 20 to 22) | 89.9 | 116.8 | 110.8 | 2.1 | 15.1 | 334.6 | 36.3 | 74,092 |
 
 ### Two more players: milestones
 
 | Profile | Lighthouse 5 | Lighthouse 10 | Lighthouse 15 | Lighthouse 20 | Lighthouse 25 | Lighthouse 30 |
 | --- | --- | --- | --- | --- | --- | --- |
-| Never stokes (6 sessions) | day 1.1 | day 6.0 | day 21.5 | day 58.1 | day 144.9 | day 352.6 |
-| Away 3 days (6 sessions, none on days 20 to 22) | day 1.1 | day 5.6 | day 18.1 | day 47.3 | day 116.9 | day 314.6 |
+| Never stokes (6 sessions) | day 0.2 | day 6.1 | day 20.5 | day 51.1 | day 131.7 | day 354.5 |
+| Away 3 days (6 sessions, none on days 20 to 22) | day 0.2 | day 4.9 | day 17.1 | day 45.6 | day 115.7 | day 315.4 |
 
 ### What a player away finds on return (before the first session)
 
 | Profile | Day | Rafts | Damaged | Lowest sturdiness | Mists missed so far | Oil (storage) | Repairing everything: oil, wood, time |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Away 3 days (6 sessions, none on days 20 to 22) | 23 | 7 | 0 | 100 | 0 | 45,538 (65,975) | 0, 0, 0.0 h |
+| Away 3 days (6 sessions, none on days 20 to 22) | 23 | 7 | 0 | 100 | 0 | 47,076 (65,975) | 0, 0, 0.0 h |
 
 ### The storage wall
 
@@ -130,7 +130,23 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 
 ## What it shows
 
-Written on 18 October, with all of week 7 played and the owner's decisions of that day. A test keeps every milestone of the three profiles within 10 % of week 6 (`tools/balance/balance.test.ts`).
+### 0. The early start (23 October): the new reference
+
+The quick first levels (an island building's levels 1 to 5 in at most 1, 1, 2, 5 and 15 minutes) and the richer start (2,000 wood, 1,400 oil, 800 fish), the owner's decision of 23 October (`docs/tasks/early-start.md`).
+
+- **Lighthouse 5** comes the first day: at 22 minutes for a player who stays the first hour, and after 2 h 35 to 13 h 15 for the three players (started at their third session of the day). It came on day 1.1 before.
+- **Lighthouse 10**:
+  - day 6.8 for the casual player (7.6 before);
+  - day 4.9 for the regular player (5.6);
+  - day 5.6 for the dedicated player (5.7).
+- **From Lighthouse 15 on**, the casual and the dedicated players stay within 6 % of week 6. The regular player's Lighthouse 15 and 20 come 13.2 % and 15.4 % sooner: the owner accepted them for this change only.
+- **These days are the reference since 23 October**: a test keeps every milestone within 10 % of them, and Lighthouse 15 to 30 within 10 % of week 6 but for that exception (`tools/balance/balance.test.ts`).
+- **The second day is short of wood.** Both builders are idle about 44 hours of the 48 for every profile.
+- **To review in week 10**, with the late game: the curve of Lighthouse 10 to 20 after A + C (`docs/tasks/roadmap.md`).
+
+Sections 1 to 5 below were written on 18 October, before the early start. Their days are those of that time; the tables above are today's rules.
+
+Written on 18 October, with all of week 7 played and the owner's decisions of that day. A test kept every milestone of the three profiles within 10 % of week 6 (`tools/balance/balance.test.ts`).
 
 ### 1. The pace: as in week 6, Lighthouse 30 in about a year
 

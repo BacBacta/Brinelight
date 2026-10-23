@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BUILDERS, BUILDING_IDS, STARTING_BUILDINGS, advanceQueue, canUpgrade, maxLevel, startUpgrade, upgradeCost, upgradePearls, upgradeTime, LIGHTHOUSE_MAX, LIGHTHOUSE_PEARLS, TIME_SCALE, type UpgradeJob } from "../src/index.js";
+import { BUILDERS, BUILDING_IDS, STARTING_BUILDINGS, advanceQueue, canUpgrade, maxLevel, startUpgrade, upgradeCost, upgradePearls, upgradeTime, LIGHTHOUSE_MAX, LIGHTHOUSE_PEARLS, QUICK_LEVELS, TIME_SCALE, type BuildingId, type UpgradeJob } from "../src/index.js";
 
 const stock = { oil: 10_000, fish: 10_000, wood: 10_000, rope: 0 };
 
@@ -18,8 +18,8 @@ describe("buildings", () => {
     expect(upgradeCost("lighthouse", 2)).toEqual({ wood: 350, oil: 240 });
     // 180 × 1.4¹⁴ = 20,001.6 → 20,000
     expect(upgradeCost("lighthouse", 14).wood).toBe(20000);
-    // 9 × 1.35² = 16.4 prototype seconds; 9 × 1.35¹⁴ = 601.6, about 2.5 real days
-    expect(upgradeTime("lighthouse", 2)).toBe(Math.round(9 * 1.35 ** 2 * TIME_SCALE));
+    // 9 × 1.35⁵ = 40.4 prototype seconds (5 → 6, past the quick levels); 9 × 1.35¹⁴ = 601.6, about 2.5 real days
+    expect(upgradeTime("lighthouse", 5)).toBe(Math.round(9 * 1.35 ** 5 * TIME_SCALE));
     expect(upgradeTime("lighthouse", 14) / 86400).toBeCloseTo(2.5, 2);
   });
 
@@ -56,9 +56,45 @@ describe("buildings", () => {
     }
   });
 
-  it("a 6 s prototype duration equals 36 real minutes", () => {
-    expect(upgradeTime("refinery", 0)).toBe(6 * TIME_SCALE);
-    expect(upgradeTime("refinery", 0)).toBe(2160);
+  it("a 6 s prototype duration equals 36 real minutes (the Refinery's growth, past the quick levels)", () => {
+    expect(6 * TIME_SCALE).toBe(2160);
+    expect(upgradeTime("refinery", 5)).toBe(Math.round(6 * 1.5 ** 5 * TIME_SCALE));
+  });
+
+  describe("the quick first levels (owner's decision, 23 October: A of docs/studies/early-game.md)", () => {
+    // The owner's table (docs/tasks/early-start.md), in real seconds, by the level reached: 1, 1, 2, 5 and 15 minutes.
+    it("caps an upgrade to levels 1 to 5 at 1, 1, 2, 5 and 15 minutes", () => {
+      expect(QUICK_LEVELS).toEqual({ 1: 60, 2: 60, 3: 120, 4: 300, 5: 900 });
+    });
+
+    it("every island building, level by level: the owner's table exactly", () => {
+      const table: Record<BuildingId, number[]> = {
+        lighthouse: [60, 60, 120, 300, 900],
+        refinery: [60, 60, 120, 300, 900],
+        fishery: [60, 60, 120, 300, 900],
+        lumberyard: [60, 60, 120, 300, 900],
+        shelters: [60, 60, 120, 300, 900],
+        barracks: [60, 60, 120, 300, 900],
+        harbor: [60, 60, 120, 300, 900],
+        observatory: [60, 60, 120, 300, 900],
+        infirmary: [60, 60, 120, 300, 900],
+      };
+      for (const id of BUILDING_IDS) expect([0, 1, 2, 3, 4].map((l) => upgradeTime(id, l)), id).toEqual(table[id]);
+    });
+
+    it("from level 6 on, the times are the growth's own, unchanged (4 h 02 for the Lighthouse, 6 h 05 for the Barracks)", () => {
+      expect(upgradeTime("lighthouse", 5)).toBe(14528);
+      expect(upgradeTime("refinery", 5)).toBe(16403);
+      expect(upgradeTime("shelters", 5)).toBe(19136);
+      expect(upgradeTime("barracks", 5)).toBe(21870);
+      expect(upgradeTime("lighthouse", 9)).toBe(48256);
+    });
+
+    it("the costs do not change: only the time", () => {
+      expect(upgradeCost("lighthouse", 2)).toEqual({ wood: 350, oil: 240 });
+      expect(upgradeCost("lighthouse", 4)).toEqual({ wood: 690, oil: 460 });
+      expect(upgradeCost("barracks", 0)).toEqual({ wood: 140, oil: 60, fish: 60 });
+    });
   });
 
   it("the Lighthouse caps the other buildings", () => {

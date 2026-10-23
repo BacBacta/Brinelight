@@ -51,7 +51,7 @@ describe("the study's rules", () => {
 describe("the study's tables", () => {
   it("say a duration as a player reads it", () => {
     expect([duration(90), duration(48 * 60), duration(5905), duration(3 * HOUR), duration(65 * HOUR)]).toEqual(["2 min", "48 min", "1 h 38", "3 h", "2 d 17 h"]);
-    expect(rulesTable()).toContain("| 3 | 350 wood + 240 oil | 1 h 38 | 1 h 38 | 1 min |");
+    expect(rulesTable()).toContain("| 3 | 350 wood + 240 oil | 2 min | 2 min | 1 min |");
   });
 
   it("split a level's time into its build, the player away, and the resources it lacked", () => {
