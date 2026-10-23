@@ -171,6 +171,8 @@ async function signOut(page: Page): Promise<void> {
 }
 
 const queued = (c: City | null) => (c?.queue ?? []).map((j) => j.id).sort();
+/** The device's own city upgraded its Refinery: still at work, or done (1 minute since the early start, sped up in development). */
+const refineryOnDevice = (c: City | null) => !!c && (c.queue.some((j) => j.id === "refinery") || c.buildings.refinery === 2);
 /** Until no celebration is on screen: one would take the next tap (a tap closes it). */
 const calm = (page: Page) => expect.poll(() => page.locator(".celebration").count(), { timeout: 15_000, interval: 100 }).toBe(0);
 /**
@@ -440,6 +442,10 @@ describe("the queue", () => {
     city = ok(promote(city, "crossbowmen"));
     city = ok(heal(city));
     city = ok(sail(city, "camp-1"));
+    // Levels up to 5 take minutes since the early start (23 October): the two upgrades keep the times they had before
+    // (2 h 42 and 1 h 03), so no work ends during the test and the queue looks as it did.
+    const before: Record<string, number> = { observatory: 9720, infirmary: 3780 };
+    city = { ...city, queue: city.queue.map((j) => ({ ...j, left: before[j.id] ?? j.left, duration: before[j.id] ?? j.duration })) };
     const names = ["Observatory Lv 4", "Infirmary Lv 2", "Research · Sealed Warehouses", "10 veteran crossbowmen", "Healing · 20 wounded", "Fleet · Mist Pirates"];
     const rowsOf = (page: Page) =>
       page.evaluate(() =>
@@ -1339,13 +1345,13 @@ describe("signed in", () => {
     await upgradeBuilding(page, "Fishery");
     await expect.poll(() => shownJobs(page), NET).toEqual(["Fishery"]);
     await serverHas(token, ["fishery"]);
-    expect(queued(await localCity(page))).toEqual(["refinery"]);
+    expect(refineryOnDevice(await localCity(page))).toBe(true);
 
     await page.reload();
     await page.waitForSelector(".labels.city .bl", { state: "attached" });
     await expect.poll(() => shownJobs(page), NET).toEqual(["Fishery"]);
     expect((await copyOf(page, playerId))?.pending).toEqual([]);
-    expect(queued(await localCity(page))).toEqual(["refinery"]);
+    expect(refineryOnDevice(await localCity(page))).toBe(true);
     await page.screenshot({ path: "e2e/.shots/shot-signed-in.png" });
     expect(p.problems).toEqual([]);
     await p.context.close();
@@ -1558,7 +1564,8 @@ describe("signed in", () => {
     expect(sent.map((r) => r.status)).toEqual([400, 200]);
     for (const r of sent) {
       expect(r.body.state.buildings.refinery).toBeLessThan(30);
-      expect(r.body.state.stock.oil).toBeLessThan(1000);
+      // The server's own stock (a new city starts with 1,400 oil), never the edited one (× 100).
+      expect(r.body.state.stock.oil).toBeLessThan(5000);
     }
 
     // A few real seconds later, by a clock 1000 times faster: the server's upgrade has moved by those seconds only.
@@ -1567,7 +1574,7 @@ describe("signed in", () => {
     const job = server.state.queue[0] as Job & { left: number; duration: number };
     expect(job.duration - job.left).toBeLessThan(60);
     expect(server.state.buildings.refinery).toBe(1);
-    expect(Math.max(...Object.values(server.state.stock))).toBeLessThan(1000);
+    expect(Math.max(...Object.values(server.state.stock))).toBeLessThan(5000);
     // Shown again, the page takes the server's city: the edit is gone.
     await show(page);
     await expect.poll(async () => (await copyOf(page, playerId))?.server?.state.buildings.refinery, NET).toBe(1);
