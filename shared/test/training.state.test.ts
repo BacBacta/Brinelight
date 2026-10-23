@@ -24,10 +24,10 @@ import {
 const json = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 const ID = "3f2b8c1e-9d4a-4f6b-8e2c-1a7d5b9c0e4f";
 
-/** A city with its Barracks built, and enough fish and wood for a few batches. */
+/** A city with its Barracks built, and enough fish and wood for a few batches; Lighthouse 6, past the early start's cap. */
 const withBarracks = (level = 1): PlayerState => {
   const s = newPlayerState();
-  return { ...s, buildings: { ...s.buildings, barracks: level }, stock: { oil: 5000, fish: 5000, wood: 5000, rope: 3 } };
+  return { ...s, buildings: { ...s.buildings, lighthouse: 6, barracks: level }, stock: { oil: 5000, fish: 5000, wood: 5000, rope: 3 } };
 };
 const started = (s: PlayerState, troop: "boarders" | "harpooners" | "crossbowmen" = "boarders"): PlayerState => {
   const r = train(s, troop);

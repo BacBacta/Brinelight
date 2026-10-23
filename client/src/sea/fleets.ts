@@ -5,7 +5,7 @@ import { normalizeBuilding } from "../scene/index.js";
 /** Where a fleet is on its trip, from 0 (your city) to 1 (the site). */
 export function fleetPosition(f: Fleet): number {
   if (f.phase === "stay") return 1;
-  const done = Math.min(1, Math.max(0, 1 - f.left / f.travel));
+  const done = Math.min(1, Math.max(0, 1 - f.left / (f.phase === "out" ? (f.out ?? f.travel) : f.travel)));
   return f.phase === "out" ? done : 1 - done;
 }
 

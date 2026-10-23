@@ -20,6 +20,7 @@ import {
   seaSite,
   totalTroops,
   travelTime,
+  campTrip,
   type CaptainId,
 } from "@brinelight/shared";
 import { formatAmount, formatTimeLeft } from "../city/format.js";
@@ -144,7 +145,9 @@ export function createSeaSheet(root: HTMLElement, actions: { sail(site: string):
   const siteHtml = (id: string, state: PlayerState, speed: number): string => {
     const s = seaSite(id)!;
     const lead = leadOf(state.lead, state.captains);
-    const trip = formatTimeLeft(travelTime(s, state.techs, lead) / speed);
+    // The way out: to a camp, at most 10 minutes while the Lighthouse is below level 6 (the early start).
+    const out = travelTime(s, state.techs, lead);
+    const trip = formatTimeLeft((s.kind === "camp" ? campTrip(out, state.buildings.lighthouse) : out) / speed);
     // In the Mist, only within the Lighthouse's light; the Leviathan, only while it is at sea: the refusal says why.
     const check = fleetCheck(state, id);
     const mine = state.fleets.filter((f) => f.site === id);

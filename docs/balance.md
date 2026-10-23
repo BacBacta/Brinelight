@@ -39,7 +39,7 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Casual (3 sessions) | day 0.6 | day 6.8 | day 25.5 | day 64.6 | day 153.0 | day 350.4 | day 2.2 | day 0.0 | day 1.0 |
 | Regular (6 sessions) | day 0.2 | day 4.9 | day 17.1 | day 44.5 | day 115.4 | day 313.6 | day 2.1 | day 0.0 | day 1.4 |
-| Dedicated (10 sessions) | day 0.1 | day 5.6 | day 16.7 | day 46.0 | day 119.6 | day 326.4 | day 1.1 | day 0.0 | day 0.4 |
+| Dedicated (10 sessions) | day 0.1 | day 5.6 | day 16.7 | day 46.0 | day 119.6 | day 326.4 | day 1.1 | day 0.0 | day 0.3 |
 
 ### Day 30
 
@@ -71,7 +71,7 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Casual (3 sessions) | 39.2 | 16.6 | 9.9 | 285 of 1095 (26 %) | 0 | wood 285 | 0, 0, 0 |
 | Regular (6 sessions) | 20.3 | 5.5 | 7.5 | 382 of 2190 (17 %) | 51 | wood 382 | 54, 0, 0 |
-| Dedicated (10 sessions) | 17.8 | 5.8 | 9.3 | 756 of 3650 (21 %) | 57 | wood 756 | 2192, 0, 0 |
+| Dedicated (10 sessions) | 17.8 | 5.8 | 9.3 | 756 of 3650 (21 %) | 58 | wood 756 | 2193, 0, 0 |
 
 ### Oil, the Mist, the Leviathan and the claims (whole run)
 
@@ -79,7 +79,7 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Casual (3 sessions) | 0 | 65,591 | 0 (0 oil) | 1094 | 0 | 364 | 0 | 18 | 759 |
 | Regular (6 sessions) | 54 | 68,928 | 0 (0 oil) | 1094 | 0 | 729 | 0 | 18 | 797 |
-| Dedicated (10 sessions) | 456 | 68,788 | 0 (0 oil) | 1094 | 0 | 709 | 0 | 18 | 819 |
+| Dedicated (10 sessions) | 457 | 68,788 | 0 (0 oil) | 1094 | 0 | 709 | 0 | 18 | 819 |
 | Never stokes (6 sessions) | 139 | 0 | 406 (387,140 oil) | 0 | 1094 | 729 | 1 | 10 | 421 |
 | Away 3 days (6 sessions, none on days 20 to 22) | 0 | 68,848 | 0 (0 oil) | 1094 | 0 | 723 | 1 | 18 | 788 |
 

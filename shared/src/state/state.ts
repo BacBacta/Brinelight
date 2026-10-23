@@ -297,7 +297,7 @@ export function addStar(state: PlayerState, id: CaptainId): ActionResult {
 
 /** Puts a building on the free raft of a slot with the shared rule; a refusal comes with its reason. */
 export function installOnRaft(state: PlayerState, slot: string, building: RaftBuildingId): ActionResult {
-  const r = startInstall(building, { rafts: state.rafts, slot, stock: state.stock, yard: state.yard });
+  const r = startInstall(building, { rafts: state.rafts, slot, lighthouse: state.buildings.lighthouse, stock: state.stock, yard: state.yard });
   return r.ok ? { ok: true, state: { ...state, stock: r.stock, yard: r.yard } } : r;
 }
 
@@ -315,7 +315,7 @@ export function repairRafts(state: PlayerState): ActionResult {
 
 /** Starts a batch of soldiers at the Barracks with the shared rule; a refusal comes with its reason. */
 export function train(state: PlayerState, troop: TroopType): ActionResult {
-  const r = startTraining(troop, { barracks: state.buildings.barracks, stock: state.stock, training: state.training });
+  const r = startTraining(troop, { barracks: state.buildings.barracks, lighthouse: state.buildings.lighthouse, stock: state.stock, training: state.training });
   return r.ok ? { ok: true, state: { ...state, stock: r.stock, training: r.training } } : r;
 }
 

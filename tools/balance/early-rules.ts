@@ -64,8 +64,10 @@ function observe(state: PlayerState): void {
   for (const f of state.fleets) {
     const what = `fleet to ${f.site}`;
     if (!open("sea", what)) {
-      const start = state.clock - (f.phase === "out" ? f.travel - f.left : f.travel);
-      study.jobs.push({ kind: "sea", what, start, end: null, arrive: start + f.travel });
+      // The way out: shorter than the trip to a camp in the early start (`out`).
+      const out = f.out ?? f.travel;
+      const start = state.clock - (f.phase === "out" ? out - f.left : out);
+      study.jobs.push({ kind: "sea", what, start, end: null, arrive: start + out });
     }
   }
   for (const job of state.queue) {

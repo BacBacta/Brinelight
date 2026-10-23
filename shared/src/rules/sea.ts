@@ -1,5 +1,6 @@
 import { CAPTAINS, addXp, combatXp, skillFactor, type CaptainId, type Captains, type Shards } from "./captains.js";
 import { pirateCamp, pirateLoot, resolveCombat, strengths } from "./combat.js";
+import { EARLY_CAMP_TRIP, earlyCapped } from "./early.js";
 import { storeCap } from "./economy.js";
 import { HUNT_SHARDS, HUNT_XP, LEVIATHAN_SITE, huntAt, huntPearls, huntShare, leviathanHealth, type LeviathanState } from "./leviathan.js";
 import { raftEffect, type Rafts } from "./rafts.js";
@@ -155,6 +156,9 @@ export function fleetSpeed(techs: Techs, lead: FleetLead): number {
 }
 
 /** One-way trip to a site, in real seconds. */
+/** A fleet's way out to a pirate camp: at most 10 minutes while the Lighthouse is below level 6 (the early start). */
+export const campTrip = (travel: number, lighthouse: number): number => earlyCapped(travel, EARLY_CAMP_TRIP, lighthouse);
+
 export const travelTime = (site: { x: number; z: number }, techs: Techs, lead: FleetLead): number =>
   Math.round(protoSeconds(distance(site) / fleetSpeed(techs, lead)));
 
@@ -180,6 +184,8 @@ export type Fleet = {
   left: number;
   /** One-way trip, real seconds, fixed at departure. */
   travel: number;
+  /** The way out, when shorter than `travel`: a pirate camp's in the early start (`campTrip`). The way back is `travel`. */
+  out?: number;
   troops: Troops;
   /** The veterans it took: a veteran counts as VETERAN_WEIGHT soldiers in combat. */
   veterans: Troops;
@@ -282,12 +288,14 @@ export function sendFleet(siteId: string, s: SeaState, sight: Sight = CLEAR_SIGH
   const site = seaSite(siteId)!;
   const kind: FleetKind = site.kind === "camp" ? "attack" : site.kind === "leviathan" ? "hunt" : "collect";
   const travel = travelTime(site, s.techs, s.lead);
+  const out = kind === "attack" ? campTrip(travel, s.buildings.lighthouse) : travel;
   const fleet: Fleet = {
     site: siteId,
     kind,
     phase: "out",
-    left: travel,
+    left: out,
     travel,
+    ...(out < travel ? { out } : {}),
     troops: kind === "collect" ? emptyTroops() : { ...s.troops },
     veterans: kind === "collect" ? emptyTroops() : { ...s.veterans },
     techs: { ...s.techs },

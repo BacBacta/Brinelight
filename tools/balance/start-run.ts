@@ -40,6 +40,8 @@ const at = (hours: number, minutes = 0) => hours * HOUR + minutes * 60;
 const firstHour: Profile = { id: "casual", name: "First hour, then casual", sessions: [...Array.from({ length: 61 }, (_, i) => at(8, i)), at(13), at(21)] };
 /** An attentive player, there every minute from 8:00 to 22:00, three days: the quests as this simulated player plays them. */
 const attentive: Profile = { id: "regular", name: "Attentive", sessions: Array.from({ length: 14 * 60 + 1 }, (_, i) => at(8, i)) };
+/** The same player, who does each quest's own action first, keeps no wood for the Lighthouse, and attacks at any odds it wins. */
+const follower: Profile = { ...attentive, name: "Follows the quests", questFirst: true };
 
 // The rules first: the runs must be the balance's own (docs/balance.md, its milestones).
 const balance = readFileSync(`${docs}balance.md`, "utf8");
@@ -60,7 +62,8 @@ const results = variants.map((v) => {
   });
   const h = play(firstHour, 2, v);
   const q = play(attentive, 3, v);
-  return { variant: v, profiles, first: h, quests: q };
+  const f = play(follower, 3, v);
+  return { variant: v, profiles, first: h, quests: q, follows: f };
 });
 
 const pct = (value: number, base: number) => {
@@ -104,30 +107,35 @@ for (const r of results) {
 }
 
 const rules = results[0]!;
-const path = start.questPath(rules.quests.claims, rules.quests.jobs, FOUNDED, 18);
-const ninth = path.find((s) => s.objective === 8);
-const quests = ["| Quest | Claimed at | After the one before | Waited on an uncapped work |", "| --- | --- | --- | --- |"];
-for (const s of path) {
-  const w = s.waitedOn;
-  quests.push(`| ${s.objective + 1}. ${s.text} | ${duration(s.claimed)} | ${duration(s.after)} | ${w ? `${w.what}, ${duration((w.arrive ?? w.end!) - w.start)}${w.arrive ? " out" : ""}, from ${start.at(w.start, FOUNDED)}` : "no"} |`);
-}
-const until = ninth ? FOUNDED + ninth.claimed : FOUNDED + DAY;
-const longOnes = start.longWorks(rules.quests.jobs, until);
-const works = ["| Uncapped work | Started at | Took | Blocked a quest |", "| --- | --- | --- | --- |"];
-for (const j of longOnes) {
-  const blocked = path.find((s) => s.waitedOn === j);
-  works.push(`| ${j.what} | ${start.at(j.start, FOUNDED)} | ${j.end === null ? "still running" : duration(j.end - j.start)} | ${blocked ? `quest ${blocked.objective + 1}` : "no"} |`);
-}
+/** A player's 18 quests, what they waited on, and the uncapped works over 15 minutes before quest 9. */
+const questTables = (q: (typeof rules)["quests"]) => {
+  const path = start.questPath(q.claims, q.jobs, FOUNDED, 18);
+  const ninth = path.find((s) => s.objective === 8);
+  const rows = ["| Quest | Claimed at | After the one before | Waited on an uncapped work |", "| --- | --- | --- | --- |"];
+  for (const s of path) {
+    const w = s.waitedOn;
+    rows.push(`| ${s.objective + 1}. ${s.text} | ${duration(s.claimed)} | ${duration(s.after)} | ${w ? `${w.what}, ${duration((w.arrive ?? w.end!) - w.start)}${w.arrive ? " out" : ""}, from ${start.at(w.start, FOUNDED)}` : "no"} |`);
+  }
+  const until = ninth ? FOUNDED + ninth.claimed : FOUNDED + DAY;
+  const longOnes = start.longWorks(q.jobs, until);
+  const works = ["| Uncapped work | Started at | Took | Blocked a quest |", "| --- | --- | --- | --- |"];
+  for (const j of longOnes) {
+    const blocked = path.find((s) => s.waitedOn === j);
+    works.push(`| ${j.what} | ${start.at(j.start, FOUNDED)} | ${j.end === null ? "still running" : duration(j.end - j.start)} | ${blocked ? `quest ${blocked.objective + 1}` : "no"} |`);
+  }
+  return [rows.join("\n"), "Uncapped works longer than 15 minutes, started before quest 9 was claimed:", longOnes.length ? works.join("\n") : "None."];
+};
 
 const tables = [
   "### The first hour",
   "A new player who stays the whole first hour (a session every minute from 8:00 to 9:00), then plays as the casual player.",
   first.join("\n"),
-  "### The quests, and the uncapped works (A + C)",
-  "An attentive player, there every minute from 8:00 to 22:00, who plays as the balance's players (the Lighthouse first, its wood kept; a camp only at easy odds). A quest waited on an uncapped work (research, training, healing, the shipyard, the sea) when that work was done in the minute before the quest was claimed (a fleet: when it arrives).",
-  quests.join("\n"),
-  "Uncapped works longer than 15 minutes, started before quest 9 was claimed:",
-  longOnes.length ? works.join("\n") : "None.",
+  "### The quests, for a player who follows them (A + C and the three caps)",
+  "There every minute from 8:00 to 22:00. At each session, the current quest's own action first, with no wood kept for the Lighthouse, and a camp attacked at any odds it wins. A quest waited on an uncapped work (research, training, healing, the shipyard, the sea) when that work was done in the minute before the quest was claimed (a fleet: when it arrives).",
+  ...questTables(rules.follows),
+  "### The quests, for the balance's attentive player",
+  "The same sessions, played as the balance's players: the Lighthouse first, its wood kept; a camp only at easy odds.",
+  ...questTables(rules.quests),
   "### The soft transition (not in the game): its times",
   start.transitionTable(),
   "### Milestones: A + C, and A + C with the soft transition",

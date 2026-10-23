@@ -27,8 +27,9 @@ import {
   type SeaState,
 } from "../src/index.js";
 
+// Lighthouse 6: the trips' own times (below it, the way out to a camp is capped: shared/test/early.test.ts).
 const start = (): SeaState => ({
-  buildings: { ...STARTING_BUILDINGS },
+  buildings: { ...STARTING_BUILDINGS, lighthouse: 6 },
   troops: { ...STARTING_TROOPS },
   veterans: emptyTroops(),
   stock: { ...STARTING_STOCK },
@@ -146,7 +147,7 @@ describe("attack: 25/25/25 against the level 1 camp, the whole trip", () => {
     expect(r.state.stock).toEqual({ ...s0.stock, oil: s0.stock.oil + 110, wood: s0.stock.wood + 110, rope: s0.stock.rope + 1 });
     expect(r.state.pearls).toBe(216);
     // A camp's loot has no storage cap: it carries the stock past it.
-    const cap = storeCap(STARTING_BUILDINGS.lighthouse);
+    const cap = storeCap(start().buildings.lighthouse);
     const full = { ...start(), stock: { ...STARTING_STOCK, oil: cap, wood: cap } };
     expect(advanceFleets(send("camp-1", full), t + ATTACK_STAY + t).state.stock).toMatchObject({ oil: cap + 110, wood: cap + 110 });
   });
@@ -209,7 +210,7 @@ describe("salvage", () => {
   });
 
   it("a wreck's oil fills the storage and no more; its rope always comes in", () => {
-    const cap = storeCap(STARTING_BUILDINGS.lighthouse);
+    const cap = storeCap(start().buildings.lighthouse);
     const near = { ...start(), stock: { ...STARTING_STOCK, oil: cap - 100 } };
     const r = advanceFleets(send("wreck-2", near), t + COLLECT_STAY + t);
     expect(r.state.stock.oil).toBe(cap);
