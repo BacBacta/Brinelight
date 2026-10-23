@@ -209,10 +209,10 @@ describe("playing without signing in", () => {
     const page = await openGame(p.context);
     await upgradeBuilding(page, "Refinery");
     await hide(page);
-    expect(queued(await localCity(page))).toEqual(["refinery"]);
+    expect(refineryOnDevice(await localCity(page))).toBe(true);
     await page.reload();
     await page.waitForSelector(".labels.city .bl", { state: "attached" });
-    expect(queued(await localCity(page))).toEqual(["refinery"]);
+    expect(refineryOnDevice(await localCity(page))).toBe(true);
     await page.locator(".hud .lvl").click();
     await expect(page.locator(".profile").textContent()).resolves.toContain(PROFILE_TEXT.noWallet);
     await page.screenshot({ path: "e2e/.shots/shot-profile-no-wallet.png" });
@@ -1162,6 +1162,9 @@ describe("the look", () => {
         daily: { day: 0, counts: { upgrades: 3, gathers: 1, camps: 2, trains: 0, mists: 1, research: 0 }, chests: [20] },
       };
       town = ok(upgrade(town, "lumberyard"));
+      // The Lumberyard's level 3 keeps the time it had before the early start (1 h 21): at 2 minutes, it would end before
+      // the captures, and the top bar and its "working" sheet would no longer show a work under way.
+      town = { ...town, queue: town.queue.map((j) => (j.id === "lumberyard" ? { ...j, left: 4860, duration: 4860 } : j)) };
       town = ok(research(town, "nets"));
       town = ok(installOnRaft(town, clear[2]!.slot, "watchtower"));
       let page = await frozenGame(size, town);
@@ -1278,6 +1281,9 @@ describe("the look", () => {
       busy = ok(promote(busy, "crossbowmen"));
       busy = ok(heal(busy));
       busy = ok(sail(busy, "camp-1"));
+      // As in the queue's own test: the two upgrades keep the times they had before the early start, so the look stays.
+      const before: Record<string, number> = { observatory: 9720, infirmary: 3780 };
+      busy = { ...busy, queue: busy.queue.map((j) => ({ ...j, left: before[j.id] ?? j.left, duration: before[j.id] ?? j.duration })) };
       page = await frozenGame(size, busy);
       await look(page, page.locator(".queue"), `queue-folded-${w}`);
       await page.locator(".queue .more").click();
