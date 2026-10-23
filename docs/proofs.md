@@ -12,7 +12,8 @@ Only these addresses seal Brinelight's proofs. A memo in this format signed by a
 
 | Network | Address | Seals from | Until |
 | --- | --- | --- | --- |
-| — | No notary yet: the first key is made on the server (`docs/deploy.md`, step 12). | | |
+| devnet | `Dr8DjzcGqdE2UReZHfzoN7gkSiYTiinoDw58wb9G522K` ([on the explorer](https://explorer.solana.com/address/Dr8DjzcGqdE2UReZHfzoN7gkSiYTiinoDw58wb9G522K?cluster=devnet)) | 2026-10-23 | (current) |
+| mainnet | No notary yet: mainnet waits for the owner's yes (week 9, task 6). | | |
 
 If a key is lost or leaks, a new key is made on the server and its address is added here, and in the game, with the day it starts. The old addresses stay listed with the days they sealed: the proofs they sealed stay checkable. A key that leaked is listed with the day it leaked: what it signs after that day is not ours. The key is never copied off the server.
 

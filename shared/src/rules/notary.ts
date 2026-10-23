@@ -26,7 +26,10 @@ export const isCluster = (v: unknown): v is Cluster => v === "devnet" || v === "
 export type NotaryAddress = { cluster: Cluster; address: string; from: string; until: string | null; leaked?: string };
 
 /** Every address the notary ever sealed with, the current ones with `until: null`. Published in `docs/proofs.md` too. */
-export const NOTARIES: readonly NotaryAddress[] = [];
+export const NOTARIES: readonly NotaryAddress[] = [
+  // Made on the server on 23 October 2026 (docs/deploy.md, step 12); its first seal is that day's.
+  { cluster: "devnet", address: "Dr8DjzcGqdE2UReZHfzoN7gkSiYTiinoDw58wb9G522K", from: "2026-10-23", until: null },
+];
 
 /** The notary's current address on a network, or null when it has none yet. */
 export const currentNotary = (cluster: Cluster, list: readonly NotaryAddress[] = NOTARIES): NotaryAddress | null =>
