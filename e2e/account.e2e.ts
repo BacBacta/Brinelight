@@ -9,7 +9,7 @@ import type { BrowserContext, Locator, Page } from "playwright-core";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import * as THREE from "three";
 import { parseProofFile } from "@brinelight/shared";
-import { BUILDINGS, BUILDING_IDS, HOUR, PROMOTE_TIME, RAFT_INSTALL_TIME, RAFT_SLOTS, advance, heal, installOnRaft, newPlayerState, promote, raftUpgradeTime, research, sail, upgrade, type ActionResult, type PlayerState, type RaftBuildingId } from "@brinelight/shared";
+import { BUILDINGS, BUILDING_IDS, HOUR, PROMOTE_TIME, RAFT_SLOTS, advance, heal, installOnRaft, installTime, newPlayerState, promote, raftUpgradeTime, research, sail, upgrade, type ActionResult, type PlayerState, type RaftBuildingId } from "@brinelight/shared";
 import { CITY_ANGLE, CITY_FILL, CITY_FOV, cityFraming } from "../client/src/scene/framing.js";
 import { ERA_PLOTS } from "../client/src/city/plots.js";
 import { terrainCoast } from "../client/src/scene/terrainCoast.js";
@@ -2001,7 +2001,8 @@ describe("signed in", () => {
 
     // 3 seconds from its end: the server puts the building on the raft on its own clock.
     const now = (await serverCity(p.token))!.state as unknown as PlayerState;
-    expect(now.yard!.duration).toBe(RAFT_INSTALL_TIME);
+    // Its own time: 5 minutes below Lighthouse 6 since the early start, else the rules' 48 minutes.
+    expect(now.yard!.duration).toBe(installTime(now.buildings.lighthouse));
     await h.putCity(p.playerId, { ...now, yard: { ...now.yard!, left: 3 } });
     await show(p.page);
     await p.page.waitForTimeout(4000);
