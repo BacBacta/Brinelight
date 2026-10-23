@@ -19,6 +19,7 @@ The milestones of the day sealed every night in one Solana transaction, checked 
 - The Fish Shoals and Wooded Isles of the map, harvestable by the fleets, with amounts that follow the Lighthouse.
 - The late game's wall (the other buildings and the storage: task 7 of `week-8.md`).
 - The survivors' growth.
+- Review the curve of Lighthouse 10 to 20 after A + C (the early start, `docs/tasks/early-start.md`), with the late game.
 - Simulations first: no value enters the game without the owner's agreement.
 - The hour of the first Leviathan on `s1`: 13:00 (today) or 11:00 UTC, decided on its measured effects (the table A / B / C of 22 October, in `docs/decisions.md`): hunts and Pearls of each simulated player, and the Lighthouse's milestones against week 6.
 - The simulated players play at varied hours: each session's hour drawn around the player's habits, with a fixed seed (the same run every time), instead of fixed hours, so that the balance never hangs on a two-hour gap between a session and a hunt.
