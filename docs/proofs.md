@@ -61,6 +61,16 @@ brinelight proof v1 <day sealed> <root in hex>
 
 For example `brinelight proof v1 2026-10-22 3f…` (64 hex characters). The day sealed is the night's day; each leaf carries its own day.
 
+### The test seal
+
+`npm run notary:test-seal` (run by hand on the server, `docs/deploy.md` step 12) sends one transaction of the same kind on **devnet only**, to check the key, its balance, the transaction and its explorer page:
+
+```
+brinelight test v1 <day> 0000000000000000000000000000000000000000000000000000000000000000
+```
+
+Its root is fixed (32 zero bytes): it holds no player's data. It is not a seal: nothing of it is recorded by the game, the nightly seals go on as before, and a reader of this format never takes it for one (`brinelight test`, not `brinelight proof`). The command refuses mainnet.
+
 ## A leaf worked by hand
 
 The leaf 0 of the test vectors (`shared/test/fixtures/proofs-v1.json`):
@@ -134,23 +144,27 @@ It moves no SOL (only the fee is paid: 5,000 lamports, no priority fee), creates
 9. Le journal du serveur (`docker compose logs server | grep -i notary`) dit `"cluster":"devnet"` et l'adresse de l'étape 1.
 10. Sur `explorer.solana.com`, l'adresse du notaire n'existe que sur **Devnet** (le sélecteur en haut à droite) : sur **Mainnet Beta**, elle est vide.
 
+**Le sceau de test**
+
+11. `docker compose exec server npm run notary:test-seal` : toutes les lignes commencent par ✓, et la page « See it » montre un seul signataire (l'adresse du notaire), « Memo Program », le texte `brinelight test v1 <jour> 000…0` et des frais de 0.000005 SOL.
+
 **Le sceau**
 
-11. Le lendemain d'un palier, après 00:15 UTC : sur la page de l'adresse (devnet), **une seule** transaction pour cette nuit.
-12. En l'ouvrant : un seul signataire (l'adresse du notaire), un seul programme (« Memo Program »), un texte `brinelight proof v1 <jour> <64 caractères>`, des frais de 0.000005 SOL, et aucun transfert de SOL.
-13. Le solde de l'adresse n'a baissé que de 0.000005 SOL par nuit scellée.
-14. Dans le jeu, Profil → « Your proofs » : ton palier dit « Sealed on Solana », et **Check** répond « This proof matches the seal. »
-15. « Save the proof », puis le fichier envoyé à Claude Code : `npm run proof:check` répond « This proof holds. »
-16. `curl -s https://api.brinelight.xyz/health` dit `"notary":"ok"`.
+12. Le lendemain d'un palier, après 00:15 UTC : sur la page de l'adresse (devnet), **une seule** transaction `brinelight proof` pour cette nuit (celles en `brinelight test` sont tes sceaux de test).
+13. En l'ouvrant : un seul signataire (l'adresse du notaire), un seul programme (« Memo Program »), un texte `brinelight proof v1 <jour> <64 caractères>`, des frais de 0.000005 SOL, et aucun transfert de SOL.
+14. Le solde de l'adresse n'a baissé que de 0.000005 SOL par nuit scellée et par sceau de test.
+15. Dans le jeu, Profil → « Your proofs » : ton palier dit « Sealed on Solana », et **Check** répond « This proof matches the seal. »
+16. « Save the proof », puis le fichier envoyé à Claude Code : `npm run proof:check` répond « This proof holds. »
+17. `curl -s https://api.brinelight.xyz/health` dit `"notary":"ok"`.
 
 **Les pannes**
 
-17. Le serveur redémarré (`docker compose restart server`) pendant la journée : la nuit suivante, toujours une seule transaction.
-18. L'alerte : si le notaire n'a plus assez de SOL ou si un sceau a plus de 26 heures de retard, GitHub t'envoie un e-mail (le workflow watch).
+18. Le serveur redémarré (`docker compose restart server`) pendant la journée : la nuit suivante, toujours une seule transaction.
+19. L'alerte : si le notaire n'a plus assez de SOL ou si un sceau a plus de 26 heures de retard, GitHub t'envoie un e-mail (le workflow watch).
 
 **La relecture**
 
-19. La relecture indépendante de la semaine 9 a été faite, et ce qu'elle a trouvé est corrigé (`docs/tasks/week-9.md`).
-20. Avant les paiements USDC (semaine 14) : une relecture par un développeur Solana humain, obligatoire (`docs/decisions.md`).
+20. La relecture indépendante de la semaine 9 a été faite, et ce qu'elle a trouvé est corrigé (`docs/tasks/week-9.md`).
+21. Avant les paiements USDC (semaine 14) : une relecture par un développeur Solana humain, obligatoire (`docs/decisions.md`).
 
 Alors seulement : ton accord pour mainnet (tâche 6).

@@ -24,6 +24,7 @@ import {
   parseSealMemo,
   proofDay,
   sealMemo,
+  testSealMemo,
   toHex,
   type PlayerState,
   type ProofLeaf,
@@ -112,6 +113,10 @@ describe("the proof's format, v1", () => {
     expect(parseSealMemo(memo)).toEqual({ day: "2026-10-22", root });
     for (const m of [memo + " ", memo.toUpperCase(), memo.replace("v1", "v2"), memo.slice(0, -1), "brinelight proof v1 2026-02-30 " + "0".repeat(64)]) expect(parseSealMemo(m), m).toBeNull();
     expect(() => sealMemo("2026-10-22", new Uint8Array(31))).toThrow();
+    // A test seal is marked "test", with a fixed root: never read as a night's seal.
+    expect(testSealMemo("2026-10-23")).toBe(`brinelight test v1 2026-10-23 ${"0".repeat(64)}`);
+    expect(parseSealMemo(testSealMemo("2026-10-23"))).toBeNull();
+    expect(() => testSealMemo("2026-02-30")).toThrow();
   });
 
   it("hex both ways, and only lowercase hex is read", () => {

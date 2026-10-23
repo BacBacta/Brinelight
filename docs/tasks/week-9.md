@@ -187,6 +187,17 @@ A separate agent, which had not written the code, read it to find flaws: the key
 
 Found sound by the review: the transaction's bytes; the wrong network made impossible; no key in `ps`, the shell's history, the terminal, logs, errors, the database or its backups; one seal a night on the normal paths; SQL with parameters only; `GET /proofs` limited to your own rows; nothing personal in the memo; the seal on real UTC time.
 
+## On the server (23 October)
+
+- The devnet key was made on the server by `./notary-key.sh devnet` (mode 600, owned by `brinelight`). Its address, `Dr8DjzcGqdE2UReZHfzoN7gkSiYTiinoDw58wb9G522K`, is in `NOTARIES` and `docs/proofs.md` from 2026-10-23.
+- **The test seal** (owner's request; the owner's city is at Lighthouse 2): `docker compose exec server npm run notary:test-seal` (`server/src/proofs/testSeal.ts`). It does this:
+  - one Memo transaction `brinelight test v1 <day> <64 zeros>` on devnet;
+  - it waits until it is finalized, reads it back, checks its signer and its memo, and gives its explorer page.
+- What the test seal does not do:
+  - it never runs on mainnet;
+  - it never opens the database, never holds a player's data, and is never a night's seal or a proof.
+- Tests: `server/test/testSeal.test.ts`, against the fake network. Also checked on the real devnet with a throwaway key: the node accepts its signature (it answers `AccountNotFound` only, as that key has no SOL), and answers `SignatureFailure` when one byte is changed. Then the throwaway key was deleted.
+
 ## Task 6 · On mainnet
 
 What it does:

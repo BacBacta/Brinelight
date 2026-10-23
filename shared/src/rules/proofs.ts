@@ -94,6 +94,15 @@ export const sealMemo = (day: string, root: Uint8Array): string => {
   return `${PROOF_VERSION} ${day} ${toHex(root)}`;
 };
 
+/**
+ * The memo of a test seal (`npm run notary:test-seal`, devnet only): marked "test", with a fixed root of 32 zero bytes.
+ * It holds no player's data, is never a night's seal, and is never a proof: `parseSealMemo` refuses it.
+ */
+export const testSealMemo = (day: string): string => {
+  if (!isProofDay(day)) throw new Error("A test seal needs a day");
+  return `brinelight test v1 ${day} ${"00".repeat(HASH_BYTES)}`;
+};
+
 /** Reads a seal's memo, or null when it is not one. */
 export function parseSealMemo(text: string): { day: string; root: Uint8Array } | null {
   const m = /^brinelight proof v1 (\d{4}-\d{2}-\d{2}) ([0-9a-f]{64})$/.exec(text);
