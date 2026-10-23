@@ -5,3 +5,4 @@ export { MAX_REPORT_SEQ, REPORT_ID, cleanFleets, cleanQueue, parseState } from "
 export { CITY_SHAPE, MIN_CITY_SHAPE, migrateCity, upgradeShape, type MigrationContext } from "./migrate.js";
 export { ACTION_ID, applyAction, parseAction, type GameAction, type GameActionType } from "./actions.js";
 export { eventsBetween, type GameEvent } from "./events.js";
+export { milestonesReached, type Milestone } from "./milestones.js";

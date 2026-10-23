@@ -44,7 +44,7 @@ describe("database", () => {
     expect(database.engine).toBe("pglite");
     const rows = await db.execute<{ table_name: string }>(sql`select table_name from information_schema.tables where table_schema = 'public' order by table_name`);
     const names = (rows as unknown as { rows: { table_name: string }[] }).rows.map((r) => r.table_name);
-    expect(names).toEqual(["applied_actions", "auth_nonces", "cities", "players", "sessions"]);
+    expect(names).toEqual(["applied_actions", "auth_nonces", "cities", "players", "proofs", "seals", "sessions"]);
   });
 
   it("runs the PostgreSQL major version written in docs/decisions.md", async () => {

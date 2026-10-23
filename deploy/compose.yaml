@@ -44,6 +44,18 @@ services:
       TRUSTED_PROXY: 172.30.0.10
       # Where /health reads the last backup's time and the last test restore's result (backup.sh, restore.sh).
       HEALTH_STATUS_DIR: /status
+      # The notary on Solana (docs/proofs.md): its network (empty: no notary) and, if ever, other RPC endpoints. Its
+      # key is never an environment variable: it is a secret below.
+      SOLANA_CLUSTER: ${SOLANA_CLUSTER:-}
+      SOLANA_RPC_URLS: ${SOLANA_RPC_URLS:-}
+    # The notary's keys, one file per network made by notary-key.sh (empty until then), mounted read-only in this
+    # container only, under /run/secrets. The server reads the one of SOLANA_CLUSTER. A file mounted this way keeps its
+    # owner and mode on the machine: it must belong to the user 1000, the game server's user here, mode 600.
+    secrets:
+      - source: notary_devnet
+        target: notary-devnet.key
+      - source: notary_mainnet
+        target: notary-mainnet.key
     volumes:
       # Read-only, and only the status folder: two one-line files, never a dump.
       - ${STATUS_DIR:-/var/lib/brinelight/status}:/status:ro
@@ -81,6 +93,13 @@ networks:
   # The server and the database; "internal": no way out to the Internet from here.
   data:
     internal: true
+
+secrets:
+  # Files, read by Docker Compose alone (no Swarm). They must exist, even empty: update.sh makes them if they do not.
+  notary_devnet:
+    file: ./secrets/notary-devnet.key
+  notary_mainnet:
+    file: ./secrets/notary-mainnet.key
 
 volumes:
   db-data:

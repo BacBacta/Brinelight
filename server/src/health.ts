@@ -26,6 +26,12 @@ export type Health = {
   backup?: "ok" | "late" | "none";
   /** The last weekly test restore; "none" until the first one, which does not count against `ok`. */
   restore?: "ok" | "failed" | "none";
+  /**
+   * The notary on Solana (week 9): "off" when there is none, which does not count against `ok`; "late" (a milestone
+   * waits for its seal for more than 26 hours), "low" (under 0.005 SOL) or "unlisted" (its address is not in the
+   * official list) do.
+   */
+  notary?: "ok" | "late" | "low" | "unlisted" | "off";
 };
 
 /** The database answers a trivial query in time, or it is down. */
@@ -70,13 +76,25 @@ export async function restoreStatus(dir: string): Promise<"ok" | "failed" | "non
  * The server's health. Without a database (development without one), the database is not checked; without a status
  * folder (development, tests), the backups and the restores are not either.
  */
-export async function health(options: { db?: Db; statusDir: string | null; now: Date; version: string }): Promise<Health> {
+export async function health(options: {
+  db?: Db;
+  statusDir: string | null;
+  now: Date;
+  version: string;
+  /** The notary's state; not asked when the database is down. */
+  notary?: () => Promise<NonNullable<Health["notary"]>>;
+}): Promise<Health> {
   const out: Health = { ok: true, service: "brinelight", version: options.version };
   if (options.db) out.database = (await databaseUp(options.db)) ? "ok" : "down";
   if (options.statusDir) {
     out.backup = await backupStatus(options.statusDir, options.now);
     out.restore = await restoreStatus(options.statusDir);
   }
-  out.ok = out.database !== "down" && (out.backup === undefined || out.backup === "ok") && out.restore !== "failed";
+  if (options.notary && out.database !== "down") out.notary = await options.notary().catch(() => "late" as const);
+  out.ok =
+    out.database !== "down" &&
+    (out.backup === undefined || out.backup === "ok") &&
+    out.restore !== "failed" &&
+    (out.notary === undefined || out.notary === "ok" || out.notary === "off");
   return out;
 }

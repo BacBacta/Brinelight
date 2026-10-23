@@ -29,6 +29,20 @@
       "when": 1792222578550,
       "tag": "0003_city_shape",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792673451717,
+      "tag": "0004_proofs",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792677835584,
+      "tag": "0005_seals",
+      "breakpoints": true
     }
   ]
 }

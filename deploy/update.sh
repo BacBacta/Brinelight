@@ -14,6 +14,8 @@ git -C "$DEPLOY_DIR/.." fetch origin main
 git -C "$DEPLOY_DIR/.." merge --ff-only origin/main
 
 echo "3/4 Build and restart (database migrations apply by themselves at start)"
+# The notary's key files must exist for Docker Compose, even empty (no key): made here, yours only.
+(umask 077 && mkdir -p secrets && touch secrets/notary-devnet.key secrets/notary-mainnet.key)
 docker compose up -d --build
 
 echo "4/4 Check"

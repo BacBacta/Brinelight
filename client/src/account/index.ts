@@ -8,6 +8,7 @@ import { BUILDING_IDS, MIST_HELD_PEARLS, STARTING_PEARLS, newPlayerState, type A
 import type { Wallet } from "@wallet-standard/base";
 import { createCityQueue, newActionId, type ActionInput, type CityQueue, type Timers } from "./actions.js";
 import type { Api, ApiResult } from "./api.js";
+import type { ProofsAnswer } from "./proofs.js";
 import { signIn } from "./signIn.js";
 
 /** The session on this device: the token, the wallet and the player's id. Never the city. */
@@ -159,6 +160,12 @@ export function createAccount(deps: AccountDeps) {
       forget();
       deps.toast(TEXT.signedOut);
       if (token) await api.call("POST", "/auth/logout", { token });
+    },
+    /** Your proofs on Solana (GET /proofs); null when signed out or when they cannot be read now. */
+    async proofs(): Promise<ProofsAnswer | null> {
+      if (!saved) return null;
+      const r = await api.call<ProofsAnswer>("GET", "/proofs", { token: saved.token, timeoutMs: 10_000 });
+      return r.ok ? r.data : null;
     },
     /** The network is back, or the page is shown again. */
     wake(): void {

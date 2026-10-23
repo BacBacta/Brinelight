@@ -44,7 +44,7 @@ jobs:
           cache: npm
       - run: npm ci
       # One file after the other: they empty the same database, and the migration test rebuilds it as week 4 left it.
-      - run: npx vitest run --no-file-parallelism server/test/concurrency.test.ts server/test/migration.test.ts
+      - run: npx vitest run --no-file-parallelism server/test/concurrency.test.ts server/test/migration.test.ts server/test/proofs.test.ts server/test/seal.test.ts
         env:
           TEST_DATABASE_URL: postgres://postgres@localhost:5432/brinelight_test
 
@@ -90,6 +90,8 @@ jobs:
             echo "ACME_EMAIL=ci@example.com"
             echo "POSTGRES_PASSWORD=$(openssl rand -hex 32)"
           } > .env
+          # The notary's key files, empty (no key), as update.sh makes them on the server.
+          (umask 077 && mkdir -p secrets && touch secrets/notary-devnet.key secrets/notary-mainnet.key)
           docker compose up -d --build --wait --wait-timeout 180
       - name: Check it
         working-directory: deploy
@@ -121,6 +123,40 @@ jobs:
           # Caddy's local certificate, trusted for this run only.
           docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt "$RUNNER_TEMP/caddy-root.crt"
           NODE_EXTRA_CA_CERTS="$RUNNER_TEMP/caddy-root.crt" npm run load -- --url https://localhost --origin https://play.example.test --stages 20 --stage-seconds 30 --stats
+      - name: The notary's key, a Docker Compose secret, never in the container's environment
+        working-directory: deploy
+        run: |
+          # A throwaway devnet key, never funded, made by the server's own keygen; owned by the server's user (1000).
+          out="$(cd .. && node --import tsx server/src/proofs/keygen.ts)"
+          address="$(sed -n 's/^address //p' <<< "$out")"
+          secret="$(sed -n 's/^secret //p' <<< "$out")"
+          (umask 077 && printf '%s\n' "$secret" > secrets/notary-devnet.key)
+          sudo chown 1000:1000 secrets/notary-devnet.key
+          echo "SOLANA_CLUSTER=devnet" >> .env
+          docker compose up -d --wait --wait-timeout 120
+          # The server read it: its log names the notary's address.
+          for _ in $(seq 1 20); do if docker compose logs server | grep "The notary seals every night" | grep -F "$address" > /dev/null; then break; fi; sleep 2; done
+          docker compose logs server | grep "The notary seals every night" | grep -F "$address"
+          # Mounted read-only, in the server's container only.
+          docker inspect brinelight-server-1 --format '{{range .Mounts}}{{.Destination}} rw={{.RW}}{{println}}{{end}}' | grep -x "/run/secrets/notary-devnet.key rw=false"
+          for c in brinelight-db-1 brinelight-caddy-1; do
+            if docker inspect "$c" --format '{{range .Mounts}}{{.Destination}}{{println}}{{end}}' | grep /run/secrets > /dev/null; then echo "The key is mounted in $c"; exit 1; fi
+          done
+          # Never in what Docker shows, in the container's environment, nor in any log. Each output is read first, and
+          # must hold what it should (a command that failed would hide nothing), then searched for the key.
+          inspect="$(docker inspect brinelight-server-1)"
+          config="$(docker compose config)"
+          environ="$(docker compose exec -T server cat /proc/1/environ | tr '\0' '\n')"
+          logs="$(docker compose logs)"
+          grep -F '"Name": "/brinelight-server-1"' <<< "$inspect" > /dev/null
+          grep -F "notary-devnet.key" <<< "$config" > /dev/null
+          grep -Fx "SOLANA_CLUSTER=devnet" <<< "$environ" > /dev/null
+          grep -F "The notary seals every night" <<< "$logs" > /dev/null
+          leaks=0
+          for what in inspect config environ logs; do
+            if grep -F "$secret" <<< "${!what}" > /dev/null; then echo "The key shows in $what"; leaks=1; else echo "Not in $what: checked"; fi
+          done
+          exit "$leaks"
       - if: failure()
         working-directory: deploy
         run: docker compose logs --tail 100

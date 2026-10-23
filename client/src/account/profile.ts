@@ -2,6 +2,7 @@
 import type { Wallet } from "@wallet-standard/base";
 import { NO_SIGN_IN, canSignIn, isPhone, phantomLink } from "./wallets.js";
 import { box, button, createSheetView, esc, listRow, why } from "../ui/components.js";
+import { checkInBrowser, proofsHtml, savedProof, type CheckShown, type ProofsAnswer } from "./proofs.js";
 
 export const PROFILE_TEXT = {
   local: "Playing without an account. Your city is saved on this device.",
@@ -60,10 +61,32 @@ export function profileHtml(v: ProfileView, page: { href: string; origin: string
 export const soundsHtml = (on: boolean): string =>
   `<div class="list">${listRow(PROFILE_TEXT.sounds, `<small>${PROFILE_TEXT.soundsNote}</small>`, button(on ? "On" : "Off", "sm", "sound", "", undefined, ` aria-pressed="${on}"`), "", ' data-sounds=""')}</div>`;
 
+/** Hands a file to the player: their browser saves it. */
+function download(name: string, text: string): void {
+  const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export function createProfile(
   root: HTMLElement,
-  actions: { view(): ProfileView; signIn(wallet: Wallet): void; signOut(): void; sound(): boolean; toggleSound(): void },
+  actions: {
+    view(): ProfileView;
+    signIn(wallet: Wallet): void;
+    signOut(): void;
+    sound(): boolean;
+    toggleSound(): void;
+    /** The signed-in player's proofs (GET /proofs); null when they cannot be read now. */
+    proofs?(): Promise<ProofsAnswer | null>;
+  },
 ) {
+  /** The proofs last read for the wallet signed in, and the checks shown under them. */
+  let proofs: { wallet: string; answer: ProofsAnswer } | null = null;
+  const checks = new Map<number, CheckShown>();
+
   const sheet = createSheetView(root, "profile", (act, data) => {
     if (act === "close") sheet.hide();
     if (act === "sign-out") actions.signOut();
@@ -75,16 +98,44 @@ export function createProfile(
       const w = actions.view().wallets[Number(data.i)];
       if (w) actions.signIn(w);
     }
+    const i = Number(data.i);
+    const p = proofs?.answer.proofs[i];
+    if (act === "proof-check" && p?.seal) {
+      checks.set(i, "checking");
+      render();
+      void checkInBrowser({ ...p, seal: p.seal }).then((reason) => {
+        checks.set(i, reason ?? "holds");
+        render();
+      });
+    }
+    if (act === "proof-save" && p?.seal) {
+      const file = savedProof({ ...p, seal: p.seal });
+      download(file.name, file.text);
+    }
   });
 
   const render = () => {
-    sheet.draw("Profile", profileHtml(actions.view(), { href: location.href, origin: location.origin, userAgent: navigator.userAgent }) + soundsHtml(actions.sound()));
+    const view = actions.view();
+    const mine = view.wallet && proofs?.wallet === view.wallet ? proofs.answer : null;
+    sheet.draw("Profile", profileHtml(view, { href: location.href, origin: location.origin, userAgent: navigator.userAgent }) + proofsHtml(mine, checks) + soundsHtml(actions.sound()));
+  };
+
+  /** Reads the proofs of the wallet signed in, then shows them if the sheet is still open on it. */
+  const loadProofs = async () => {
+    const wallet = actions.view().wallet;
+    if (!wallet || !actions.proofs) return;
+    const answer = await actions.proofs();
+    if (!answer || actions.view().wallet !== wallet) return;
+    proofs = { wallet, answer };
+    checks.clear();
+    if (sheet.shown) render();
   };
 
   return {
     open() {
       render();
       sheet.show();
+      void loadProofs();
     },
     close: sheet.hide,
     /** Shows the latest state if the sheet is open. */

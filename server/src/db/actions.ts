@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { CITY_SHAPE, applyAction, catchUp, migrateCity, parseState, type GameAction, type PlayerState } from "@brinelight/shared";
 import { and, eq, lt } from "drizzle-orm";
 import { ensureCity, gameSeconds, savedClock, type DbLog } from "./cities.js";
+import { recordMilestones } from "../proofs/record.js";
 import type { Db } from "./index.js";
 import { appliedActions, cities } from "./schema.js";
 
@@ -35,7 +36,8 @@ export const RULE_REFUSED = "rule_refused";
  * the city, brought up to the current shape (migrateCity), is advanced to `now` (server clock, times `speed`), then the
  * action is applied with the shared rules; a city stored in an older shape is written in the current one.
  * The city is checked with parseState after catching up and after the action: refused, nothing is written.
- * Only the outcome and a hash of the action are kept, never the city.
+ * Only the outcome and a hash of the action are kept, never the city. A city written records its new Lighthouse
+ * milestones in the same transaction (proofs/record.ts).
  */
 export async function applyPlayerAction(db: Db, playerId: string, action: GameAction, now: Date, speed: number, log?: DbLog): Promise<ActionOutcome> {
   const broken = (message: string) => {
@@ -80,6 +82,8 @@ export async function applyPlayerAction(db: Db, playerId: string, action: GameAc
     if (!parseState(result.state)) return broken("City refused by parseState after an action");
     const version = row.version + 1;
     await tx.update(cities).set({ state: result.state, version, shape: CITY_SHAPE, savedAt: now }).where(eq(cities.playerId, playerId));
+    // The Lighthouse's milestones of the city written, to be sealed on Solana at night (week 9).
+    await recordMilestones(tx, playerId, stored, result.state, now, log);
     // The player id and the two shapes only: never the city, never a wallet address.
     if (row.shape !== CITY_SHAPE) log?.info?.({ playerId, from: row.shape, to: CITY_SHAPE }, "Stored city written in the current shape");
     await tx.insert(appliedActions).values({ playerId, actionId: action.id, actionHash: hash, appliedAt: now, ok: true });

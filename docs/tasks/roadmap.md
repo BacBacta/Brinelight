@@ -12,7 +12,7 @@ Re-planned by the owner on 21 October 2026, with the design of Tides (`docs/desi
 
 ## Week 9 · The first proof on Solana
 
-Unchanged.
+The milestones of the day sealed every night in one Solana transaction, checked by each player without trusting Brinelight: the plan is `week-9.md`.
 
 ## Week 10 · The economy
 
@@ -35,6 +35,11 @@ Unchanged.
 - The rewards.
 - The zones' harvest bonus.
 - The replays.
+- Before the Tides open, a new load test, with sudden peaks and late-game cities:
+  - a whole alliance arriving at the same time;
+  - the start of Tuesday's attacks;
+  - the hunt of the Leviathan;
+  - the simulated players' cities at the end of the game (Lighthouse 25 to 30, every raft), not new cities.
 
 ## Week 13 · Seasons, then the phone
 

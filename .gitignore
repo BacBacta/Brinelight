@@ -10,6 +10,8 @@ e2e/.dist/
 e2e/.shots/
 deploy/.local-*
 deploy/.env
+deploy/secrets/*
+!deploy/secrets/README.md
 deploy/local-test/logs/
 .venv-blender/
 assets/blender/out/

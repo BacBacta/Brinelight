@@ -1,4 +1,5 @@
-import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { bigint, boolean, index, integer, jsonb, pgTable, primaryKey, serial, text, timestamp, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 /** A player: one per Solana wallet. */
 export const players = pgTable("players", {
@@ -71,4 +72,64 @@ export const appliedActions = pgTable(
     error: text("error"),
   },
   (t) => [primaryKey({ columns: [t.playerId, t.actionId] }), index("applied_actions_at_idx").on(t.appliedAt)],
+);
+
+/**
+ * The nightly seals on Solana (week 9, task 4): one Memo transaction a night per network. Everything here is public
+ * (the root, the memo, the signed transaction): never the key. A seal is written, with its signed transaction, before
+ * it is sent; `status` is `sent`, then `finalized`, or `expired` (its blockhash passed: it can never land) or `failed`
+ * (it landed with an error). At most one seal of a night is `sent` or `finalized`, enforced by the database.
+ */
+export const seals = pgTable(
+  "seals",
+  {
+    id: serial("id").primaryKey(),
+    cluster: text("cluster").notNull(),
+    day: text("day").notNull(),
+    root: text("root").notNull(),
+    memo: text("memo").notNull(),
+    leaves: integer("leaves").notNull(),
+    /**
+     * The seal's leaves (hex, 64 characters each), in their order: the tree is kept whole with the seal, so a proof's
+     * path never depends on other players' rows (a player deleted leaves the others' proofs as they were).
+     */
+    leafHashes: text("leaf_hashes").notNull(),
+    signer: text("signer").notNull(),
+    signature: text("signature").notNull().unique(),
+    /** The signed transaction, in base64: sent again as it is (same signature) until it lands or expires. */
+    tx: text("tx").notNull(),
+    lastValidHeight: bigint("last_valid_height", { mode: "number" }).notNull(),
+    status: text("status").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    finalizedAt: timestamp("finalized_at", { withTimezone: true }),
+  },
+  (t) => [uniqueIndex("seals_one_a_night").on(t.cluster, t.day).where(sql`status in ('sent', 'finalized')`)],
+);
+
+/**
+ * The facts of a player's game to be sealed on Solana (week 9, `docs/proofs.md`): today the Lighthouse's milestones.
+ * Each row keeps what its player needs to check it: the fact, `on` or `by` its day, the salt (hex, random, the only
+ * thing that ties the leaf to the player) and the leaf (hex). Never the wallet: the leaf already holds it, hashed.
+ * A fact is recorded once per player; a player deleted takes their rows with them, and their leaves can then be tied
+ * to no one.
+ */
+export const proofs = pgTable(
+  "proofs",
+  {
+    id: serial("id").primaryKey(),
+    playerId: uuid("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    fact: text("fact").notNull(),
+    /** `on` or `by` (`when` is a word of SQL). */
+    when: text("dated").notNull(),
+    day: text("day").notNull(),
+    salt: text("salt").notNull(),
+    leaf: text("leaf").notNull(),
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull(),
+    /** The seal it went into, and its place among that seal's leaves; empty until then. */
+    sealId: integer("seal_id").references(() => seals.id, { onDelete: "set null" }),
+    position: integer("position"),
+  },
+  (t) => [unique("proofs_player_fact").on(t.playerId, t.fact), index("proofs_seal_idx").on(t.sealId)],
 );
