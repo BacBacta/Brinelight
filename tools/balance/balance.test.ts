@@ -55,7 +55,7 @@ describe("the balance simulation", () => {
     const reg = runs.find((r) => r.profile.id === "regular")!;
     expect(reg.mists.held).toBeGreaterThan(3 * (DAYS - 2));
     expect(reg.hunts.joined).toBeGreaterThan(DAYS);
-    expect(reg.claims.objectives).toBe(18);
+    expect(reg.claims.objectives).toBe(19);
     expect(reg.claims.chests).toBeGreaterThan(DAYS);
     expect(reg.pearls.mist).toBe(30 * reg.mists.held);
     const [never, away] = more as [(typeof more)[number], (typeof more)[number]];
@@ -77,8 +77,8 @@ describe("the balance simulation", () => {
     // (docs/tasks/early-start.md), the producers' curve and the isles and shoals (E, docs/studies/resources.md), the
     // players keeping the Lighthouse's reserve only on what a spending uses: the reference since 23 October.
     const REFERENCE: Record<string, Record<number, number>> = {
-      casual: { 5: 0.6, 10: 4.6, 15: 16.0, 20: 43.0, 25: 117.4, 30: 299.0 },
-      regular: { 5: 0.2, 10: 3.5, 15: 12.5, 20: 38.0, 25: 101.4, 30: 257.6 },
+      casual: { 5: 0.6, 10: 4.6, 15: 16.0, 20: 42.6, 25: 117.4, 30: 299.4 },
+      regular: { 5: 0.2, 10: 3.5, 15: 12.5, 20: 38.0, 25: 101.4, 30: 264.6 },
       dedicated: { 5: 0.1, 10: 2.8, 15: 11.5, 20: 37.0, 25: 100.0, 30: 256.0 },
     };
     for (const r of long) {

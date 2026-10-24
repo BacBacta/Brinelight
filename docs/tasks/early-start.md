@@ -135,12 +135,22 @@ What it gives:
 - **quest 9 at 14 minutes**, 10 minutes after quest 8: the way out to the camp;
 - **quest 15** waits on nothing: its first raft (5 minutes) is already moored when the quest comes;
 - **quest 16** 5 minutes later: the Kelp Greenhouse;
-- all 18 quests are done at **8 h 50**. What remains is wood and the Mist's hours, never an uncapped work over 15 minutes.
+- all 18 quests are done at **8 h 50**. What remains is wood and the Mist's hours, never an uncapped work over 15 minutes. (Since the Mist's quest moved: 5 h 40, below.)
 
 **The balance's players** keep the Lighthouse's wood and attack only at easy odds:
 - the attentive one beats its first camp at 1 h 42 (10 h 24 before the caps);
 - it reaches quests 15 and 16 only on day 2, past Lighthouse 6, where the caps no longer hold;
 - the Lighthouse milestones of the three profiles do not move (`docs/balance.md`).
+
+### The Mist's quest moved (owner's decision of 23 October, done)
+
+The eleventh quest waited for the Mist: it comes at fixed hours (three times a day), so in the middle of the tutorial the player waited hours they could neither choose nor shorten (4 h 44 for the player who follows the quests, founded at 8:00).
+
+- **Quest 11** is now "Keep 500 oil in store for the Mist": done if the city holds 500 oil or more when you claim it; its reward is unchanged (250 oil). A Mist burns 23 to 38 oil at Lighthouse 3 to 5, so 500 leaves a wide margin.
+- **Quest 19** is the real Mist, with its text: "Keep the Lighthouse stoked through a Mist", 250 oil. The quest card shows "1/19".
+- **A city that had claimed the Mist** (its quest past the eleventh, shape 10) has the nineteenth marked as claimed (`claimedAhead`, shape 11): its reward is never paid twice. A city that had claimed all 18 has nothing left.
+
+What it gives, for the player who follows the quests: quest 11 at 1 h 16, with no wait; the first 18 at **5 h 40** (8 h 50 before); the nineteenth at 6 h, when the first Mist lifts. A casual player who follows the quests ends them on day 5 at 13:00, as before: a Mist passes between their sessions, and the Lighthouse holds it on its own.
 
 ### The soft transition: abandoned by the owner (23 October)
 
@@ -160,7 +170,7 @@ What it gives:
 
 **What would help day 2: wood, not time.** The first point of week 10 (`docs/tasks/roadmap.md`), with 44 hours of 48 as the measure to bring down.
 
-Since E (the producers' curve and the isles and shoals, 23 October, `docs/studies/resources.md`), the tables below are those of today's rules, played by the balance's players who keep the reserve only on what a spending uses; the figures in the text above are those of A + C before E.
+Since E (the producers' curve and the isles and shoals, 23 October, `docs/studies/resources.md`), the tables below are those of today's rules, played by the balance's players who keep the reserve only on what a spending uses; the figures in the text above are those of A + C before E. With E and the Mist's quest moved, the player who follows the quests ends the first 18 at **2 h 15** and the nineteenth at 6 h, when the first Mist lifts; the casual player who follows them ends all 19 at 13 h 50.
 
 <!-- start:generated:start (npx tsx tools/balance/start-run.ts) -->
 
@@ -189,14 +199,15 @@ There every minute from 8:00 to 22:00. At each session, the current quest's own 
 | 8. Train troops at the Barracks | 4 min | 0 min | no |
 | 9. Beat a pirate camp | 14 min | 10 min | fleet to camp-1, 10 min out, from 4 min |
 | 10. Build the Infirmary | 53 min | 39 min | no |
-| 11. Keep the Lighthouse stoked through a Mist | 6 h | 5 h 07 | no |
-| 12. Upgrade the Lumberyard to level 3 | 6 h | 0 min | no |
-| 13. Upgrade the Shelters to level 3 | 6 h 29 | 29 min | no |
-| 14. Upgrade the Lighthouse to level 4 | 6 h 29 | 0 min | no |
-| 15. Moor your first raft | 6 h 29 | 0 min | no |
-| 16. Put a Kelp Greenhouse on a raft | 6 h 29 | 0 min | no |
-| 17. Upgrade the Harbor to level 3 | 6 h 47 | 18 min | no |
-| 18. Bring the Lighthouse to level 5 | 6 h 47 | 0 min | no |
+| 11. Keep 500 oil in store for the Mist | 53 min | 0 min | no |
+| 12. Upgrade the Lumberyard to level 3 | 55 min | 2 min | no |
+| 13. Upgrade the Shelters to level 3 | 1 h 58 | 1 h 03 | no |
+| 14. Upgrade the Lighthouse to level 4 | 1 h 58 | 0 min | no |
+| 15. Moor your first raft | 1 h 58 | 0 min | no |
+| 16. Put a Kelp Greenhouse on a raft | 2 h 03 | 5 min | shipyard: install, 5 min, from 1 h 58 |
+| 17. Upgrade the Harbor to level 3 | 2 h 15 | 12 min | no |
+| 18. Bring the Lighthouse to level 5 | 2 h 15 | 0 min | no |
+| 19. Keep the Lighthouse stoked through a Mist | 6 h | 3 h 45 | no |
 
 Uncapped works longer than 15 minutes, started before quest 9 was claimed:
 
@@ -222,14 +233,15 @@ The same sessions, played as the balance's players: the Lighthouse first, its wo
 | 8. Train troops at the Barracks | 1 h 30 | 0 min | no |
 | 9. Beat a pirate camp | 1 h 30 | 0 min | no |
 | 10. Build the Infirmary | 1 h 30 | 0 min | no |
-| 11. Keep the Lighthouse stoked through a Mist | 6 h | 4 h 30 | train 20 boarders, 5 min, from 5 h 54 |
-| 12. Upgrade the Lumberyard to level 3 | 6 h | 0 min | no |
-| 13. Upgrade the Shelters to level 3 | 10 h 56 | 4 h 56 | no |
-| 14. Upgrade the Lighthouse to level 4 | 10 h 56 | 0 min | no |
-| 15. Moor your first raft | 13 h 01 | 2 h 05 | shipyard: raft, 1 h 12, from 11 h 49 |
-| 16. Put a Kelp Greenhouse on a raft | 13 h 49 | 48 min | shipyard: install, 48 min, from 13 h 01 |
-| 17. Upgrade the Harbor to level 3 | 26 h 05 | 12 h 16 | no |
-| 18. Bring the Lighthouse to level 5 | 26 h 05 | 0 min | no |
+| 11. Keep 500 oil in store for the Mist | 2 h 31 | 1 h 01 | no |
+| 12. Upgrade the Lumberyard to level 3 | 2 h 31 | 0 min | no |
+| 13. Upgrade the Shelters to level 3 | 11 h 03 | 8 h 32 | no |
+| 14. Upgrade the Lighthouse to level 4 | 11 h 03 | 0 min | no |
+| 15. Moor your first raft | 12 h 34 | 1 h 31 | shipyard: raft, 1 h 12, from 11 h 22 |
+| 16. Put a Kelp Greenhouse on a raft | 13 h 50 | 1 h 16 | shipyard: install, 48 min, from 13 h 02 |
+| 17. Upgrade the Harbor to level 3 | 13 h 50 | 0 min | no |
+| 18. Bring the Lighthouse to level 5 | 13 h 50 | 0 min | no |
+| 19. Keep the Lighthouse stoked through a Mist | 13 h 50 | 0 min | no |
 
 Uncapped works longer than 15 minutes, started before quest 9 was claimed:
 
@@ -262,10 +274,10 @@ Lighthouse 5 to 10: time after the founding. 15 and 20: the day, against A + C (
 
 | Variant | Profile | Lighthouse 5 | 6 | 8 | 10 | 15 (vs A + C; vs week 6) | 20 (vs A + C; vs week 6) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| A + C (the rules) | Casual (3 sessions) | 13 h 15 | 28 h 02 | 2 d 12 h | 4 d 13 h | day 16.0 (0 %; -38.3 %) | day 43.0 (0 %; -31.7 %) |
+| A + C (the rules) | Casual (3 sessions) | 13 h 15 | 28 h 02 | 2 d 12 h | 4 d 13 h | day 16.0 (0 %; -38.3 %) | day 42.6 (0 %; -32.5 %) |
 | A + C (the rules) | Regular (6 sessions) | 5 h 15 | 15 h 02 | 39 h 21 | 3 d 12 h | day 12.5 (0 %; -36.7 %) | day 38.0 (0 %; -27.8 %) |
 | A + C (the rules) | Dedicated (10 sessions) | 2 h 35 | 13 h 02 | 33 h 41 | 2 d 19 h | day 11.5 (0 %; -34.5 %) | day 37.0 (0 %; -18.2 %) |
-| A + C + soft transition | Casual (3 sessions) | 13 h 15 | 24 h 45 | 2 d 8 h | 4 d 13 h | day 16.0 (0 %; -38.3 %) | day 43.2 (+0.5 %; -31.4 %) |
+| A + C + soft transition | Casual (3 sessions) | 13 h 15 | 24 h 45 | 2 d 8 h | 4 d 13 h | day 16.0 (0 %; -38.3 %) | day 43.2 (+1.6 %; -31.4 %) |
 | A + C + soft transition | Regular (6 sessions) | 5 h 15 | 11 h 45 | 32 h | 3 d 3 h | day 12.6 (+1 %; -36.1 %) | day 38.3 (+1 %; -27.1 %) |
 | A + C + soft transition | Dedicated (10 sessions) | 2 h 35 | 9 h 45 | 26 h | 2 d 15 h | day 11.5 (0 %; -34.5 %) | day 37.0 (0 %; -18.2 %) |
 

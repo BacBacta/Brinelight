@@ -10,13 +10,13 @@ describe("the current objective", () => {
   it("its number, what to do and its reward; Claim only once the rules say it is done", () => {
     const s = city();
     const html = questHtml(s);
-    expect(html).toContain("1/18");
+    expect(html).toContain("1/19");
     expect(html).toContain("Upgrade the Refinery to level 2");
     expect(html).toContain(">150</span>");
     expect(html).not.toContain("Claim");
     expect(questHtml({ ...s, buildings: { ...s.buildings, refinery: 2 } })).toContain('data-act="claimObjective">Claim</button>');
-    expect(questHtml({ ...s, objective: 17 })).toContain("18/18");
-    expect(questHtml({ ...s, objective: 18 })).toBe("");
+    expect(questHtml({ ...s, objective: 18 })).toContain("19/19");
+    expect(questHtml({ ...s, objective: 19 })).toBe("");
   });
 
   it("a reward: an icon and an amount per resource, Pearls last", () => {

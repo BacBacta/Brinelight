@@ -2,11 +2,12 @@
  * Objectives (week 7, task 4): a fixed list, one at a time, in order. Each one has a condition read from the city and
  * a reward you claim (action `claimObjective`); the rules check the condition, never the client. The list is the
  * prototype's, without what needs other players or a payment, its speedups replaced by resources, and nothing that
- * asks you to be online at a fixed hour (owner's decision, 18 October).
+ * asks you to be online at a fixed hour (owner's decision, 18 October). The Mist comes at fixed hours, so the
+ * eleventh asks for oil in store, done at once, and the real Mist is the last one (owner's decision, 23 October).
  */
 import type { Rafts } from "./rafts.js";
 import type { ResearchJob, Techs } from "./research.js";
-import type { Buildings } from "./types.js";
+import type { Buildings, Resource } from "./types.js";
 
 /**
  * What a reward gives: resources and Pearls, and for your lead captain, experience (`xp`) and its own shards
@@ -25,6 +26,7 @@ export type ObjectiveView = {
   techs: Techs;
   research: ResearchJob | null;
   rafts: Rafts;
+  stock: Record<Resource, number>;
   mist: { held: number };
   progress: Progress;
 };
@@ -42,7 +44,7 @@ export const OBJECTIVES: readonly Objective[] = [
   { text: "Train troops at the Barracks", reward: { fish: 200 }, done: (c) => c.progress.trained >= 1 },
   { text: "Beat a pirate camp", reward: { pearls: 150 }, done: (c) => c.progress.camps >= 1 },
   { text: "Build the Infirmary", reward: { fish: 250 }, done: (c) => c.buildings.infirmary >= 1 },
-  { text: "Keep the Lighthouse stoked through a Mist", reward: { oil: 250 }, done: (c) => c.mist.held >= 1 },
+  { text: "Keep 500 oil in store for the Mist", reward: { oil: 250 }, done: (c) => c.stock.oil >= 500 },
   { text: "Upgrade the Lumberyard to level 3", reward: { fish: 300 }, done: (c) => c.buildings.lumberyard >= 3 },
   { text: "Upgrade the Shelters to level 3", reward: { fish: 300 }, done: (c) => c.buildings.shelters >= 3 },
   { text: "Upgrade the Lighthouse to level 4", reward: { oil: 400, wood: 400, fish: 400 }, done: (c) => c.buildings.lighthouse >= 4 },
@@ -50,4 +52,12 @@ export const OBJECTIVES: readonly Objective[] = [
   { text: "Put a Kelp Greenhouse on a raft", reward: { fish: 400 }, done: (c) => Object.values(c.rafts).some((r) => r.building === "greenhouse") },
   { text: "Upgrade the Harbor to level 3", reward: { pearls: 200 }, done: (c) => c.buildings.harbor >= 3 },
   { text: "Bring the Lighthouse to level 5", reward: { pearls: 300 }, done: (c) => c.buildings.lighthouse >= 5 },
+  { text: "Keep the Lighthouse stoked through a Mist", reward: { oil: 250 }, done: (c) => c.mist.held >= 1 },
 ];
+
+/** The objective after `index`, skipping the ones already claimed ahead of their turn (`claimedAhead`). */
+export function nextObjective(index: number, claimedAhead: readonly number[] = []): number {
+  let next = index + 1;
+  while (claimedAhead.includes(next)) next++;
+  return next;
+}

@@ -15,10 +15,11 @@ import type { PlayerState } from "./types.js";
  * The current shape of a city. Shape 4: the city of week 4. Shape 5: week 5 (training, healing, veterans, shards).
  * Shape 6: week 7, the Mist (the city's clock, the order to stoke). Shape 7: week 7, the Leviathan (its level, the hunt).
  * Shape 8: week 7, the objectives and the daily tasks. Shape 9: week 7, the wrecks that wait before they fill again.
- * Shape 10: week 8, the city's server (its Mist and Leviathan hours). Shape 11: week 10, the Wooded Isles and Fish
+ * Shape 10: week 8, the city's server (its Mist and Leviathan hours). Shape 11: week 10, the Mist's objective moved
+ * from the eleventh to the nineteenth (owner's decision, 23 October). Shape 12: week 10, the Wooded Isles and Fish
  * Shoals the fleets harvest.
  */
-export const CITY_SHAPE = 11;
+export const CITY_SHAPE = 12;
 /** The oldest shape a stored city can have: nothing was stored before week 4. */
 export const MIN_CITY_SHAPE = 4;
 
@@ -67,8 +68,14 @@ const STEPS: Record<number, (s: Raw, ctx: MigrationContext) => Raw> = {
   8: (s) => (isObj(s.world) && !("refill" in s.world) ? { ...s, world: { ...s.world, refill: {} } } : s),
   // Week 8: every city stored before belongs to the only server, s1.
   9: (s) => ("server" in s ? s : { ...s, server: DEFAULT_SERVER }),
+  // Week 10: the eleventh objective was the Mist's, now the nineteenth. A city past it has claimed it: never twice.
+  // A city that had claimed all 18 has nothing left; the only step that changes a value, once.
+  10: (s) => {
+    if (typeof s.objective !== "number" || s.objective < 11 || "claimedAhead" in s) return s;
+    return s.objective >= 18 ? { ...s, objective: 19 } : { ...s, claimedAhead: [18] };
+  },
   // Week 10: no isle or shoal harvested yet: every one of them full.
-  10: (s) => (isObj(s.world) && !("harvest" in s.world) ? { ...s, world: { ...s.world, harvest: {} } } : s),
+  11: (s) => (isObj(s.world) && !("harvest" in s.world) ? { ...s, world: { ...s.world, harvest: {} } } : s),
 };
 
 /** Adds the fields of every step from `shape` to the current shape. Does not check the city: parseState does. */

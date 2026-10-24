@@ -9,8 +9,8 @@ const json = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 const SAVED = { clock: 1_792_310_400 };
 
 describe("the shapes", () => {
-  it("shape 11 is today's, shape 4 the oldest stored", () => {
-    expect(CITY_SHAPE).toBe(11);
+  it("shape 12 is today's, shape 4 the oldest stored", () => {
+    expect(CITY_SHAPE).toBe(12);
     expect(MIN_CITY_SHAPE).toBe(4);
   });
 
@@ -140,8 +140,8 @@ describe("from shape 4 to today's", () => {
 });
 
 describe("cities that cannot be read", () => {
-  it("a shape older than 4, newer than 10, or not a whole number", () => {
-    for (const shape of [0, 3, 11, 99, 4.5, NaN]) expect(migrateCity(week4(), shape, SAVED), String(shape)).toBeNull();
+  it("a shape older than 4, newer than 12, or not a whole number", () => {
+    for (const shape of [0, 3, 13, 99, 4.5, NaN]) expect(migrateCity(week4(), shape, SAVED), String(shape)).toBeNull();
   });
 
   it("a city of shape 4 with a field parseState refuses, once the missing fields are added", () => {

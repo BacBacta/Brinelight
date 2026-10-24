@@ -61,6 +61,11 @@ export type PlayerState = {
   leviathan: LeviathanState;
   /** The current objective: its index in OBJECTIVES (OBJECTIVES.length once every one is claimed). */
   objective: number;
+  /**
+   * Objectives claimed ahead of their turn, skipped when it comes: a city that claimed the Mist's objective when it
+   * was the eleventh has the nineteenth claimed (shape 11). Absent when there is none.
+   */
+  claimedAhead?: number[];
   /** What the city has done since it was founded: fleets sent to gather, trainings started, camps beaten. */
   progress: Progress;
   /** Today's daily tasks (00:00 UTC on the city's clock) and the chests opened. */
