@@ -49,7 +49,7 @@ const BEFORE: Setup = { key: "before", name: "Before 24 October", time: D.before
 const SLOWER: Setup = { key: "slow", name: "Slower (the rules since 24 October)", time: null };
 const SETUPS: readonly Setup[] = [BEFORE, { key: "fast", name: "Faster", time: (id, level) => D.curveTime(fast, id, level) }, SLOWER];
 /** The cost option, on the slower curve: the other buildings past level 15 cost this much more a level (the rules: 1.6). */
-const COSTS: readonly Setup[] = [1.15, 1.1, 1.05].map((growth) => ({ key: `slow-${growth}`, name: `Slower, others ×${growth} a level past 15`, time: null, costs: { from: 15, growth } }));
+const COSTS: readonly Setup[] = [1.15, 1.1, 1.05].map((growth) => ({ key: `slow-${growth}`, name: `Slower, others ×${growth} a level past 15`, time: null, costs: R.growthPast(15, growth) }));
 /** The alliance's help, on the slower curve: 10 allies, 3 minutes each, never more than half the build. */
 const HELP: Setup = { key: "slow-help", name: "Slower, with 10 helps of 3 min", time: null, help: { count: 10, minutes: 3 } };
 
