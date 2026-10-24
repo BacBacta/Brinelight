@@ -88,6 +88,12 @@ export type Profile = {
    * upgrade paid in fish and oil goes ahead while the Lighthouse waits for wood (docs/studies/resources.md).
    */
   holdWholeReserve?: boolean;
+  /**
+   * A study's own work at the shipyard (docs/studies/population.md): tried when the shipyard is free and no raft needs
+   * mending, before the balance's own choices; `act` keeps the Lighthouse's reserve, as every other spending. True if it
+   * started something.
+   */
+  shipyard?: (s: PlayerState, act: (action: Intent, label: string) => boolean) => boolean;
 };
 
 const at = (hours: number, minutes = 0) => hours * HOUR + minutes * 60;
@@ -198,7 +204,7 @@ export type Run = {
 };
 
 /** An action without its id, for each type of action. */
-type Intent = GameAction extends infer A ? (A extends GameAction ? Omit<A, "id"> : never) : never;
+export type Intent = GameAction extends infer A ? (A extends GameAction ? Omit<A, "id"> : never) : never;
 
 /** A plain action id, numbered: the rules need one, the simulation has no randomness to make it. */
 const actionId = (n: number) => `00000000-0000-4000-8000-${n.toString(16).padStart(12, "0")}`;
@@ -438,6 +444,7 @@ export function simulate(profile: Profile, days: number): Run {
     // a repair leaves the Lighthouse's reserve untouched (it did not before 18 October: the player who never stokes
     // spent the Lighthouse's oil on repairs every day).
     if (!profile.skip?.repairs && Object.values(s.rafts).some((r) => r.hp < 60)) return act({ type: "repairRafts" }, "repair the rafts", true);
+    if (profile.shipyard?.(s, (action, label) => act(action, label, true))) return true;
     const slots = RAFT_SLOTS.map((x) => x.key);
     const empty = slots.find((k) => s.rafts[k] && !s.rafts[k]!.building);
     if (empty) {
