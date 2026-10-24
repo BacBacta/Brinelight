@@ -27,7 +27,7 @@ export type Started = { clock: number; id: BuildingId; level: number; seconds: n
  * every building at the Lighthouse's level); and hours with both builders busy while something else could start
  * (everything waits for a build).
  */
-export type Builders = { hours: number; away: number; nothing: number; waitBuild: number };
+export type Builders = { hours: number; away: number; nothing: number; waitBuild: number; held?: number };
 
 /**
  * A cost option (studied, never in the game): the cost to go from `level` to `level + 1` in its place, or null where the
@@ -45,7 +45,13 @@ export const growthPast = (from: number, growth: number): Costs => (id, level) =
 /** Other build times than the rules': the time to reach `level`, in real seconds. */
 export type Times = (id: BuildingId, level: number) => number;
 
-export type Study = { time: Times | null; help: Help | null; costs: Costs | null; started: Started[]; seen: Set<string>; builders: Record<number, Builders> };
+/**
+ * A production option (studied, never in the game): how many times the rules' production of oil, fish and wood the
+ * city's buildings make, from its state (the rules: 1). What the Lighthouse burns and the survivors eat do not change.
+ */
+export type Production = (s: PlayerState) => number;
+
+export type Study = { time: Times | null; help: Help | null; costs: Costs | null; production?: Production | null; started: Started[]; seen: Set<string>; builders: Record<number, Builders> };
 
 /** Shared with `durations-run.ts` through the global object: the two may load this module under two names. */
 const g = globalThis as { brinelightDurationsStudy?: Study };
@@ -88,10 +94,10 @@ export function applyAction(state: PlayerState, action: GameAction): ActionResul
  * Could the balance's player start an upgrade now, builders aside: the Lighthouse's next level paid in full, or another
  * building under its cap whose cost leaves the Lighthouse's reserve on what it spends (as `simulate.ts` plays it).
  */
-function affordable(s: PlayerState): boolean {
+function affordable(s: PlayerState, keepReserve = true): boolean {
   const lighthouseFree = !s.queue.some((j) => j.id === "lighthouse") && s.buildings.lighthouse < rules.LIGHTHOUSE_MAX;
   const reserve: Cost = {};
-  if (lighthouseFree) {
+  if (lighthouseFree && keepReserve) {
     const storage = rules.storeCap(s.buildings.lighthouse, s.techs);
     for (const [k, v] of Object.entries(upgradeCost("lighthouse", s.buildings.lighthouse)) as [keyof Cost, number][]) reserve[k] = Math.min(v, storage);
   }
@@ -123,5 +129,21 @@ export function advance(state: PlayerState, seconds: number): PlayerState {
   const can = affordable(state);
   if (free > 0) b[can ? "away" : "nothing"] += free * hours;
   else if (can) b.waitBuild += hours;
-  return rules.advance(state, seconds);
+  // Nothing to start, but something the city could pay for if it did not keep the Lighthouse's reserve.
+  if (free > 0 && !can && affordable(state, false)) b.held = (b.held ?? 0) + free * hours;
+  let s = rules.advance(state, seconds);
+  const times = study.production?.(state) ?? 1;
+  if (times !== 1) {
+    // What the city's buildings made in this step (before what the Lighthouse burns and the survivors eat), made
+    // `times` times, within the storage. Out of the Mist: a little more than the rules in the Mist.
+    const cap = rules.storeCap(s.buildings.lighthouse, s.techs);
+    const made = rules.netRates({ ...state, buildings: { ...state.buildings, lighthouse: 0 }, survivors: 0 }, { mist: false, stoked: false });
+    const stock = { ...s.stock };
+    for (const k of ["oil", "fish", "wood"] as const) {
+      const extra = (Math.max(0, made[k]) * (times - 1) * seconds) / rules.HOUR;
+      if (stock[k] < cap) stock[k] = Math.min(cap, stock[k] + extra);
+    }
+    s = { ...s, stock };
+  }
+  return s;
 }

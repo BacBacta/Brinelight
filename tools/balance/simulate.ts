@@ -88,6 +88,8 @@ export type Profile = {
    * upgrade paid in fish and oil goes ahead while the Lighthouse waits for wood (docs/studies/resources.md).
    */
   holdWholeReserve?: boolean;
+  /** Keeps no reserve for the Lighthouse: every spending goes ahead when it can be paid (docs/studies/idle.md). */
+  noReserve?: boolean;
 };
 
 const at = (hours: number, minutes = 0) => hours * HOUR + minutes * 60;
@@ -296,7 +298,7 @@ export function simulate(profile: Profile, days: number): Run {
 
   /** What a spending leaves still covers the Lighthouse's reserve, on what it spends (all of it: `holdWholeReserve`). */
   const keeps = (before: Record<Resource, number>, after: Record<Resource, number>, held: Cost) =>
-    profile.holdWholeReserve ? covers(after, held) : RESOURCES.every((k) => after[k] >= before[k] || after[k] >= (held[k] ?? 0));
+    profile.noReserve || (profile.holdWholeReserve ? covers(after, held) : RESOURCES.every((k) => after[k] >= before[k] || after[k] >= (held[k] ?? 0)));
 
   /**
    * What every other spending leaves untouched: the Lighthouse's reserve, and for a player who follows the quests, also
