@@ -170,7 +170,9 @@ What it gives, for the player who follows the quests: quest 11 at 1 h 16, with n
 
 **What would help day 2: wood, not time.** The first point of week 10 (`docs/tasks/roadmap.md`), with 44 hours of 48 as the measure to bring down.
 
-Since E (the producers' curve and the isles and shoals, 23 October, `docs/studies/resources.md`), the tables below are those of today's rules, played by the balance's players who keep the reserve only on what a spending uses; the figures in the text above are those of A + C before E. With E and the Mist's quest moved, the player who follows the quests ends the first 18 at **2 h 15** and the nineteenth at 6 h, when the first Mist lifts; the casual player who follows them ends all 19 at 13 h 50.
+Since E (the producers' curve and the isles and shoals, 23 October, `docs/studies/resources.md`), the tables below are those of today's rules, played by the balance's players who keep the reserve only on what a spending uses; the figures in the text above are those of A + C before E. With E and the Mist's quest moved, the player who follows the quests ends the first 18 at **2 h 15** and the nineteenth at 6 h, when the first Mist lifts.
+
+Since 24 October, the build times of levels 6 to 30 are the slower curve (`docs/studies/durations.md`): Lighthouse 6 in 44 minutes, not 4 h 02. The times of levels 6 and more in the text above are those of before. The quest follower does not change (2 h 15 and 6 h). The balance's attentive player, who plays the Lighthouse first and not the quests, now claims the last quests on day 2 (2 d 3 h, 13 h 50 before): its Lighthouse goes past 5 sooner, and the Shelters' and the Harbor's quests wait their turn. The soft transition is no longer played: the slower curve replaced the times it was measured against.
 
 <!-- start:generated:start (npx tsx tools/balance/start-run.ts) -->
 
@@ -181,7 +183,6 @@ A new player who stays the whole first hour (a session every minute from 8:00 to
 | Variant | Upgrades finished within 10 min | 30 min | 60 min | Lighthouse 5 at | Lighthouse after 1 h |
 | --- | --- | --- | --- | --- | --- |
 | A + C (the rules) | 10 | 11 | 12 | 46 min | 5 |
-| A + C + soft transition | 10 | 11 | 12 | 46 min | 5 |
 
 ### The quests, for a player who follows them (A + C and the three caps)
 
@@ -235,13 +236,13 @@ The same sessions, played as the balance's players: the Lighthouse first, its wo
 | 10. Build the Infirmary | 1 h 30 | 0 min | no |
 | 11. Keep 500 oil in store for the Mist | 2 h 31 | 1 h 01 | no |
 | 12. Upgrade the Lumberyard to level 3 | 2 h 31 | 0 min | no |
-| 13. Upgrade the Shelters to level 3 | 11 h 03 | 8 h 32 | no |
-| 14. Upgrade the Lighthouse to level 4 | 11 h 03 | 0 min | no |
-| 15. Moor your first raft | 12 h 34 | 1 h 31 | shipyard: raft, 1 h 12, from 11 h 22 |
-| 16. Put a Kelp Greenhouse on a raft | 13 h 50 | 1 h 16 | shipyard: install, 48 min, from 13 h 02 |
-| 17. Upgrade the Harbor to level 3 | 13 h 50 | 0 min | no |
-| 18. Bring the Lighthouse to level 5 | 13 h 50 | 0 min | no |
-| 19. Keep the Lighthouse stoked through a Mist | 13 h 50 | 0 min | no |
+| 13. Upgrade the Shelters to level 3 | 24 h 02 | 21 h 31 | no |
+| 14. Upgrade the Lighthouse to level 4 | 24 h 02 | 0 min | no |
+| 15. Moor your first raft | 24 h 02 | 0 min | no |
+| 16. Put a Kelp Greenhouse on a raft | 26 h 21 | 2 h 19 | shipyard: install, 48 min, from 25 h 33 |
+| 17. Upgrade the Harbor to level 3 | 2 d 3 h | 25 h 29 | no |
+| 18. Bring the Lighthouse to level 5 | 2 d 3 h | 0 min | no |
+| 19. Keep the Lighthouse stoked through a Mist | 2 d 3 h | 0 min | no |
 
 Uncapped works longer than 15 minutes, started before quest 9 was claimed:
 
@@ -254,32 +255,15 @@ Uncapped works longer than 15 minutes, started before quest 9 was claimed:
 | research refining | 2 min | 1 h | no |
 | heal the wounded | 1 h 30 | 26 min | no |
 
-### The soft transition (not in the game): its times
-
-| Building | → 6 | → 7 | → 8 | → 9 | → 10 (unchanged) |
-| --- | --- | --- | --- | --- | --- |
-| Lighthouse | 4 h 02 → **45 min** | 5 h 27 → **1 h 30** | 7 h 21 → **3 h** | 9 h 56 → **5 h** | 13 h 24 |
-| Refinery | 4 h 33 → **50 min** | 6 h 50 → **1 h 55** | 10 h 15 → **4 h 10** | 15 h 23 → **7 h 45** | 23 h 04 |
-| Fishery | 4 h 33 → **50 min** | 6 h 50 → **1 h 55** | 10 h 15 → **4 h 10** | 15 h 23 → **7 h 45** | 23 h 04 |
-| Lumberyard | 4 h 33 → **50 min** | 6 h 50 → **1 h 55** | 10 h 15 → **4 h 10** | 15 h 23 → **7 h 45** | 23 h 04 |
-| Shelters | 5 h 19 → **1 h** | 7 h 58 → **2 h 10** | 11 h 58 → **4 h 55** | 17 h 56 → **9 h** | 26 h 55 |
-| Barracks | 6 h 05 → **1 h 10** | 9 h 07 → **2 h 30** | 13 h 40 → **5 h 35** | 20 h 30 → **10 h 20** | 30 h 45 |
-| Harbor | 6 h 05 → **1 h 10** | 9 h 07 → **2 h 30** | 13 h 40 → **5 h 35** | 20 h 30 → **10 h 20** | 30 h 45 |
-| Observatory | 6 h 05 → **1 h 10** | 9 h 07 → **2 h 30** | 13 h 40 → **5 h 35** | 20 h 30 → **10 h 20** | 30 h 45 |
-| Infirmary | 5 h 19 → **1 h** | 7 h 58 → **2 h 10** | 11 h 58 → **4 h 55** | 17 h 56 → **9 h** | 26 h 55 |
-
-### Milestones: A + C, and A + C with the soft transition
+### Milestones: the rules
 
 Lighthouse 5 to 10: time after the founding. 15 and 20: the day, against A + C (the reference since 23 October) and against week 6.
 
 | Variant | Profile | Lighthouse 5 | 6 | 8 | 10 | 15 (vs A + C; vs week 6) | 20 (vs A + C; vs week 6) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| A + C (the rules) | Casual (3 sessions) | 13 h 15 | 28 h 02 | 2 d 12 h | 4 d 13 h | day 16.0 (0 %; -38.3 %) | day 42.6 (0 %; -32.5 %) |
-| A + C (the rules) | Regular (6 sessions) | 5 h 15 | 15 h 02 | 39 h 21 | 3 d 12 h | day 12.5 (0 %; -36.7 %) | day 38.0 (0 %; -27.8 %) |
-| A + C (the rules) | Dedicated (10 sessions) | 2 h 35 | 13 h 02 | 33 h 41 | 2 d 19 h | day 11.5 (0 %; -34.5 %) | day 37.0 (0 %; -18.2 %) |
-| A + C + soft transition | Casual (3 sessions) | 13 h 15 | 24 h 45 | 2 d 8 h | 4 d 13 h | day 16.0 (0 %; -38.3 %) | day 43.2 (+1.6 %; -31.4 %) |
-| A + C + soft transition | Regular (6 sessions) | 5 h 15 | 11 h 45 | 32 h | 3 d 3 h | day 12.6 (+1 %; -36.1 %) | day 38.3 (+1 %; -27.1 %) |
-| A + C + soft transition | Dedicated (10 sessions) | 2 h 35 | 9 h 45 | 26 h | 2 d 15 h | day 11.5 (0 %; -34.5 %) | day 37.0 (0 %; -18.2 %) |
+| A + C (the rules) | Casual (3 sessions) | 13 h 15 | 24 h 44 | 2 d 6 h | 4 d 3 h | day 15.5 (0 %; -40.5 %) | day 40.4 (0 %; -35.9 %) |
+| A + C (the rules) | Regular (6 sessions) | 5 h 15 | 11 h 44 | 30 h 46 | 2 d 11 h | day 9.0 (0 %; -54.1 %) | day 26.8 (0 %; -49.1 %) |
+| A + C (the rules) | Dedicated (10 sessions) | 2 h 35 | 9 h 44 | 24 h 46 | 2 d 5 h | day 8.4 (0 %; -51.9 %) | day 23.5 (0 %; -48 %) |
 
 ### The second day
 
@@ -287,11 +271,8 @@ The calendar day after the founding. Builders idle: hours with a builder free (t
 
 | Variant | Profile | Builders idle on day 2 (hours, both builders) | Upgrades finished on day 2 | Longest upgrade started on day 2 |
 | --- | --- | --- | --- | --- |
-| A + C (the rules) | Casual (3 sessions) | 40.9 | 3 | lighthouse 7, 5 h 27 |
-| A + C (the rules) | Regular (6 sessions) | 35.1 | 9 | lighthouse 8, 7 h 21 |
-| A + C (the rules) | Dedicated (10 sessions) | 34.9 | 12 | lighthouse 9, 9 h 56 |
-| A + C + soft transition | Casual (3 sessions) | 45.7 | 4 | lighthouse 7, 1 h 30 |
-| A + C + soft transition | Regular (6 sessions) | 43.4 | 7 | lighthouse 8, 3 h |
-| A + C + soft transition | Dedicated (10 sessions) | 39.8 | 8 | lighthouse 9, 5 h |
+| A + C (the rules) | Casual (3 sessions) | 46.0 | 4 | lighthouse 7, 1 h 12 |
+| A + C (the rules) | Regular (6 sessions) | 44.9 | 7 | lighthouse 8, 1 h 46 |
+| A + C (the rules) | Dedicated (10 sessions) | 43.7 | 7 | lighthouse 9, 2 h 28 |
 
 <!-- start:generated:end -->

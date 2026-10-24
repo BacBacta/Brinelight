@@ -1,44 +1,13 @@
 /**
  * The early start, A + C, measured (docs/tasks/early-start.md): the first hour, the quests 1 to 9 and what they wait
- * on, the second day, and the soft transition of levels 6 to 9 the owner asked to see before choosing. Pure: it reads
+ * on, and the second day. Pure: it reads
  * what runs of the balance's simulator gave (`start-run.ts` plays them) and writes the tables. It changes no rule.
  */
-import { BUILDING_IDS, BUILDINGS, DAY, HOUR, OBJECTIVES, upgradeTime, type BuildingId } from "@brinelight/shared";
-import type { Claim, Finished, OtherJob, Started, Variant } from "./early-rules.js";
+import { DAY, HOUR, OBJECTIVES } from "@brinelight/shared";
+import type { Claim, Finished, OtherJob, Started } from "./early-rules.js";
 import { duration } from "./early.js";
 
 const MIN = 60;
-
-/**
- * The soft transition (owner's request of 23 October, not in the game): the Lighthouse's levels 6 to 9 take at most
- * 45 min, 1 h 30, 3 h and 5 h; then the rules' times. Every other building gets the same share of its own time as the
- * Lighthouse at that level, to the nearest 5 minutes, so their order stays the same.
- */
-export const TRANSITION_LIGHTHOUSE: Readonly<Record<number, number>> = { 6: 45 * MIN, 7: 90 * MIN, 8: 3 * HOUR, 9: 5 * HOUR };
-
-/** The soft transition's longest time for an upgrade of `id` to `level`, or null outside levels 6 to 9. */
-export function transitionCap(id: BuildingId, level: number): number | null {
-  const lighthouse = TRANSITION_LIGHTHOUSE[level];
-  if (lighthouse === undefined) return null;
-  const share = upgradeTime(id, level - 1) / upgradeTime("lighthouse", level - 1);
-  return Math.max(5 * MIN, Math.round((lighthouse * share) / (5 * MIN)) * 5 * MIN);
-}
-
-export const TRANSITION: Variant = {
-  id: "transition",
-  name: "A + C + soft transition",
-  duration: (id, level, seconds) => Math.min(seconds, transitionCap(id, level) ?? seconds),
-};
-
-/** The soft transition, building by building: the rules' time → its cap, levels 6 to 9. */
-export function transitionTable(): string {
-  const rows = ["| Building | → 6 | → 7 | → 8 | → 9 | → 10 (unchanged) |", "| --- | --- | --- | --- | --- | --- |"];
-  for (const id of BUILDING_IDS) {
-    const cells = [6, 7, 8, 9].map((l) => `${duration(upgradeTime(id, l - 1))} → **${duration(transitionCap(id, l)!)}**`);
-    rows.push(`| ${BUILDINGS[id].name} | ${cells.join(" | ")} | ${duration(upgradeTime(id, 9))} |`);
-  }
-  return rows.join("\n");
-}
 
 /** How many upgrades finished in the first `minutes` after the founding. */
 export const finishedWithin = (finished: readonly Finished[], founded: number, minutes: number): number =>
