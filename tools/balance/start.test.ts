@@ -1,23 +1,11 @@
 /**
- * The early start's measures (docs/tasks/early-start.md): the soft transition's times, and what the quests waited on.
+ * The early start's measures (docs/tasks/early-start.md): what the quests waited on, and the second day.
  */
 import { describe, expect, it } from "vitest";
-import { HOUR, upgradeTime } from "@brinelight/shared";
-import { TRANSITION, finishedWithin, questPath, secondDay, transitionCap } from "./start.js";
+import { HOUR } from "@brinelight/shared";
+import { finishedWithin, questPath, secondDay } from "./start.js";
 
 const MIN = 60;
-
-describe("the soft transition (measured, not in the game)", () => {
-  it("caps the Lighthouse's levels 6 to 9 at 45 min, 1 h 30, 3 h and 5 h; the others by their share, to 5 minutes", () => {
-    expect([6, 7, 8, 9].map((l) => transitionCap("lighthouse", l))).toEqual([45 * MIN, 90 * MIN, 3 * HOUR, 5 * HOUR]);
-    expect([5, 10].map((l) => transitionCap("lighthouse", l))).toEqual([null, null]);
-    // The Barracks' level 6 takes 6 h 05 against the Lighthouse's 4 h 02: 45 min × 1.51, about 1 h 10.
-    expect(transitionCap("barracks", 6)).toBe(70 * MIN);
-    for (const l of [6, 7, 8, 9]) expect(transitionCap("refinery", l)! % (5 * MIN)).toBe(0);
-    expect(TRANSITION.duration!("lighthouse", 6, upgradeTime("lighthouse", 5))).toBe(45 * MIN);
-    expect(TRANSITION.duration!("lighthouse", 10, upgradeTime("lighthouse", 9))).toBe(upgradeTime("lighthouse", 9));
-  });
-});
 
 describe("the measures", () => {
   const founded = 8 * HOUR;
