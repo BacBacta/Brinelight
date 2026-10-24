@@ -9,8 +9,8 @@ const json = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 const SAVED = { clock: 1_792_310_400 };
 
 describe("the shapes", () => {
-  it("shape 10 is today's, shape 4 the oldest stored", () => {
-    expect(CITY_SHAPE).toBe(10);
+  it("shape 12 is today's, shape 4 the oldest stored", () => {
+    expect(CITY_SHAPE).toBe(12);
     expect(MIN_CITY_SHAPE).toBe(4);
   });
 
@@ -20,7 +20,7 @@ describe("the shapes", () => {
 });
 
 describe("from shape 4 to today's", () => {
-  it("adds exactly the fields of weeks 5, 7 and 8, and changes nothing else", () => {
+  it("adds exactly the fields of weeks 5, 7, 8 and 10, and changes nothing else", () => {
     const raw = week4();
     const city = migrateCity(raw, 4, SAVED)!;
     expect(city).not.toBeNull();
@@ -40,13 +40,14 @@ describe("from shape 4 to today's", () => {
     expect(city.daily).toEqual(startingDaily(SAVED.clock, "s1"));
     // And no wreck waiting to fill again.
     expect(city.world.refill).toEqual({});
-    // Week 8: the only server, s1.
+    // Week 8: the only server, s1. Week 10: every isle and shoal full.
     expect(city.server).toBe("s1");
+    expect(city.world.harvest).toEqual({});
     // Everything the city had is there, unchanged; the fleets only gain their veterans.
     const { training: _t, healing: _h, veterans: _v, shards: _s, clock: _c, mist: _m, leviathan: _l, objective: _o, progress: _p, daily: _d, server: _sv, fleets, world, ...rest } = city;
     const { fleets: rawFleets, world: rawWorld, ...rawRest } = raw;
     expect(rest).toEqual(rawRest);
-    expect(world).toEqual({ ...(rawWorld as object), refill: {} });
+    expect(world).toEqual({ ...(rawWorld as object), harvest: {}, refill: {} });
     expect(fleets).toEqual((rawFleets as object[]).map((f) => ({ ...f, veterans: emptyTroops() })));
   });
 
@@ -139,8 +140,8 @@ describe("from shape 4 to today's", () => {
 });
 
 describe("cities that cannot be read", () => {
-  it("a shape older than 4, newer than 10, or not a whole number", () => {
-    for (const shape of [0, 3, 11, 99, 4.5, NaN]) expect(migrateCity(week4(), shape, SAVED), String(shape)).toBeNull();
+  it("a shape older than 4, newer than 12, or not a whole number", () => {
+    for (const shape of [0, 3, 13, 99, 4.5, NaN]) expect(migrateCity(week4(), shape, SAVED), String(shape)).toBeNull();
   });
 
   it("a city of shape 4 with a field parseState refuses, once the missing fields are added", () => {

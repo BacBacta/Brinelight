@@ -80,6 +80,14 @@ export type Profile = {
    * camp at any odds it wins: a player who follows the quests, to measure their pace (docs/tasks/early-start.md).
    */
   questFirst?: boolean;
+  /** Never sends a fleet: no salvage, no camp, no hunt; the island alone (docs/studies/resources.md). */
+  noSea?: boolean;
+  /**
+   * Holds the Lighthouse's whole reserve: no spending at all while the Lighthouse waits for any resource. The balance's
+   * players before 23 October played so; since, they keep the reserve only on the resources a spending uses, and an
+   * upgrade paid in fish and oil goes ahead while the Lighthouse waits for wood (docs/studies/resources.md).
+   */
+  holdWholeReserve?: boolean;
 };
 
 const at = (hours: number, minutes = 0) => hours * HOUR + minutes * 60;
@@ -115,6 +123,12 @@ const CAPTAIN_IDS = Object.keys(CAPTAINS) as CaptainId[];
 const RESOURCES: readonly Resource[] = ["oil", "fish", "wood", "rope"];
 /** The wrecks, nearest first: the only sites that give resources besides the camps. */
 const WRECKS = SEA_SITES.filter((s) => s.kind === "wreck").sort((a, b) => distance(a) - distance(b));
+/**
+ * The sites a fleet gathers from, nearest first: the wrecks, and the Wooded Isles and Fish Shoals of the map, which the
+ * rules refuse today (a study can open them: docs/studies/resources.md).
+ */
+const GATHER = SEA_SITES.filter((s) => s.kind === "wreck" || s.kind === "isle" || s.kind === "fish").sort((a, b) => distance(a) - distance(b));
+const gathered = (kind: string): "oil" | "wood" | "fish" => (kind === "isle" ? "wood" : kind === "fish" ? "fish" : "oil");
 const CAMPS = SEA_SITES.filter((s) => s.kind === "camp");
 
 /** Why a builder stayed free at the end of a session. */
@@ -262,7 +276,7 @@ export function simulate(profile: Profile, days: number): Run {
   /** Applies an action; `keep`: only if what is left still covers the Lighthouse's next level. */
   const act = (action: Intent, label: string, keep = false): boolean => {
     const r = applyAction(s, { ...action, id: actionId(ids + 1) } as GameAction);
-    if (!r.ok || (keep && !covers(r.state.stock, reserve(s)))) return false;
+    if (!r.ok || (keep && !keeps(s.stock, r.state.stock, held()))) return false;
     ids++;
     const pearls = r.state.pearls - s.pearls;
     if (action.type === "claimObjective") (run.pearls.objectives += pearls), run.claims.objectives++;
@@ -278,6 +292,23 @@ export function simulate(profile: Profile, days: number): Run {
     if (action.type === "sail" && label.startsWith("salvage")) today.salvages++;
     else today.started.push(label);
     return true;
+  };
+
+  /** What a spending leaves still covers the Lighthouse's reserve, on what it spends (all of it: `holdWholeReserve`). */
+  const keeps = (before: Record<Resource, number>, after: Record<Resource, number>, held: Cost) =>
+    profile.holdWholeReserve ? covers(after, held) : RESOURCES.every((k) => after[k] >= before[k] || after[k] >= (held[k] ?? 0));
+
+  /**
+   * What every other spending leaves untouched: the Lighthouse's reserve, and for a player who follows the quests, also
+   * what the current quest's upgrade costs.
+   */
+  const held = (): Cost => {
+    const lighthouse = reserve(s);
+    const o = profile.questFirst ? OBJECTIVES[s.objective] : undefined;
+    const building = o && !o.done(s) && /^(Upgrade|Build|Bring)/.test(o.text) ? BUILDING_IDS.find((id) => o.text.includes(BUILDINGS[id].name)) : undefined;
+    if (!building || s.queue.some((j) => j.id === building)) return lighthouse;
+    const quest = upgradeCost(building, s.buildings[building]);
+    return Object.fromEntries(RESOURCES.map((k) => [k, Math.max(lighthouse[k] ?? 0, quest[k] ?? 0)]));
   };
 
   /** A player who follows the quests keeps one builder and one fleet for them, until the last quest is claimed. */
@@ -362,6 +393,7 @@ export function simulate(profile: Profile, days: number): Run {
   };
 
   const sea = () => {
+    if (profile.noSea) return false;
     let any = false;
     // The Leviathan first, when it is at sea and a fleet stays free for the wrecks (owner's decision, 18 October): all
     // the troops sail to it, and no camp is attacked meanwhile.
@@ -374,11 +406,12 @@ export function simulate(profile: Profile, days: number): Run {
       const level = s.world.camps[camp.id] ?? 1;
       if (campOdds(level) === "easy") any = act({ type: "sail", site: camp.id }, `attack ${camp.id} (level ${level})`) || any;
     }
-    // Every other fleet salvages the nearest wreck it can sail to (oil and rope), one fleet a wreck: an emptied wreck
-    // waits before it fills again.
+    // Every other fleet gathers from the nearest site it can sail to, one fleet a site: an emptied site waits before it
+    // fills again. The resource the storage holds the least of first; today only the wrecks (oil and rope) are open.
     for (;;) {
       if (fleetsMax(s.buildings.harbor) - s.fleets.length <= keepForQuests()) break;
-      const w = WRECKS.find((x) => !s.fleets.some((f) => f.site === x.id) && fleetCheck(s, x.id).ok);
+      const open = GATHER.filter((x) => !s.fleets.some((f) => f.site === x.id) && fleetCheck(s, x.id).ok);
+      const w = open.sort((a, b) => s.stock[gathered(a.kind)] - s.stock[gathered(b.kind)])[0];
       if (!w || !act({ type: "sail", site: w.id }, `salvage ${w.id}`)) break;
       any = true;
     }

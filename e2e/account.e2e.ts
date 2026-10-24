@@ -1239,9 +1239,9 @@ describe("the look", () => {
       await page.evaluate(() => document.fonts.ready);
       await page.locator('.nav button[data-v="sea"]').click();
       await page.waitForTimeout(1500);
-      for (const kind of ["camp", "wreck"] as const) {
+      for (const kind of ["camp", "wreck", "isle", "fish"] as const) {
         if (kind === "wreck") {
-          // Farther out: the wrecks are beyond the first view.
+          // Farther out: the wrecks (then the isles and the shoals) are beyond the first view.
           await page.mouse.move(size.width / 2, size.height / 2);
           await page.mouse.wheel(0, 1500);
           await page.waitForTimeout(1000);

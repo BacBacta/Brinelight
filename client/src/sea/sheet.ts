@@ -18,6 +18,7 @@ import {
   odds,
   pirateCamp,
   seaSite,
+  siteLeft,
   totalTroops,
   travelTime,
   campTrip,
@@ -124,7 +125,19 @@ export function wreckOilText(state: Pick<PlayerState, "world">, id: string, spee
   return oil > 0 || refill === undefined ? formatAmount(oil) : `Empty · fills again in ${formatTimeLeft(refill / speed)}`;
 }
 
-/** The sheet of a camp, a wreck or the Leviathan, and the reports. */
+/**
+ * What is left on an isle or a shoal (in full until a fleet harvests it); an emptied one, when it fills again (real
+ * seconds sped up by `speed`, as the trip).
+ */
+export function harvestText(state: Pick<PlayerState, "world" | "buildings">, id: string, speed: number): string {
+  const site = seaSite(id)!;
+  const left = siteLeft(state.world, site, state.buildings.lighthouse);
+  const refill = state.world.refill[id];
+  if (left > 0 || refill === undefined) return formatAmount(left);
+  return `${site.kind === "isle" ? "Bare · grows back" : "Empty · the fish come back"} in ${formatTimeLeft(refill / speed)}`;
+}
+
+/** The sheet of a camp, a wreck, an isle, a shoal or the Leviathan, and the reports. */
 export function createSeaSheet(root: HTMLElement, actions: { sail(site: string): void; closeReport(reportId: string): void }) {
   let site: string | null = null;
   let report: Report | null = null;
@@ -207,11 +220,18 @@ export function createSeaSheet(root: HTMLElement, actions: { sail(site: string):
       );
     }
     const hold = holdCapacity(state.buildings.harbor, state.techs, lead);
+    // A wreck gives oil (and rope), an isle its wood, a shoal its fish; a fleet needs no troops for any of them.
+    const what =
+      s.kind === "isle"
+        ? { text: "A wooded isle. Your fleet brings back its wood; it grows back once bare.", kv: kv("Wood", harvestText(state, id, speed)) }
+        : s.kind === "fish"
+          ? { text: "A fish shoal. Your fleet brings back its fish; they come back once it is empty.", kv: kv("Fish", harvestText(state, id, speed)) }
+          : { text: "A wreck to loot. Other fleets may come to fight over it.", kv: kv("Oil", wreckOilText(state, id, speed)) };
     return (
-      `<p class="p">A wreck to loot. Other fleets may come to fight over it.</p>` +
+      `<p class="p">${what.text}</p>` +
       busy +
       keyValues(
-        kv("Oil", wreckOilText(state, id, speed)) +
+        what.kv +
           kv("Your hold", `${formatAmount(hold)}${lead ? (HOLD_NOTE[lead.id] ?? "") : ""}`) +
           kv("Trip", `${trip} one way`),
       ) +

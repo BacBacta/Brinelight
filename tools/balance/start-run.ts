@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 register("./early-hooks.mjs", import.meta.url);
 const { FOUNDED, PROFILES, simulate } = await import("./simulate.js");
 const { study } = await import("./early-rules.js");
-const { DAY, HOUR } = await import("@brinelight/shared");
+const { DAY, HOUR, OBJECTIVES } = await import("@brinelight/shared");
 const { duration } = await import("./early.js");
 const start = await import("./start.js");
 type Profile = (typeof PROFILES)[number];
@@ -107,9 +107,9 @@ for (const r of results) {
 }
 
 const rules = results[0]!;
-/** A player's 18 quests, what they waited on, and the uncapped works over 15 minutes before quest 9. */
+/** A player's quests, what they waited on, and the uncapped works over 15 minutes before quest 9. */
 const questTables = (q: (typeof rules)["quests"]) => {
-  const path = start.questPath(q.claims, q.jobs, FOUNDED, 18);
+  const path = start.questPath(q.claims, q.jobs, FOUNDED, OBJECTIVES.length);
   const ninth = path.find((s) => s.objective === 8);
   const rows = ["| Quest | Claimed at | After the one before | Waited on an uncapped work |", "| --- | --- | --- | --- |"];
   for (const s of path) {

@@ -12,7 +12,7 @@ export type Sea = {
   closeSheet(): void;
 };
 
-/** The sea view: the map, your fleets, the sheets of camps, wrecks and the Leviathan, and the reports. */
+/** The sea view: the map, your fleets, the sheets of camps, wrecks, isles, shoals and the Leviathan, and the reports. */
 export function createSea(
   kit: Kit,
   models: Models,
@@ -56,7 +56,7 @@ export function createSea(
     if (moved || sheet.showsReport) return;
     const id = scene.pick(e.clientX, e.clientY, map.hits)[0]?.object.userData.site as string | undefined;
     if (!id) return sheet.close();
-    if (id.startsWith("camp-") || id.startsWith("wreck-") || id === LEVIATHAN_SITE) sheet.openSite(id, game.state(), game.speed());
+    if (id.startsWith("camp-") || id.startsWith("wreck-") || id.startsWith("isle-") || id.startsWith("fish-") || id === LEVIATHAN_SITE) sheet.openSite(id, game.state(), game.speed());
     else {
       sheet.close();
       game.soon();

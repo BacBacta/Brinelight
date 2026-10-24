@@ -8,7 +8,7 @@ import { OBJECTIVES, type Progress } from "../rules/objectives.js";
 import type { MistState } from "../rules/mist.js";
 import { RAFT_BUILDINGS, RAFT_BUILDING_MAX_COPIES, RAFT_BUILDING_MAX_LEVEL, RAFT_MAX_HP, RAFT_SLOTS, raftBuildingCopies, type RaftBuildingId, type Rafts, type YardJob } from "../rules/rafts.js";
 import { TECHS, techLevel, type ResearchJob, type TechId, type Techs } from "../rules/research.js";
-import { ATTACK_STAY, COLLECT_STAY, SEA_SITES, WRECK_REFILL, fleetsMax, hospitalCapacity, seaSite, type Fleet, type SeaWorld } from "../rules/sea.js";
+import { ATTACK_STAY, COLLECT_STAY, HARVEST_REFILL, SEA_SITES, WRECK_REFILL, fleetsMax, gathers, harvestAmount, hospitalCapacity, seaSite, type Fleet, type SeaWorld } from "../rules/sea.js";
 import { PROMOTE_BARRACKS, PROMOTE_COUNT, TRAIN_PER_LEVEL, type TrainingJob } from "../rules/training.js";
 import type { Troops } from "../rules/types.js";
 import { MAX_REPORTS } from "./state.js";
@@ -87,6 +87,10 @@ const isLeviathan = (l: unknown): l is LeviathanState =>
 const isProgress = (p: unknown): p is Progress =>
   isObj(p) && Object.keys(p).sort().join() === "camps,gathers,trained" && isWhole(p.camps) && isWhole(p.gathers) && isWhole(p.trained);
 
+/** Objectives claimed ahead of their turn: each one an objective, once. */
+const isClaimedAhead = (a: unknown): a is number[] =>
+  Array.isArray(a) && a.every((i) => isWhole(i, 0, OBJECTIVES.length - 1)) && new Set(a).size === a.length;
+
 /**
  * A day of daily tasks: a day no later than the city's clock, a whole count for each task, and the chests opened that
  * day, each once and none beyond the day's points.
@@ -122,7 +126,7 @@ export function cleanQueue(raw: readonly unknown[]): UpgradeJob[] {
 function isFleet(f: unknown): f is Fleet {
   if (!isObj(f) || typeof f.site !== "string") return false;
   const site = seaSite(f.site);
-  const kind = site?.kind === "camp" ? "attack" : site?.kind === "wreck" ? "collect" : site?.kind === "leviathan" ? "hunt" : null;
+  const kind = site?.kind === "camp" ? "attack" : site && gathers(site) ? "collect" : site?.kind === "leviathan" ? "hunt" : null;
   const lead = f.lead;
   const leadOk =
     lead === null ||
@@ -241,12 +245,13 @@ function parseHealing(raw: unknown, infirmary: number): HealingJob | null | unde
 }
 
 /**
- * Camp levels and wrecks: every camp and every wreck of the map, each with a valid value. An empty wreck has its wait
- * before it fills again, from more than 0 to WRECK_REFILL; no other wreck has one.
+ * Camp levels, wrecks, isles and shoals: every camp and every wreck of the map, each with a valid value; the isles and
+ * shoals a fleet has harvested, with what is left on them (at most what one holds at Lighthouse 30). An empty wreck,
+ * isle or shoal has its wait before it fills again, from more than 0 to WRECK_REFILL or HARVEST_REFILL; no other has one.
  */
 function parseWorld(raw: unknown): SeaWorld | null {
-  if (!isObj(raw) || !isObj(raw.camps) || !isObj(raw.wrecks) || !isObj(raw.refill)) return null;
-  const world: SeaWorld = { camps: {}, wrecks: {}, refill: {} };
+  if (!isObj(raw) || !isObj(raw.camps) || !isObj(raw.wrecks) || !isObj(raw.harvest) || !isObj(raw.refill)) return null;
+  const world: SeaWorld = { camps: {}, wrecks: {}, harvest: {}, refill: {} };
   const refills = raw.refill;
   for (const s of SEA_SITES) {
     if (s.kind === "camp") {
@@ -263,6 +268,16 @@ function parseWorld(raw: unknown): SeaWorld | null {
         if (!isNum(wait) || wait <= 0 || wait > WRECK_REFILL) return null;
         world.refill[s.id] = wait;
       }
+    }
+  }
+  for (const [id, v] of Object.entries(raw.harvest)) {
+    const s = seaSite(id);
+    if (!s || (s.kind !== "isle" && s.kind !== "fish") || !isNum(v) || v < 0 || v > harvestAmount(s, LIGHTHOUSE_MAX)) return null;
+    world.harvest[id] = v;
+    if (v === 0) {
+      const wait = refills[id];
+      if (!isNum(wait) || wait <= 0 || wait > HARVEST_REFILL) return null;
+      world.refill[id] = wait;
     }
   }
   if (Object.keys(refills).some((id) => !(id in world.refill))) return null;
@@ -351,6 +366,7 @@ export function parseState(raw: unknown): PlayerState | null {
       !isMist(s.mist) ||
       !isLeviathan(s.leviathan) ||
       !isWhole(s.objective, 0, OBJECTIVES.length) ||
+      !(s.claimedAhead === undefined || isClaimedAhead(s.claimedAhead)) ||
       !isProgress(s.progress) ||
       !isDaily(s.daily, s.clock, s.server)
     ) {
@@ -400,6 +416,7 @@ export function parseState(raw: unknown): PlayerState | null {
       mist: { ...(s.mist as MistState) },
       leviathan: { ...(s.leviathan as LeviathanState) },
       objective: s.objective,
+      ...(s.claimedAhead === undefined ? {} : { claimedAhead: [...(s.claimedAhead as number[])] }),
       progress: { ...(s.progress as Progress) },
       daily: { day: (s.daily as DailyState).day, counts: { ...(s.daily as DailyState).counts }, chests: [...(s.daily as DailyState).chests] },
     };

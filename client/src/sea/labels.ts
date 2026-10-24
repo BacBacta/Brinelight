@@ -1,4 +1,4 @@
-import { SEA_SITES, distance, fleetSight, leviathanUp, odds, pirateCamp } from "@brinelight/shared";
+import { SEA_SITES, distance, fleetSight, gathers, leviathanUp, odds, pirateCamp } from "@brinelight/shared";
 import type { SceneHandle } from "../scene/index.js";
 import type { PlayerState } from "../state/index.js";
 import { leviathanText } from "../ui/values.js";
@@ -15,8 +15,8 @@ export function siteLabel(id: string, state: PlayerState): string {
 }
 
 /**
- * Labels over the sea sites; pirate camps are colored by your odds; in the Mist, the camps and wrecks beyond your light
- * fade. The Leviathan's says how long its hunt has left, or when it rises.
+ * Labels over the sea sites; pirate camps are colored by your odds; in the Mist, the camps, wrecks, isles and shoals
+ * beyond your light fade. The Leviathan's says how long its hunt has left, or when it rises.
  */
 export function createSeaLabels(root: HTMLElement, scene: SceneHandle) {
   const layer = document.createElement("div");
@@ -34,7 +34,7 @@ export function createSeaLabels(root: HTMLElement, scene: SceneHandle) {
     update(state: PlayerState) {
       const { reach } = fleetSight(state);
       for (const { s, el } of els) {
-        el.classList.toggle("hid", (s.kind === "camp" || s.kind === "wreck") && distance(s) > reach);
+        el.classList.toggle("hid", (s.kind === "camp" || gathers(s)) && distance(s) > reach);
         const text = s.kind === "leviathan" ? leviathanText(state) : siteLabel(s.id, state);
         if (s.kind === "leviathan") el.classList.toggle("up", leviathanUp(state.clock, state.server, state.leviathan));
         if (el.textContent !== text) el.textContent = text;

@@ -5,7 +5,7 @@ import { advanceStock, netRates, storeCap, type Weather } from "../rules/economy
 import { CHESTS, canOpenChest, chestReward, countDaily, dailyOn, dayOf, startingDaily, untilReset, type Chest, type DailyTaskId } from "../rules/daily.js";
 import { advanceHealing, startHealing } from "../rules/healing.js";
 import { startingLeviathan } from "../rules/leviathan.js";
-import { OBJECTIVES, startingProgress, type Reward } from "../rules/objectives.js";
+import { OBJECTIVES, nextObjective, startingProgress, type Reward } from "../rules/objectives.js";
 import { MIST_HELD_PEARLS, isLit, mistAt, seaReach, startingMist } from "../rules/mist.js";
 import { DEFAULT_SERVER, type ServerId } from "../rules/servers.js";
 import { advanceYard, applyMistDamage, startInstall, startRaft, startRaftUpgrade, startRepair, type RaftBuildingId } from "../rules/rafts.js";
@@ -259,7 +259,7 @@ export function claimObjective(state: PlayerState): ActionResult {
   const o = OBJECTIVES[state.objective];
   if (!o) return { ok: false, reason: "You have finished every objective" };
   if (!o.done(state)) return { ok: false, reason: "Finish your current objective first" };
-  return { ok: true, state: { ...give(state, o.reward), objective: state.objective + 1 } };
+  return { ok: true, state: { ...give(state, o.reward), objective: nextObjective(state.objective, state.claimedAhead) } };
 }
 
 /** Opens one of today's chests with today's points, once a day. */
