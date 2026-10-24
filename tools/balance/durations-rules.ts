@@ -2,8 +2,7 @@
  * The rules of `shared/` as the durations study plays them (docs/studies/durations.md). The balance's simulator
  * (`simulate.ts`) imports this module in place of `@brinelight/shared` when, and only when, `durations-run.ts` runs it
  * (through `durations-hooks.mjs`): every rule is the shared one, word for word, except an upgrade's duration when the
- * study sets other times, the alliance's help when it is, and the other buildings' costs past level 15 when a cost option
- * is. Nothing is changed in `shared/`. Without any of them, a run is the balance's own (checked by `durations-run.ts`
+ * study sets other times, the alliance's help when it is, and the costs when a cost option is. Nothing is changed in `shared/`. Without any of them, a run is the balance's own (checked by `durations-run.ts`
  * before anything else).
  *
  * It also writes down every upgrade started, and, hour by hour, what the builders did.
@@ -31,10 +30,17 @@ export type Started = { clock: number; id: BuildingId; level: number; seconds: n
 export type Builders = { hours: number; away: number; nothing: number; waitBuild: number };
 
 /**
- * A cost option (studied, never in the game): every building but the Lighthouse, past level `from`, costs `growth`
- * times its level before (the rules: 1.6 a level, all the way to 30). The Lighthouse keeps its costs.
+ * A cost option (studied, never in the game): the cost to go from `level` to `level + 1` in its place, or null where the
+ * rules' cost stays. `docs/studies/durations.md` and `docs/studies/costs.md` use it past level 15.
  */
-export type Costs = { from: number; growth: number };
+export type Costs = (id: BuildingId, level: number) => Cost | null;
+
+/** The other buildings, past level `from`, cost `growth` times their level before (the rules: 1.6 a level to 30). */
+export const growthPast = (from: number, growth: number): Costs => (id, level) => {
+  if (id === "lighthouse" || level <= from) return null;
+  const at = rules.upgradeCost(id, from);
+  return rules.roundCost(Object.fromEntries(Object.entries(at).map(([k, v]) => [k, v * growth ** (level - from)])) as Cost);
+};
 
 /** Other build times than the rules': the time to reach `level`, in real seconds. */
 export type Times = (id: BuildingId, level: number) => number;
@@ -54,10 +60,7 @@ export function studyTime(id: BuildingId, level: number, rulesSeconds: number): 
 
 /** The cost to go from `level` to `level + 1` in the study: the rules', or the cost option's. */
 export function upgradeCost(id: BuildingId, level: number): Cost {
-  const c = study.costs;
-  if (!c || id === "lighthouse" || level <= c.from) return rules.upgradeCost(id, level);
-  const at = rules.upgradeCost(id, c.from);
-  return rules.roundCost(Object.fromEntries(Object.entries(at).map(([k, v]) => [k, v * c.growth ** (level - c.from)])) as Cost);
+  return study.costs?.(id, level) ?? rules.upgradeCost(id, level);
 }
 
 export function applyAction(state: PlayerState, action: GameAction): ActionResult {
