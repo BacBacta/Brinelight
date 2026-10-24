@@ -1,14 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { BUILDING_IDS, HOUR, QUICK_LEVELS, upgradeTime } from "@brinelight/shared";
-import { BANDS, CURVES, GROUPS, LEVELS, betweenSessions, curveTime, nextSession, todayTime, wholeCity } from "./durations.js";
+import { BANDS, CURVES, GROUPS, LEVELS, beforeTime, betweenSessions, curveTime, nextSession, wholeCity } from "./durations.js";
 
 const MIN = 60;
 const DAY = 24 * HOUR;
 
-describe("today's times", () => {
-  it("are the rules' own, level by level, and the buildings of a group share them", () => {
-    for (const id of BUILDING_IDS) for (const level of LEVELS) expect(todayTime(id, level)).toBe(upgradeTime(id, level - 1));
-    for (const g of GROUPS) for (const id of g.ids) for (const level of LEVELS) expect(todayTime(id, level)).toBe(todayTime(g.ids[0]!, level));
+describe("the times before 24 October, frozen for the study", () => {
+  it("are the rules' of then: 4 h 02 for the Lighthouse's 6, 6 h 05 for the Barracks', 43 days for the Lighthouse's 30", () => {
+    expect([beforeTime("lighthouse", 6), beforeTime("refinery", 6), beforeTime("shelters", 6), beforeTime("barracks", 6), beforeTime("lighthouse", 10)]).toEqual([14528, 16403, 19136, 21870, 48256]);
+    expect(beforeTime("lighthouse", 30) / DAY).toBeCloseTo(43.4, 1);
+    for (const id of BUILDING_IDS) for (let level = 1; level <= 5; level++) expect(beforeTime(id, level)).toBe(QUICK_LEVELS[level]);
+    for (const g of GROUPS) for (const id of g.ids) for (const level of LEVELS) expect(beforeTime(id, level)).toBe(beforeTime(g.ids[0]!, level));
+  });
+});
+
+describe("the slower curve, chosen by the owner on 24 October", () => {
+  it("is the rules' own, level by level, for every building", () => {
+    const slow = CURVES.find((c) => c.id === "slow")!;
+    for (const id of BUILDING_IDS) for (const level of LEVELS) expect(curveTime(slow, id, level), `${id} ${level}`).toBe(upgradeTime(id, level - 1));
   });
 });
 

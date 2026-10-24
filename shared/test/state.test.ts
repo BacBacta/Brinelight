@@ -140,15 +140,15 @@ describe("queue read from a save", () => {
 describe("long time away", () => {
   const DAYS_3 = 3 * 24 * HOUR;
 
-  it("a 20 h upgrade started before 3 days away is finished", () => {
-    // Barracks 8 to 9 takes 20.5 h, so the Lighthouse must be above 8.
-    const cap = storeCap(10);
-    const city = { ...newPlayerState(), buildings: { ...STARTING_BUILDINGS, lighthouse: 10, barracks: 8 }, stock: { oil: cap, fish: cap, wood: cap, rope: 50 } };
-    expect(upgradeTime("barracks", 8)).toBeGreaterThan(20 * HOUR);
-    const r = upgrade(city, "barracks");
+  it("a 34 h upgrade started before 3 days away is finished", () => {
+    // The Lighthouse 20 to 21 takes 34 h 10.
+    const cap = storeCap(20);
+    const city = { ...newPlayerState(), buildings: { ...STARTING_BUILDINGS, lighthouse: 20 }, stock: { oil: cap, fish: cap, wood: cap, rope: 50 } };
+    expect(upgradeTime("lighthouse", 20)).toBeGreaterThan(34 * HOUR);
+    const r = upgrade(city, "lighthouse");
     if (!r.ok) throw new Error(r.reason);
     const after = catchUp(r.state, DAYS_3);
-    expect(after.buildings.barracks).toBe(9);
+    expect(after.buildings.lighthouse).toBe(21);
     expect(after.queue).toEqual([]);
   });
 

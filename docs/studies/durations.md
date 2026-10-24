@@ -1,5 +1,7 @@
 # The build times, levels 6 to 30 (study)
 
+**The owner chose the slower curve on 24 October; it is in the game since (`BUILD_MINUTES` in `shared/src/rules/buildings.ts`, `docs/decisions.md`).** The study is kept as it was measured: "today" below means the times before 24 October, frozen in `tools/balance/durations.ts` (`beforeTime`) so that `durations-run.ts` still plays them; the slower curve is now the rules' own.
+
 A study only (owner's request, 24 October). It changes no value. It measures today's build times level by level, then two curves for levels 6 to 30 built on the player's day, played by the balance's simulator with E in place, and the alliance's help. **Nothing goes into the game without the owner's agreement, value by value.**
 
 The owner's starting point: from 15 minutes at level 5, a build jumps to 4 to 6 hours at level 6, and the gap keeps growing until years at level 30. With E, wood no longer holds the owner's city back (9,900 in stock); the builds do. The reason the "soft transition" was set aside (day 2 short of wood, not of time) no longer holds.
@@ -7,10 +9,10 @@ The owner's starting point: from 15 minutes at level 5, a build jumps to 4 to 6 
 ## How it is measured
 
 - **The players:** the balance's three (casual: 3 sessions a day at 8:00, 13:00 and 21:00; regular: 6; dedicated: 10), with today's rules (E since 23 October). They keep the Lighthouse's reserve only on what a spending uses. They are played for **two years**.
-- **The curves are played in place of the rules by the study alone.**
-  - `tools/balance/durations-rules.ts` replaces an upgrade's time when it starts. It also applies the cost option and the alliance's help when the study asks for them, and writes down what the builders do, hour by hour.
+- **The other times are played in place of the rules by the study alone.**
+  - `tools/balance/durations-rules.ts` replaces an upgrade's time when it starts (the times before 24 October, or the faster curve). It also applies the cost option and the alliance's help when the study asks for them, and writes down what the builders do, hour by hour.
   - `tools/balance/durations-hooks.mjs` gives it to the simulator in place of `@brinelight/shared`. Nothing in `shared/` changes.
-  - Without a curve, the runs are the balance's own: the study checks they give the milestones of `docs/balance.md` exactly, or it stops.
+  - With the rules' own times (the slower curve since 24 October), the runs are the balance's own: the study checks they give the milestones of `docs/balance.md` exactly, or it stops.
 - **What the builders do**, by the Lighthouse's level at the time, in shares of the two builders' time:
   - **at work**;
   - **free, the player away**: something could start (paid in full, the Lighthouse's reserve kept), but the player is not there until the next session;
@@ -39,7 +41,7 @@ The owner's starting point: from 15 minutes at level 5, a build jumps to 4 to 6 
    - From Lighthouse 11 on, a builder is free with nothing to start **68 to 90 % of the time**. 96 to 98 % of sessions end with a builder free, 75 to 88 % of them for lack of wood.
    - From Lighthouse 11 on, everything waits for a build less than 10 % of the time.
    - The wall moves from the builds to the costs: the other buildings cost ×1.6 a level, while a producer adds the same production at each level.
-4. **A wall hidden today: the other buildings can never pass level 21 or 22** (table 3, storage).
+4. **A wall hidden before: the other buildings can never pass level 21 or 22** (table 3, storage).
    - Their level 22 or 23 costs more than the storage holds at Lighthouse 30 with every Sealed Warehouses (2.6 million): 2.7 to 3.4 million wood.
    - Today the years of build hide it. With the curves, the regular player has the Lighthouse at 30 on day 185, then the others stop at 21 to 23 for good.
    - "The whole city at 30" takes 134 days of builds with two builders on the slower curve, and never happens with today's costs.
@@ -114,9 +116,9 @@ If the owner agrees, value by value:
 
 <!-- durations:generated:start (npx tsx tools/balance/durations-run.ts) -->
 
-### 1. Today's build times
+### 1. The build times before 24 October
 
-The time to reach each level from the one before (the rules' `upgradeTime`), and its ratio to the level before. The buildings of a column share their times.
+The time to reach each level from the one before (the rules' `upgradeTime` until 24 October), and its ratio to the level before. The buildings of a column share their times.
 
 | Level | Lighthouse | ratio | Refinery, Fishery, Lumberyard | ratio | Shelters, Infirmary | ratio | Barracks, Harbor, Observatory | ratio |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -227,18 +229,18 @@ The time to reach each level from the one before (the rules' `upgradeTime`), and
 
 | Curve | Group | Levels 6 to 10 | Levels 11 to 20 | Levels 21 to 30 |
 | --- | --- | --- | --- | --- |
-| Today | Lighthouse | 4 h 02 to 13 h 24 | 18 h 06 to 7 d | 8 d 9 h to 43 d 9 h |
-| Today | Refinery, Fishery, Lumberyard | 4 h 33 to 23 h 04 | 34 h 36 to 55 d 10 h | 83 d 3 h to 8.8 y |
-| Today | Shelters, Infirmary | 5 h 19 to 26 h 55 | 40 h 22 to 64 d 15 h | 96 d 23 h to 10.2 y |
-| Today | Barracks, Harbor, Observatory | 6 h 05 to 30 h 45 | 46 h 08 to 73 d 21 h | 110 d 20 h to 11.7 y |
+| Before 24 October | Lighthouse | 4 h 02 to 13 h 24 | 18 h 06 to 7 d | 8 d 9 h to 43 d 9 h |
+| Before 24 October | Refinery, Fishery, Lumberyard | 4 h 33 to 23 h 04 | 34 h 36 to 55 d 10 h | 83 d 3 h to 8.8 y |
+| Before 24 October | Shelters, Infirmary | 5 h 19 to 26 h 55 | 40 h 22 to 64 d 15 h | 96 d 23 h to 10.2 y |
+| Before 24 October | Barracks, Harbor, Observatory | 6 h 05 to 30 h 45 | 46 h 08 to 73 d 21 h | 110 d 20 h to 11.7 y |
 | Faster | Lighthouse | 37 min to 2 h 25 | 3 h 06 to 17 h 49 | 20 h 57 to 3 d 4 h |
 | Faster | Refinery, Fishery, Lumberyard | 34 min to 2 h | 2 h 31 to 12 h 34 | 14 h 34 to 2 d |
 | Faster | Shelters, Infirmary | 35 min to 2 h 08 | 2 h 42 to 14 h 05 | 16 h 25 to 2 d 8 h |
 | Faster | Barracks, Harbor, Observatory | 36 min to 2 h 14 | 2 h 51 to 15 h 34 | 18 h 12 to 2 d 16 h |
-| Slower | Lighthouse | 44 min to 3 h 20 | 4 h 23 to 28 h 46 | 34 h 10 to 5 d 14 h |
-| Slower | Refinery, Fishery, Lumberyard | 40 min to 2 h 45 | 3 h 33 to 20 h 11 | 23 h 39 to 3 d 12 h |
-| Slower | Shelters, Infirmary | 41 min to 2 h 56 | 3 h 48 to 22 h 40 | 26 h 41 to 4 d 2 h |
-| Slower | Barracks, Harbor, Observatory | 42 min to 3 h 06 | 4 h 02 to 25 h 04 | 29 h 37 to 4 d 16 h |
+| Slower (the rules since 24 October) | Lighthouse | 44 min to 3 h 20 | 4 h 23 to 28 h 46 | 34 h 10 to 5 d 14 h |
+| Slower (the rules since 24 October) | Refinery, Fishery, Lumberyard | 40 min to 2 h 45 | 3 h 33 to 20 h 11 | 23 h 39 to 3 d 12 h |
+| Slower (the rules since 24 October) | Shelters, Infirmary | 41 min to 2 h 56 | 3 h 48 to 22 h 40 | 26 h 41 to 4 d 2 h |
+| Slower (the rules since 24 October) | Barracks, Harbor, Observatory | 42 min to 3 h 06 | 4 h 02 to 25 h 04 | 29 h 37 to 4 d 16 h |
 
 ### 3. What the players get (E in place, the balance's players, two years)
 
@@ -246,23 +248,23 @@ The time to reach each level from the one before (the rules' `upgradeTime`), and
 
 | Durations | Player | Lighthouse 5 | Lighthouse 10 | Lighthouse 15 | Lighthouse 20 | Lighthouse 25 | Lighthouse 30 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Today | Casual (3 sessions) | day 0.6 | day 4.6 | day 16.0 | day 42.6 | day 117.4 | day 299.4 (9.8 months) |
-| Today | Regular (6 sessions) | day 0.2 | day 3.5 | day 12.5 | day 38.0 | day 101.4 | day 264.6 (8.7 months) |
-| Today | Dedicated (10 sessions) | day 0.1 | day 2.8 | day 11.5 | day 37.0 | day 100.0 | day 256.0 (8.4 months) |
+| Before 24 October | Casual (3 sessions) | day 0.6 | day 4.6 | day 16.0 | day 42.6 | day 117.4 | day 299.4 (9.8 months) |
+| Before 24 October | Regular (6 sessions) | day 0.2 | day 3.5 | day 12.5 | day 38.0 | day 101.4 | day 264.6 (8.7 months) |
+| Before 24 October | Dedicated (10 sessions) | day 0.1 | day 2.8 | day 11.5 | day 37.0 | day 100.0 | day 256.0 (8.4 months) |
 | Faster | Casual (3 sessions) | day 0.6 | day 4.1 | day 14.8 | day 43.3 | day 109.6 | day 261.2 (8.6 months) |
 | Faster | Regular (6 sessions) | day 0.2 | day 2.4 | day 9.4 | day 26.8 | day 70.1 | day 175.2 (5.8 months) |
 | Faster | Dedicated (10 sessions) | day 0.1 | day 2.1 | day 8.4 | day 23.2 | day 63.2 | day 159.2 (5.2 months) |
-| Slower | Casual (3 sessions) | day 0.6 | day 4.1 | day 15.5 | day 40.4 | day 100.7 | day 248.6 (8.2 months) |
-| Slower | Regular (6 sessions) | day 0.2 | day 2.5 | day 9.0 | day 26.8 | day 72.8 | day 184.7 (6.1 months) |
-| Slower | Dedicated (10 sessions) | day 0.1 | day 2.2 | day 8.4 | day 23.5 | day 65.1 | day 165.6 (5.4 months) |
+| Slower (the rules since 24 October) | Casual (3 sessions) | day 0.6 | day 4.1 | day 15.5 | day 40.4 | day 100.7 | day 248.6 (8.2 months) |
+| Slower (the rules since 24 October) | Regular (6 sessions) | day 0.2 | day 2.5 | day 9.0 | day 26.8 | day 72.8 | day 184.7 (6.1 months) |
+| Slower (the rules since 24 October) | Dedicated (10 sessions) | day 0.1 | day 2.2 | day 8.4 | day 23.5 | day 65.1 | day 165.6 (5.4 months) |
 
 #### The regular player's last levels: days from one Lighthouse level to the next
 
 | Durations | 20 → 21 | 21 → 22 | 22 → 23 | 23 → 24 | 24 → 25 | 25 → 26 | 26 → 27 | 27 → 28 | 28 → 29 | 29 → 30 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Today | 8.5 d | 10.2 d | 12.4 d | 14.5 d | 17.8 d | 21.0 d | 25.2 d | 37.1 d | 36.4 d | 43.5 d |
+| Before 24 October | 8.5 d | 10.2 d | 12.4 d | 14.5 d | 17.8 d | 21.0 d | 25.2 d | 37.1 d | 36.4 d | 43.5 d |
 | Faster | 5.6 d | 6.8 d | 8.3 d | 10.3 d | 12.2 d | 13.1 d | 17.0 d | 20.4 d | 24.5 d | 30.0 d |
-| Slower | 6.1 d | 7.1 d | 8.9 d | 10.3 d | 13.5 d | 15.3 d | 18.6 d | 22.1 d | 25.1 d | 30.7 d |
+| Slower (the rules since 24 October) | 6.1 d | 7.1 d | 8.9 d | 10.3 d | 13.5 d | 15.3 d | 18.6 d | 22.1 d | 25.1 d | 30.7 d |
 
 #### The builders, by the Lighthouse's level
 
@@ -270,21 +272,21 @@ Shares of the builders' time (two builders). *The player away*: a builder free w
 
 | Durations | Player | Lighthouse | Time there | Builders at work | A builder free, the player away | A builder free, nothing to start | Both at work, something else could start |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Today | Casual (3 sessions) | Lighthouse 2 to 5 | 29 h | 21 % | 62 % | 17 % | 14 % |
-| Today | Casual (3 sessions) | 6 to 10 | 5 d 3 h | 30 % | 57 % | 12 % | 10 % |
-| Today | Casual (3 sessions) | 11 to 20 | 45 d 2 h | 83 % | 15 % | 2 % | 71 % |
-| Today | Casual (3 sessions) | 21 to 29 | 248 d | 94 % | 2 % | 4 % | 82 % |
-| Today | Casual (3 sessions) | 30, after it | 1.2 y | 100 % | 0 % | 0 % | 99 % |
-| Today | Regular (6 sessions) | Lighthouse 2 to 5 | 16 h | 41 % | 34 % | 25 % | 25 % |
-| Today | Regular (6 sessions) | 6 to 10 | 4 d 2 h | 41 % | 39 % | 19 % | 20 % |
-| Today | Regular (6 sessions) | 11 to 20 | 41 d 18 h | 92 % | 8 % | 1 % | 84 % |
-| Today | Regular (6 sessions) | 21 to 29 | 218 d 3 h | 99 % | 1 % | 0 % | 98 % |
-| Today | Regular (6 sessions) | 30, after it | 1.3 y | 100 % | 0 % | 0 % | 99 % |
-| Today | Dedicated (10 sessions) | Lighthouse 2 to 5 | 14 h | 39 % | 37 % | 24 % | 26 % |
-| Today | Dedicated (10 sessions) | 6 to 10 | 3 d 7 h | 52 % | 34 % | 13 % | 22 % |
-| Today | Dedicated (10 sessions) | 11 to 20 | 41 d 13 h | 94 % | 6 % | 0 % | 88 % |
-| Today | Dedicated (10 sessions) | 21 to 29 | 210 d 13 h | 99 % | 1 % | 0 % | 98 % |
-| Today | Dedicated (10 sessions) | 30, after it | 1.3 y | 100 % | 0 % | 0 % | 99 % |
+| Before 24 October | Casual (3 sessions) | Lighthouse 2 to 5 | 29 h | 21 % | 62 % | 17 % | 14 % |
+| Before 24 October | Casual (3 sessions) | 6 to 10 | 5 d 3 h | 30 % | 57 % | 12 % | 10 % |
+| Before 24 October | Casual (3 sessions) | 11 to 20 | 45 d 2 h | 83 % | 15 % | 2 % | 71 % |
+| Before 24 October | Casual (3 sessions) | 21 to 29 | 248 d | 94 % | 2 % | 4 % | 82 % |
+| Before 24 October | Casual (3 sessions) | 30, after it | 1.2 y | 100 % | 0 % | 0 % | 99 % |
+| Before 24 October | Regular (6 sessions) | Lighthouse 2 to 5 | 16 h | 41 % | 34 % | 25 % | 25 % |
+| Before 24 October | Regular (6 sessions) | 6 to 10 | 4 d 2 h | 41 % | 39 % | 19 % | 20 % |
+| Before 24 October | Regular (6 sessions) | 11 to 20 | 41 d 18 h | 92 % | 8 % | 1 % | 84 % |
+| Before 24 October | Regular (6 sessions) | 21 to 29 | 218 d 3 h | 99 % | 1 % | 0 % | 98 % |
+| Before 24 October | Regular (6 sessions) | 30, after it | 1.3 y | 100 % | 0 % | 0 % | 99 % |
+| Before 24 October | Dedicated (10 sessions) | Lighthouse 2 to 5 | 14 h | 39 % | 37 % | 24 % | 26 % |
+| Before 24 October | Dedicated (10 sessions) | 6 to 10 | 3 d 7 h | 52 % | 34 % | 13 % | 22 % |
+| Before 24 October | Dedicated (10 sessions) | 11 to 20 | 41 d 13 h | 94 % | 6 % | 0 % | 88 % |
+| Before 24 October | Dedicated (10 sessions) | 21 to 29 | 210 d 13 h | 99 % | 1 % | 0 % | 98 % |
+| Before 24 October | Dedicated (10 sessions) | 30, after it | 1.3 y | 100 % | 0 % | 0 % | 99 % |
 | Faster | Casual (3 sessions) | Lighthouse 2 to 5 | 25 h | 16 % | 64 % | 20 % | 16 % |
 | Faster | Casual (3 sessions) | 6 to 10 | 4 d 3 h | 11 % | 48 % | 41 % | 5 % |
 | Faster | Casual (3 sessions) | 11 to 20 | 46 d 17 h | 7 % | 16 % | 77 % | 2 % |
@@ -300,57 +302,57 @@ Shares of the builders' time (two builders). *The player away*: a builder free w
 | Faster | Dedicated (10 sessions) | 11 to 20 | 25 d 16 h | 14 % | 7 % | 79 % | 5 % |
 | Faster | Dedicated (10 sessions) | 21 to 29 | 130 d 23 h | 10 % | 2 % | 89 % | 0 % |
 | Faster | Dedicated (10 sessions) | 30, after it | 1.6 y | 2 % | 0 % | 97 % | 0 % |
-| Slower | Casual (3 sessions) | Lighthouse 2 to 5 | 25 h | 16 % | 64 % | 20 % | 16 % |
-| Slower | Casual (3 sessions) | 6 to 10 | 4 d 4 h | 13 % | 50 % | 38 % | 5 % |
-| Slower | Casual (3 sessions) | 11 to 20 | 43 d 19 h | 12 % | 20 % | 68 % | 3 % |
-| Slower | Casual (3 sessions) | 21 to 29 | 199 d 15 h | 11 % | 4 % | 86 % | 1 % |
-| Slower | Casual (3 sessions) | 30, after it | 1.3 y | 4 % | 2 % | 94 % | 0 % |
-| Slower | Regular (6 sessions) | Lighthouse 2 to 5 | 12 h | 33 % | 33 % | 33 % | 25 % |
-| Slower | Regular (6 sessions) | 6 to 10 | 3 d 1 h | 22 % | 39 % | 39 % | 12 % |
-| Slower | Regular (6 sessions) | 11 to 20 | 29 d 9 h | 19 % | 11 % | 70 % | 8 % |
-| Slower | Regular (6 sessions) | 21 to 29 | 151 d 19 h | 15 % | 2 % | 82 % | 0 % |
-| Slower | Regular (6 sessions) | 30, after it | 1.5 y | 4 % | 1 % | 96 % | 0 % |
-| Slower | Dedicated (10 sessions) | Lighthouse 2 to 5 | 10 h | 30 % | 37 % | 33 % | 27 % |
-| Slower | Dedicated (10 sessions) | 6 to 10 | 2 d 18 h | 19 % | 40 % | 41 % | 12 % |
-| Slower | Dedicated (10 sessions) | 11 to 20 | 25 d 6 h | 24 % | 9 % | 68 % | 9 % |
-| Slower | Dedicated (10 sessions) | 21 to 29 | 137 d 4 h | 16 % | 2 % | 82 % | 0 % |
-| Slower | Dedicated (10 sessions) | 30, after it | 1.5 y | 4 % | 0 % | 96 % | 0 % |
+| Slower (the rules since 24 October) | Casual (3 sessions) | Lighthouse 2 to 5 | 25 h | 16 % | 64 % | 20 % | 16 % |
+| Slower (the rules since 24 October) | Casual (3 sessions) | 6 to 10 | 4 d 4 h | 13 % | 50 % | 38 % | 5 % |
+| Slower (the rules since 24 October) | Casual (3 sessions) | 11 to 20 | 43 d 19 h | 12 % | 20 % | 68 % | 3 % |
+| Slower (the rules since 24 October) | Casual (3 sessions) | 21 to 29 | 199 d 15 h | 11 % | 4 % | 86 % | 1 % |
+| Slower (the rules since 24 October) | Casual (3 sessions) | 30, after it | 1.3 y | 4 % | 2 % | 94 % | 0 % |
+| Slower (the rules since 24 October) | Regular (6 sessions) | Lighthouse 2 to 5 | 12 h | 33 % | 33 % | 33 % | 25 % |
+| Slower (the rules since 24 October) | Regular (6 sessions) | 6 to 10 | 3 d 1 h | 22 % | 39 % | 39 % | 12 % |
+| Slower (the rules since 24 October) | Regular (6 sessions) | 11 to 20 | 29 d 9 h | 19 % | 11 % | 70 % | 8 % |
+| Slower (the rules since 24 October) | Regular (6 sessions) | 21 to 29 | 151 d 19 h | 15 % | 2 % | 82 % | 0 % |
+| Slower (the rules since 24 October) | Regular (6 sessions) | 30, after it | 1.5 y | 4 % | 1 % | 96 % | 0 % |
+| Slower (the rules since 24 October) | Dedicated (10 sessions) | Lighthouse 2 to 5 | 10 h | 30 % | 37 % | 33 % | 27 % |
+| Slower (the rules since 24 October) | Dedicated (10 sessions) | 6 to 10 | 2 d 18 h | 19 % | 40 % | 41 % | 12 % |
+| Slower (the rules since 24 October) | Dedicated (10 sessions) | 11 to 20 | 25 d 6 h | 24 % | 9 % | 68 % | 9 % |
+| Slower (the rules since 24 October) | Dedicated (10 sessions) | 21 to 29 | 137 d 4 h | 16 % | 2 % | 82 % | 0 % |
+| Slower (the rules since 24 October) | Dedicated (10 sessions) | 30, after it | 1.5 y | 4 % | 0 % | 96 % | 0 % |
 
 #### The casual player (3 sessions: 8:00, 13:00, 21:00): builds that end before the next session
 
 | Durations | Levels | Builds started (two years) | Ended before the next session | The builder then waited, on average |
 | --- | --- | --- | --- | --- |
-| Today | 6 to 10 | 45 | 14 (31 %) | 2 h 41 |
-| Today | 11 to 20 | 85 | 0 (0 %) | 0 min |
-| Today | 21 to 30 | 10 | 0 (0 %) | 0 min |
+| Before 24 October | 6 to 10 | 45 | 14 (31 %) | 2 h 41 |
+| Before 24 October | 11 to 20 | 85 | 0 (0 %) | 0 min |
+| Before 24 October | 21 to 30 | 10 | 0 (0 %) | 0 min |
 | Faster | 6 to 10 | 45 | 45 (100 %) | 6 h 06 |
 | Faster | 11 to 20 | 90 | 45 (50 %) | 3 h 35 |
 | Faster | 21 to 30 | 17 | 0 (0 %) | 0 min |
-| Slower | 6 to 10 | 45 | 45 (100 %) | 6 h 08 |
-| Slower | 11 to 20 | 90 | 30 (33 %) | 3 h 15 |
-| Slower | 21 to 30 | 18 | 0 (0 %) | 0 min |
+| Slower (the rules since 24 October) | 6 to 10 | 45 | 45 (100 %) | 6 h 08 |
+| Slower (the rules since 24 October) | 11 to 20 | 90 | 30 (33 %) | 3 h 15 |
+| Slower (the rules since 24 October) | 21 to 30 | 18 | 0 (0 %) | 0 min |
 
 #### The whole city at level 30
 
 | Durations | Every level of every building, added up | With two builders, at best | The regular player at day 730 | Whole city at 30 |
 | --- | --- | --- | --- | --- |
-| Today | 245.8 y | 122.9 y | Lighthouse 30, the others 19 to 20 | never in two years |
+| Before 24 October | 245.8 y | 122.9 y | Lighthouse 30, the others 19 to 20 | never in two years |
 | Faster | 160 d 2 h | 80 d 1 h | Lighthouse 30, the others 21 to 23 | never in two years |
-| Slower | 267 d 14 h | 133 d 19 h | Lighthouse 30, the others 21 to 23 | never in two years |
+| Slower (the rules since 24 October) | 267 d 14 h | 133 d 19 h | Lighthouse 30, the others 21 to 23 | never in two years |
 
 #### Where the resources hold the builders back
 
 | Durations | Player | Sessions ended with a builder free (two years) | Short of wood | Short of oil | Short of fish | Every building at its cap |
 | --- | --- | --- | --- | --- | --- | --- |
-| Today | Casual (3 sessions) | 65 of 2190 (3 %) | 38 | 27 | 0 | 0 |
-| Today | Regular (6 sessions) | 4 of 4380 (0 %) | 2 | 2 | 0 | 0 |
-| Today | Dedicated (10 sessions) | 10 of 7300 (0 %) | 3 | 7 | 0 | 0 |
+| Before 24 October | Casual (3 sessions) | 65 of 2190 (3 %) | 38 | 27 | 0 | 0 |
+| Before 24 October | Regular (6 sessions) | 4 of 4380 (0 %) | 2 | 2 | 0 | 0 |
+| Before 24 October | Dedicated (10 sessions) | 10 of 7300 (0 %) | 3 | 7 | 0 | 0 |
 | Faster | Casual (3 sessions) | 2115 of 2190 (97 %) | 1583 | 479 | 53 | 0 |
 | Faster | Regular (6 sessions) | 4274 of 4380 (98 %) | 3259 | 914 | 101 | 0 |
 | Faster | Dedicated (10 sessions) | 7148 of 7300 (98 %) | 6280 | 816 | 52 | 0 |
-| Slower | Casual (3 sessions) | 2095 of 2190 (96 %) | 1726 | 302 | 67 | 0 |
-| Slower | Regular (6 sessions) | 4225 of 4380 (96 %) | 3236 | 937 | 52 | 0 |
-| Slower | Dedicated (10 sessions) | 7058 of 7300 (97 %) | 6195 | 813 | 50 | 0 |
+| Slower (the rules since 24 October) | Casual (3 sessions) | 2095 of 2190 (96 %) | 1726 | 302 | 67 | 0 |
+| Slower (the rules since 24 October) | Regular (6 sessions) | 4225 of 4380 (96 %) | 3236 | 937 | 52 | 0 |
+| Slower (the rules since 24 October) | Dedicated (10 sessions) | 7058 of 7300 (97 %) | 6195 | 813 | 50 | 0 |
 
 The levels the storage can never hold, today's costs:
 
@@ -365,7 +367,7 @@ The levels the storage can never hold, today's costs:
 
 | Durations and costs | Regular player: Lighthouse 30 | Whole city at 30 | At day 730 |
 | --- | --- | --- | --- |
-| Slower | day 184.7 | not in two years | the others 21 to 23 |
+| Slower (the rules since 24 October) | day 184.7 | not in two years | the others 21 to 23 |
 | Slower, others ×1.15 a level past 15 | day 185.7 | not in two years | the others 27 to 30 |
 | Slower, others ×1.1 a level past 15 | day 185.6 | day 665 | the others 30 to 30 |
 | Slower, others ×1.05 a level past 15 | day 185.1 | day 506 | the others 30 to 30 |

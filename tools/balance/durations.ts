@@ -3,13 +3,26 @@
  * study proposes for levels 6 to 30. Pure: the runs are played by `durations-run.ts`; nothing here changes a value of
  * the rules.
  */
-import { BUILDING_IDS, BUILDINGS, HOUR, QUICK_LEVELS, upgradeTime, type BuildingId } from "@brinelight/shared";
+import { BUILDING_IDS, HOUR, QUICK_LEVELS, TIME_SCALE, type BuildingId } from "@brinelight/shared";
 
 const MIN = 60;
 export const LEVELS = Array.from({ length: 30 }, (_, i) => i + 1);
 
-/** Today's build time to reach `level` (from the level before), in real seconds: the rules' own. */
-export const todayTime = (id: BuildingId, level: number): number => upgradeTime(id, level - 1);
+/**
+ * The build times before 24 October, frozen here so that the study can be played again: base times of 9 (the
+ * Lighthouse), 6 (the producers), 7 (the Shelters and the Infirmary) and 8 (the Barracks, the Harbor and the
+ * Observatory) prototype seconds, ×1.5 a level (the Lighthouse: ×1.35, then ×1.2 past level 15), capped by the quick
+ * levels 1 to 5. Since 24 October the rules have the slower curve (`BUILD_MINUTES` in `shared/src/rules/buildings.ts`).
+ */
+const BEFORE_BASE: Readonly<Record<BuildingId, number>> = { lighthouse: 9, refinery: 6, fishery: 6, lumberyard: 6, shelters: 7, infirmary: 7, barracks: 8, harbor: 8, observatory: 8 };
+
+/** The time to reach `level` (from the level before) before 24 October, in real seconds. */
+export function beforeTime(id: BuildingId, level: number): number {
+  const from = level - 1;
+  const grown = id === "lighthouse" ? (from > 15 ? 1.35 ** 15 * 1.2 ** (from - 15) : 1.35 ** from) : 1.5 ** from;
+  const seconds = Math.round(BEFORE_BASE[id] * grown * TIME_SCALE);
+  return Math.min(seconds, QUICK_LEVELS[level] ?? seconds);
+}
 
 /**
  * A proposed curve for levels 6 to 30 (1 to 5 keep the rules' quick levels: 1, 1, 2, 5 and 15 minutes). For the
@@ -26,11 +39,11 @@ export const todayTime = (id: BuildingId, level: number): number => upgradeTime(
 export type Curve = { id: string; name: string; at10: number; at30: number };
 
 /**
- * At level 30, each building's time in producers' times: today's base times (6, 7 and 8 prototype seconds), and the
- * Lighthouse a little more than its own 9 (1.6 in place of 1.5): it is the longest of its level from level 6 on.
+ * At level 30, each building's time in producers' times: the base times before 24 October (6, 7 and 8 prototype
+ * seconds), and the Lighthouse a little more than its own 9 (1.6 in place of 1.5): the longest of its level from 6 on.
  */
 export const TIMES: Readonly<Record<BuildingId, number>> = Object.fromEntries(
-  BUILDING_IDS.map((id) => [id, id === "lighthouse" ? 1.6 : BUILDINGS[id].baseTime / 6]),
+  BUILDING_IDS.map((id) => [id, id === "lighthouse" ? 1.6 : BEFORE_BASE[id] / 6]),
 ) as Record<BuildingId, number>;
 
 const BASE = 15 * MIN;
@@ -52,7 +65,7 @@ export function curveTime(c: Curve, id: BuildingId, level: number): number {
   return Math.round((BASE * Math.exp(w * k * (level - 5) ** p)) / MIN) * MIN;
 }
 
-/** The study's two curves. */
+/** The study's two curves; the owner chose the slower one on 24 October (now the rules' `BUILD_MINUTES`). */
 export const CURVES: readonly Curve[] = [
   { id: "fast", name: "Faster", at10: 2 * HOUR, at30: 48 * HOUR },
   { id: "slow", name: "Slower", at10: 2.75 * HOUR, at30: 84 * HOUR },

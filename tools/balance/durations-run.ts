@@ -6,16 +6,15 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { register } from "node:module";
 import { fileURLToPath } from "node:url";
-import type { Costs, Help } from "./durations-rules.js";
+import type { Costs, Help, Times } from "./durations-rules.js";
 
 // The simulator gets the study's rules in place of `@brinelight/shared`: registered before it is loaded.
 register("./durations-hooks.mjs", import.meta.url);
 const { PROFILES, simulate } = await import("./simulate.js");
 const R = await import("./durations-rules.js");
 const D = await import("./durations.js");
-const { BUILDING_IDS, HOUR, TECHS, storeCap, upgradeCost } = await import("@brinelight/shared");
+const { BUILDING_IDS, HOUR, TECHS, storeCap, upgradeCost, upgradeTime } = await import("@brinelight/shared");
 type Profile = (typeof PROFILES)[number];
-type Curve = (typeof D.CURVES)[number];
 type BuildingId = (typeof BUILDING_IDS)[number];
 
 const docs = fileURLToPath(new URL("../../docs/", import.meta.url));
@@ -25,10 +24,10 @@ const MARK_END = "<!-- durations:generated:end -->";
 const DAYS = 730;
 const MILESTONES = [5, 10, 15, 20, 25, 30] as const;
 
-type Setup = { key: string; name: string; curve: Curve | null; help?: Help; costs?: Costs };
+type Setup = { key: string; name: string; time: Times | null; help?: Help; costs?: Costs };
 
 const play = (profile: Profile, setup: Setup) => {
-  R.study.curve = setup.curve;
+  R.study.time = setup.time;
   R.study.help = setup.help ?? null;
   R.study.costs = setup.costs ?? null;
   R.study.started = [];
@@ -36,7 +35,7 @@ const play = (profile: Profile, setup: Setup) => {
   R.study.builders = {};
   const run = simulate(profile, DAYS);
   const out = { run, started: R.study.started, builders: R.study.builders };
-  R.study.curve = null;
+  R.study.time = null;
   R.study.help = null;
   R.study.costs = null;
   return out;
@@ -45,20 +44,22 @@ type Played = ReturnType<typeof play>;
 
 const fast = D.CURVES.find((c) => c.id === "fast")!;
 const slow = D.CURVES.find((c) => c.id === "slow")!;
-const TODAY: Setup = { key: "today", name: "Today", curve: null };
-const SETUPS: readonly Setup[] = [TODAY, { key: "fast", name: "Faster", curve: fast }, { key: "slow", name: "Slower", curve: slow }];
+/** The times before 24 October, the faster curve, and the slower one: the rules' own since (no other times). */
+const BEFORE: Setup = { key: "before", name: "Before 24 October", time: D.beforeTime };
+const SLOWER: Setup = { key: "slow", name: "Slower (the rules since 24 October)", time: null };
+const SETUPS: readonly Setup[] = [BEFORE, { key: "fast", name: "Faster", time: (id, level) => D.curveTime(fast, id, level) }, SLOWER];
 /** The cost option, on the slower curve: the other buildings past level 15 cost this much more a level (the rules: 1.6). */
-const COSTS: readonly Setup[] = [1.15, 1.1, 1.05].map((growth) => ({ key: `slow-${growth}`, name: `Slower, others ×${growth} a level past 15`, curve: slow, costs: { from: 15, growth } }));
+const COSTS: readonly Setup[] = [1.15, 1.1, 1.05].map((growth) => ({ key: `slow-${growth}`, name: `Slower, others ×${growth} a level past 15`, time: null, costs: { from: 15, growth } }));
 /** The alliance's help, on the slower curve: 10 allies, 3 minutes each, never more than half the build. */
-const HELP: Setup = { key: "slow-help", name: "Slower, with 10 helps of 3 min", curve: slow, help: { count: 10, minutes: 3 } };
+const HELP: Setup = { key: "slow-help", name: "Slower, with 10 helps of 3 min", time: null, help: { count: 10, minutes: 3 } };
 
-// The rules first: the study's runs must be the balance's own (docs/balance.md, its milestones).
+// The rules first: the study's runs with the rules' times must be the balance's own (docs/balance.md, its milestones).
 const balance = readFileSync(`${docs}balance.md`, "utf8");
 const played = new Map<string, Played>();
 for (const s of [...SETUPS, ...COSTS, HELP]) {
   for (const p of PROFILES) {
     const out = play(p, s);
-    if (s === TODAY) {
+    if (s === SLOWER) {
       const row = balance.split("\n").find((l) => l.startsWith(`| ${p.name} | day `));
       const days = MILESTONES.map((l) => `day ${(out.run.lighthouse[l]! / 24).toFixed(1)}`);
       if (!row || !row.startsWith(`| ${p.name} | ${days.join(" | ")} |`)) throw new Error(`${p.name}: the study's run is not the balance's (${days.join(", ")})`);
@@ -68,7 +69,7 @@ for (const s of [...SETUPS, ...COSTS, HELP]) {
 }
 const get = (s: Setup, p: Profile) => played.get(`${s.key} ${p.id}`)!;
 
-const timeOf = (curve: Curve | null) => (id: BuildingId, level: number) => (curve ? D.curveTime(curve, id, level) : D.todayTime(id, level));
+const timeOf = (time: Times | null) => (id: BuildingId, level: number) => (time ? time(id, level) : upgradeTime(id, level - 1));
 const pct = (n: number) => `${Math.round(n * 100)} %`;
 const dayOf = (hours: number | undefined) => (hours === undefined ? "never" : `day ${(hours / 24).toFixed(1)}`);
 const months = (hours: number | undefined) => (hours === undefined ? "" : ` (${(hours / 24 / 30.44).toFixed(1)} months)`);
@@ -125,7 +126,7 @@ function wholeCityTable(setups: readonly Setup[]): string {
   const regular = PROFILES[1]!;
   const rows = ["| Durations | Every level of every building, added up | With two builders, at best | The regular player at day 730 | Whole city at 30 |", "| --- | --- | --- | --- | --- |"];
   for (const s of setups) {
-    const w = D.wholeCity(timeOf(s.curve));
+    const w = D.wholeCity(timeOf(s.time));
     const { run } = get(s, regular);
     const all = run.days.find((d) => Object.values(d.buildings).every((l) => l >= 30));
     const last = run.days.at(-1)!.buildings;
@@ -161,7 +162,7 @@ function wallsTable(): string {
 function costsTable(): string {
   const regular = PROFILES[1]!;
   const rows = ["| Durations and costs | Regular player: Lighthouse 30 | Whole city at 30 | At day 730 |", "| --- | --- | --- | --- |"];
-  for (const s of [SETUPS[2]!, ...COSTS]) {
+  for (const s of [SLOWER, ...COSTS]) {
     const { run } = get(s, regular);
     const all = run.days.find((d) => Object.values(d.buildings).every((l) => l >= 30));
     const last = run.days.at(-1)!.buildings;
@@ -172,7 +173,7 @@ function costsTable(): string {
 }
 
 function helpTable(): string {
-  const base = SETUPS[2]!;
+  const base = SLOWER;
   const rows = ["| Player | Lighthouse 10 | 20 | 30 | Build time taken off by the help (two years) | Share of the builds' time |", "| --- | --- | --- | --- | --- | --- |"];
   for (const p of PROFILES) {
     const a = get(base, p);
@@ -197,15 +198,15 @@ function endgameTable(setups: readonly Setup[]): string {
   return rows.join("\n");
 }
 
-const curves = SETUPS.map((s) => ({ name: s.name, time: timeOf(s.curve) }));
+const curves = SETUPS.map((s) => ({ name: s.name, time: timeOf(s.time) }));
 const tables = [
-  "### 1. Today's build times",
-  "The time to reach each level from the one before (the rules' `upgradeTime`), and its ratio to the level before. The buildings of a column share their times.",
-  D.durationTable(timeOf(null)),
+  "### 1. The build times before 24 October",
+  "The time to reach each level from the one before (the rules' `upgradeTime` until 24 October), and its ratio to the level before. The buildings of a column share their times.",
+  D.durationTable(D.beforeTime),
   "### 2. The two curves",
   ...D.CURVES.flatMap((c) => {
     const { k, p } = D.shape(c);
-    return [`#### ${c.name}: level 10 in ${D.duration(c.at10)}, level 30 in ${D.duration(c.at30)} (producers; k = ${k.toFixed(4)}, p = ${p.toFixed(4)})`, D.durationTable(timeOf(c))];
+    return [`#### ${c.name}: level 10 in ${D.duration(c.at10)}, level 30 in ${D.duration(c.at30)} (producers; k = ${k.toFixed(4)}, p = ${p.toFixed(4)})`, D.durationTable((id, level) => D.curveTime(c, id, level))];
   }),
   "#### The bands, side by side",
   D.bandsTable(curves),

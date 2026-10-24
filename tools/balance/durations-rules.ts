@@ -1,8 +1,8 @@
 /**
  * The rules of `shared/` as the durations study plays them (docs/studies/durations.md). The balance's simulator
  * (`simulate.ts`) imports this module in place of `@brinelight/shared` when, and only when, `durations-run.ts` runs it
- * (through `durations-hooks.mjs`): every rule is the shared one, word for word, except an upgrade's duration when a
- * study curve is set, the alliance's help when it is, and the other buildings' costs past level 15 when a cost option
+ * (through `durations-hooks.mjs`): every rule is the shared one, word for word, except an upgrade's duration when the
+ * study sets other times, the alliance's help when it is, and the other buildings' costs past level 15 when a cost option
  * is. Nothing is changed in `shared/`. Without any of them, a run is the balance's own (checked by `durations-run.ts`
  * before anything else).
  *
@@ -10,7 +10,6 @@
  */
 import * as rules from "@brinelight/shared";
 import type { ActionResult, BuildingId, Cost, GameAction, PlayerState } from "@brinelight/shared";
-import { curveTime, type Curve } from "./durations.js";
 
 export * from "@brinelight/shared";
 
@@ -37,15 +36,18 @@ export type Builders = { hours: number; away: number; nothing: number; waitBuild
  */
 export type Costs = { from: number; growth: number };
 
-export type Study = { curve: Curve | null; help: Help | null; costs: Costs | null; started: Started[]; seen: Set<string>; builders: Record<number, Builders> };
+/** Other build times than the rules': the time to reach `level`, in real seconds. */
+export type Times = (id: BuildingId, level: number) => number;
+
+export type Study = { time: Times | null; help: Help | null; costs: Costs | null; started: Started[]; seen: Set<string>; builders: Record<number, Builders> };
 
 /** Shared with `durations-run.ts` through the global object: the two may load this module under two names. */
 const g = globalThis as { brinelightDurationsStudy?: Study };
-export const study: Study = (g.brinelightDurationsStudy ??= { curve: null, help: null, costs: null, started: [], seen: new Set(), builders: {} });
+export const study: Study = (g.brinelightDurationsStudy ??= { time: null, help: null, costs: null, started: [], seen: new Set(), builders: {} });
 
-/** The time an upgrade to `level` takes in the study: the curve's (or the rules'), less the alliance's help. */
+/** The time an upgrade to `level` takes in the study: the study's times (or the rules'), less the alliance's help. */
 export function studyTime(id: BuildingId, level: number, rulesSeconds: number): number {
-  const seconds = study.curve ? curveTime(study.curve, id, level) : rulesSeconds;
+  const seconds = study.time ? study.time(id, level) : rulesSeconds;
   if (!study.help || level < 6) return seconds;
   return Math.round(seconds - Math.min(study.help.count * study.help.minutes * 60, seconds / 2));
 }
