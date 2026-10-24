@@ -1,6 +1,6 @@
 /**
  * npx tsx tools/balance/costs-run.ts: the costs study (docs/studies/costs.md). Plays the balance's simulator with the
- * rules of `shared/` (E and the slower build times since 24 October), then with each cost option, through the durations
+ * rules of `shared/` (E, the slower build times and the costs past 15 since 24 October), then with each other cost option, through the durations
  * study's rules (`durations-hooks.mjs`, `durations-rules.ts`), and writes the study's tables between its markers. It
  * changes no rule.
  */

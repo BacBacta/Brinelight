@@ -72,15 +72,15 @@ describe("the balance simulation", () => {
   // The casual player reaches Lighthouse 30 after a year: its run goes on a little longer.
   const long = [...runs.filter((r) => r.profile.id !== "casual"), simulate(casual, 380)];
 
-  it("keeps every Lighthouse milestone within 10 % of the reference of 24 October (the slower build times, owner's decision)", () => {
+  it("keeps every Lighthouse milestone within 10 % of the reference of 24 October (the slower build times and the costs past 15, owner's decisions)", () => {
     // The days each profile reaches Lighthouse 5, 10, 15, 20, 25 and 30 with the quick first levels and the richer start
     // (docs/tasks/early-start.md), the producers' curve and the isles and shoals (E, docs/studies/resources.md), the
-    // slower curve of build times (docs/studies/durations.md), the players keeping the Lighthouse's reserve only on what
-    // a spending uses: the reference since 24 October.
+    // slower curve of build times (docs/studies/durations.md), the costs past level 15 (docs/studies/costs.md), the
+    // players keeping the Lighthouse's reserve only on what a spending uses: the reference since 24 October.
     const REFERENCE: Record<string, Record<number, number>> = {
-      casual: { 5: 0.6, 10: 4.1, 15: 15.5, 20: 40.4, 25: 100.7, 30: 248.6 },
-      regular: { 5: 0.2, 10: 2.5, 15: 9.0, 20: 26.8, 25: 72.8, 30: 184.7 },
-      dedicated: { 5: 0.1, 10: 2.2, 15: 8.4, 20: 23.5, 25: 65.1, 30: 165.6 },
+      casual: { 5: 0.6, 10: 4.1, 15: 15.5, 20: 40.4, 25: 100.7, 30: 246.6 },
+      regular: { 5: 0.2, 10: 2.5, 15: 9.0, 20: 26.8, 25: 72.8, 30: 183.9 },
+      dedicated: { 5: 0.1, 10: 2.2, 15: 8.4, 20: 23.5, 25: 65.1, 30: 162.8 },
     };
     for (const r of long) {
       for (const [level, reference] of Object.entries(REFERENCE[r.profile.id]!)) {

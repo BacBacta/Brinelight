@@ -1,5 +1,7 @@
 # The costs past level 15 (study)
 
+**The owner chose the recommendation on 24 October, every value: it is in the game since (`COST_PAST_15` in `shared/src/rules/buildings.ts`, `docs/decisions.md`).** The study is kept as it was measured: "today" below means the costs before 24 October, frozen in `tools/balance/costs.ts` (`beforeCost`) so that `costs-run.ts` still plays them; the recommended option is now the rules' own.
+
 A study only, at the owner's request of 24 October, after the slower build times went into the game (`docs/studies/durations.md`). It changes no value.
 
 It measures what the other buildings' costs do past level 15 now that the builds no longer hold the game back, and seven options, played by the balance's simulator for three years. **Nothing goes into the game without the owner's agreement, value by value.**
@@ -78,13 +80,13 @@ If the owner agrees, value by value:
 
 ### The regular player, in short
 
-- Today (×1.6 a level): Lighthouse 30 on day 184.7 (6.1 months); the whole city at 30 not in three years.
+- Before 24 October (×1.6 a level): Lighthouse 30 on day 184.7 (6.1 months); the whole city at 30 not in three years.
 - ×1.3 a level past 15 (as the Lighthouse): Lighthouse 30 on day 184.9 (6.1 months); the whole city at 30 not in three years.
 - ×1.2: Lighthouse 30 on day 186.1 (6.1 months); the whole city at 30 on day 1008 (33.1 months).
 - ×1.15: Lighthouse 30 on day 185.7 (6.1 months); the whole city at 30 on day 699 (23.0 months).
 - ×1.1: Lighthouse 30 on day 184.7 (6.1 months); the whole city at 30 on day 509 (16.7 months).
 - ×1.15, a third of the wood in oil and fish: Lighthouse 30 on day 184.2 (6.1 months); the whole city at 30 on day 573 (18.8 months).
-- ×1.12, a third of the wood in oil and fish: Lighthouse 30 on day 183.9 (6.0 months); the whole city at 30 on day 479 (15.7 months).
+- ×1.12, a third of the wood in oil and fish (the rules since 24 October): Lighthouse 30 on day 183.9 (6.0 months); the whole city at 30 on day 479 (15.7 months).
 - ×1.1, a third of the wood in oil and fish: Lighthouse 30 on day 184.2 (6.1 months); the whole city at 30 on day 430 (14.1 months).
 - ×1.1, half the wood in oil and fish: Lighthouse 30 on day 180.7 (5.9 months); the whole city at 30 on day 441 (14.5 months).
 
@@ -94,21 +96,21 @@ The other buildings' levels 16 to 30 added up (every building), by resource; and
 
 | Option | Other buildings' levels 16 to 30, all of them: wood | oil | fish | Levels the storage can never hold |
 | --- | --- | --- | --- | --- |
-| Today (×1.6 a level) | 1881.4 M | 641.9 M | 708.3 M | refinery 23, fishery 24, lumberyard 24, shelters 23, barracks 22, harbor 22, observatory 22, infirmary 23 |
+| Before 24 October (×1.6 a level) | 1881.4 M | 641.9 M | 708.3 M | refinery 23, fishery 24, lumberyard 24, shelters 23, barracks 22, harbor 22, observatory 22, infirmary 23 |
 | ×1.3 a level past 15 (as the Lighthouse) | 133.2 M | 45.4 M | 50.1 M | refinery 30, fishery 30, shelters 29, barracks 28, harbor 28, observatory 27, infirmary 28 |
 | ×1.2 | 52.9 M | 18.1 M | 19.9 M | none |
 | ×1.15 | 33.5 M | 11.4 M | 12.6 M | none |
 | ×1.1 | 21.4 M | 7.3 M | 8.1 M | none |
 | ×1.15, a third of the wood in oil and fish | 22.3 M | 13.0 M | 14.3 M | none |
-| ×1.12, a third of the wood in oil and fish | 17.0 M | 9.9 M | 10.9 M | none |
+| ×1.12, a third of the wood in oil and fish (the rules since 24 October) | 17.0 M | 9.9 M | 10.9 M | none |
 | ×1.1, a third of the wood in oil and fish | 14.3 M | 8.3 M | 9.1 M | none |
 | ×1.1, half the wood in oil and fish | 10.7 M | 8.8 M | 9.7 M | none |
 
-### The recommended option's values: ×1.12, a third of the wood in oil and fish
+### The recommended option's values: ×1.12, a third of the wood in oil and fish (the rules since 24 October)
 
 The cost to reach each level (from the one before); the levels between follow the same rule. The Lighthouse keeps its costs.
 
-| Building | Level | Today | With the option |
+| Building | Level | Before 24 October | With the option |
 | --- | --- | --- | --- |
 | refinery | 16 | 103,760 wood + 46,120 fish | 48,420 wood + 40,350 fish |
 | refinery | 20 | 680,020 wood + 302,230 fish | 76,190 wood + 63,490 fish |
@@ -147,9 +149,9 @@ The cost to reach each level (from the one before); the levels between follow th
 
 | Option | Player | Lighthouse 10 | Lighthouse 15 | Lighthouse 20 | Lighthouse 25 | Lighthouse 30 | Whole city at 20 | at 25 | at 30 | Other buildings, day 365 | day 730 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Today (×1.6 a level) | Casual (3 sessions) | day 4.1 | day 15.5 | day 40.4 | day 100.7 | day 248.6 | day 617 | not in 3 years | not in 3 years | 17 to 20 | 20 to 23 |
-| Today (×1.6 a level) | Regular (6 sessions) | day 2.5 | day 9.0 | day 26.8 | day 72.8 | day 184.7 | day 499 | not in 3 years | not in 3 years | 18 to 22 | 21 to 23 |
-| Today (×1.6 a level) | Dedicated (10 sessions) | day 2.2 | day 8.4 | day 23.5 | day 65.1 | day 165.6 | day 484 | not in 3 years | not in 3 years | 19 to 22 | 21 to 23 |
+| Before 24 October (×1.6 a level) | Casual (3 sessions) | day 4.1 | day 15.5 | day 40.4 | day 100.7 | day 248.6 | day 617 | not in 3 years | not in 3 years | 17 to 20 | 20 to 23 |
+| Before 24 October (×1.6 a level) | Regular (6 sessions) | day 2.5 | day 9.0 | day 26.8 | day 72.8 | day 184.7 | day 499 | not in 3 years | not in 3 years | 18 to 22 | 21 to 23 |
+| Before 24 October (×1.6 a level) | Dedicated (10 sessions) | day 2.2 | day 8.4 | day 23.5 | day 65.1 | day 165.6 | day 484 | not in 3 years | not in 3 years | 19 to 22 | 21 to 23 |
 | ×1.3 a level past 15 (as the Lighthouse) | Casual (3 sessions) | day 4.1 | day 15.5 | day 40.4 | day 100.7 | day 247.8 | day 439 | day 995 | not in 3 years | 18 to 23 | 23 to 28 |
 | ×1.3 a level past 15 (as the Lighthouse) | Regular (6 sessions) | day 2.5 | day 9.0 | day 26.8 | day 72.8 | day 184.9 | day 328 | day 837 | not in 3 years | 20 to 26 | 24 to 29 |
 | ×1.3 a level past 15 (as the Lighthouse) | Dedicated (10 sessions) | day 2.2 | day 8.4 | day 23.5 | day 65.1 | day 163.8 | day 315 | day 796 | not in 3 years | 20 to 26 | 24 to 29 |
@@ -165,9 +167,9 @@ The cost to reach each level (from the one before); the levels between follow th
 | ×1.15, a third of the wood in oil and fish | Casual (3 sessions) | day 4.1 | day 15.5 | day 40.4 | day 100.7 | day 246.6 | day 351 | day 516 | day 691 | 20 to 25 | 30 to 30 |
 | ×1.15, a third of the wood in oil and fish | Regular (6 sessions) | day 2.5 | day 9.0 | day 26.8 | day 72.8 | day 184.2 | day 273 | day 396 | day 573 | 24 to 29 | 30 to 30 |
 | ×1.15, a third of the wood in oil and fish | Dedicated (10 sessions) | day 2.2 | day 8.4 | day 23.5 | day 65.1 | day 161.8 | day 228 | day 341 | day 531 | 25 to 30 | 30 to 30 |
-| ×1.12, a third of the wood in oil and fish | Casual (3 sessions) | day 4.1 | day 15.5 | day 40.4 | day 100.7 | day 246.6 | day 346 | day 482 | day 588 | 20 to 27 | 30 to 30 |
-| ×1.12, a third of the wood in oil and fish | Regular (6 sessions) | day 2.5 | day 9.0 | day 26.8 | day 72.8 | day 183.9 | day 264 | day 351 | day 479 | 25 to 30 | 30 to 30 |
-| ×1.12, a third of the wood in oil and fish | Dedicated (10 sessions) | day 2.2 | day 8.4 | day 23.5 | day 65.1 | day 162.8 | day 230 | day 319 | day 435 | 26 to 30 | 30 to 30 |
+| ×1.12, a third of the wood in oil and fish (the rules since 24 October) | Casual (3 sessions) | day 4.1 | day 15.5 | day 40.4 | day 100.7 | day 246.6 | day 346 | day 482 | day 588 | 20 to 27 | 30 to 30 |
+| ×1.12, a third of the wood in oil and fish (the rules since 24 October) | Regular (6 sessions) | day 2.5 | day 9.0 | day 26.8 | day 72.8 | day 183.9 | day 264 | day 351 | day 479 | 25 to 30 | 30 to 30 |
+| ×1.12, a third of the wood in oil and fish (the rules since 24 October) | Dedicated (10 sessions) | day 2.2 | day 8.4 | day 23.5 | day 65.1 | day 162.8 | day 230 | day 319 | day 435 | 26 to 30 | 30 to 30 |
 | ×1.1, a third of the wood in oil and fish | Casual (3 sessions) | day 4.1 | day 15.5 | day 40.4 | day 100.7 | day 243.6 | day 351 | day 452 | day 535 | 21 to 28 | 30 to 30 |
 | ×1.1, a third of the wood in oil and fish | Regular (6 sessions) | day 2.5 | day 9.0 | day 26.8 | day 72.8 | day 184.2 | day 262 | day 345 | day 430 | 26 to 30 | 30 to 30 |
 | ×1.1, a third of the wood in oil and fish | Dedicated (10 sessions) | day 2.2 | day 8.4 | day 23.5 | day 65.1 | day 161.9 | day 228 | day 296 | day 379 | 28 to 30 | 30 to 30 |
@@ -179,13 +181,13 @@ The cost to reach each level (from the one before); the levels between follow th
 
 | Option | 20 → 21 | 21 → 22 | 22 → 23 | 23 → 24 | 24 → 25 | 25 → 26 | 26 → 27 | 27 → 28 | 28 → 29 | 29 → 30 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Today (×1.6 a level) | 6.1 d | 7.1 d | 8.9 d | 10.3 d | 13.5 d | 15.3 d | 18.6 d | 22.1 d | 25.1 d | 30.7 d |
+| Before 24 October (×1.6 a level) | 6.1 d | 7.1 d | 8.9 d | 10.3 d | 13.5 d | 15.3 d | 18.6 d | 22.1 d | 25.1 d | 30.7 d |
 | ×1.3 a level past 15 (as the Lighthouse) | 6.1 d | 7.1 d | 8.9 d | 10.3 d | 13.5 d | 15.3 d | 18.6 d | 21.8 d | 25.9 d | 30.5 d |
 | ×1.2 | 6.1 d | 7.1 d | 8.9 d | 10.3 d | 13.5 d | 15.3 d | 18.5 d | 22.6 d | 26.3 d | 30.6 d |
 | ×1.15 | 6.1 d | 7.1 d | 8.9 d | 10.3 d | 13.5 d | 15.3 d | 18.5 d | 22.6 d | 25.9 d | 30.6 d |
 | ×1.1 | 6.1 d | 7.1 d | 8.9 d | 10.3 d | 13.5 d | 15.3 d | 18.5 d | 22.2 d | 25.4 d | 30.5 d |
 | ×1.15, a third of the wood in oil and fish | 6.1 d | 7.1 d | 8.9 d | 10.3 d | 13.5 d | 15.3 d | 19.0 d | 21.2 d | 25.1 d | 30.7 d |
-| ×1.12, a third of the wood in oil and fish | 6.1 d | 7.1 d | 8.9 d | 10.3 d | 13.5 d | 15.3 d | 18.0 d | 21.7 d | 25.4 d | 30.7 d |
+| ×1.12, a third of the wood in oil and fish (the rules since 24 October) | 6.1 d | 7.1 d | 8.9 d | 10.3 d | 13.5 d | 15.3 d | 18.0 d | 21.7 d | 25.4 d | 30.7 d |
 | ×1.1, a third of the wood in oil and fish | 6.1 d | 7.1 d | 8.9 d | 10.3 d | 13.5 d | 15.3 d | 18.9 d | 21.2 d | 25.6 d | 30.4 d |
 | ×1.1, half the wood in oil and fish | 6.1 d | 7.1 d | 8.9 d | 10.3 d | 13.5 d | 15.3 d | 18.6 d | 19.9 d | 24.3 d | 29.7 d |
 
@@ -195,9 +197,9 @@ Shares of the builders' time, as in `docs/studies/durations.md`. At Lighthouse 3
 
 | Option | Lighthouse | Builders at work | A builder free, the player away | A builder free, nothing to start | Both at work, something else could start |
 | --- | --- | --- | --- | --- | --- |
-| Today (×1.6 a level) | 11 to 20 (29 d 9 h) | 19 % | 11 % | 70 % | 8 % |
-| Today (×1.6 a level) | 21 to 29 (151 d 19 h) | 15 % | 2 % | 82 % | 0 % |
-| Today (×1.6 a level) | 30, until the city is done (2.5 y) | 2 % | 0 % | 97 % | 0 % |
+| Before 24 October (×1.6 a level) | 11 to 20 (29 d 9 h) | 19 % | 11 % | 70 % | 8 % |
+| Before 24 October (×1.6 a level) | 21 to 29 (151 d 19 h) | 15 % | 2 % | 82 % | 0 % |
+| Before 24 October (×1.6 a level) | 30, until the city is done (2.5 y) | 2 % | 0 % | 97 % | 0 % |
 | ×1.3 a level past 15 (as the Lighthouse) | 11 to 20 (29 d 9 h) | 19 % | 11 % | 70 % | 8 % |
 | ×1.3 a level past 15 (as the Lighthouse) | 21 to 29 (152 d 1 h) | 16 % | 3 % | 81 % | 0 % |
 | ×1.3 a level past 15 (as the Lighthouse) | 30, until the city is done (2.5 y) | 7 % | 1 % | 92 % | 0 % |
@@ -213,9 +215,9 @@ Shares of the builders' time, as in `docs/studies/durations.md`. At Lighthouse 3
 | ×1.15, a third of the wood in oil and fish | 11 to 20 (29 d 9 h) | 19 % | 11 % | 70 % | 8 % |
 | ×1.15, a third of the wood in oil and fish | 21 to 29 (151 d 7 h) | 18 % | 3 % | 79 % | 2 % |
 | ×1.15, a third of the wood in oil and fish | 30, until the city is done (1.1 y) | 27 % | 2 % | 71 % | 0 % |
-| ×1.12, a third of the wood in oil and fish | 11 to 20 (29 d 9 h) | 19 % | 11 % | 70 % | 8 % |
-| ×1.12, a third of the wood in oil and fish | 21 to 29 (151 d 1 h) | 19 % | 3 % | 78 % | 2 % |
-| ×1.12, a third of the wood in oil and fish | 30, until the city is done (294 d 17 h) | 34 % | 2 % | 64 % | 0 % |
+| ×1.12, a third of the wood in oil and fish (the rules since 24 October) | 11 to 20 (29 d 9 h) | 19 % | 11 % | 70 % | 8 % |
+| ×1.12, a third of the wood in oil and fish (the rules since 24 October) | 21 to 29 (151 d 1 h) | 19 % | 3 % | 78 % | 2 % |
+| ×1.12, a third of the wood in oil and fish (the rules since 24 October) | 30, until the city is done (294 d 17 h) | 34 % | 2 % | 64 % | 0 % |
 | ×1.1, a third of the wood in oil and fish | 11 to 20 (29 d 9 h) | 19 % | 11 % | 70 % | 8 % |
 | ×1.1, a third of the wood in oil and fish | 21 to 29 (151 d 7 h) | 19 % | 4 % | 78 % | 4 % |
 | ×1.1, a third of the wood in oil and fish | 30, until the city is done (245 d 11 h) | 42 % | 3 % | 56 % | 0 % |
@@ -229,9 +231,9 @@ Until the whole city is at 30 (or three years). The sessions that ended with a b
 
 | Option | Player | Sessions ended with a builder free | Short of wood | of oil | of fish | Days ended full: wood | oil | fish |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Today (×1.6 a level) | Casual (3 sessions) | 3190 of 3285 (97 %) | 2815 | 302 | 73 | 83 | 169 | 124 |
-| Today (×1.6 a level) | Regular (6 sessions) | 6415 of 6570 (98 %) | 5426 | 937 | 52 | 171 | 417 | 331 |
-| Today (×1.6 a level) | Dedicated (10 sessions) | 10708 of 10950 (98 %) | 9845 | 813 | 50 | 190 | 529 | 333 |
+| Before 24 October (×1.6 a level) | Casual (3 sessions) | 3190 of 3285 (97 %) | 2815 | 302 | 73 | 83 | 169 | 124 |
+| Before 24 October (×1.6 a level) | Regular (6 sessions) | 6415 of 6570 (98 %) | 5426 | 937 | 52 | 171 | 417 | 331 |
+| Before 24 October (×1.6 a level) | Dedicated (10 sessions) | 10708 of 10950 (98 %) | 9845 | 813 | 50 | 190 | 529 | 333 |
 | ×1.3 a level past 15 (as the Lighthouse) | Casual (3 sessions) | 3188 of 3285 (97 %) | 2682 | 294 | 212 | 0 | 19 | 0 |
 | ×1.3 a level past 15 (as the Lighthouse) | Regular (6 sessions) | 6392 of 6570 (97 %) | 5395 | 932 | 65 | 0 | 235 | 60 |
 | ×1.3 a level past 15 (as the Lighthouse) | Dedicated (10 sessions) | 10633 of 10950 (97 %) | 9328 | 1191 | 114 | 0 | 357 | 64 |
@@ -247,9 +249,9 @@ Until the whole city is at 30 (or three years). The sessions that ended with a b
 | ×1.15, a third of the wood in oil and fish | Casual (3 sessions) | 1912 of 2073 (92 %) | 751 | 714 | 440 | 0 | 0 | 0 |
 | ×1.15, a third of the wood in oil and fish | Regular (6 sessions) | 3164 of 3438 (92 %) | 670 | 2405 | 54 | 2 | 0 | 0 |
 | ×1.15, a third of the wood in oil and fish | Dedicated (10 sessions) | 4927 of 5310 (93 %) | 2843 | 1029 | 1011 | 0 | 0 | 0 |
-| ×1.12, a third of the wood in oil and fish | Casual (3 sessions) | 1576 of 1764 (89 %) | 666 | 624 | 277 | 0 | 0 | 0 |
-| ×1.12, a third of the wood in oil and fish | Regular (6 sessions) | 2559 of 2874 (89 %) | 432 | 2039 | 53 | 0 | 0 | 0 |
-| ×1.12, a third of the wood in oil and fish | Dedicated (10 sessions) | 3863 of 4350 (89 %) | 2214 | 1062 | 539 | 0 | 0 | 0 |
+| ×1.12, a third of the wood in oil and fish (the rules since 24 October) | Casual (3 sessions) | 1576 of 1764 (89 %) | 666 | 624 | 277 | 0 | 0 | 0 |
+| ×1.12, a third of the wood in oil and fish (the rules since 24 October) | Regular (6 sessions) | 2559 of 2874 (89 %) | 432 | 2039 | 53 | 0 | 0 | 0 |
+| ×1.12, a third of the wood in oil and fish (the rules since 24 October) | Dedicated (10 sessions) | 3863 of 4350 (89 %) | 2214 | 1062 | 539 | 0 | 0 | 0 |
 | ×1.1, a third of the wood in oil and fish | Casual (3 sessions) | 1429 of 1605 (89 %) | 556 | 712 | 145 | 0 | 0 | 0 |
 | ×1.1, a third of the wood in oil and fish | Regular (6 sessions) | 2172 of 2580 (84 %) | 302 | 1815 | 0 | 0 | 0 | 0 |
 | ×1.1, a third of the wood in oil and fish | Dedicated (10 sessions) | 3231 of 3790 (85 %) | 1715 | 1247 | 227 | 0 | 0 | 0 |

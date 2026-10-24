@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BUILDING_IDS, LIGHTHOUSE_MAX, TECHS, storeCap, upgradeCost } from "@brinelight/shared";
-import { OPTIONS, RECOMMENDED, STORAGE_MAX, WOOD_WORTH, growth, lessWood, pastFifteen, walls } from "./costs.js";
+import { OPTIONS, RECOMMENDED, STORAGE_MAX, WOOD_WORTH, beforeCost, growth, lessWood, pastFifteen, walls } from "./costs.js";
 
 describe("the costs study's options", () => {
   it("leave the Lighthouse and every level up to 15 as the rules have them", () => {
@@ -31,7 +31,18 @@ describe("the costs study's options", () => {
     expect(harbor.fish).toBeUndefined();
   });
 
-  it("the storage: today's costs never fit past levels 22 to 24; the recommended option always fits", () => {
+  it("the costs before 24 October: ×1.6 a level all the way, the rules' own then", () => {
+    expect(beforeCost("refinery", 20)).toEqual({ wood: Math.round((90 * 1.6 ** 20) / 10) * 10, fish: Math.round((40 * 1.6 ** 20) / 10) * 10 });
+    expect(beforeCost("refinery", 14)).toBeNull();
+    expect(beforeCost("lighthouse", 20)).toBeNull();
+  });
+
+  it("the recommended option is the rules' own since 24 October, level by level", () => {
+    for (const id of BUILDING_IDS) for (let level = 0; level < LIGHTHOUSE_MAX; level++) expect(lessWood(growth(1.12), 1 / 3)(id, level) ?? upgradeCost(id, level), `${id} ${level}`).toEqual(upgradeCost(id, level));
+    expect(OPTIONS.find((o) => o.id === RECOMMENDED)!.cost).toBeNull();
+  });
+
+  it("the storage: the costs before 24 October never fit past levels 22 to 24; the recommended option always fits", () => {
     expect(STORAGE_MAX).toBe(storeCap(LIGHTHOUSE_MAX, { warehouses: TECHS.warehouses.max }));
     expect(walls(OPTIONS[0]!)).toMatchObject({ barracks: 22, refinery: 23, fishery: 24 });
     expect(walls(OPTIONS.find((o) => o.id === RECOMMENDED)!)).toEqual({});

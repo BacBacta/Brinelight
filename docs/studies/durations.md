@@ -1,6 +1,6 @@
 # The build times, levels 6 to 30 (study)
 
-**The owner chose the slower curve on 24 October; it is in the game since (`BUILD_MINUTES` in `shared/src/rules/buildings.ts`, `docs/decisions.md`).** The study is kept as it was measured: "today" below means the times before 24 October, frozen in `tools/balance/durations.ts` (`beforeTime`) so that `durations-run.ts` still plays them; the slower curve is now the rules' own.
+**The owner chose the slower curve on 24 October; it is in the game since (`BUILD_MINUTES` in `shared/src/rules/buildings.ts`, `docs/decisions.md`).** The study is kept as it was measured: "today" below means the times before 24 October, frozen in `tools/balance/durations.ts` (`beforeTime`) so that `durations-run.ts` still plays them; the slower curve is now the rules' own. Its tables were measured before the costs past level 15 changed (24 October, `docs/studies/costs.md`): run again, `durations-run.ts` plays today's costs.
 
 A study only (owner's request, 24 October). It changes no value. It measures today's build times level by level, then two curves for levels 6 to 30 built on the player's day, played by the balance's simulator with E in place, and the alliance's help. **Nothing goes into the game without the owner's agreement, value by value.**
 

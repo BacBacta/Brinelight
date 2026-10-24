@@ -42,13 +42,40 @@ export const STARTING_BUILDINGS: Buildings = {
 const grown = (growth: number, level: number, after?: { level: number; growth: number }) =>
   after && level > after.level ? growth ** after.level * after.growth ** (level - after.level) : growth ** level;
 
-/** Cost to go from level `level` to level `level + 1`, rounded to the nearest ten. */
-export function upgradeCost(id: BuildingId, level: number): Cost {
+/** The cost of a level by its growth alone, rounded to the nearest ten: every level of the Lighthouse, the others' to 15. */
+function grownCost(id: BuildingId, level: number): Cost {
   const d = BUILDINGS[id];
   const f = grown(d.growth, level, d.after);
   const raw: Cost = {};
   for (const [k, v] of Object.entries(d.base) as [keyof Cost, number][]) raw[k] = v * f;
   return roundCost(raw);
+}
+
+/**
+ * The other buildings' costs past level 15 (owner's decision, 24 October: `docs/studies/costs.md`). From the level 16
+ * (`from`: the cost to go from 15 to 16), each level costs `growth` times the one before (×1.6 until then); then
+ * `woodShare` of its wood is asked in the building's oil and fish instead, at their worth in wood, shared equally
+ * between them. The Lighthouse keeps its own costs.
+ */
+export const COST_PAST_15 = { from: 15, growth: 1.12, woodShare: 1 / 3 } as const;
+
+/** What a unit of oil and of fish is worth in wood: what a producer's level adds an hour (42 wood, 11 oil, 14 fish). */
+export const WOOD_WORTH: Readonly<Record<"oil" | "fish", number>> = { oil: 42 / 11, fish: 42 / 14 };
+
+/** Cost to go from level `level` to level `level + 1`, rounded to the nearest ten. */
+export function upgradeCost(id: BuildingId, level: number): Cost {
+  if (id === "lighthouse" || level < COST_PAST_15.from) return grownCost(id, level);
+  // ×1.12 a level from the level 15's cost, rounded to ten.
+  const at15 = grownCost(id, COST_PAST_15.from - 1);
+  const times = COST_PAST_15.growth ** (level - COST_PAST_15.from + 1);
+  const grownPast = roundCost(Object.fromEntries(Object.entries(at15).map(([k, v]) => [k, v * times])) as Cost);
+  // A third of the wood in the building's oil and fish, at their worth in wood (the Lumberyard costs no wood).
+  const others = (["oil", "fish"] as const).filter((k) => (grownPast[k] ?? 0) > 0);
+  if (!grownPast.wood || !others.length) return grownPast;
+  const moved = grownPast.wood * COST_PAST_15.woodShare;
+  const out: Cost = { ...grownPast, wood: grownPast.wood - moved };
+  for (const k of others) out[k] = (grownPast[k] ?? 0) + moved / others.length / WOOD_WORTH[k];
+  return roundCost(out);
 }
 
 /**

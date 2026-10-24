@@ -1,9 +1,10 @@
 /**
  * The costs study (docs/studies/costs.md): the other buildings' costs past level 15, with the slower build times in
  * the game. Pure: its options and what it reads from a run; the runs are played by `costs-run.ts`. Nothing here changes
- * a value of the rules.
+ * a value of the rules. The owner chose ×1.12 with a third of the wood in oil and fish on 24 October: the rules' own
+ * since (`upgradeCost`); the costs of before are frozen here (`beforeCost`) so that the study can be played again.
  */
-import { BUILDING_IDS, LIGHTHOUSE_MAX, TECHS, roundCost, storeCap, upgradeCost, type BuildingId, type Cost } from "@brinelight/shared";
+import { BUILDINGS, BUILDING_IDS, LIGHTHOUSE_MAX, TECHS, roundCost, storeCap, upgradeCost, type BuildingId, type Cost } from "@brinelight/shared";
 
 /** A cost option: the cost to go from `level` to `level + 1`, or null where the rules' cost stays. */
 export type CostOption = { id: string; name: string; cost: ((id: BuildingId, level: number) => Cost | null) | null };
@@ -47,14 +48,22 @@ export function lessWood(base: (id: BuildingId, level: number) => Cost | null, s
   };
 }
 
+/** The other buildings' costs before 24 October: ×1.6 a level all the way to 30, frozen here (the rules' since differ). */
+export function beforeCost(id: BuildingId, level: number): Cost | null {
+  if (id === "lighthouse" || level < FROM) return null;
+  const d = BUILDINGS[id];
+  return roundCost(Object.fromEntries(Object.entries(d.base).map(([k, v]) => [k, v * d.growth ** level])) as Cost);
+}
+
 export const OPTIONS: readonly CostOption[] = [
-  { id: "rules", name: "Today (×1.6 a level)", cost: null },
+  { id: "before", name: "Before 24 October (×1.6 a level)", cost: beforeCost },
   { id: "g1.3", name: "×1.3 a level past 15 (as the Lighthouse)", cost: growth(1.3) },
   { id: "g1.2", name: "×1.2", cost: growth(1.2) },
   { id: "g1.15", name: "×1.15", cost: growth(1.15) },
   { id: "g1.1", name: "×1.1", cost: growth(1.1) },
   { id: "g1.15-wood", name: "×1.15, a third of the wood in oil and fish", cost: lessWood(growth(1.15), 1 / 3) },
-  { id: "g1.12-wood", name: "×1.12, a third of the wood in oil and fish", cost: lessWood(growth(1.12), 1 / 3) },
+  // The owner's choice of 24 October: the rules' own since (no other costs).
+  { id: "g1.12-wood", name: "×1.12, a third of the wood in oil and fish (the rules since 24 October)", cost: null },
   { id: "g1.1-wood", name: "×1.1, a third of the wood in oil and fish", cost: lessWood(growth(1.1), 1 / 3) },
   { id: "g1.1-wood-half", name: "×1.1, half the wood in oil and fish", cost: lessWood(growth(1.1), 0.5) },
 ];
@@ -96,13 +105,13 @@ export function pastFifteen(option: CostOption): Record<"wood" | "oil" | "fish",
 /** The option the study recommends. */
 export const RECOMMENDED = "g1.12-wood";
 
-/** The cost of a few levels of each building but the Lighthouse, today and with an option. */
+/** The cost of a few levels of each building but the Lighthouse, before 24 October and with an option. */
 export function valuesTable(option: CostOption, levels: readonly number[] = [16, 20, 25, 30]): string {
   const show = (c: Cost) => (["wood", "oil", "fish"] as const).filter((k) => c[k]).map((k) => `${c[k]!.toLocaleString("en-US")} ${k}`).join(" + ");
-  const rows = ["| Building | Level | Today | With the option |", "| --- | --- | --- | --- |"];
+  const rows = ["| Building | Level | Before 24 October | With the option |", "| --- | --- | --- | --- |"];
   for (const id of BUILDING_IDS) {
     if (id === "lighthouse") continue;
-    for (const level of levels) rows.push(`| ${id} | ${level} | ${show(upgradeCost(id, level - 1))} | ${show(option.cost?.(id, level - 1) ?? upgradeCost(id, level - 1))} |`);
+    for (const level of levels) rows.push(`| ${id} | ${level} | ${show(beforeCost(id, level - 1) ?? upgradeCost(id, level - 1))} | ${show(option.cost?.(id, level - 1) ?? upgradeCost(id, level - 1))} |`);
   }
   return rows.join("\n");
 }

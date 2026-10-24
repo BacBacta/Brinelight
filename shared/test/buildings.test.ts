@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BUILDERS, BUILDING_IDS, STARTING_BUILDINGS, advanceQueue, canUpgrade, maxLevel, startUpgrade, upgradeCost, upgradePearls, upgradeTime, DAY, HOUR, LIGHTHOUSE_MAX, LIGHTHOUSE_PEARLS, QUICK_LEVELS, type BuildingId, type UpgradeJob } from "../src/index.js";
+import { BUILDERS, BUILDING_IDS, STARTING_BUILDINGS, advanceQueue, canUpgrade, maxLevel, startUpgrade, upgradeCost, upgradePearls, upgradeTime, COST_PAST_15, WOOD_WORTH, storeCap, DAY, HOUR, LIGHTHOUSE_MAX, LIGHTHOUSE_PEARLS, QUICK_LEVELS, type BuildingId, type UpgradeJob } from "../src/index.js";
 
 const stock = { oil: 10_000, fish: 10_000, wood: 10_000, rope: 0 };
 
@@ -27,8 +27,6 @@ describe("buildings", () => {
     expect(upgradeCost("lighthouse", 16)).toEqual({ wood: 36400, oil: 24270 });
     // 29 → 30: 180 × 1.4¹⁵ × 1.3¹⁴ = 1,102,550 wood.
     expect(upgradeCost("lighthouse", 29).wood).toBe(1102550);
-    // The other buildings keep one growth.
-    expect(upgradeCost("refinery", 20).wood).toBe(Math.round((90 * 1.6 ** 20) / 10) * 10);
   });
 
   it("costs are rounded to the nearest ten", () => {
@@ -127,6 +125,58 @@ describe("buildings", () => {
     it("never weeks: at most 5 days 14 hours, the Lighthouse's 30", () => {
       for (const id of BUILDING_IDS) for (let l = 0; l < LIGHTHOUSE_MAX; l++) expect(upgradeTime(id, l)).toBeLessThanOrEqual(upgradeTime("lighthouse", 29));
       expect(upgradeTime("lighthouse", 29)).toBeLessThan(6 * DAY);
+    });
+  });
+
+  describe("the costs past level 15 (owner's decision, 24 October: docs/studies/costs.md)", () => {
+    // The owner's values, by the level reached: every building but the Lighthouse.
+    const VALUES = {
+      refinery: { 16: { wood: 48420, fish: 40350 }, 20: { wood: 76190, fish: 63490 }, 25: { wood: 134270, fish: 111890 }, 30: { wood: 236640, fish: 197190 } },
+      fishery: { 16: { wood: 43050, oil: 29850 }, 20: { wood: 67730, oil: 46970 }, 25: { wood: 119370, oil: 82780 }, 30: { wood: 210370, oil: 145890 } },
+      lumberyard: { 16: { fish: 56490, oil: 24210 }, 20: { fish: 88890, oil: 38100 }, 25: { fish: 156660, oil: 67150 }, 30: { fish: 276090, oil: 118340 } },
+      shelters: { 16: { wood: 59180, fish: 58280 }, 20: { wood: 93120, fish: 91710 }, 25: { wood: 164110, fish: 161620 }, 30: { wood: 289220, fish: 284820 } },
+      barracks: { 16: { wood: 75330, oil: 53350, fish: 54700 }, 20: { wood: 118530, oil: 83950, fish: 86070 }, 25: { wood: 208880, oil: 147950, fish: 151680 }, 30: { wood: 368110, oil: 260720, fish: 267300 } },
+      harbor: { 16: { wood: 80710, oil: 75140 }, 20: { wood: 126990, oil: 118230 }, 25: { wood: 223810, oil: 208360 }, 30: { wood: 394430, oil: 367200 } },
+      observatory: { 16: { wood: 86080, oil: 83900 }, 20: { wood: 135450, oil: 132030 }, 25: { wood: 238710, oil: 232670 }, 30: { wood: 420700, oil: 410050 } },
+      infirmary: { 16: { wood: 64570, fish: 83390 }, 20: { wood: 101590, fish: 131220 }, 25: { wood: 179040, fish: 231250 }, 30: { wood: 315530, fish: 407550 } },
+    } as const;
+
+    it("every building, at levels 16, 20, 25 and 30: the owner's values exactly", () => {
+      for (const [id, levels] of Object.entries(VALUES)) {
+        for (const [level, cost] of Object.entries(levels)) expect(upgradeCost(id as BuildingId, Number(level) - 1), `${id} ${level}`).toEqual(cost);
+      }
+    });
+
+    it("up to level 15, and the Lighthouse at every level, the costs do not change", () => {
+      // ×1.6 a level to 15: the Refinery's level 15 costs 90 × 1.6¹⁴ wood and 40 × 1.6¹⁴ fish.
+      expect(upgradeCost("refinery", 14)).toEqual({ wood: Math.round((90 * 1.6 ** 14) / 10) * 10, fish: Math.round((40 * 1.6 ** 14) / 10) * 10 });
+      expect(upgradeCost("lighthouse", 29)).toEqual({ wood: 1102550, oil: 735040 });
+    });
+
+    it("each level from 16 costs ×1.12 the level before, then a third of its wood is asked in oil and fish, at their worth in wood", () => {
+      expect([COST_PAST_15.from, COST_PAST_15.growth, COST_PAST_15.woodShare]).toEqual([15, 1.12, 1 / 3]);
+      expect(WOOD_WORTH).toEqual({ oil: 42 / 11, fish: 42 / 14 });
+      // The Barracks' level 16: 1.12 × its level 15, rounded; a third of the wood out, half of it into oil, half into fish.
+      const at15 = upgradeCost("barracks", 14);
+      const grown = { wood: Math.round((at15.wood! * 1.12) / 10) * 10, oil: Math.round((at15.oil! * 1.12) / 10) * 10, fish: Math.round((at15.fish! * 1.12) / 10) * 10 };
+      const moved = grown.wood / 3;
+      expect(upgradeCost("barracks", 15)).toEqual({
+        wood: Math.round((grown.wood - moved) / 10) * 10,
+        oil: Math.round((grown.oil + moved / 2 / (42 / 11)) / 10) * 10,
+        fish: Math.round((grown.fish + moved / 2 / (42 / 14)) / 10) * 10,
+      });
+      // The Lumberyard costs no wood: only the growth.
+      const lumber = upgradeCost("lumberyard", 14);
+      expect(upgradeCost("lumberyard", 15)).toEqual({ fish: Math.round((lumber.fish! * 1.12) / 10) * 10, oil: Math.round((lumber.oil! * 1.12) / 10) * 10 });
+    });
+
+    it("a building keeps the resources it costs: no new one appears", () => {
+      for (const id of BUILDING_IDS) for (let l = 15; l < LIGHTHOUSE_MAX; l++) expect(Object.keys(upgradeCost(id, l)).sort(), `${id} ${l}`).toEqual(Object.keys(upgradeCost(id, 14)).sort());
+    });
+
+    it("every level fits in the storage, at most 2,597,893 (Lighthouse 30, every Sealed Warehouses)", () => {
+      const most = storeCap(LIGHTHOUSE_MAX, { warehouses: 3 });
+      for (const id of BUILDING_IDS) for (let l = 0; l < LIGHTHOUSE_MAX; l++) for (const v of Object.values(upgradeCost(id, l))) expect(v, `${id} ${l + 1}`).toBeLessThanOrEqual(most);
     });
   });
 
