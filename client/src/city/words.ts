@@ -43,7 +43,7 @@ export type RaftWords = {
 const RAFT: RaftWords = {
   free: "The Lighthouse's light reaches this far. You can moor a raft here and grow your city.",
   working: "Work in progress.",
-  empty: `A free raft. Put a building on it. Each type is limited to ${RAFT_BUILDING_MAX_COPIES} rafts; Houses, as many as you like.`,
+  empty: `A free raft. Put a building on it. Each type is limited to ${RAFT_BUILDING_MAX_COPIES} rafts, and a House on every raft.`,
   build: "Build the raft",
   rope: "You find rope in wrecks and on pirates.",
   max: "Max level.",
@@ -70,7 +70,7 @@ const RAFT: RaftWords = {
 const LAND: RaftWords = {
   free: "The Lighthouse's light reaches this far. Win this plot from the sea and grow your city.",
   working: "Work in progress.",
-  empty: `An empty plot. Put a building on it. You can build each type ${RAFT_BUILDING_MAX_COPIES === 2 ? "twice" : `${RAFT_BUILDING_MAX_COPIES} times`}, and as many Houses as you like.`,
+  empty: `An empty plot. Put a building on it. You can build each type ${RAFT_BUILDING_MAX_COPIES === 2 ? "twice" : `${RAFT_BUILDING_MAX_COPIES} times`}, and a House on every plot.`,
   build: "Fill it in",
   rope: "You find rope in wrecks and on pirates.",
   max: "Max level.",

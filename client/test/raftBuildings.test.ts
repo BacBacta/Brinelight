@@ -60,7 +60,7 @@ describe("the sheet of a raft", () => {
   it("a free raft: the four buildings, their effect, cost, time and copies (none for the House), an Install button each", () => {
     const html = raftSheetHtml(carrying(moored(), B, "smokehouse", 1), A, 1, RAFTS)!;
     expect(html.title).toBe("Raft");
-    expect(html.body).toContain("A free raft. Put a building on it. Each type is limited to 2 rafts; Houses, as many as you like.");
+    expect(html.body).toContain("A free raft. Put a building on it. Each type is limited to 2 rafts, and a House on every raft.");
     expect(html.body).toContain("Sturdiness");
     expect(html.body).toContain("<b>Kelp Greenhouse</b><small>+4.5 fish/h per level</small><small>200 wood · 80 oil · 48 min · 0/2</small>");
     expect(html.body).toContain("<b>Smokehouse</b><small>−10% fish eaten per level</small><small>220 wood · 100 fish · 48 min · 1/2</small>");

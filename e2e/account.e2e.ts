@@ -936,9 +936,10 @@ describe("short motions", () => {
 });
 
 describe("the Houses in the city (step 2)", () => {
-  it("a few, then every plot, at the Lighthouses 7, 14, 22 and 30: captured for the owner, with the draw calls and FPS (?fps)", async () => {
+  it("on the rafts at the Lighthouse 4, then a few, then every plot, at the Lighthouses 7, 14, 22 and 30: captured for the owner, with the draw calls and FPS (?fps)", async () => {
     const rows: string[] = [];
     for (const [lighthouse, plots, houses] of [
+      [4, 6, 2],
       [7, 10, 3],
       [14, 17, 8],
       [22, 33, 20],
