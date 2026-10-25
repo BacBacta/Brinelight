@@ -1,7 +1,8 @@
 /**
  * npx tsx tools/balance/start-run.ts: the early start, A + C, measured (docs/tasks/early-start.md). Plays the rules
- * of `shared/` (A + C since 23 October) and the soft transition the owner asked to see, then writes the tables between
- * the markers of `docs/tasks/early-start.md`. It changes no rule.
+ * of `shared/` (A + C since 23 October; the slower curve of build times since 24 October), then writes the tables
+ * between the markers of `docs/tasks/early-start.md`. It changes no rule. The soft transition, measured on 23 October
+ * against the times of then, is no longer played: the slower curve replaced those times.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { register } from "node:module";
@@ -15,7 +16,7 @@ const { DAY, HOUR, OBJECTIVES } = await import("@brinelight/shared");
 const { duration } = await import("./early.js");
 const start = await import("./start.js");
 type Profile = (typeof PROFILES)[number];
-type Variant = typeof start.TRANSITION | null;
+type Variant = import("./early-rules.js").Variant | null;
 
 const docs = fileURLToPath(new URL("../../docs/", import.meta.url));
 const MARK_START = "<!-- start:generated:start (npx tsx tools/balance/start-run.ts) -->";
@@ -45,7 +46,7 @@ const follower: Profile = { ...attentive, name: "Follows the quests", questFirst
 
 // The rules first: the runs must be the balance's own (docs/balance.md, its milestones).
 const balance = readFileSync(`${docs}balance.md`, "utf8");
-const variants: Variant[] = [null, start.TRANSITION];
+const variants: Variant[] = [null];
 const name = (v: Variant) => v?.name ?? "A + C (the rules)";
 const reference: Record<string, Record<number, number>> = {};
 const results = variants.map((v) => {
@@ -136,9 +137,7 @@ const tables = [
   "### The quests, for the balance's attentive player",
   "The same sessions, played as the balance's players: the Lighthouse first, its wood kept; a camp only at easy odds.",
   ...questTables(rules.quests),
-  "### The soft transition (not in the game): its times",
-  start.transitionTable(),
-  "### Milestones: A + C, and A + C with the soft transition",
+  "### Milestones: the rules",
   "Lighthouse 5 to 10: time after the founding. 15 and 20: the day, against A + C (the reference since 23 October) and against week 6.",
   milestones.join("\n"),
   "### The second day",

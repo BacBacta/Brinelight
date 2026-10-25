@@ -72,14 +72,15 @@ describe("the balance simulation", () => {
   // The casual player reaches Lighthouse 30 after a year: its run goes on a little longer.
   const long = [...runs.filter((r) => r.profile.id !== "casual"), simulate(casual, 380)];
 
-  it("keeps every Lighthouse milestone within 10 % of the reference of 23 October (A + C + E, owner's decision)", () => {
+  it("keeps every Lighthouse milestone within 10 % of the reference of 24 October (the slower build times and the costs past 15, owner's decisions)", () => {
     // The days each profile reaches Lighthouse 5, 10, 15, 20, 25 and 30 with the quick first levels and the richer start
     // (docs/tasks/early-start.md), the producers' curve and the isles and shoals (E, docs/studies/resources.md), the
-    // players keeping the Lighthouse's reserve only on what a spending uses: the reference since 23 October.
+    // slower curve of build times (docs/studies/durations.md), the costs past level 15 (docs/studies/costs.md), the
+    // players keeping the Lighthouse's reserve only on what a spending uses: the reference since 24 October.
     const REFERENCE: Record<string, Record<number, number>> = {
-      casual: { 5: 0.6, 10: 4.6, 15: 16.0, 20: 42.6, 25: 117.4, 30: 299.4 },
-      regular: { 5: 0.2, 10: 3.5, 15: 12.5, 20: 38.0, 25: 101.4, 30: 264.6 },
-      dedicated: { 5: 0.1, 10: 2.8, 15: 11.5, 20: 37.0, 25: 100.0, 30: 256.0 },
+      casual: { 5: 0.6, 10: 4.1, 15: 15.5, 20: 40.4, 25: 100.7, 30: 246.6 },
+      regular: { 5: 0.2, 10: 2.5, 15: 9.0, 20: 26.8, 25: 72.8, 30: 183.9 },
+      dedicated: { 5: 0.1, 10: 2.2, 15: 8.4, 20: 23.5, 25: 65.1, 30: 162.8 },
     };
     for (const r of long) {
       for (const [level, reference] of Object.entries(REFERENCE[r.profile.id]!)) {
@@ -90,9 +91,10 @@ describe("the balance simulation", () => {
     }
   });
 
-  it("never brings Lighthouse 15 to 30 later than week 6 (E brings them sooner, owner's decision of 23 October)", () => {
+  it("never brings Lighthouse 15 to 30 later than week 6 (E and the slower build times bring them sooner, owner's decisions)", () => {
     // The days each profile reached them with the rules of week 6 (commit c307f9f). The limit of 18 October (within
-    // 10 %) gave way to A + C, then to E: the owner took the new days as the reference (docs/decisions.md).
+    // 10 %) gave way to A + C, then to E and the slower build times: the owner took the new days as the reference
+    // (docs/decisions.md).
     const WEEK_6: Record<string, Record<number, number>> = {
       casual: { 15: 26.0, 20: 63.0, 25: 152.4, 30: 371.4 },
       regular: { 15: 19.7, 20: 52.6, 25: 122.7, 30: 321.4 },
