@@ -154,8 +154,8 @@ def house(level, age):
     p.append(prism_roof(w + 0.12, d + 0.12, 0.2, (hx, h, hz), "sail_red"))
     p += door(hx - 0.1, 0, hz + d / 2, w=0.11, h=0.2, color="dark")
     p += window(hx + 0.11, 0.17, hz + d / 2, w=0.08, h=0.08, frame=look["post"])
-    # The washing on a line at the front corner.
-    p += washing_line((0.12, 0, 0.36), (0.42, 0, 0.2), colors=("cream", "navy", "white"))
+    # The washing on a line along the front edge, facing the camera, its clothes large enough to read from the normal view (owner, 25 October).
+    p += washing_line((-0.4, 0, 0.42), (0.4, 0, 0.42), colors=("cream", "navy", "white"), cloth=(0.14, 0.19))
     return p
 
 

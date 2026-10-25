@@ -78,7 +78,7 @@ describe("repairing the rafts", () => {
     const sound = { ...worn(), rafts: { [A]: worn().rafts[A]! } };
     expect(repairRafts(sound)).toEqual({ ok: false, reason: "Nothing needs mending" });
     const busy = ok(repairRafts(worn()));
-    expect(repairRafts(busy)).toEqual({ ok: false, reason: "Your builders on the shore are busy" });
+    expect(repairRafts(busy)).toEqual({ ok: false, reason: "Your dike builders are busy." });
     expect(repairRafts({ ...worn(), stock: { oil: 219, fish: 0, wood: 0, rope: 0 } })).toEqual({ ok: false, reason: "Not enough resources" });
     expect(repairRafts({ ...worn(), stock: { oil: 220, fish: 0, wood: 0, rope: 0 } }).ok).toBe(true);
     expect(canRepair({ rafts: worn().rafts, stock: worn().stock, yard: null })).toEqual({ ok: true });

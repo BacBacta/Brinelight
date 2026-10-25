@@ -60,8 +60,8 @@ def tent(x, z, w, d, h, color, foot=0.0, turn=0.0):
     return [prism_roof(w, d, h, (x, foot, z), color, turn=turn)]
 
 
-def washing_line(a, b, colors=("cream", "white", "navy")):
-    """Two poles, a rope between them, cloths hanging on it."""
+def washing_line(a, b, colors=("cream", "white", "navy"), cloth=(0.09, 0.12)):
+    """Two poles, a rope between them, cloths hanging on it (`cloth`: their width and height)."""
     (ax, ay, az), (bx, by, bz) = a, b
     h = 0.42
     out = [cylinder(0.018, h, (ax, ay + h / 2, az), "wood", sides=5, bevel=0), cylinder(0.018, h, (bx, by + h / 2, bz), "wood", sides=5, bevel=0)]
@@ -69,7 +69,7 @@ def washing_line(a, b, colors=("cream", "white", "navy")):
     n = len(colors)
     for i, c in enumerate(colors):
         t = (i + 1) / (n + 1)
-        out.append(box((0.09, 0.12, 0.01), (ax + (bx - ax) * t, ay + h - 0.09, az + (bz - az) * t), c, bevel=0, turn=math.atan2(bz - az, bx - ax) * -1))
+        out.append(box((cloth[0], cloth[1], 0.01), (ax + (bx - ax) * t, ay + h - 0.03 - cloth[1] / 2, az + (bz - az) * t), c, bevel=0, turn=math.atan2(bz - az, bx - ax) * -1))
     return out
 
 

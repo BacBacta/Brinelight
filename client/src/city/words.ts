@@ -3,7 +3,7 @@
  * won on the sea, and the game says so ("plot", "dike", "drain"); before, they are rafts. The rules' refusals are
  * neutral (shared/src/rules/rafts.ts): they fit both.
  */
-import { RAFT_BUILDING_MAX_COPIES } from "@brinelight/shared";
+import { RAFT_BUILDING_MAX_COPIES, YARD_BUSY } from "@brinelight/shared";
 
 /** From this Lighthouse level on, the rafts are land (display only: the rules keep their rafts). */
 export const LAND_FROM = 5;
@@ -60,7 +60,7 @@ const RAFT: RaftWords = {
   repairing: (n) => `Repairing ${plural(n, "raft", "rafts")}`,
   yard: "Shipyard",
   yardNew: "raft",
-  yardBusy: "The shipyard is busy",
+  yardBusy: YARD_BUSY,
   newOne: "A new raft is moored",
   mended: (n) => (n === 1 ? "A raft repaired" : `${n} rafts repaired`),
   damaged: (n) => plural(n, "raft", "rafts") + " damaged",
@@ -87,7 +87,7 @@ const LAND: RaftWords = {
   repairing: (n) => `Draining ${plural(n, "plot", "plots")}`,
   yard: "Dike works",
   yardNew: "new plot",
-  yardBusy: "The dike works are busy",
+  yardBusy: YARD_BUSY,
   newOne: "New land won from the sea",
   mended: (n) => (n === 1 ? "A plot drained" : `${n} plots drained`),
   damaged: (n) => plural(n, "plot", "plots") + " flooded",

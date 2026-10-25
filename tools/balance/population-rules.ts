@@ -95,7 +95,7 @@ function buildHouse(s: PlayerState, slot: string, p: Proposal): ActionResult {
   const raft = s.rafts[slot];
   if (!raft) return refuse("There is nothing here yet");
   if (raft.building) return refuse("There is already a building here");
-  if (s.yard) return refuse("Your builders on the shore are busy");
+  if (s.yard) return refuse(rules.YARD_BUSY);
   const cost = houseCost(p, 0);
   if (!rules.canPay(s.stock, cost)) return refuse("Not enough resources");
   const time = rules.installTime(s.buildings.lighthouse);
@@ -108,7 +108,7 @@ function upgradeHouse(s: PlayerState, slot: string, p: Proposal): ActionResult {
   if (raft.level >= p.house!.maxLevel) return refuse("Max level");
   if (raft.level >= houseMaxLevel(p, s.buildings.lighthouse)) return refuse("Upgrade the Lighthouse first");
   if (raft.hp < rules.RAFT_DAMAGED_BELOW) return refuse("Mend this first");
-  if (s.yard) return refuse("Your builders on the shore are busy");
+  if (s.yard) return refuse(rules.YARD_BUSY);
   const cost = houseCost(p, raft.level);
   if (!rules.canPay(s.stock, cost)) return refuse("Not enough resources");
   const time = rules.raftUpgradeTime(raft.level);

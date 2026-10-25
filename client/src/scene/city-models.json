@@ -1022,14 +1022,14 @@
   ]
  },
  "house-1-age1": {
-  "kB": 26.6,
+  "kB": 24.8,
   "triangles": 252,
   "levels": [
    {
     "level": 0,
     "indices": 756,
     "height": 0.493,
-    "reach": 0.437
+    "reach": 0.582
    }
   ]
  },

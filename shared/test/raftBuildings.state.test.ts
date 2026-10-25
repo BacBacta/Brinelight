@@ -90,7 +90,7 @@ describe("putting a building on a raft", () => {
     expect(installOnRaft(broke, A, "smokehouse")).toEqual({ ok: false, reason: "There is already a building here" });
     const withFree = { ...broke, rafts: { ...broke.rafts, [D]: { ...free } } };
     expect(installOnRaft(withFree, D, "greenhouse")).toEqual({ ok: false, reason: "You can build each type twice" });
-    expect(installOnRaft(withFree, D, "smokehouse")).toEqual({ ok: false, reason: "Your builders on the shore are busy" });
+    expect(installOnRaft(withFree, D, "smokehouse")).toEqual({ ok: false, reason: "Your dike builders are busy." });
     expect(installOnRaft({ ...withFree, yard: null }, D, "smokehouse")).toEqual({ ok: false, reason: "Not enough resources" });
     expect(installOnRaft({ ...withFree, yard: null, stock: moored().stock }, D, "smokehouse").ok).toBe(true);
   });
@@ -129,17 +129,17 @@ describe("upgrading a building on a raft", () => {
     expect(upgradeRaft(gone, D)).toEqual({ ok: false, reason: "There is nothing here yet" });
     expect(upgradeRaft(busy, D)).toEqual({ ok: false, reason: "Put a building here first" });
     expect(upgradeRaft(busy, A)).toEqual({ ok: false, reason: "Max level" });
-    expect(upgradeRaft(busy, B)).toEqual({ ok: false, reason: "Your builders on the shore are busy" });
+    expect(upgradeRaft(busy, B)).toEqual({ ok: false, reason: "Your dike builders are busy." });
     expect(upgradeRaft({ ...busy, yard: null }, B)).toEqual({ ok: false, reason: "Not enough resources" });
   });
 
   it("one work at a time at the shipyard, new rafts included", () => {
     const s = carrying(moored(), A, "greenhouse", 1);
     const up = ok(upgradeRaft(s, A));
-    expect(dockRaft({ ...up, buildings: { ...up.buildings, lighthouse: 8 } }, INNER[5]!)).toEqual({ ok: false, reason: "Your builders on the shore are busy" });
-    expect(installOnRaft(up, B, "smokehouse")).toEqual({ ok: false, reason: "Your builders on the shore are busy" });
+    expect(dockRaft({ ...up, buildings: { ...up.buildings, lighthouse: 8 } }, INNER[5]!)).toEqual({ ok: false, reason: "Your dike builders are busy." });
+    expect(installOnRaft(up, B, "smokehouse")).toEqual({ ok: false, reason: "Your dike builders are busy." });
     const raft = ok(dockRaft({ ...s, rafts: { [A]: s.rafts[A]! } }, B));
-    expect(upgradeRaft(raft, A)).toEqual({ ok: false, reason: "Your builders on the shore are busy" });
+    expect(upgradeRaft(raft, A)).toEqual({ ok: false, reason: "Your dike builders are busy." });
   });
 
   it("each level adds 90 to your Power, as the sheet says", () => {

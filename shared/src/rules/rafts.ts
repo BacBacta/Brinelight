@@ -45,6 +45,9 @@ export const MIST_RAFT_DAMAGE = 35;
 /** The Mist never takes a raft below this: a raft is never stopped, below RAFT_DAMAGED_BELOW it runs at half. */
 export const RAFT_MIN_HP = 25;
 
+/** The refusal while the shipyard works (owner, 25 October: one sentence, on the sheets and in the refusals). */
+export const YARD_BUSY = "Your dike builders are busy.";
+
 /** Rafts allowed by Lighthouse level. Prototype table up to level 10, capped after that. */
 const RAFT_CAP_TABLE = [0, 0, 0, 0, 6, 10, 14, 17, 25, 33, 39];
 export const RAFT_MAX = 39;
@@ -92,7 +95,7 @@ export function canAddRaft(ctx: { rafts: Rafts; lighthouse: number; slot: string
   if (ctx.rafts[ctx.slot]) return refuse("This spot is taken");
   if (!slotOpen(slot.ring, ctx.lighthouse)) return refuse("The Lighthouse's light doesn't reach this far yet");
   if (Object.keys(ctx.rafts).length >= raftCap(ctx.lighthouse)) return refuse("Upgrade the Lighthouse to grow your city further");
-  if (ctx.yardBusy) return refuse("Your builders on the shore are busy");
+  if (ctx.yardBusy) return refuse(YARD_BUSY);
   if (!canPay(ctx.stock, raftCost(Object.keys(ctx.rafts).length))) return refuse("Not enough resources");
   return OK;
 }
@@ -181,7 +184,7 @@ export function canInstall(id: RaftBuildingId, ctx: { rafts: Rafts; slot: string
   if (!raft) return refuse("There is nothing here yet");
   if (raft.building) return refuse("There is already a building here");
   if (raftBuildingCopies(id, ctx.rafts, ctx.yard) >= raftBuildingMaxCopies(id)) return refuse(`You can build each type ${RAFT_BUILDING_MAX_COPIES === 2 ? "twice" : `${RAFT_BUILDING_MAX_COPIES} times`}`);
-  if (ctx.yard) return refuse("Your builders on the shore are busy");
+  if (ctx.yard) return refuse(YARD_BUSY);
   if (!canPay(ctx.stock, raftBuildingCost(id, 0))) return refuse("Not enough resources");
   return OK;
 }
@@ -205,7 +208,7 @@ export function canUpgradeRaft(ctx: { rafts: Rafts; slot: string; lighthouse: nu
   if (raft.level >= raftBuildingMaxLevel(raft.building)) return refuse("Max level");
   if (raft.level >= raftBuildingLevelCap(raft.building, ctx.lighthouse)) return refuse("Upgrade the Lighthouse first");
   if (raft.hp < RAFT_DAMAGED_BELOW) return refuse("Mend this first");
-  if (ctx.yard) return refuse("Your builders on the shore are busy");
+  if (ctx.yard) return refuse(YARD_BUSY);
   if (!canPay(ctx.stock, raftBuildingCost(raft.building, raft.level))) return refuse("Not enough resources");
   return OK;
 }
@@ -222,7 +225,7 @@ export function startRaftUpgrade(ctx: { rafts: Rafts; slot: string; lighthouse: 
 /** Can you repair your rafts now? */
 export function canRepair(ctx: { rafts: Rafts; stock: Stock; yard: YardJob | null }): Check {
   if (damagedRafts(ctx.rafts).length === 0) return refuse("Nothing needs mending");
-  if (ctx.yard) return refuse("Your builders on the shore are busy");
+  if (ctx.yard) return refuse(YARD_BUSY);
   if (!canPay(ctx.stock, repairCost(ctx.rafts))) return refuse("Not enough resources");
   return OK;
 }

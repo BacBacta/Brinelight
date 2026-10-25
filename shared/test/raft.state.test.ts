@@ -61,7 +61,7 @@ describe("rafts around the island", () => {
     const full = { ...lit(), rafts: Object.fromEntries(INNER.slice(0, raftCap(4)).map((k) => [k, { hp: RAFT_MAX_HP, building: null, level: 0 }])) };
     expect(dockRaft(full, INNER[raftCap(4)]!)).toEqual({ ok: false, reason: "Upgrade the Lighthouse to grow your city further" });
     const busy = (dockRaft(lit(), INNER[0]!) as { state: PlayerState }).state;
-    expect(dockRaft(busy, INNER[1]!)).toEqual({ ok: false, reason: "Your builders on the shore are busy" });
+    expect(dockRaft(busy, INNER[1]!)).toEqual({ ok: false, reason: "Your dike builders are busy." });
     expect(dockRaft({ ...lit(), stock: { oil: 0, fish: 0, wood: 0, rope: 0 } }, INNER[0]!)).toEqual({ ok: false, reason: "Not enough resources" });
     expect(dockRaft(lit(), "0,0")).toEqual({ ok: false, reason: "Unknown slot" });
   });
