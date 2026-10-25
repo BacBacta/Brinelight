@@ -35,6 +35,9 @@ export const ZONES: readonly Zone[] = [
   ZONES_2_8_12[2]!,
 ];
 
+/** The same zones bringing 1, 2 and 3 Amber (the owner's request of 25 October: Amber a little short). */
+export const ZONES_LOW: readonly Zone[] = ZONES.map((z, i) => ({ ...z, amber: i + 1 }));
+
 /** What Amber is for. */
 export type AmberUse =
   /** Nothing: the expeditions bring base resources only (to tell the hunt's share from Amber's). */
@@ -80,6 +83,12 @@ export const PROPOSALS: readonly Proposal[] = [
   { id: "swap10", name: "B · Amber in place of up to 10 % of a cost", hunt: { ...HUNT, amber: { kind: "swap", max: 10 } }, speedup: null },
   { id: "contest25", name: "Contested isles and shoals: a quarter of their harvest to another city", hunt: null, speedup: null, contest: 0.25 },
   { id: "contest50", name: "Contested isles and shoals: half their harvest to another city", hunt: null, speedup: null, contest: 0.5 },
+  ...([[1, 5, 10], [2, 0, 0], [2, 2, 4], [2, 3, 6], [2, 5, 10], [2, 10, 20], [3, 10, 20]] as const).map(([perLevel, h4, h5]): Proposal => ({
+    id: `low${perLevel}-${h4}`,
+    name: `A · 1, 2 and 3 Amber an expedition; ${perLevel} a level past 15, ${h4} and ${h5} for the House's levels 4 and 5`,
+    hunt: { ...HUNT, zones: ZONES_LOW, amber: { kind: "gate", perLevel, house: { 4: h4, 5: h5 } } },
+    speedup: null,
+  })),
   { id: "base1", name: "C · base resources only, one fleet away at a time", hunt: { ...HUNT, one: true, amber: { kind: "none" } }, speedup: null },
   { id: "gate1one", name: "A · Amber needed (1 a level past 15), one fleet away at a time", hunt: { ...HUNT, one: true, amber: { kind: "gate", perLevel: 1, house: { 4: 5, 5: 10 } } }, speedup: null },
   { id: "swap1", name: "B · Amber in place of up to 25 % of a cost, one fleet away at a time", hunt: { ...HUNT, one: true, amber: { kind: "swap", max: 25 } }, speedup: null },
