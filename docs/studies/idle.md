@@ -1,5 +1,7 @@
 # Idle builders at Lighthouse 11 to 20 (study)
 
+> **Decision of 24 October 2026: not adopted.** Neither A nor B goes into the game: the idle time comes from saving for the Lighthouse, and both options make the game too short (Lighthouse 30 in 3.3 and 4.4 months for the regular player, against a target of about 6). Instead, later, in the interface only: on the Lighthouse's sheet and in the queue, "Saving for Lighthouse N", one bar for each resource still missing, and "ready in about X h" (`docs/tasks/roadmap.md`).
+
 A study only, at the owner's request of 24 October: from Lighthouse 11 to 20, a builder has nothing to start 70 % of the time. Is it the other buildings' costs at levels 6 to 15, or the production, that sets this pace? And two options to bring it under 30 %, with their effect on Lighthouses 15, 20 and 30. **It changes no value: the owner decides on the numbers.**
 
 ## How it is measured
