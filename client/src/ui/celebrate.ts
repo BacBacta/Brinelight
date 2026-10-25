@@ -17,6 +17,11 @@ export type Celebration = { kind: CelebrationKind; title: string; lines: string[
 export const CELEBRATION_MS: Record<CelebrationKind, number> = { float: 1200, lighthouse: 2500, captain: 2500, away: 6000 };
 /** The lines of the "away" card; what is beyond is counted. */
 export const AWAY_LINES = 5;
+/** The line under a builder's celebration. */
+export const BUILDER_LINE = "One more upgrade at a time.";
+
+/** The builders a city can have past its first two (rules/buildings.ts: BUILDER_AT). */
+const BUILDER_ORDINALS: Record<number, string> = { 3: "third", 4: "fourth" };
 
 /** What an event says, in a few words; `land`: the rafts show as land (words.ts). */
 export function eventText(e: GameEvent, land = false): string {
@@ -40,6 +45,8 @@ export function eventText(e: GameEvent, land = false): string {
       return `${e.count} wounded healed`;
     case "survivors":
       return e.count === 1 ? "A survivor reached your city" : `${e.count} survivors reached your city`;
+    case "builder":
+      return `A ${BUILDER_ORDINALS[e.count] ?? `new`} builder joins you`;
     case "captain":
       return `${CAPTAINS[e.captain].name} reached level ${e.level}`;
     case "mistHeld":
@@ -54,6 +61,8 @@ export function eventText(e: GameEvent, land = false): string {
 /** The celebration of one event. */
 export function celebrationOf(e: GameEvent, land = false): Celebration {
   if (e.kind === "building" && e.building === "lighthouse") return { kind: "lighthouse", title: eventText(e, land), lines: ["Your light reaches farther."], sound: "lighthouse" };
+  // A builder is rare (twice a game): the whole screen and the Lighthouse's sound (owner, 25 October).
+  if (e.kind === "builder") return { kind: "lighthouse", title: eventText(e, land), lines: [BUILDER_LINE], sound: "lighthouse" };
   if (e.kind === "captain") return { kind: "captain", title: eventText(e, land), lines: [], sound: "captain", portrait: captainPortrait(e.captain, 512) };
   const sound = e.kind === "troops" || e.kind === "veterans" ? "troops" : e.kind === "mistMissed" ? "refused" : "done";
   return { kind: "float", title: eventText(e, land), lines: [], sound };

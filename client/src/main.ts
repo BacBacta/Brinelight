@@ -11,7 +11,7 @@
  * light sounds of wood and rope, made by the game, that you can turn off in the Profile.
  * The reference prototype stays playable at /prototype/.
  */
-import { BUILDING_IDS, HOME, applyAction, yardSlot, type GameAction } from "@brinelight/shared";
+import { BUILDING_IDS, HOME, applyAction, builders, yardSlot, type GameAction } from "@brinelight/shared";
 import type { Wallet } from "@wallet-standard/base";
 import type { ActionInput } from "./account/actions.js";
 import { createAccount, isUntouched } from "./account/index.js";
@@ -44,9 +44,9 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 /** The actions that start a work: they knock twice on wood. */
 const WORKS = new Set<ActionInput["type"]>(["upgrade", "research", "train", "promote", "heal", "dockRaft", "installOnRaft", "upgradeRaft", "repairRafts", "sail"]);
 
-/** What the screen shows: changes here open a report, refresh a sheet, and save the city of this device. */
+/** What the screen shows: changes here open a report, refresh a sheet, save the city of this device, and are celebrated (a builder who joins shows at once). */
 const signature = (s: PlayerState): string =>
-  `${s.queue.map((j) => j.id).join()}|${s.research?.id ?? ""}|${JSON.stringify(s.techs)}|${s.yard ? `${s.yard.kind}${yardSlot(s.yard) ?? ""}` : ""}|${JSON.stringify(s.rafts)}|${s.training ? `${s.training.kind}${s.training.troop}` : ""}|${s.healing ? "h" : ""}|${JSON.stringify(s.troops)}|${JSON.stringify(s.veterans)}|${s.lead}|${JSON.stringify(s.captains)}|${JSON.stringify(s.shards)}|${s.reports.map((r) => `${r.id}${r.read ? "+" : "-"}`).join()}|${s.fleets.map((f) => f.phase).join()}|${s.mist.stoke}${s.mist.dark}${s.mist.held}.${s.mist.missed}`;
+  `${s.queue.map((j) => j.id).join()}|${s.research?.id ?? ""}|${JSON.stringify(s.techs)}|${s.yard ? `${s.yard.kind}${yardSlot(s.yard) ?? ""}` : ""}|${JSON.stringify(s.rafts)}|${s.training ? `${s.training.kind}${s.training.troop}` : ""}|${s.healing ? "h" : ""}|${JSON.stringify(s.troops)}|${JSON.stringify(s.veterans)}|${s.lead}|${JSON.stringify(s.captains)}|${JSON.stringify(s.shards)}|${s.reports.map((r) => `${r.id}${r.read ? "+" : "-"}`).join()}|${s.fleets.map((f) => f.phase).join()}|${s.mist.stoke}${s.mist.dark}${s.mist.held}.${s.mist.missed}|${builders(s.survivors)}`;
 
 if (new URLSearchParams(location.search).has("rules")) {
   showRules(app);

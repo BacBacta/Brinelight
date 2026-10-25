@@ -61,7 +61,7 @@ describe("applyAction", () => {
       { id: "refinery" as const, left: 100, duration: 100 },
       { id: "fishery" as const, left: 100, duration: 100 },
     ];
-    expect(act("lumberyard", { ...s, queue: busy })).toEqual({ ok: false, reason: "Your 2 builders are busy" });
+    expect(act("lumberyard", { ...s, queue: busy })).toEqual({ ok: false, reason: "Your builders are busy." });
     expect(act("refinery", { ...s, queue: busy.slice(0, 1) })).toEqual({ ok: false, reason: "This building is already being upgraded" });
   });
 

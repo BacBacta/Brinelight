@@ -334,7 +334,7 @@ describe("the account's actions", () => {
     t.q.act(UP_REFINERY);
     t.q.act(UP_FISHERY);
     await t.clock.pass(10);
-    expect(t.q.act(UP_LUMBERYARD)).toEqual({ ok: false, reason: "Your 2 builders are busy" });
+    expect(t.q.act(UP_LUMBERYARD)).toEqual({ ok: false, reason: "Your builders are busy." });
     await flush();
     expect(sent(t.api)).toHaveLength(2);
   });

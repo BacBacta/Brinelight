@@ -186,27 +186,27 @@ describe("buildings", () => {
   });
 
   it("accepts a valid upgrade", () => {
-    expect(canUpgrade("refinery", { buildings: STARTING_BUILDINGS, stock, pearls: 0, queue: [] })).toEqual({ ok: true });
+    expect(canUpgrade("refinery", { buildings: STARTING_BUILDINGS, stock, pearls: 0, survivors: 8, queue: [] })).toEqual({ ok: true });
   });
 
   it("refuses when the Lighthouse is too low", () => {
     const b = { ...STARTING_BUILDINGS, refinery: 2 };
-    expect(canUpgrade("refinery", { buildings: b, stock, pearls: 0, queue: [] })).toEqual({ ok: false, reason: "Upgrade the Lighthouse first" });
+    expect(canUpgrade("refinery", { buildings: b, stock, pearls: 0, survivors: 8, queue: [] })).toEqual({ ok: false, reason: "Upgrade the Lighthouse first" });
   });
 
   it("refuses when the builders are busy", () => {
-    const r = canUpgrade("lumberyard", { buildings: STARTING_BUILDINGS, stock, pearls: 0, queue: ["refinery", "fishery"] });
+    const r = canUpgrade("lumberyard", { buildings: STARTING_BUILDINGS, stock, pearls: 0, survivors: 8, queue: ["refinery", "fishery"] });
     expect(r.ok).toBe(false);
     expect(BUILDERS).toBe(2);
   });
 
   it("refuses a building that is already being upgraded", () => {
-    const r = canUpgrade("refinery", { buildings: STARTING_BUILDINGS, stock, pearls: 0, queue: ["refinery"] });
+    const r = canUpgrade("refinery", { buildings: STARTING_BUILDINGS, stock, pearls: 0, survivors: 8, queue: ["refinery"] });
     expect(r).toEqual({ ok: false, reason: "This building is already being upgraded" });
   });
 
   it("refuses without enough resources", () => {
-    const r = canUpgrade("lighthouse", { buildings: STARTING_BUILDINGS, stock: { oil: 0, fish: 0, wood: 0, rope: 0 }, pearls: 0, queue: [] });
+    const r = canUpgrade("lighthouse", { buildings: STARTING_BUILDINGS, stock: { oil: 0, fish: 0, wood: 0, rope: 0 }, pearls: 0, survivors: 8, queue: [] });
     expect(r).toEqual({ ok: false, reason: "Not enough resources" });
   });
 
@@ -218,19 +218,19 @@ describe("buildings", () => {
     expect(upgradePearls("refinery", 27)).toBe(0);
     const rich = { oil: 1e9, fish: 1e9, wood: 1e9, rope: 1e9 };
     const at = (lighthouse: number) => ({ ...STARTING_BUILDINGS, lighthouse });
-    expect(canUpgrade("lighthouse", { buildings: at(27), stock: rich, pearls: 6999, queue: [] })).toEqual({ ok: false, reason: "You need 7,000 Pearls for this level." });
-    expect(canUpgrade("lighthouse", { buildings: at(27), stock: rich, pearls: 7000, queue: [] })).toEqual({ ok: true });
-    expect(canUpgrade("lighthouse", { buildings: at(24), stock: rich, pearls: 0, queue: [] })).toEqual({ ok: true });
+    expect(canUpgrade("lighthouse", { buildings: at(27), stock: rich, pearls: 6999, survivors: 8, queue: [] })).toEqual({ ok: false, reason: "You need 7,000 Pearls for this level." });
+    expect(canUpgrade("lighthouse", { buildings: at(27), stock: rich, pearls: 7000, survivors: 8, queue: [] })).toEqual({ ok: true });
+    expect(canUpgrade("lighthouse", { buildings: at(24), stock: rich, pearls: 0, survivors: 8, queue: [] })).toEqual({ ok: true });
     // Resources first: a player short of both is told about the resources.
-    expect(canUpgrade("lighthouse", { buildings: at(27), stock, pearls: 0, queue: [] })).toEqual({ ok: false, reason: "Not enough resources" });
+    expect(canUpgrade("lighthouse", { buildings: at(27), stock, pearls: 0, survivors: 8, queue: [] })).toEqual({ ok: false, reason: "Not enough resources" });
     // Started, the upgrade takes its Pearls.
-    const r = startUpgrade("lighthouse", { buildings: at(29), stock: rich, pearls: 10_000, queue: [] });
+    const r = startUpgrade("lighthouse", { buildings: at(29), stock: rich, pearls: 10_000, survivors: 8, queue: [] });
     expect(r.ok && r.pearls).toBe(1000);
   });
 });
 
 describe("upgrade queue", () => {
-  const start = { buildings: { ...STARTING_BUILDINGS }, stock: { ...stock }, pearls: 0, queue: [] as UpgradeJob[] };
+  const start = { buildings: { ...STARTING_BUILDINGS }, stock: { ...stock }, pearls: 0, survivors: 8, queue: [] as UpgradeJob[] };
 
   it("starting an upgrade pays the cost and adds the job with its fixed duration", () => {
     const r = startUpgrade("refinery", start);
@@ -244,7 +244,7 @@ describe("upgrade queue", () => {
       { id: "refinery", left: 100, duration: 100 },
       { id: "fishery", left: 100, duration: 100 },
     ];
-    expect(startUpgrade("lumberyard", { ...start, queue })).toEqual({ ok: false, reason: `Your ${BUILDERS} builders are busy` });
+    expect(startUpgrade("lumberyard", { ...start, queue })).toEqual({ ok: false, reason: "Your builders are busy." });
   });
 
   it("refuses with the reason of canUpgrade and changes nothing", () => {

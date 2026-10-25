@@ -125,7 +125,7 @@ export function advance(state: PlayerState, seconds: number): PlayerState {
   const hours = seconds / rules.HOUR;
   const b = (study.builders[state.buildings.lighthouse] ??= { hours: 0, away: 0, nothing: 0, waitBuild: 0 });
   b.hours += hours;
-  const free = Math.max(0, rules.BUILDERS - state.queue.length);
+  const free = Math.max(0, rules.builders(state.survivors) - state.queue.length);
   const can = affordable(state);
   if (free > 0) b[can ? "away" : "nothing"] += free * hours;
   else if (can) b.waitBuild += hours;

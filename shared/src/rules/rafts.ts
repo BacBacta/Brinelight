@@ -1,3 +1,4 @@
+import { BUILDERS_BUSY } from "./buildings.js";
 import { EARLY_INSTALL, EARLY_RAFT, earlyCapped } from "./early.js";
 import { OK, canPay, payCost, refuse, roundCost, type Check, type Cost, type Stock } from "./types.js";
 import { protoSeconds } from "./time.js";
@@ -46,7 +47,7 @@ export const MIST_RAFT_DAMAGE = 35;
 export const RAFT_MIN_HP = 25;
 
 /** The refusal while the shipyard works (owner, 25 October: one sentence, on the sheets and in the refusals). */
-export const YARD_BUSY = "Your builders are busy.";
+export const YARD_BUSY = BUILDERS_BUSY;
 
 /** Rafts allowed by Lighthouse level. Prototype table up to level 10, capped after that. */
 const RAFT_CAP_TABLE = [0, 0, 0, 0, 6, 10, 14, 17, 25, 33, 39];

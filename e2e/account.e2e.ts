@@ -1373,6 +1373,26 @@ describe("the look", () => {
       await expect.poll(() => card.locator("img").evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth === 512)).toBe(true);
       await look(page, card.locator(".cel-card"), `celebrate-captain-${w}`);
       await page.context().close();
+
+      // The third builder (step 3): the 100th survivor reaches the city at 7:00, a survivor's gold text, then the
+      // whole screen with the Lighthouse's sound (owner, 25 October).
+      const crowded: PlayerState = {
+        ...base,
+        buildings: { ...base.buildings, lighthouse: 24, shelters: 24 },
+        stock: { oil: 9e5, fish: 9e5, wood: 9e5, rope: 10 },
+        survivors: 99,
+        coming: 0.5,
+      };
+      page = await frozenGame(size, crowded);
+      await page.clock.fastForward(60 * 60_000);
+      await page.clock.runFor(200);
+      await expect(page.locator(".celebration.float").textContent()).resolves.toBe("A survivor reached your city");
+      await page.clock.runFor(1300);
+      const builder = page.locator(".celebration.lighthouse");
+      await builder.waitFor();
+      await expect(builder.textContent()).resolves.toContain("A third builder joins you");
+      await look(page, builder, `celebrate-builder-${w}`, ".hud,.sub{visibility:hidden!important}");
+      await page.context().close();
     }
     writeFileSync(`${OUT}/pairs.txt`, [...pairs].sort().join("\n") + "\n");
     // Two CI machines can draw a rounded corner a little differently (week 6): which processor drew these captures.
@@ -1536,7 +1556,7 @@ describe("signed in", () => {
     await expect.poll(() => shownJobs(p.page), NET).toEqual(["Lumberyard"]);
     await p.page.unroute(`${API}/**`);
     await show(p.page);
-    await p.page.locator(".toast", { hasText: "Your 2 builders are busy" }).waitFor({ timeout: 15_000 });
+    await p.page.locator(".toast", { hasText: "Your builders are busy." }).waitFor({ timeout: 15_000 });
     await expect.poll(() => shownJobs(p.page), NET).toEqual(["Fishery", "Refinery"]);
     await p.page.screenshot({ path: "e2e/.shots/shot-refused.png" });
     const server = await serverHas(p.token, ["fishery", "refinery"]);

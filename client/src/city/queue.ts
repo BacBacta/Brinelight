@@ -1,4 +1,4 @@
-import { BUILDINGS, BUILDERS, TECHS, seaSite, totalTroops, trainingName, type Fleet } from "@brinelight/shared";
+import { BUILDINGS, BUILDERS, TECHS, builders, seaSite, totalTroops, trainingName, type Fleet } from "@brinelight/shared";
 import { ICONS } from "../ui/icons.js";
 import type { PlayerState } from "../state/index.js";
 import { formatAmount, formatTimeLeft } from "./format.js";
@@ -58,6 +58,9 @@ export function createQueue(root: HTMLElement, onCity: () => void) {
   const queue = {
     update(state: PlayerState, speed: number) {
       last = { state, speed };
+      // The third and fourth builders come with the survivors.
+      const label = `Your ${builders(state.survivors)} builders`;
+      if (el.getAttribute("aria-label") !== label) el.setAttribute("aria-label", label);
       const b = buildBadge(state);
       badge.hidden = b === null;
       if (b && badge.getAttribute("aria-label") !== b.label) {

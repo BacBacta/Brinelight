@@ -2,8 +2,17 @@ import { OK, canPay, payCost, refuse, roundCost, type BuildingId, type Buildings
 
 /** Maximum Lighthouse level in the full game (the prototype stopped at 10). */
 export const LIGHTHOUSE_MAX = 30;
-/** Number of builders: simultaneous upgrades. */
+/** Number of builders of a new city: simultaneous upgrades. */
 export const BUILDERS = 2;
+/**
+ * One more builder at each of these numbers of survivors (owner's decision, 25 October; docs/studies/population.md):
+ * a third at 100, a fourth at 250. The survivors never leave, so a builder who came never goes. Never for sale.
+ */
+export const BUILDER_AT = [100, 250] as const;
+/** The builders of a city with this many survivors. */
+export const builders = (survivors: number): number => BUILDERS + BUILDER_AT.filter((n) => survivors >= n).length;
+/** Every builder busy, on the island as at the shipyard: one sentence (owner, 25 October). */
+export const BUILDERS_BUSY = "Your builders are busy.";
 
 /** The buildings that share their build times from level 6 on. */
 export type TimeGroup = "lighthouse" | "producers" | "shelters" | "large";
@@ -130,6 +139,8 @@ export type UpgradeContext = {
   pearls: number;
   /** Buildings already being upgraded. */
   queue: BuildingId[];
+  /** The city's survivors: they bring the third and fourth builders (`builders`). */
+  survivors: number;
 };
 
 /** The server calls this rule before accepting any upgrade. */
@@ -139,7 +150,7 @@ export function canUpgrade(id: BuildingId, ctx: UpgradeContext): Check {
     return refuse(id === "lighthouse" ? "The Lighthouse is at max level" : "Upgrade the Lighthouse first");
   }
   if (ctx.queue.includes(id)) return refuse("This building is already being upgraded");
-  if (ctx.queue.length >= BUILDERS) return refuse(`Your ${BUILDERS} builders are busy`);
+  if (ctx.queue.length >= builders(ctx.survivors)) return refuse(BUILDERS_BUSY);
   if (!canPay(ctx.stock, upgradeCost(id, level))) return refuse("Not enough resources");
   const pearls = upgradePearls(id, level);
   if (ctx.pearls < pearls) return refuse(`You need ${thousands(pearls)} Pearls for this level.`);
@@ -154,8 +165,8 @@ export type StartUpgrade =
   | { ok: false; reason: string };
 
 /** Starts an upgrade: checks canUpgrade, pays the cost (and the Pearls) and adds the job at the end of the queue. */
-export function startUpgrade(id: BuildingId, ctx: { buildings: Buildings; stock: Stock; pearls: number; queue: UpgradeJob[] }): StartUpgrade {
-  const check = canUpgrade(id, { buildings: ctx.buildings, stock: ctx.stock, pearls: ctx.pearls, queue: ctx.queue.map((j) => j.id) });
+export function startUpgrade(id: BuildingId, ctx: { buildings: Buildings; stock: Stock; pearls: number; queue: UpgradeJob[]; survivors: number }): StartUpgrade {
+  const check = canUpgrade(id, { buildings: ctx.buildings, stock: ctx.stock, pearls: ctx.pearls, queue: ctx.queue.map((j) => j.id), survivors: ctx.survivors });
   if (!check.ok) return check;
   const level = ctx.buildings[id];
   const duration = upgradeTime(id, level);

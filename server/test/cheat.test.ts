@@ -126,7 +126,32 @@ describe("a modified client cannot change the rules", () => {
     later(1000);
     await expectApplied(server, busy, action({ type: "upgrade", building: "fishery" }));
     later(1000);
-    await expectRefused(server, busy, action({ type: "upgrade", building: "lumberyard" }), "Your 2 builders are busy");
+    await expectRefused(server, busy, action({ type: "upgrade", building: "lumberyard" }), "Your builders are busy.");
+  });
+
+  it("a third builder at 100 survivors, never at 99; never a fourth before 250", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const s = newPlayerState();
+    const big = (survivors: number) => ({
+      ...s,
+      buildings: { ...s.buildings, lighthouse: 24, shelters: 24 },
+      stock: { oil: 1e8, fish: 1e8, wood: 1e8, rope: 0 },
+      survivors,
+    });
+    for (const [survivors, third] of [[99, false], [100, true]] as const) {
+      const p = await player(big(survivors));
+      await expectApplied(server, p, action({ type: "upgrade", building: "refinery" }));
+      later(1000);
+      await expectApplied(server, p, action({ type: "upgrade", building: "fishery" }));
+      later(1000);
+      if (!third) {
+        await expectRefused(server, p, action({ type: "upgrade", building: "lumberyard" }), "Your builders are busy.");
+        continue;
+      }
+      await expectApplied(server, p, action({ type: "upgrade", building: "lumberyard" }));
+      later(1000);
+      await expectRefused(server, p, action({ type: "upgrade", building: "barracks" }), "Your builders are busy.");
+    }
   });
 
   it("a fleet without troops, to an unknown site, or when every fleet the Harbor allows is at sea", async () => {
