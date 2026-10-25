@@ -63,6 +63,28 @@ What it shows:
 
 **Recommendation:** zones of **5, 8 and 12 hours**, at most **half the fleets** away, and Amber **needed for the high levels (option A)**: the casual player gains the most (−13.7 days), every player holds the fish bar, the Lighthouse is never held back by Amber, and the high levels get a reason to sail. With Amber at 1 or 2 a level it changes almost nothing of the pace; if the owner wants Amber to be felt, fewer Amber an expedition. Option B if the owner wants a stronger lift for the late game, knowing it brings Lighthouse 30 a month sooner for the casual player.
 
+### Amber a little short (the owner's request of 25 October)
+
+> **The owner's decisions of 25 October:** option A kept in principle (Amber needed for the levels 16 to 30 of the island's buildings, never for the Lighthouse), zones of 5, 8 and 12 hours; speed-ups paid in resources and contested shoals given up (`docs/decisions.md`). Asked: the numbers with 1, 2 and 3 Amber an expedition, and values that leave Amber a little short, the casual player having just enough over two years.
+
+The same zones, each bringing **1, 2 and 3 Amber** (the Far Reef, the Drowned Deeps, the Abyss). The casual player brings home 2,200 to 2,650 Amber in two years, the regular 3,000 to 5,600, the dedicated 6,300 to 7,200 (fewer when the Amber holds the builders back: the fleets wait with the rest).
+
+| Amber needed (a level past 15; the House's levels 4 and 5) | In all | Lighthouse 30: casual | regular | dedicated | Whole city at 30: casual | regular | dedicated | Casual: Amber brought, sessions short of it | Sessions short of fish: casual, regular, dedicated |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| The rules (no expedition) | | day 248.8 | 188.1 | 168.0 | day 633 | 497 | 474 | | 156, 0, 50 |
+| 1; 5 and 10 | 1,455 | −13.7 | −9.9 | −9.1 | −27 | −21 | −36 | 2,645 (1.8 times what is needed), 0 | 184, 7, 15 |
+| **2; none for the House** | **1,920** | **−13.7** | **−9.5** | **−8.1** | **−9** | **−20** | **−38** | **2,587 (1.35 times), 315** | **101, 0, 22** |
+| 2; 2 and 4 | 2,118 | −13.7 | −9.5 | −8.1 | +50 | +24 | −30 | 2,400, 710 | 6, 0, 59 |
+| 2; 3 and 6 | 2,217 | −13.7 | −9.1 | −8.1 | +70 | +85 | −34 | 2,418, 820 | 6, 0, 225 |
+| 2; 5 and 10 | 2,415 | −13.7 | −9.4 | −8.4 | never in two years | +62 | −22 | 2,305, 1,136 | 2, 0, 52 |
+| 2; 10 and 20 | 2,910 | −13.7 | −10.5 | −7.8 | never | +101 | −19 | 2,177, 1,330 | 0, 0, 0 |
+| 3; 10 and 20 | 3,870 | −13.7 | −10.5 | −7.4 | never | never | +100 | 2,180, 1,360 | 0, 0, 0 |
+
+- **Lighthouse 30 does not move with Amber** (−13.7, −9.1 to −10.5, −7.4 to −9.1 days): the Lighthouse never needs it. What Amber moves is the rest of the city past 15.
+- **The House's levels 4 and 5 are where Amber runs out:** they come last, when the casual player has spent most of it. With 2 and 4 Amber for them, the casual player's whole city is at 30 50 days later than today; with 5 and 10, not in two years.
+- **The proposal: 1, 2 and 3 Amber an expedition; 2 Amber a level past 15 for the eight island buildings (2 for level 16, 30 for level 30: 240 a building, 1,920 in all); no Amber for the House.** The casual player brings 2,587 in two years, 1.35 times what the city needs, and still waits for it in 315 sessions on the way: Amber is a little short, and their whole city is at 30 9 days sooner than today. The regular and dedicated players bring 2.8 and 3.7 times what they need, and wait for it in 1,267 and 163 sessions: they climb past 15 faster than the Amber comes. Every player holds the fish bar (101, 0 and 22).
+- **"Sessions short of fish"** falls when Amber holds the city back (6 to 0 in the last rows): those sessions are short of Amber first.
+
 ## 2. Speed-ups paid in resources
 
 ### The rule played
@@ -115,14 +137,14 @@ Two cities on the same isle or shoal share its harvest: the study gives another 
 
 ## The values to choose (value by value)
 
-1. **The expeditions:** yes or no; open at Lighthouse 10.
-2. **The zones:** 5, 8 and 12 hours (proposed), or 2, 8 and 12 (the example).
-3. **What each brings:** 1.25, 2 and 3 full isles or shoals of the Lighthouse's level; 3, 5 and 8 Amber (or fewer: 1, 2 and 3).
+1. **The expeditions:** kept in principle (option A); open at Lighthouse 10.
+2. **The zones:** 5, 8 and 12 hours (the owner's choice).
+3. **What each brings:** 1.25, 2 and 3 full isles or shoals of the Lighthouse's level; **1, 2 and 3 Amber** (proposed, "Amber a little short").
 4. **The escort and its loss:** 1, 1 and 1.5 soldiers a Lighthouse level; 3, 5 and 10 % lost, known before sailing.
 5. **The fleets away:** half the city's fleets at most (proposed), or one.
-6. **What Amber is for:** A (needed for the high levels: 1 or 2 a level past 15, never the Lighthouse; 5 and 10, or 10 and 20, for the House's levels 4 and 5), B (in place of up to 25 % or 10 % of a cost), or C (nothing, no Amber).
-7. **The speed-up paid in resources:** no (proposed), or 1 hour a day at price ×1, with a word in the game that it slows the city.
-8. **Contested shoals:** no on the city's map (proposed); the contest stays in the Tides' zones.
+6. **What Amber is for:** option A (the owner's choice): **2 Amber a level past 15** for the eight island buildings (proposed), never the Lighthouse; **none for the House** (proposed).
+7. **The speed-up paid in resources:** given up (the owner's decision).
+8. **Contested shoals:** given up (the owner's decision); the contest stays in the Tides' zones.
 
 ## What the study leaves out
 
@@ -160,6 +182,27 @@ Two cities on the same isle or shoal share its harvest: the study gives another 
 | B · Amber in place of up to 10 % of a cost | Casual (3 sessions) | 13.7 | 37.4 | 94.9 | 244.1 (−4.7) | day 569 (−64) | 125 (5) | 60 | 619, 0, 688 | 4,856,748 | 7,361, 793, 0 | 2,672 |
 | B · Amber in place of up to 10 % of a cost | Regular (6 sessions) | 8.5 | 24.8 | 69.2 | 169.9 (−18.1) | day 445 (−52) | 0 (0) | 0 | 0, 2819, 0 | 9,846,900 | 14,095, 931, 0 | 2,810 |
 | B · Amber in place of up to 10 % of a cost | Dedicated (10 sessions) | 8.4 | 22.4 | 60.7 | 152.6 (−15.4) | day 406 (−68) | 52 (23) | 0 | 0, 3543, 0 | 12,382,740 | 17,715, 971, 0 | 3,533 |
+| A · 1, 2 and 3 Amber an expedition; 1 a level past 15, 5 and 10 for the House's levels 4 and 5 | Casual (3 sessions) | 13.7 | 39.4 | 101.2 | 235.1 (−13.7) | day 606 (−27) | 184 (2) | 0 | 611, 0, 678 | 4,806,882 | 2,645, 1,455, 0 | 2,646 |
+| A · 1, 2 and 3 Amber an expedition; 1 a level past 15, 5 and 10 for the House's levels 4 and 5 | Regular (6 sessions) | 8.5 | 25.8 | 71.8 | 178.2 (−9.9) | day 476 (−21) | 7 (0) | 0 | 0, 2780, 0 | 9,716,940 | 5,560, 1,455, 1179 | 2,770 |
+| A · 1, 2 and 3 Amber an expedition; 1 a level past 15, 5 and 10 for the House's levels 4 and 5 | Dedicated (10 sessions) | 8.4 | 23.2 | 64.0 | 158.8 (−9.1) | day 438 (−36) | 15 (10) | 0 | 0, 3597, 0 | 12,579,120 | 7,194, 1,455, 870 | 3,588 |
+| A · 1, 2 and 3 Amber an expedition; 2 a level past 15, 0 and 0 for the House's levels 4 and 5 | Casual (3 sessions) | 13.7 | 39.4 | 101.2 | 235.1 (−13.7) | day 624 (−9) | 101 (2) | 0 | 610, 0, 659 | 4,704,653 | 2,587, 1,920, 315 | 2,570 |
+| A · 1, 2 and 3 Amber an expedition; 2 a level past 15, 0 and 0 for the House's levels 4 and 5 | Regular (6 sessions) | 8.5 | 25.8 | 71.8 | 178.6 (−9.5) | day 477 (−20) | 0 (0) | 0 | 0, 2728, 0 | 9,533,880 | 5,456, 1,920, 1267 | 2,718 |
+| A · 1, 2 and 3 Amber an expedition; 2 a level past 15, 0 and 0 for the House's levels 4 and 5 | Dedicated (10 sessions) | 8.4 | 23.2 | 64.0 | 159.9 (−8.1) | day 436 (−38) | 22 (13) | 0 | 0, 3529, 0 | 12,339,810 | 7,058, 1,920, 163 | 3,520 |
+| A · 1, 2 and 3 Amber an expedition; 2 a level past 15, 2 and 4 for the House's levels 4 and 5 | Casual (3 sessions) | 13.7 | 39.4 | 101.2 | 235.1 (−13.7) | day 683 (+50) | 6 (2) | 0 | 612, 0, 596 | 4,377,346 | 2,400, 2,118, 710 | 2,318 |
+| A · 1, 2 and 3 Amber an expedition; 2 a level past 15, 2 and 4 for the House's levels 4 and 5 | Regular (6 sessions) | 8.5 | 25.8 | 71.8 | 178.6 (−9.5) | day 521 (+24) | 0 (0) | 0 | 0, 2443, 0 | 8,533,530 | 4,886, 2,118, 1738 | 2,433 |
+| A · 1, 2 and 3 Amber an expedition; 2 a level past 15, 2 and 4 for the House's levels 4 and 5 | Dedicated (10 sessions) | 8.4 | 23.2 | 64.0 | 159.9 (−8.1) | day 444 (−30) | 59 (18) | 0 | 0, 3470, 0 | 12,132,720 | 6,940, 2,118, 1501 | 3,461 |
+| A · 1, 2 and 3 Amber an expedition; 2 a level past 15, 3 and 6 for the House's levels 4 and 5 | Casual (3 sessions) | 13.7 | 39.4 | 101.2 | 235.1 (−13.7) | day 703 (+70) | 6 (2) | 0 | 612, 0, 602 | 4,408,936 | 2,418, 2,217, 820 | 2,342 |
+| A · 1, 2 and 3 Amber an expedition; 2 a level past 15, 3 and 6 for the House's levels 4 and 5 | Regular (6 sessions) | 8.5 | 25.8 | 71.8 | 178.9 (−9.1) | day 582 (+85) | 0 (0) | 0 | 0, 2123, 0 | 7,411,500 | 4,246, 2,217, 2316 | 2,113 |
+| A · 1, 2 and 3 Amber an expedition; 2 a level past 15, 3 and 6 for the House's levels 4 and 5 | Dedicated (10 sessions) | 8.4 | 23.2 | 64.0 | 159.9 (−8.1) | day 440 (−34) | 225 (19) | 0 | 0, 3553, 0 | 12,424,050 | 7,106, 2,217, 1650 | 3,544 |
+| A · 1, 2 and 3 Amber an expedition; 2 a level past 15, 5 and 10 for the House's levels 4 and 5 | Casual (3 sessions) | 13.7 | 39.4 | 101.2 | 235.1 (−13.7) | never | 2 (2) | 0 | 610, 0, 565 | 4,209,743 | 2,305, 2,295, 1136 | 2,194 |
+| A · 1, 2 and 3 Amber an expedition; 2 a level past 15, 5 and 10 for the House's levels 4 and 5 | Regular (6 sessions) | 8.5 | 25.8 | 71.8 | 178.7 (−9.4) | day 559 (+62) | 0 (0) | 0 | 0, 2345, 0 | 8,189,820 | 4,690, 2,415, 2111 | 2,335 |
+| A · 1, 2 and 3 Amber an expedition; 2 a level past 15, 5 and 10 for the House's levels 4 and 5 | Dedicated (10 sessions) | 8.4 | 23.2 | 64.0 | 159.6 (−8.4) | day 452 (−22) | 52 (0) | 0 | 0, 3493, 0 | 12,213,000 | 6,986, 2,415, 2181 | 3,484 |
+| A · 1, 2 and 3 Amber an expedition; 2 a level past 15, 10 and 20 for the House's levels 4 and 5 | Casual (3 sessions) | 13.7 | 39.4 | 101.2 | 235.1 (−13.7) | never | 0 (0) | 0 | 614, 0, 521 | 3,986,859 | 2,177, 2,166, 1330 | 2,018 |
+| A · 1, 2 and 3 Amber an expedition; 2 a level past 15, 10 and 20 for the House's levels 4 and 5 | Regular (6 sessions) | 8.5 | 25.8 | 71.8 | 177.6 (−10.5) | day 598 (+101) | 0 (0) | 0 | 0, 2346, 0 | 8,191,890 | 4,692, 2,910, 2532 | 2,336 |
+| A · 1, 2 and 3 Amber an expedition; 2 a level past 15, 10 and 20 for the House's levels 4 and 5 | Dedicated (10 sessions) | 8.4 | 23.2 | 64.0 | 160.2 (−7.8) | day 455 (−19) | 0 (0) | 0 | 0, 3507, 0 | 12,262,770 | 7,014, 2,910, 3272 | 3,498 |
+| A · 1, 2 and 3 Amber an expedition; 3 a level past 15, 10 and 20 for the House's levels 4 and 5 | Casual (3 sessions) | 13.7 | 39.4 | 101.2 | 235.1 (−13.7) | never | 0 (0) | 0 | 617, 0, 521 | 3,993,441 | 2,180, 2,163, 1360 | 2,018 |
+| A · 1, 2 and 3 Amber an expedition; 3 a level past 15, 10 and 20 for the House's levels 4 and 5 | Regular (6 sessions) | 8.5 | 25.8 | 71.8 | 177.6 (−10.5) | never | 0 (0) | 0 | 0, 1489, 0 | 5,183,820 | 2,978, 2,940, 3554 | 1,479 |
+| A · 1, 2 and 3 Amber an expedition; 3 a level past 15, 10 and 20 for the House's levels 4 and 5 | Dedicated (10 sessions) | 8.4 | 23.2 | 64.0 | 160.6 (−7.4) | day 574 (+100) | 0 (0) | 0 | 0, 3152, 0 | 11,015,640 | 6,304, 3,870, 4219 | 3,143 |
 | C · base resources only, one fleet away at a time | Casual (3 sessions) | 13.7 | 39.4 | 101.7 | 238.6 (−10.2) | day 610 (−23) | 245 (2) | 0 | 134, 0, 509 | 2,889,805 | 4,474, 0, 0 | 1,970 |
 | C · base resources only, one fleet away at a time | Regular (6 sessions) | 8.5 | 25.8 | 71.8 | 178.6 (−9.5) | day 488 (−9) | 7 (5) | 0 | 0, 617, 0 | 2,124,270 | 3,085, 0, 0 | 607 |
 | C · base resources only, one fleet away at a time | Dedicated (10 sessions) | 8.4 | 23.2 | 64.0 | 159.9 (−8.1) | day 460 (−14) | 280 (0) | 0 | 0, 606, 0 | 2,080,080 | 3,030, 0, 0 | 597 |
