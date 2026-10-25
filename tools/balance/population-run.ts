@@ -75,6 +75,8 @@ const HOUSE_OPTIONS: readonly Setup[] = [
   { key: "h-fish0-room3", name: "3. No fish, 3 room a level: 600 wood, ×3 a level; 0.6 fish an hour", proposal: { ...P.START, house: { ...H, cost: { wood: 600 }, roomPerLevel: 3 } } },
   { key: "h-fish0-eat075", name: "4. No fish, and 0.45 fish an hour", proposal: { ...P.START, eats: 0.75, house: { ...H, cost: { wood: 600 } } } },
   { key: "h-fish0-eat05", name: "5. No fish, and 0.3 fish an hour", proposal: { ...P.START, eats: 0.5, house: { ...H, cost: { wood: 600 } } } },
+  { key: "h-fish0-eat025", name: "7. No fish, and 0.25 fish an hour", proposal: { ...P.START, eats: 0.25 / 0.6, house: { ...H, cost: { wood: 600 } } } },
+  { key: "h-fish0-eat02", name: "8. No fish, and 0.2 fish an hour", proposal: { ...P.START, eats: 0.2 / 0.6, house: { ...H, cost: { wood: 600 } } } },
   { key: "h-fish100-eat05", name: "6. 600 wood and 100 fish, ×3 a level, and 0.3 fish an hour", proposal: { ...P.START, eats: 0.5, house: { ...H, cost: { wood: 600, fish: 100 } } } },
 ];
 
