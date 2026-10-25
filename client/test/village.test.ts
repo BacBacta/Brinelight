@@ -173,7 +173,7 @@ describe.runIf(villageServed())("the floating village's models", () => {
     });
   }
 
-  it("a House afloat (the Lighthouse 4) is a small driftwood cabin on its deck's middle, in budget; from the Lighthouse 5 the fabric draws it", () => {
+  it("a House afloat (the Lighthouse 4) is a small driftwood cabin under a sailcloth roof, with its washing, on its deck's middle, in budget; from the Lighthouse 5 the fabric draws it", () => {
     const a = RAFT_SLOTS.find((s) => s.ring === 3)!.key;
     const slots = [{ key: a, view: "raft" as const, variant: raftVariant(a) }];
     const rafts = { [a]: { hp: 100, building: "house" as const, level: 1 } };
@@ -185,8 +185,8 @@ describe.runIf(villageServed())("the floating village's models", () => {
     expect(Math.max(...p.map((v) => Math.abs(v.x)))).toBeLessThanOrEqual(FOOT.x);
     expect(Math.min(...p.map((v) => v.z))).toBeGreaterThanOrEqual(FOOT.back);
     expect(Math.max(...p.map((v) => v.z))).toBeLessThanOrEqual(FOOT.front);
-    // Smaller than the Smokehouse's hut, the lightest building on a raft.
-    expect(CITY_MANIFEST[RAFT_HOUSE]!.triangles).toBeLessThanOrEqual(CITY_MANIFEST["smokehouse-1-age1"]!.triangles);
+    // Lighter than the Smokehouse's hut (272 triangles), the lightest building on a raft (owner, 25 October).
+    expect(CITY_MANIFEST[RAFT_HOUSE]!.triangles).toBeLessThan(CITY_MANIFEST["smokehouse-1-age1"]!.triangles);
   });
 
   for (const age of VILLAGE_AGES) {

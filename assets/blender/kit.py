@@ -56,6 +56,8 @@ PALETTE = {
     "tin": "#9AA0A0",
     "solar": "#163A63",
     "steam": "#F4F1EA",
+    # The House's roof on a raft (owner, 25 October): a sail's canvas, faded red, so it never reads as the Smokehouse.
+    "sail_red": "#A3665B",
     # The island's ground through the eras (week 8): earth paths, cobbles, paving.
     "earth": "#9A7448",
     "cobble": "#8F8A80",
