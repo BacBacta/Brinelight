@@ -27,6 +27,8 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 
 **Week 7 is played** (task 5): the Mist, three a day on the city's clock, the order to stoke left on, as for a new city; the repairs; the Leviathan; the objectives and the daily tasks. **Two more players**, with the regular player's sessions: one who turns the order to stoke off at the start and never back on, and one away from day 20 to day 22 (no session), back on day 23. **Not modeled:** other players, the daily recruitment.
 
+**The population is played** (owner's decision, 24 October): survivors come while the Shelters have room and the city has fish, and eat 0.6 fish an hour each; the morale moves with the fish and the Mists (`shared/src/rules/population.ts`).
+
 ## Results
 
 ![Lighthouse level by day for the three profiles](balance/lighthouse.svg)
@@ -38,67 +40,67 @@ The city is founded on day 1 at 8:00, in a first session. A session is instant: 
 | Profile | Lighthouse 5 | Lighthouse 10 | Lighthouse 15 | Lighthouse 20 | Lighthouse 25 | Lighthouse 30 | Refinery 2 | Barracks 1 | First camp beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Casual (3 sessions) | day 0.6 | day 4.1 | day 15.5 | day 40.4 | day 100.7 | day 246.6 | day 2.0 | day 0.0 | day 1.0 |
-| Regular (6 sessions) | day 0.2 | day 2.5 | day 9.0 | day 26.8 | day 72.8 | day 183.9 | day 1.0 | day 0.0 | day 0.4 |
-| Dedicated (10 sessions) | day 0.1 | day 2.2 | day 8.4 | day 23.5 | day 65.1 | day 162.8 | day 0.5 | day 0.0 | day 0.3 |
+| Regular (6 sessions) | day 0.2 | day 2.5 | day 9.0 | day 26.8 | day 72.9 | day 185.2 | day 1.0 | day 0.0 | day 0.4 |
+| Dedicated (10 sessions) | day 0.1 | day 2.2 | day 8.4 | day 23.2 | day 64.7 | day 162.0 | day 0.5 | day 0.0 | day 0.3 |
 
 ### Day 30
 
 | Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 18 | 79,967 | 20,110 | 67,833 | 40,988 | 111,505 | 442 | 6 (mira, 10, 19★) | 18 | 6 | 36 |
-| Regular (6 sessions) | 20 | 113,970 | 45,317 | 95,856 | 77,904 | 188,446 | 413 | 6 (mira, 18, 30★) | 28 | 7 | 63 |
-| Dedicated (10 sessions) | 21 | 133,983 | 24,093 | 98,920 | 47,608 | 244,978 | 314 | 6 (mira, 19, 30★) | 28 | 7 | 71 |
+| Casual (3 sessions) | 18 | 79,967 | 20,110 | 63,404 | 40,988 | 111,505 | 442 | 6 (mira, 10, 19★) | 18 | 6 | 36 |
+| Regular (6 sessions) | 20 | 113,970 | 44,974 | 93,362 | 77,211 | 188,446 | 413 | 6 (mira, 18, 30★) | 28 | 7 | 63 |
+| Dedicated (10 sessions) | 21 | 136,837 | 34,594 | 84,074 | 59,915 | 244,978 | 548 | 6 (mira, 20, 30★) | 28 | 7 | 89 |
 
 ### Day 90
 
 | Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 24 | 161,895 | 90,799 | 290,119 | 163,564 | 538,222 | 1,390 | 6 (mira, 20, 30★) | 28 | 7 | 154 |
-| Regular (6 sessions) | 26 | 204,207 | 62,532 | 336,730 | 83,666 | 909,603 | 1,127 | 6 (mira, 20, 30★) | 28 | 7 | 232 |
-| Dedicated (10 sessions) | 26 | 202,809 | 291,031 | 612,221 | 531,477 | 909,603 | 1,267 | 6 (mira, 20, 30★) | 28 | 7 | 229 |
+| Casual (3 sessions) | 24 | 161,895 | 90,799 | 267,785 | 163,564 | 538,222 | 1,390 | 6 (mira, 20, 30★) | 28 | 7 | 154 |
+| Regular (6 sessions) | 26 | 203,025 | 43,082 | 342,733 | 93,695 | 909,603 | 1,240 | 6 (mira, 20, 30★) | 28 | 7 | 224 |
+| Dedicated (10 sessions) | 26 | 205,989 | 306,629 | 490,786 | 509,780 | 909,603 | 1,352 | 6 (mira, 20, 30★) | 28 | 7 | 244 |
 
 ### Day 365
 
 | Profile | Lighthouse | Power | Oil | Fish | Wood | Storage | Troops + veterans | Captains (lead, level, stars) | Techs | Rafts | Camps beaten |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 30 | 359,017 | 37,308 | 120,526 | 16,167 | 2,597,893 | 911 | 6 (mira, 20, 30★) | 28 | 7 | 246 |
-| Regular (6 sessions) | 30 | 447,499 | 81,768 | 68,599 | 519,486 | 2,597,893 | 1,245 | 6 (mira, 20, 30★) | 28 | 7 | 395 |
-| Dedicated (10 sessions) | 30 | 466,423 | 690,146 | 96,150 | 198,679 | 2,597,893 | 2,742 | 6 (mira, 20, 30★) | 28 | 7 | 498 |
+| Casual (3 sessions) | 30 | 358,357 | 96,486 | 44,635 | 90,046 | 2,597,893 | 789 | 6 (mira, 20, 30★) | 28 | 7 | 246 |
+| Regular (6 sessions) | 30 | 445,437 | 200,079 | 155,978 | 530,444 | 2,597,893 | 1,205 | 6 (mira, 20, 30★) | 28 | 7 | 388 |
+| Dedicated (10 sessions) | 30 | 464,575 | 416,790 | 224,147 | 115,529 | 2,597,893 | 1,853 | 6 (mira, 20, 30★) | 28 | 7 | 464 |
 
 ### Waiting and blocks
 
 | Profile | Builder hours free a day (days 1–30) | (days 31–90) | (days 91–365) | Sessions with a builder free and nothing to start | Sessions with nothing at all | Blocked by (sessions) | Hours full: oil, fish, wood |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 43.8 | 42.6 | 39.8 | 987 of 1095 (90 %) | 0 | oil 442, wood 545 | 0, 0, 0 |
-| Regular (6 sessions) | 41.1 | 38.9 | 33.2 | 1915 of 2190 (87 %) | 0 | oil 1430, fish 53, wood 432 | 0, 0, 0 |
-| Dedicated (10 sessions) | 38.4 | 40.5 | 31.5 | 3182 of 3650 (87 %) | 37 | oil 1062, fish 101, wood 2019 | 0, 0, 0 |
+| Casual (3 sessions) | 43.8 | 42.6 | 39.8 | 983 of 1095 (90 %) | 0 | oil 468, fish 5, wood 510 | 0, 0, 0 |
+| Regular (6 sessions) | 41.1 | 39.1 | 33.6 | 1899 of 2190 (87 %) | 0 | oil 1512, wood 387 | 0, 0, 0 |
+| Dedicated (10 sessions) | 38.1 | 40.3 | 31.7 | 3217 of 3650 (88 %) | 28 | oil 1310, fish 195, wood 1712 | 0, 0, 0 |
 
 ### Oil, the Mist, the Leviathan and the claims (whole run)
 
 | Profile | Hours of full oil (days 1–90) | Oil spent stoking | Repairs (oil) | Mists held | Mists missed | Hunts joined | Leviathans killed | Objectives claimed | Chests opened |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Casual (3 sessions) | 0 | 71,126 | 0 (0 oil) | 1094 | 0 | 364 | 2 | 19 | 776 |
-| Regular (6 sessions) | 0 | 74,224 | 0 (0 oil) | 1094 | 0 | 729 | 2 | 19 | 862 |
-| Dedicated (10 sessions) | 0 | 75,095 | 0 (0 oil) | 1094 | 0 | 688 | 1 | 19 | 876 |
-| Never stokes (6 sessions) | 0 | 0 | 326 (311,670 oil) | 0 | 1094 | 729 | 2 | 18 | 483 |
-| Away 3 days (6 sessions, none on days 20 to 22) | 0 | 74,071 | 0 (0 oil) | 1094 | 0 | 723 | 2 | 19 | 851 |
+| Regular (6 sessions) | 0 | 74,191 | 0 (0 oil) | 1094 | 0 | 729 | 2 | 19 | 857 |
+| Dedicated (10 sessions) | 0 | 75,151 | 0 (0 oil) | 1094 | 0 | 681 | 1 | 19 | 867 |
+| Never stokes (6 sessions) | 0 | 0 | 328 (313,700 oil) | 0 | 1094 | 729 | 2 | 18 | 475 |
+| Away 3 days (6 sessions, none on days 20 to 22) | 0 | 74,041 | 0 (0 oil) | 1094 | 0 | 723 | 2 | 19 | 853 |
 
 ### Pearls a day, by source (average over the whole run)
 
 | Profile | Mist | Leviathan | Camps | Objectives | Chests | Earned | Spent on Logbooks | Pearls at the end |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Casual (3 sessions) | 89.9 | 43.4 | 101.6 | 2.1 | 7.7 | 244.7 | 36.2 | 41,324 |
-| Regular (6 sessions) | 89.9 | 123.9 | 243.9 | 2.1 | 32.3 | 492.1 | 37.0 | 131,315 |
-| Dedicated (10 sessions) | 89.9 | 84.6 | 377.8 | 2.1 | 38.9 | 593.3 | 35.2 | 168,889 |
-| Never stokes (6 sessions) | 0.0 | 123.0 | 212.5 | 2.1 | 6.3 | 343.9 | 27.1 | 80,816 |
-| Away 3 days (6 sessions, none on days 20 to 22) | 89.9 | 125.2 | 239.3 | 2.1 | 31.2 | 487.7 | 37.4 | 129,569 |
+| Casual (3 sessions) | 89.9 | 43.4 | 101.6 | 2.1 | 7.7 | 244.7 | 36.2 | 41,323 |
+| Regular (6 sessions) | 89.9 | 126.4 | 235.9 | 2.1 | 31.0 | 485.2 | 37.0 | 128,782 |
+| Dedicated (10 sessions) | 89.9 | 88.9 | 330.4 | 2.1 | 36.7 | 547.9 | 34.7 | 152,545 |
+| Never stokes (6 sessions) | 0.0 | 120.9 | 195.6 | 2.1 | 6.3 | 324.8 | 27.4 | 73,742 |
+| Away 3 days (6 sessions, none on days 20 to 22) | 89.9 | 108.4 | 238.1 | 2.1 | 31.8 | 470.3 | 37.4 | 123,200 |
 
 ### Two more players: milestones
 
 | Profile | Lighthouse 5 | Lighthouse 10 | Lighthouse 15 | Lighthouse 20 | Lighthouse 25 | Lighthouse 30 |
 | --- | --- | --- | --- | --- | --- | --- |
-| Never stokes (6 sessions) | day 0.2 | day 3.1 | day 10.0 | day 28.4 | day 77.8 | day 193.2 |
-| Away 3 days (6 sessions, none on days 20 to 22) | day 0.2 | day 2.5 | day 9.0 | day 28.8 | day 73.8 | day 185.6 |
+| Never stokes (6 sessions) | day 0.2 | day 3.1 | day 10.0 | day 28.4 | day 77.8 | day 192.1 |
+| Away 3 days (6 sessions, none on days 20 to 22) | day 0.2 | day 2.5 | day 9.0 | day 28.8 | day 74.9 | day 185.2 |
 
 ### What a player away finds on return (before the first session)
 

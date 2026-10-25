@@ -167,7 +167,8 @@ describe("long time away", () => {
   });
 
   it("3 days away produce in full, and a long absence stops production at storage", () => {
-    const s = newPlayerState();
+    // Its Shelters full (10 survivors): no one more comes, so the fish eaten stays the same.
+    const s = { ...newPlayerState(), survivors: 10 };
     const cap = storeCap(s.buildings.lighthouse, s.techs);
     const rates = netRates(s);
     // 9 Mists in 3 days, all held: production stays full, and the stoked Lighthouse burns more oil while they last.

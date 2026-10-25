@@ -29,6 +29,9 @@ describe("what a celebration says", () => {
     expect(said({ kind: "troops", troop: "boarders", count: 60 })).toBe("60 boarders ready");
     expect(said({ kind: "veterans", troop: "harpooners", count: 10 })).toBe("10 veteran harpooners ready");
     expect(said({ kind: "healed", count: 8 })).toBe("8 wounded healed");
+    expect(said({ kind: "survivors", count: 1 })).toBe("A survivor reached your city");
+    expect(said({ kind: "survivors", count: 3 })).toBe("3 survivors reached your city");
+    expect(celebrationOf({ kind: "survivors", count: 3 }).kind).toBe("float");
     expect(said({ kind: "captain", captain: "tom", level: 4 })).toBe("Old Tom reached level 4");
     expect(said({ kind: "mistHeld", count: 1, pearls: 30 })).toBe("You held the Mist · +30 Pearls");
     expect(said({ kind: "mistHeld", count: 3, pearls: 90 })).toBe("You held 3 Mists · +90 Pearls");
@@ -110,10 +113,10 @@ describe("at launch, what ended while you were away", () => {
   });
 
   it("the same owner's city: what ended since is told", () => {
-    // The day away also had its Mists, held.
-    expect(awayEvents({ owner: DEVICE, state: before }, DEVICE, after).map((e) => e.kind)).toEqual(["building", "research", "troops", "mistHeld"]);
+    // The day away also had its Mists, held, and survivors who came to the Shelters' room.
+    expect(awayEvents({ owner: DEVICE, state: before }, DEVICE, after).map((e) => e.kind)).toEqual(["building", "research", "troops", "survivors", "mistHeld"]);
     const owner = accountOwner("Wa11et");
-    expect(awayEvents({ owner, state: before }, owner, after)).toHaveLength(4);
+    expect(awayEvents({ owner, state: before }, owner, after)).toHaveLength(5);
   });
 
   it("the very first launch: nothing seen yet, nothing told", () => {

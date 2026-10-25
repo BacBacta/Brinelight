@@ -1,4 +1,4 @@
-import { CAPTAINS, MIST_DURATION, huntAt, isLit, leviathanUp, mistAt, oilAutonomy, power, storeCap, survivorCap, type CaptainId, type Troops } from "@brinelight/shared";
+import { CAPTAINS, MIST_DURATION, huntAt, isLit, leviathanUp, mistAt, oilAutonomy, power, storeCap, survivorRoom, type CaptainId, type Troops } from "@brinelight/shared";
 import type { PlayerState } from "../state/index.js";
 import type { SeaMood } from "../scene/look.js";
 
@@ -38,7 +38,7 @@ export function cityPower(state: PlayerState): number {
   return power({ buildings: state.buildings, troops: state.fleets.reduce((t, f) => add(t, f.troops), state.troops), veterans: state.fleets.reduce((t, f) => add(t, f.veterans), state.veterans), captains, techs: state.techs, rafts: state.rafts });
 }
 
-export const survivorsText = (state: PlayerState): string => `${state.survivors}/${survivorCap(state.buildings.shelters)}`;
+export const survivorsText = (state: PlayerState): string => `${state.survivors}/${survivorRoom(state.buildings)}`;
 
 /** `?mist` in the address: the Mist's look, to see and measure it, whatever the calendar. No rule depends on it. */
 export const mistPreview = (search: string): boolean => new URLSearchParams(search).has("mist");

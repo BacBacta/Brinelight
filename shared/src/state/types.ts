@@ -27,6 +27,8 @@ export type PlayerState = {
   shards: Shards;
   survivors: number;
   morale: number;
+  /** Survivors on their way: a fraction of one, until one comes (rules/population.ts). */
+  coming: number;
   /** Pearls: kept apart from the stock, never capped by storage. */
   pearls: number;
   /** Upgrades in progress, in the order they were started. */

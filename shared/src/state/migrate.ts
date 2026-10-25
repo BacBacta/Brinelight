@@ -17,9 +17,9 @@ import type { PlayerState } from "./types.js";
  * Shape 8: week 7, the objectives and the daily tasks. Shape 9: week 7, the wrecks that wait before they fill again.
  * Shape 10: week 8, the city's server (its Mist and Leviathan hours). Shape 11: week 10, the Mist's objective moved
  * from the eleventh to the nineteenth (owner's decision, 23 October). Shape 12: week 10, the Wooded Isles and Fish
- * Shoals the fleets harvest.
+ * Shoals the fleets harvest. Shape 13: week 10, the population that grows (the survivors on their way).
  */
-export const CITY_SHAPE = 12;
+export const CITY_SHAPE = 13;
 /** The oldest shape a stored city can have: nothing was stored before week 4. */
 export const MIN_CITY_SHAPE = 4;
 
@@ -76,6 +76,8 @@ const STEPS: Record<number, (s: Raw, ctx: MigrationContext) => Raw> = {
   },
   // Week 10: no isle or shoal harvested yet: every one of them full.
   11: (s) => (isObj(s.world) && !("harvest" in s.world) ? { ...s, world: { ...s.world, harvest: {} } } : s),
+  // Week 10: no survivor on the way yet; the city's survivors and morale are kept as they were.
+  12: (s) => ("coming" in s ? s : { ...s, coming: 0 }),
 };
 
 /** Adds the fields of every step from `shape` to the current shape. Does not check the city: parseState does. */
