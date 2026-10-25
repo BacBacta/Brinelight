@@ -33,6 +33,15 @@ describe("the balance simulation", () => {
     expect(spent.buildings.lumberyard).toBeGreaterThan(held.buildings.lumberyard);
   });
 
+  it("a player who keeps no reserve for the Lighthouse spends what the Lighthouse would wait for, and reaches it later", () => {
+    // Ten days of the regular player: every spending goes ahead, the other buildings climb, the Lighthouse falls behind.
+    const free = simulate({ ...regular, noReserve: true }, 10);
+    const kept = simulate(regular, 10);
+    const others = (d: (typeof kept.days)[number]) => Object.entries(d.buildings).reduce((n, [id, l]) => (id === "lighthouse" ? n : n + l), 0);
+    expect(others(free.days.at(-1)!)).toBeGreaterThan(others(kept.days.at(-1)!));
+    expect(free.days.at(-1)!.buildings.lighthouse).toBeLessThan(kept.days.at(-1)!.buildings.lighthouse);
+  });
+
   it("a player who never goes to sea sends no fleet: no salvage, no camp beaten", () => {
     const island = simulate({ ...regular, noSea: true }, 10);
     expect(island.days.every((d) => d.salvages === 0 && d.campsBeaten === 0)).toBe(true);
