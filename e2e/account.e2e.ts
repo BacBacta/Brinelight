@@ -533,7 +533,11 @@ describe("buildings on rafts", () => {
       await page.mouse.click(first.x, first.y);
       await sheet.waitFor();
       expect(await sheet.locator("h2").textContent()).toBe("Raft");
-      expect(await sheet.locator("[data-raft-building]").count()).toBe(3);
+      // The three raft buildings and the House (step 2): the House with no copy count, a House on every raft.
+      expect(await sheet.locator("[data-raft-building]").count()).toBe(4);
+      expect(await sheet.locator('[data-building="house"]').getAttribute("aria-disabled")).toBe("false");
+      expect(await sheet.locator('[data-raft-building="house"] small').last().textContent()).not.toContain("/");
+      expect(await sheet.textContent()).toContain("and a House on every raft.");
       // Two greenhouses already: refused, still tappable; the reason comes in a toast.
       expect(await sheet.locator('[data-building="greenhouse"]').getAttribute("aria-disabled")).toBe("true");
       expect(await sheet.locator('[data-raft-building="watchtower"] small').last().textContent()).toContain("2/2");
