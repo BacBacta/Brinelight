@@ -99,6 +99,13 @@ export type Profile = {
   shipyard?: (s: PlayerState, act: (action: Intent, label: string) => boolean) => boolean;
   /** Keeps no reserve for the Lighthouse: every spending goes ahead when it can be paid (docs/studies/idle.md). */
   noReserve?: boolean;
+  /**
+   * A study's own work at sea (docs/studies/sea-hunt.md): tried after the Leviathan and the camps, before the
+   * gathering; `act` keeps the Lighthouse's reserve. True if it started something.
+   */
+  sea?: (s: PlayerState, act: (action: Intent, label: string) => boolean) => boolean;
+  /** A study's own work once the builders are given their upgrades (docs/studies/sea-hunt.md). True if it did something. */
+  afterBuilders?: (s: PlayerState, act: (action: Intent, label: string) => boolean) => boolean;
 };
 
 const at = (hours: number, minutes = 0) => hours * HOUR + minutes * 60;
@@ -417,6 +424,7 @@ export function simulate(profile: Profile, days: number): Run {
       const level = s.world.camps[camp.id] ?? 1;
       if (campOdds(level) === "easy") any = act({ type: "sail", site: camp.id }, `attack ${camp.id} (level ${level})`) || any;
     }
+    if (profile.sea?.(s, (action, label) => act(action, label, true))) any = true;
     // Every other fleet gathers from the nearest site it can sail to, one fleet a site: an emptied site waits before it
     // fills again. The resource the storage holds the least of first; today only the wrecks (oil and rope) are open.
     for (;;) {
@@ -488,6 +496,7 @@ export function simulate(profile: Profile, days: number): Run {
       const mark = ids;
       if (profile.questFirst) quest();
       block = builders();
+      profile.afterBuilders?.(s, (action, label) => act(action, label, true));
       observatory();
       barracks();
       infirmary();
