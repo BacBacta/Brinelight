@@ -297,7 +297,7 @@ describe("a modified client cannot change the rules", () => {
     await expectRefused(server, p, action({ type: "dockRaft", slot: outer[0]! }), "The Lighthouse's light doesn't reach this far yet");
     await expectApplied(server, p, action({ type: "dockRaft", slot: inner[1]! }));
     later(1000);
-    await expectRefused(server, p, action({ type: "dockRaft", slot: inner[2]! }), "Your dike builders are busy.");
+    await expectRefused(server, p, action({ type: "dockRaft", slot: inner[2]! }), "Your builders are busy.");
 
     const full = await player({ ...lit, rafts: Object.fromEntries(inner.slice(0, raftCap(4)).map((k) => [k, sound])) });
     await expectRefused(server, full, action({ type: "dockRaft", slot: inner[raftCap(4)]! }), "Upgrade the Lighthouse to grow your city further");
@@ -343,8 +343,8 @@ describe("a modified client cannot change the rules", () => {
     await expectApplied(server, p, action({ type: "installOnRaft", slot: c, building: "watchtower" }));
     expect(p.ref.now().yard).toMatchObject({ slot: c, kind: "install", building: "watchtower" });
     later(1000);
-    await expectRefused(server, p, action({ type: "upgradeRaft", slot: b }), "Your dike builders are busy.");
-    await expectRefused(server, p, action({ type: "dockRaft", slot: d }), "Your dike builders are busy.");
+    await expectRefused(server, p, action({ type: "upgradeRaft", slot: b }), "Your builders are busy.");
+    await expectRefused(server, p, action({ type: "dockRaft", slot: d }), "Your builders are busy.");
   });
 
   it("Houses: as many as there are plots, no level past the Lighthouse's, none past 5, wood only", async () => {
@@ -607,7 +607,7 @@ describe("a modified client cannot change the rules", () => {
     const order = action({ type: "repairRafts" });
     for (const extra of [{ slots: [a] }, { hp: RAFT_MAX_HP }, { oil: 0 }]) await expectInvalid(server, p, { action: { ...order, ...extra } });
     await expectApplied(server, p, action({ type: "repairRafts" }));
-    await expectRefused(server, p, action({ type: "repairRafts" }), "Your dike builders are busy.");
+    await expectRefused(server, p, action({ type: "repairRafts" }), "Your builders are busy.");
     // 110 points missing: 110 / 35 × 6 minutes, on the server's clock.
     later(Math.floor((110 / 35) * 360 * 1000) - 1000);
     await expectRules(server, p);

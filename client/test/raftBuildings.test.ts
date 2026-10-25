@@ -77,13 +77,13 @@ describe("the sheet of a raft", () => {
     const html = raftSheetHtml(busy, A, 1, RAFTS)!.body;
     expect(html).toContain("1/2</small>");
     // Said once, first under the title (owner, 25 October), never again under a button.
-    expect(html.startsWith('<p class="why">Your dike builders are busy.</p>')).toBe(true);
-    expect(html.split("Your dike builders are busy.")).toHaveLength(2);
+    expect(html.startsWith('<p class="why">Your builders are busy.</p>')).toBe(true);
+    expect(html.split("Your builders are busy.")).toHaveLength(2);
     // The House first, then the three other buildings.
     expect([...html.matchAll(/data-raft-building="(\w+)"/g)].map((m) => m[1])).toEqual(["house", "greenhouse", "smokehouse", "watchtower"]);
     const upgrading = raftSheetHtml(carrying(busy, A, "greenhouse", 1), A, 1, RAFTS)!.body;
-    expect(upgrading.startsWith('<p class="why">Your dike builders are busy.</p>')).toBe(true);
-    expect(upgrading.split("Your dike builders are busy.")).toHaveLength(2);
+    expect(upgrading.startsWith('<p class="why">Your builders are busy.</p>')).toBe(true);
+    expect(upgrading.split("Your builders are busy.")).toHaveLength(2);
   });
 
   it("a raft with a building: its effect at this level, the next level's cost, time and Power, or Max level", () => {

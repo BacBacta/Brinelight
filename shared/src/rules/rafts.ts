@@ -46,7 +46,7 @@ export const MIST_RAFT_DAMAGE = 35;
 export const RAFT_MIN_HP = 25;
 
 /** The refusal while the shipyard works (owner, 25 October: one sentence, on the sheets and in the refusals). */
-export const YARD_BUSY = "Your dike builders are busy.";
+export const YARD_BUSY = "Your builders are busy.";
 
 /** Rafts allowed by Lighthouse level. Prototype table up to level 10, capped after that. */
 const RAFT_CAP_TABLE = [0, 0, 0, 0, 6, 10, 14, 17, 25, 33, 39];
