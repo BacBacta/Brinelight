@@ -1556,7 +1556,7 @@ describe("signed in", () => {
     await expect.poll(() => shownJobs(p.page), NET).toEqual(["Lumberyard"]);
     await p.page.unroute(`${API}/**`);
     await show(p.page);
-    await p.page.locator(".toast", { hasText: "Your 2 builders are busy" }).waitFor({ timeout: 15_000 });
+    await p.page.locator(".toast", { hasText: "Your builders are busy." }).waitFor({ timeout: 15_000 });
     await expect.poll(() => shownJobs(p.page), NET).toEqual(["Fishery", "Refinery"]);
     await p.page.screenshot({ path: "e2e/.shots/shot-refused.png" });
     const server = await serverHas(p.token, ["fishery", "refinery"]);
