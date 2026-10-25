@@ -4,14 +4,14 @@ import type { PlayerState } from "../state/index.js";
 /** Every building whose upgrade (or building, at level 0) can start now. */
 export function possibleUpgrades(state: PlayerState): BuildingId[] {
   const queue = state.queue.map((j) => j.id);
-  return BUILDING_IDS.filter((id) => canUpgrade(id, { buildings: state.buildings, stock: state.stock, pearls: state.pearls, queue }).ok);
+  return BUILDING_IDS.filter((id) => canUpgrade(id, { buildings: state.buildings, stock: state.stock, pearls: state.pearls, survivors: state.survivors, queue }).ok);
 }
 
 /** The (up to) 2 cheapest upgrades you can start right now, as the green arrows of the prototype. */
 export function suggestedUpgrades(state: PlayerState): BuildingId[] {
   const queue = state.queue.map((j) => j.id);
   const total = (id: BuildingId) => Object.values(upgradeCost(id, state.buildings[id])).reduce((a, b) => a + b, 0);
-  return BUILDING_IDS.filter((id) => canUpgrade(id, { buildings: state.buildings, stock: state.stock, pearls: state.pearls, queue }).ok)
+  return BUILDING_IDS.filter((id) => canUpgrade(id, { buildings: state.buildings, stock: state.stock, pearls: state.pearls, survivors: state.survivors, queue }).ok)
     .sort((a, b) => total(a) - total(b))
     .slice(0, 2);
 }

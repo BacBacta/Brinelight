@@ -114,7 +114,7 @@ describe("queue read from a save", () => {
       { id: "fishery", left: 200, duration: 3240 },
       { id: "lumberyard", left: 300, duration: 3240 },
     ];
-    expect(cleanQueue(raw)).toEqual([
+    expect(cleanQueue(raw, 8)).toEqual([
       { id: "refinery", left: 100, duration: 3240 },
       { id: "fishery", left: 200, duration: 3240 },
     ]);
@@ -125,7 +125,7 @@ describe("queue read from a save", () => {
       { id: "refinery", left: 99_999, duration: 3240 },
       { id: "fishery", left: -5, duration: 3240 },
     ];
-    expect(cleanQueue(raw)).toEqual([
+    expect(cleanQueue(raw, 8)).toEqual([
       { id: "refinery", left: 3240, duration: 3240 },
       { id: "fishery", left: 0, duration: 3240 },
     ]);
@@ -133,7 +133,7 @@ describe("queue read from a save", () => {
 
   it("a bad job does not take a builder's place", () => {
     const raw = [{ id: "castle", left: 1, duration: 1 }, null, { id: "refinery", left: 1, duration: 10 }, { id: "fishery", left: 2, duration: 10 }];
-    expect(cleanQueue(raw).map((j) => j.id)).toEqual(["refinery", "fishery"]);
+    expect(cleanQueue(raw, 8).map((j) => j.id)).toEqual(["refinery", "fishery"]);
   });
 });
 

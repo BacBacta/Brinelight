@@ -30,7 +30,7 @@ export function createSheet(root: HTMLElement, actions: { upgrade(id: BuildingId
   const render = (id: BuildingId, state: PlayerState, speed: number) => {
     const level = state.buildings[id];
     const job = state.queue.find((j) => j.id === id);
-    const check = canUpgrade(id, { buildings: state.buildings, stock: state.stock, pearls: state.pearls, queue: state.queue.map((j) => j.id) });
+    const check = canUpgrade(id, { buildings: state.buildings, stock: state.stock, pearls: state.pearls, survivors: state.survivors, queue: state.queue.map((j) => j.id) });
     const next = level < maxLevel(id, state.buildings);
     const left = job ? formatTimeLeft(job.left / speed) : "";
     const extra = id === "lighthouse" ? stokeHtml(state) : level === 0 ? "" : id === "observatory" ? researchHtml(state, speed) : id === "barracks" ? trainingHtml(state, speed) : id === "infirmary" ? infirmaryHtml(state, speed) : "";

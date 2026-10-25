@@ -1,14 +1,14 @@
 /**
  * For `population-run.ts` only (docs/studies/population.md): the balance's simulator gets the study's rules
  * (`population-rules.ts`) in place of `@brinelight/shared`, and the rule of the builders reads the study's count
- * (`globalThis.brinelightPopulation.builders`, set from the city's survivors) instead of the rules' two. Without a
+ * (`globalThis.brinelightPopulation.builders`, set from the city's survivors) instead of the rules' own. Without a
  * proposal the count is the rules' own. Nothing is changed in `shared/`; every other command keeps the shared rules.
  */
 const K = "globalThis.brinelightPopulation";
 
 const PATCHES = {
   "rules/buildings.ts": [
-    ["if(ctx.queue.length>=BUILDERS)return refuse(`Your ${BUILDERS} builders are busy`);", `{const b=${K}?.builders??BUILDERS;if(ctx.queue.length>=b)return refuse(\`Your \${b} builders are busy\`)}`],
+    ["if(ctx.queue.length>=builders(ctx.survivors))return refuse(BUILDERS_BUSY);", `{const b=${K}?.builders??builders(ctx.survivors);if(ctx.queue.length>=b)return refuse(BUILDERS_BUSY)}`],
   ],
 };
 

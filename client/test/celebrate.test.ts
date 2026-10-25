@@ -32,6 +32,10 @@ describe("what a celebration says", () => {
     expect(said({ kind: "survivors", count: 1 })).toBe("A survivor reached your city");
     expect(said({ kind: "survivors", count: 3 })).toBe("3 survivors reached your city");
     expect(celebrationOf({ kind: "survivors", count: 3 }).kind).toBe("float");
+    // A builder who joins (step 3): the whole screen and the Lighthouse's sound (owner, 25 October).
+    expect(said({ kind: "builder", count: 3 })).toBe("A third builder joins you");
+    expect(said({ kind: "builder", count: 4 })).toBe("A fourth builder joins you");
+    expect(celebrationOf({ kind: "builder", count: 3 })).toEqual({ kind: "lighthouse", title: "A third builder joins you", lines: ["One more upgrade at a time."], sound: "lighthouse" });
     expect(said({ kind: "captain", captain: "tom", level: 4 })).toBe("Old Tom reached level 4");
     expect(said({ kind: "mistHeld", count: 1, pearls: 30 })).toBe("You held the Mist · +30 Pearls");
     expect(said({ kind: "mistHeld", count: 3, pearls: 90 })).toBe("You held 3 Mists · +90 Pearls");

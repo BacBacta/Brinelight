@@ -17,8 +17,8 @@ const PATCHES = {
     ["function advanceStock(stock,rates,seconds,cap){", `function advanceStock(stock,rates,seconds,cap){${K}?.stockStep?.(stock,rates,seconds,cap);`],
   ],
   "rules/buildings.ts": [
-    // The builders: the rules' two, or the study's from the Lighthouse.
-    ["if(ctx.queue.length>=BUILDERS)return refuse(`Your ${BUILDERS} builders are busy`);", `{const b=${K}?.builders?.(ctx.buildings)??BUILDERS;if(ctx.queue.length>=b)return refuse(\`Your \${b} builders are busy\`)}`],
+    // The builders: the rules' (from the survivors), or the study's from the Lighthouse.
+    ["if(ctx.queue.length>=builders(ctx.survivors))return refuse(BUILDERS_BUSY);", `{const b=${K}?.builders?.(ctx.buildings)??builders(ctx.survivors);if(ctx.queue.length>=b)return refuse(BUILDERS_BUSY)}`],
   ],
   "rules/sea.ts": [
     // The Wooded Isles and Fish Shoals of the map, open to the fleets as the wrecks when the study says so.

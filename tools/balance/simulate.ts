@@ -10,7 +10,7 @@
  * players, the daily recruitment.
  */
 import {
-  BUILDERS,
+  builders as buildersOf,
   BUILDINGS,
   BUILDING_IDS,
   CHESTS,
@@ -327,7 +327,7 @@ export function simulate(profile: Profile, days: number): Run {
 
   const builders = (): Block | null => {
     for (;;) {
-      if (s.queue.length >= BUILDERS - keepForQuests()) return null;
+      if (s.queue.length >= buildersOf(s.survivors) - keepForQuests()) return null;
       const queued = s.queue.map((j) => j.id);
       const candidates: BuildingId[] = queued.includes("lighthouse") || s.buildings.lighthouse >= LIGHTHOUSE_MAX ? [] : ["lighthouse"];
       const others = BUILD_ORDER.filter((id) => !queued.includes(id) && s.buildings[id] < s.buildings.lighthouse);
@@ -512,7 +512,7 @@ export function simulate(profile: Profile, days: number): Run {
     while (t < to) {
       const step = Math.min(to - t, HOUR - (t % HOUR));
       const busy = s.queue.reduce((sum, j) => sum + Math.min(Math.max(0, j.left), step), 0);
-      today.idle += (BUILDERS * step - busy) / HOUR;
+      today.idle += (buildersOf(s.survivors) * step - busy) / HOUR;
       const wall = s.queue.some((j) => j.id === "lighthouse") ? null : wallAt(s);
       if (wall) {
         const open = walls.find((w) => w.level === s.buildings.lighthouse);

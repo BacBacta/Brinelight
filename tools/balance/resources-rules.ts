@@ -127,7 +127,9 @@ export function useVariant(v: Variant | null): void {
 
 /** The builders, as the simulator reads them: a live binding, set from the city at each step. */
 export let BUILDERS = rules.BUILDERS;
-const buildersOf = (s: PlayerState) => study.variant?.builders?.(s.buildings.lighthouse) ?? rules.BUILDERS;
+const buildersOf = (s: PlayerState) => study.variant?.builders?.(s.buildings.lighthouse) ?? rules.builders(s.survivors);
+/** The builders, as the simulator reads them (`builders`): the live count above, whatever the survivors given. */
+export const builders = (_survivors: number): number => BUILDERS;
 
 /** Why the free builders of a session's end stay free: the resources (or Pearls), or nothing left below the Lighthouse. */
 let sessionEnd: { short: number; capped: number } | null = null;

@@ -1,6 +1,6 @@
 # The look references
 
-The e2e `the look` (`e2e/account.e2e.ts`) compares 81 captures (every sheet, the top bar, the queue and the three celebrations, at 412 and 360 px, and at 384 × 699, the owner's S22) with the PNG files of this folder, at zero pixels, with no tolerance. The captures are taken standing still: no animation in the celebrations, and no transition anywhere (the bars fill in 300 ms of real time, which a capture would catch halfway). The Lighthouse's full-screen celebration (`celebrate-lighthouse`) is captured without the top bar and the line under it, under its veil: the CI draws their rounded bars there in two ways (±1 in color, whatever the processor), and the top bar has its own captures (`hud`).
+The e2e `the look` (`e2e/account.e2e.ts`) compares 84 captures (every sheet, the top bar, the queue and the four celebrations (a work, the Lighthouse, a captain, a builder), at 412 and 360 px, and at 384 × 699, the owner's S22) with the PNG files of this folder, at zero pixels, with no tolerance. The captures are taken standing still: no animation in the celebrations, and no transition anywhere (the bars fill in 300 ms of real time, which a capture would catch halfway). The Lighthouse's full-screen celebration (`celebrate-lighthouse`) is captured without the top bar and the line under it, under its veil: the CI draws their rounded bars there in two ways (±1 in color, whatever the processor), and the top bar has its own captures (`hud`).
 
 ## How they are made
 

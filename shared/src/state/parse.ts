@@ -1,4 +1,4 @@
-import { BUILDERS, BUILDING_IDS, LIGHTHOUSE_MAX, type UpgradeJob } from "../rules/buildings.js";
+import { BUILDING_IDS, LIGHTHOUSE_MAX, builders, type UpgradeJob } from "../rules/buildings.js";
 import { CAPTAINS, CAPTAIN_MAX_LEVEL, CAPTAIN_MAX_STARS, xpNeeded, type CaptainId } from "../rules/captains.js";
 import { CHESTS, DAILY_TASKS, dailyPoints, dayOf, type DailyState } from "../rules/daily.js";
 import { isServerId, type ServerId } from "../rules/servers.js";
@@ -110,14 +110,15 @@ const isJob = (j: unknown): j is UpgradeJob =>
   isObj(j) && typeof j.id === "string" && (BUILDING_IDS as string[]).includes(j.id) && isNum(j.left) && isNum(j.duration) && j.duration > 0;
 
 /**
- * The build queue of a city being read. A bad job is dropped; at most one job per building and BUILDERS jobs
- * (the first ones), with `left` brought back between 0 and `duration`. This can only make the player lose a job, never gain.
+ * The build queue of a city being read. A bad job is dropped; at most one job per building and as many jobs as the
+ * city's builders (the first ones, `builders`), with `left` brought back between 0 and `duration`. This can only make
+ * the player lose a job, never gain.
  */
-export function cleanQueue(raw: readonly unknown[]): UpgradeJob[] {
+export function cleanQueue(raw: readonly unknown[], survivors: number): UpgradeJob[] {
   const seen = new Set<string>();
   const out: UpgradeJob[] = [];
   for (const j of raw) {
-    if (out.length >= BUILDERS) break;
+    if (out.length >= builders(survivors)) break;
     if (!isJob(j) || seen.has(j.id)) continue;
     seen.add(j.id);
     out.push({ id: j.id, left: Math.min(Math.max(0, j.left), j.duration), duration: j.duration });
@@ -412,7 +413,7 @@ export function parseState(raw: unknown): PlayerState | null {
       morale: s.morale,
       coming: s.coming,
       pearls: s.pearls,
-      queue: cleanQueue(s.queue),
+      queue: cleanQueue(s.queue, s.survivors as number),
       research,
       yard,
       training,

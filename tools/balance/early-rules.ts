@@ -98,8 +98,10 @@ function endJobs(before: PlayerState, after: PlayerState, seconds: number): void
 /** The builders, as the simulator reads them: a live binding, set from the city at each step. */
 export let BUILDERS = rules.BUILDERS;
 const setBuilders = (s: PlayerState) => {
-  BUILDERS = study.variant?.builders?.(s) ?? rules.BUILDERS;
+  BUILDERS = study.variant?.builders?.(s) ?? rules.builders(s.survivors);
 };
+/** The builders, as the simulator reads them (`builders`): the live count above, whatever the survivors given. */
+export const builders = (_survivors: number): number => BUILDERS;
 
 export function newPlayerState(clock?: number, server?: ServerId): PlayerState {
   const made = rules.newPlayerState(clock, server);
@@ -110,8 +112,8 @@ export function newPlayerState(clock?: number, server?: ServerId): PlayerState {
 
 /** An upgrade with every builder busy, started anyway when the variant gives one more: the rules see one job less. */
 function withMoreBuilders(state: PlayerState, action: GameAction & { type: "upgrade" }): ActionResult {
-  const more = study.variant?.builders?.(state) ?? rules.BUILDERS;
-  if (state.queue.length >= more || state.queue.length < rules.BUILDERS) return rules.applyAction(state, action);
+  const more = study.variant?.builders?.(state) ?? rules.builders(state.survivors);
+  if (state.queue.length >= more || state.queue.length < rules.builders(state.survivors)) return rules.applyAction(state, action);
   const hidden = state.queue.findIndex((j) => j.id !== action.building);
   const job = state.queue[hidden]!;
   const r = rules.applyAction({ ...state, queue: state.queue.filter((_, i) => i !== hidden) }, action);

@@ -77,7 +77,9 @@ export const roomOf = (s: PlayerState): number => (study.proposal ? room(study.p
 
 /** The builders, as the simulator reads them: a live binding, set from the city at each step (the hooks read the knob). */
 export let BUILDERS = rules.BUILDERS;
-const buildersOf = (s: PlayerState) => (study.proposal ? buildersFor(study.proposal, s.survivors) : rules.BUILDERS);
+const buildersOf = (s: PlayerState) => (study.proposal ? buildersFor(study.proposal, s.survivors) : rules.builders(s.survivors));
+/** The builders, as the simulator reads them (`builders`): the live count above, whatever the survivors given. */
+export const builders = (_survivors: number): number => BUILDERS;
 const sync = (s: PlayerState) => {
   BUILDERS = knob.builders = buildersOf(s);
 };
