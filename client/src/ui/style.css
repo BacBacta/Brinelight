@@ -83,6 +83,7 @@ body.at-sea .build-badge:not([hidden]){display:inline-flex}
 .chip.gold{background:rgba(255,200,58,.2);color:#FFD866}.chip.ok{background:rgba(63,191,90,.2);color:#8BF09B}.chip.bad{background:rgba(226,87,47,.22);color:#FF9A86}
 .cost{display:flex;gap:6px;flex-wrap:wrap}.cost span{display:inline-flex;gap:4px;align-items:center;padding:3px 8px 3px 3px;border-radius:99px;background:rgba(0,0,0,.25);font-weight:900;font-size:13px}.cost span.no{color:#FF9A86}.cost .ic{width:18px;height:18px;display:grid;place-items:center}.cost .ic img{width:18px;height:18px}
 .p{margin:0;font-size:13.5px;color:var(--soft);line-height:1.4}
+.sh-b .lead,.sh-b .dike{display:grid;gap:4px}
 .box{background:rgba(0,0,0,.22);border:1.5px solid rgba(255,255,255,.08);border-radius:14px;padding:10px 12px}
 .box h4{margin:0 0 6px;font-family:var(--f-d);font-weight:400;font-size:16px}
 .sh-b .pb{height:8px;border-radius:9px;background:rgba(0,0,0,.35);overflow:hidden}.sh-b .pb i{display:block;height:100%;background:linear-gradient(90deg,#3BC6FF,#7CFFD8)}

@@ -59,18 +59,16 @@ export function raftEffectText(id: RaftBuildingId, level: number): string {
 /** A button the rules may refuse: their reason under it, unless it is the busy shipyard, said at the top of the sheet. */
 const act = (label: string, check: { ok: true } | { ok: false; reason: string }, kind: string, name: string): string =>
   !check.ok && check.reason === YARD_BUSY ? button(label, kind, name, "", true) : actionButton(label, check, kind, name);
-/** The busy shipyard, first under the sheet's title; nothing while it is free. */
-const busyFirst = (state: PlayerState, w: RaftWords): string => (state.yard ? why(w.yardBusy) : "");
+/** The sheet's first lines: the busy shipyard, first under its title, kept with the line under it; that line alone while it is free. */
+const lead = (state: PlayerState, w: RaftWords, text: string): string => (state.yard ? `<div class="lead">${why(w.yardBusy)}<p class="p">${text}</p></div>` : `<p class="p">${text}</p>`);
 /** The House first in a free raft's list, then the three other buildings (owner, 25 October). */
 const INSTALL_ORDER: readonly RaftBuildingId[] = ["house", ...RAFT_BUILDING_IDS.filter((id) => id !== "house")];
 
 /** The raft's sturdiness (the land's dike), as on every raft's sheet. */
 const sturdiness = (raft: Raft, w: RaftWords): string => {
   const bad = raft.hp < RAFT_DAMAGED_BELOW;
-  return (
-    keyValues(kv(w.sturdiness, `${Math.round((raft.hp / RAFT_MAX_HP) * 100)}%${bad ? ` · ${w.weak}` : ""}`, "", bad ? "no" : "ok")) +
-    progressBar(raft.hp / RAFT_MAX_HP, 0)
-  );
+  // The line and its bar kept together: the sheet's action stays in sight at 384 × 699 (owner, 25 October).
+  return `<div class="dike">${keyValues(kv(w.sturdiness, `${Math.round((raft.hp / RAFT_MAX_HP) * 100)}%${bad ? ` · ${w.weak}` : ""}`, "", bad ? "no" : "ok"))}${progressBar(raft.hp / RAFT_MAX_HP, 0)}</div>`;
 };
 
 /** "Shipyard · Kelp Greenhouse": what the shipyard works on, as the queue names it ("Dike works" on land). */
@@ -127,7 +125,7 @@ export function raftSheetHtml(state: PlayerState, slot: string, speed: number, l
   }
   if (raft && raft.building) {
     const b = RAFT_BUILDINGS[raft.building];
-    const head = `${busyFirst(state, w)}<p class="p">${b.name} level ${raft.level}: ${raftEffectText(raft.building, raft.level)}.</p>${sturdiness(raft, w)}${repairHtml(state, speed, w)}`;
+    const head = `${lead(state, w, `${b.name} level ${raft.level}: ${raftEffectText(raft.building, raft.level)}.`)}${sturdiness(raft, w)}${repairHtml(state, speed, w)}`;
     if (raft.level >= raftBuildingMaxLevel(raft.building)) return { title: b.name, body: `${head}<p class="p">${w.max}</p>` };
     const check = canUpgradeRaft({ rafts: state.rafts, slot, lighthouse, stock: state.stock, yard: state.yard });
     return {
@@ -159,7 +157,7 @@ export function raftSheetHtml(state: PlayerState, slot: string, speed: number, l
     }).join("");
     return {
       title: w.emptyTitle,
-      body: `${busyFirst(state, w)}<p class="p">${w.empty}</p>${sturdiness(raft, w)}${repairHtml(state, speed, w)}<div class="list">${rows}</div>`,
+      body: `${lead(state, w, w.empty)}${sturdiness(raft, w)}${repairHtml(state, speed, w)}<div class="list">${rows}</div>`,
     };
   }
   const n = Object.keys(state.rafts).length;
@@ -167,8 +165,7 @@ export function raftSheetHtml(state: PlayerState, slot: string, speed: number, l
   return {
     title: w.slotTitle,
     body:
-      busyFirst(state, w) +
-      `<p class="p">${w.free}</p>` +
+      lead(state, w, w.free) +
       keyValues(
         kv(w.count, `${n} / ${raftCap(lighthouse)}`) +
           kv("Ring", s.ring === 3 ? "first" : "second") +

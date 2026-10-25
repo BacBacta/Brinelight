@@ -1256,6 +1256,14 @@ describe("the look", () => {
       page = await frozenGame(size, housed);
       await page.mouse.click(clear[0]!.x, clear[0]!.y);
       await page.locator(".raft-sheet:not([hidden])").waitFor();
+      // Its Upgrade in sight whole without scrolling, at every width, the S22's 384 × 699 included (owner, 25 October).
+      const fit = await page.evaluate(() => {
+        const body = document.querySelector(".raft-sheet:not([hidden]) .sh-b")!;
+        const button = body.querySelector('[data-act="upgrade-raft"]')!.getBoundingClientRect();
+        return { bottom: button.bottom, limit: body.getBoundingClientRect().bottom, scrolled: body.scrollHeight - body.clientHeight };
+      });
+      expect(fit.bottom, `raft-house-${w}: the Upgrade button's bottom`).toBeLessThanOrEqual(fit.limit);
+      expect(fit.scrolled, `raft-house-${w}: nothing to scroll`).toBeLessThanOrEqual(1);
       await look(page, page.locator(".raft-sheet"), `raft-house-${w}`);
       await page.context().close();
 
