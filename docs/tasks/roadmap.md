@@ -52,6 +52,7 @@ The milestones of the day sealed every night in one Solana transaction, checked 
 ## Later
 
 - **Saving for the Lighthouse, shown** (owner, 24 October, instead of the idle study's options, `docs/studies/idle.md`): on the Lighthouse's sheet and in the queue, "Saving for Lighthouse N", one bar for each resource still missing, and "ready in about X h" at the city's production. Interface only: no rule, no value.
+- **The action button pinned to the bottom of the raft and plot sheets** (owner, 25 October): on every raft and plot sheet, the action button (Upgrade, Install, Build, Repair) stays at the bottom of the sheet, always in sight, and the content above it scrolls. Why: on the S22 (384 × 699) the sheet is at most half the screen, and the House's Upgrade keeps only about 4.5 px of margin since the busy builders moved under the title (#27). Not coded yet.
 - **The morale's bonus at 90** (owner, 24 October): production ×1.1 while the morale is 90 or more, out of reach today (a fed city stays at 84, each Mist held adds 2). Something to raise it: parks, feasts?
 - **The late game's wall** (owner, 23 October): the Lighthouse's 25 to 30 is 156 days of building, and the other buildings' 29 to 30 takes years (8.8 to 11.7 years of building each). Measured in `docs/studies/resources.md`.
 - **Long expeditions for the casual player** (owner, 23 October): a fleet that harvests for several hours in a row, so that a player with three sessions a day draws at least 25 % of their wood and fish from the sea (13 % and 24 % with E).
