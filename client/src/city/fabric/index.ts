@@ -130,7 +130,7 @@ totalEmissiveRadiance += vec3(1., .74, .38) * 2.4 * on;`,
     onPlan: null as ((plan: FabricPlan) => void) | null,
     /** Plans the fabric again when the city changed: a level (the houses stay in sight of the buildings), its land (`L`, none before the Lighthouse 5). */
     update(state: PlayerState, L: LandSlots) {
-      const next = JSON.stringify([state.buildings, L.won, L.flooded, L.filling, Object.entries(state.rafts).map(([k, r]) => [k, !!r.building])]);
+      const next = JSON.stringify([state.buildings, L.won, L.flooded, L.filling, Object.entries(state.rafts).map(([k, r]) => [k, r.building === "house" ? r.level : !!r.building])]);
       if (next === key) return;
       key = next;
       const p = fabricPlan(state, L);

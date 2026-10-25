@@ -88,6 +88,10 @@ export function createView(fixed: readonly Box[]) {
         return !more || (o.fixed ? more <= MOST_HIDDEN / 2 : o.hidden + more <= MOST_HIDDEN);
       });
     },
+    /** How much of `box` the things already in the view would hide. */
+    hidden(box: Box): number {
+      return things.reduce((n, o) => n + hiddenBy(box, o.box), 0);
+    },
     put(box: Box) {
       for (const o of things) o.hidden += hiddenBy(o.box, box);
       things.push({ box, hidden: things.reduce((n, o) => n + hiddenBy(box, o.box), 0), fixed: false });

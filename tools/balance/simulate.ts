@@ -45,6 +45,9 @@ import {
   pirateCamp,
   power,
   raftEffect,
+  houseLevelCap,
+  raftBuildingCost,
+  raftCost,
   slotOpen,
   storeCap,
   techLevel,
@@ -448,16 +451,24 @@ export function simulate(profile: Profile, days: number): Run {
     if (!profile.skip?.repairs && Object.values(s.rafts).some((r) => r.hp < 60)) return act({ type: "repairRafts" }, "repair the rafts", true);
     if (profile.shipyard?.(s, (action, label) => act(action, label, true))) return true;
     const slots = RAFT_SLOTS.map((x) => x.key);
+    // The three raft buildings twice each first, then a House on every free raft (docs/studies/population.md).
     const empty = slots.find((k) => s.rafts[k] && !s.rafts[k]!.building);
     if (empty) {
       const copies = (b: RaftBuildingId) => Object.values(s.rafts).filter((r) => r.building === b).length;
-      const building = RAFT_BUILDING_ORDER.find((b) => copies(b) < RAFT_BUILDING_MAX_COPIES);
-      return !!building && act({ type: "installOnRaft", slot: empty, building }, `${building} on raft ${empty}`, true);
+      const building = RAFT_BUILDING_ORDER.find((b) => copies(b) < RAFT_BUILDING_MAX_COPIES) ?? "house";
+      return act({ type: "installOnRaft", slot: empty, building }, `${building} on raft ${empty}`, true);
     }
-    const low = slots.filter((k) => s.rafts[k]?.building && s.rafts[k]!.level < RAFT_BUILDING_MAX_LEVEL).sort((a, b) => s.rafts[a]!.level - s.rafts[b]!.level)[0];
-    if (low && act({ type: "upgradeRaft", slot: low }, `raft ${low} level ${s.rafts[low]!.level + 1}`, true)) return true;
     const free = RAFT_SLOTS.find((x) => !s.rafts[x.key] && slotOpen(x.ring, s.buildings.lighthouse));
-    return !!free && act({ type: "dockRaft", slot: free.key }, `raft at ${free.key}`, true);
+    const dock = () => !!free && act({ type: "dockRaft", slot: free.key }, `raft at ${free.key}`, true);
+    // The raft buildings up to their level 3, the lowest first.
+    const low = slots.filter((k) => s.rafts[k]?.building && s.rafts[k]!.building !== "house" && s.rafts[k]!.level < RAFT_BUILDING_MAX_LEVEL).sort((a, b) => s.rafts[a]!.level - s.rafts[b]!.level)[0];
+    if (low) return act({ type: "upgradeRaft", slot: low }, `raft ${low} level ${s.rafts[low]!.level + 1}`, true) || dock();
+    // Then the cheaper in wood of the lowest House's next level (up to what the Lighthouse allows) and the next raft.
+    const house = slots.filter((k) => s.rafts[k]?.building === "house" && s.rafts[k]!.level < houseLevelCap(s.buildings.lighthouse)).sort((a, b) => s.rafts[a]!.level - s.rafts[b]!.level)[0];
+    const tries: { wood: number; go: () => boolean }[] = [];
+    if (house) tries.push({ wood: raftBuildingCost("house", s.rafts[house]!.level).wood ?? 0, go: () => act({ type: "upgradeRaft", slot: house }, `house ${house} level ${s.rafts[house]!.level + 1}`, true) });
+    if (free) tries.push({ wood: raftCost(Object.keys(s.rafts).length).wood ?? 0, go: dock });
+    return tries.sort((a, b) => a.wood - b.wood).some((t) => t.go());
   };
 
   /** Every objective done and every chest the day's points open. */

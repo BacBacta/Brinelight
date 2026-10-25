@@ -57,15 +57,16 @@ describe("what a raft building does, in your units", () => {
 });
 
 describe("the sheet of a raft", () => {
-  it("a free raft: the three buildings, their effect, cost, time and copies, an Install button each", () => {
+  it("a free raft: the four buildings, their effect, cost, time and copies (none for the House), an Install button each", () => {
     const html = raftSheetHtml(carrying(moored(), B, "smokehouse", 1), A, 1, RAFTS)!;
     expect(html.title).toBe("Raft");
-    expect(html.body).toContain("A free raft. Put a building on it. Each type is limited to 2 rafts.");
+    expect(html.body).toContain("A free raft. Put a building on it. Each type is limited to 2 rafts, and a House on every raft.");
     expect(html.body).toContain("Sturdiness");
     expect(html.body).toContain("<b>Kelp Greenhouse</b><small>+4.5 fish/h per level</small><small>200 wood · 80 oil · 48 min · 0/2</small>");
     expect(html.body).toContain("<b>Smokehouse</b><small>−10% fish eaten per level</small><small>220 wood · 100 fish · 48 min · 1/2</small>");
     expect(html.body).toContain("<b>Watchtower</b><small>+5% fleet attack per level</small><small>260 wood · 120 oil · 48 min · 0/2</small>");
     expect(html.body).toContain('data-act="install" data-building="watchtower" aria-disabled="false">Install</button>');
+    expect(html.body).toContain("<b>House</b><small>+4 room for survivors per level</small><small>600 wood · 48 min</small>");
     expect(html.body).not.toContain('class="why"');
   });
 
@@ -75,7 +76,14 @@ describe("the sheet of a raft", () => {
     const busy = locally(moored(), { type: "installOnRaft", slot: B, building: "watchtower" });
     const html = raftSheetHtml(busy, A, 1, RAFTS)!.body;
     expect(html).toContain("1/2</small>");
-    expect(html).toContain('<p class="why">The shipyard is busy</p>');
+    // Said once, first under the title (owner, 25 October), never again under a button.
+    expect(html.startsWith('<div class="lead"><p class="why">Your builders are busy.</p><p class="p">')).toBe(true);
+    expect(html.split("Your builders are busy.")).toHaveLength(2);
+    // The House first, then the three other buildings.
+    expect([...html.matchAll(/data-raft-building="(\w+)"/g)].map((m) => m[1])).toEqual(["house", "greenhouse", "smokehouse", "watchtower"]);
+    const upgrading = raftSheetHtml(carrying(busy, A, "greenhouse", 1), A, 1, RAFTS)!.body;
+    expect(upgrading.startsWith('<div class="lead"><p class="why">Your builders are busy.</p><p class="p">Kelp Greenhouse level 1')).toBe(true);
+    expect(upgrading.split("Your builders are busy.")).toHaveLength(2);
   });
 
   it("a raft with a building: its effect at this level, the next level's cost, time and Power, or Max level", () => {
@@ -151,7 +159,7 @@ describe("the queue", () => {
 describe("buildings on rafts in the city", () => {
   it("stand on the rafts that carry them once the work is done, by type", () => {
     const s = locally(carrying(moored(), B, "greenhouse", 2), { type: "installOnRaft", slot: A, building: "greenhouse" });
-    expect(raftBuildingsShown(s)).toEqual({ greenhouse: [B], smokehouse: [], watchtower: [] });
+    expect(raftBuildingsShown(s)).toEqual({ greenhouse: [B], smokehouse: [], watchtower: [], house: [] });
     expect(raftBuildingsShown(advance(s, RAFT_INSTALL_TIME)).greenhouse.sort()).toEqual([A, B].sort());
   });
 

@@ -3,7 +3,7 @@
  * won on the sea, and the game says so ("plot", "dike", "drain"); before, they are rafts. The rules' refusals are
  * neutral (shared/src/rules/rafts.ts): they fit both.
  */
-import { RAFT_BUILDING_MAX_COPIES } from "@brinelight/shared";
+import { RAFT_BUILDING_MAX_COPIES, YARD_BUSY } from "@brinelight/shared";
 
 /** From this Lighthouse level on, the rafts are land (display only: the rules keep their rafts). */
 export const LAND_FROM = 5;
@@ -43,7 +43,7 @@ export type RaftWords = {
 const RAFT: RaftWords = {
   free: "The Lighthouse's light reaches this far. You can moor a raft here and grow your city.",
   working: "Work in progress.",
-  empty: `A free raft. Put a building on it. Each type is limited to ${RAFT_BUILDING_MAX_COPIES} rafts.`,
+  empty: `A free raft. Put a building on it. Each type is limited to ${RAFT_BUILDING_MAX_COPIES} rafts, and a House on every raft.`,
   build: "Build the raft",
   rope: "You find rope in wrecks and on pirates.",
   max: "Max level.",
@@ -60,7 +60,7 @@ const RAFT: RaftWords = {
   repairing: (n) => `Repairing ${plural(n, "raft", "rafts")}`,
   yard: "Shipyard",
   yardNew: "raft",
-  yardBusy: "The shipyard is busy",
+  yardBusy: YARD_BUSY,
   newOne: "A new raft is moored",
   mended: (n) => (n === 1 ? "A raft repaired" : `${n} rafts repaired`),
   damaged: (n) => plural(n, "raft", "rafts") + " damaged",
@@ -70,7 +70,7 @@ const RAFT: RaftWords = {
 const LAND: RaftWords = {
   free: "The Lighthouse's light reaches this far. Win this plot from the sea and grow your city.",
   working: "Work in progress.",
-  empty: `An empty plot. Put a building on it. You can build each type ${RAFT_BUILDING_MAX_COPIES === 2 ? "twice" : `${RAFT_BUILDING_MAX_COPIES} times`}.`,
+  empty: `An empty plot. Put a building on it. You can build each type ${RAFT_BUILDING_MAX_COPIES === 2 ? "twice" : `${RAFT_BUILDING_MAX_COPIES} times`}, and a House on every plot.`,
   build: "Fill it in",
   rope: "You find rope in wrecks and on pirates.",
   max: "Max level.",
@@ -87,7 +87,7 @@ const LAND: RaftWords = {
   repairing: (n) => `Draining ${plural(n, "plot", "plots")}`,
   yard: "Dike works",
   yardNew: "new plot",
-  yardBusy: "The dike works are busy",
+  yardBusy: YARD_BUSY,
   newOne: "New land won from the sea",
   mended: (n) => (n === 1 ? "A plot drained" : `${n} plots drained`),
   damaged: (n) => plural(n, "plot", "plots") + " flooded",

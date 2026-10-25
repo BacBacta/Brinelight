@@ -39,10 +39,14 @@ export const LITE = "-lite";
 /** The full model of a deck's light version (other models are their own). */
 export const fullName = (name: string): string => (name.endsWith(LITE) ? name.slice(0, -LITE.length) : name);
 
-/** Every model of the village in an age: the rafts' (of driftwood, whatever the age) and the buildings on rafts' of that age. */
+/** A House on a floating raft (before the Lighthouse 5, owner, 25 October): a small driftwood cabin (raft_buildings.py). */
+export const RAFT_HOUSE = `house-1-age${RAFT_AGE}`;
+
+/** Every model of the village in an age: the rafts' (of driftwood, whatever the age), the buildings on rafts' of that age, and the House's cabin with the driftwood. */
 export function villageNames(age: number): string[] {
   const out = [...LIGHT.flatMap((v) => [`raft-${v}-age${RAFT_AGE}`, `raft-${v}-age${RAFT_AGE}${LITE}`]), `raft-yard-age${RAFT_AGE}`, `raft-walk-age${RAFT_AGE}`, `raft-moor-age${RAFT_AGE}`];
   for (const id of BUILDING_IDS) for (let level = 1; level <= RAFT_BUILDING_MAX_LEVEL; level++) out.push(`${id}-${level}-age${age}`);
+  if (age === RAFT_AGE) out.push(RAFT_HOUSE);
   return out;
 }
 
@@ -67,7 +71,8 @@ export function villageModels(slots: readonly VillageSlot[], rafts: PlayerState[
   for (const s of slots) {
     out.set(s.key, s.view === "free" ? "raft-free" : s.view === "damaged" ? `raft-damaged-age${RAFT_AGE}${LITE}` : s.view === "building" ? `raft-yard-age${RAFT_AGE}` : deckName(s.variant));
     const raft = rafts[s.key];
-    if (raft?.building && s.view !== "free" && s.view !== "building") buildings.set(s.key, raftBuildingName(raft.building, raft.level, age));
+    // A House afloat is its cabin; on land (from the Lighthouse 5) the city fabric draws its two pieces (fabric/plan.ts).
+    if (raft?.building && s.view !== "free" && s.view !== "building") buildings.set(s.key, raft.building === "house" ? RAFT_HOUSE : raftBuildingName(raft.building, raft.level, age));
   }
   return { slots: out, buildings, walk: `raft-walk-age${RAFT_AGE}`, moor: `raft-moor-age${RAFT_AGE}` };
 }

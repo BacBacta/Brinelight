@@ -7,7 +7,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import * as THREE from "three";
-import { BUILDING_IDS, RAFT_SLOTS, newPlayerState, survivorCap } from "@brinelight/shared";
+import { BUILDING_IDS, RAFT_SLOTS, houseLevelCap, newPlayerState, survivorCap } from "@brinelight/shared";
 import type { PlayerState } from "../src/state/index.js";
 import { hexX, hexZ } from "../src/scene/island.js";
 import { ERA_PLOTS } from "../src/city/plots.js";
@@ -15,7 +15,7 @@ import { LAND_FROM } from "../src/city/words.js";
 import { ground, hexReach, islandDepth, landDepth, type LandSlots } from "../src/city/land/field.js";
 import { landSlotsOf } from "../src/city/land/index.js";
 import { LAUNDRY } from "../src/city/life/details.js";
-import { AFLOAT, CAMP, HOUSE_WORTH, LAUNDRY_AT, MIN_HOUSES, eraOf, fabricPlan, housesShown, minHouses, type FabricPlan, type Piece } from "../src/city/fabric/plan.js";
+import { AFLOAT, CAMP, HOUSE_WORTH, LAUNDRY_AT, MIN_HOUSES, eraOf, fabricPlan, housePieces, housesShown, minHouses, type FabricPlan, type Piece } from "../src/city/fabric/plan.js";
 import { mergeFabric, readFabric, type FabricModels, type Merged } from "../src/city/fabric/models.js";
 import { createFabric } from "../src/city/fabric/index.js";
 import { SIZES } from "../src/city/fabric/sight.js";
@@ -62,6 +62,26 @@ const CITIES: [number, number][] = [
   [30, RAFT_SLOTS.length],
 ];
 const WORST = (era: number) => city([4, 9, 14, 19, 24, 30][era]!, RAFT_SLOTS.length, 30);
+/** A city with Houses (step 2) at the level its Lighthouse allows on its first `houses` plots won; the three raft buildings twice on the next six. */
+function housed(lighthouse: number, rafts: number, houses: number, shelters = lighthouse): PlayerState {
+  const s = city(lighthouse, rafts, shelters);
+  const others = ["greenhouse", "greenhouse", "smokehouse", "smokehouse", "watchtower", "watchtower"] as const;
+  const out = { ...s.rafts };
+  RAFT_SLOTS.slice(0, rafts).forEach((r, i) => {
+    if (i < houses) out[r.key] = { hp: 100, building: "house", level: houseLevelCap(lighthouse) };
+    else if (i - houses < others.length) out[r.key] = { hp: 100, building: others[i - houses]!, level: 3 };
+  });
+  return { ...s, rafts: out };
+}
+/** The worst city with Houses of each era: every plot won, 33 Houses at their level, the six raft buildings, the Shelters at 30. */
+const WORST_HOUSED = (era: number) => housed([4, 9, 14, 19, 24, 30][era]!, RAFT_SLOTS.length, RAFT_SLOTS.length - 6, 30);
+/** The cities with Houses the sight test sees: a few, then every plot. */
+const HOUSED: [number, number, number][] = [
+  [7, 7, 1],
+  [14, 10, 4],
+  [22, 15, 9],
+  [30, RAFT_SLOTS.length, RAFT_SLOTS.length - 6],
+];
 
 const AFLOAT_OR_PORT = new Set(["sail-boat", "motor-boat", "jetty", "quay", "rowboat"]);
 const EQUIPMENT = new Set(["well", "windmill", "chimneys", "water-tower", "solar-field"]);
@@ -86,6 +106,38 @@ describe("the city fabric's plan", () => {
       expect(worth, `Lighthouse ${lh}`).toBeGreaterThanOrEqual(plan.houses);
       expect(worth, `Lighthouse ${lh}`).toBeLessThanOrEqual(plan.houses + 6);
     }
+  });
+
+  it("the Houses (step 2): two pieces on each House's plot, whatever its level; they stand for the Shelters' houses down to the Lighthouse's minimum", () => {
+    expect([1, 2, 3, 4, 5].map((l) => housePieces(l, 5))).toEqual([
+      ["solar-house", "solar-house"],
+      ["solar-house", "solar-house"],
+      ["apartments", "solar-house"],
+      ["apartments", "solar-house"],
+      ["apartments", "apartments"],
+    ]);
+    expect(housePieces(5, 3)).toEqual(["row", "row"]);
+    expect(housePieces(5, 1)).toEqual(["wooden", "wooden"]);
+    for (const [lh, rafts, houses] of HOUSED) {
+      const state = housed(lh, rafts, houses);
+      const plan = planOf(state);
+      const plots = RAFT_SLOTS.filter((r) => state.rafts[r.key]?.building === "house").map((r) => ({ x: hexX(r.q, r.r), z: hexZ(r.r) }));
+      for (const h of plots) {
+        const on = plan.pieces.filter((p) => HOUSES.has(p.model) && Math.hypot(p.x - h.x, p.z - h.z) < 0.6);
+        expect(on, `a House at (${h.x.toFixed(2)}, ${h.z.toFixed(2)}), Lighthouse ${lh}`).toHaveLength(2);
+      }
+      // The island keeps at least the Lighthouse's minimum, and the city shows its houses.
+      const worth = plan.pieces.reduce((n, p) => n + (HOUSE_WORTH[p.model] ?? 0), 0);
+      expect(worth, `Lighthouse ${lh}`).toBeGreaterThanOrEqual(plan.houses);
+      expect(plan.houses, `Lighthouse ${lh}`).toBeGreaterThanOrEqual(housesShown(lh, lh));
+    }
+    // A House's level changes its pieces.
+    const one = housed(30, 10, 1);
+    const at = RAFT_SLOTS[0]!;
+    const at1 = { ...one, rafts: { ...one.rafts, [at.key]: { hp: 100, building: "house" as const, level: 1 } } };
+    const on = (s: PlayerState) => planOf(s).pieces.filter((p) => HOUSES.has(p.model) && Math.hypot(p.x - hexX(at.q, at.r), p.z - hexZ(at.r)) < 0.6).map((p) => p.model);
+    expect(on(at1)).toEqual(["solar-house", "solar-house"]);
+    expect(on(one)).toEqual(["apartments", "apartments"]);
   });
 
   it("the camp: one small detail more at each Lighthouse level from 1 to 7, gone from the workshop era", () => {
@@ -256,16 +308,19 @@ const TRIANGLES = 14_000;
 describe("the city fabric's budget", () => {
   it(`three draw calls at most, and ${TRIANGLES.toLocaleString("en")} triangles at most in the worst city of each era`, () => {
     const seen: string[] = [];
-    for (let era = 0; era <= 5; era++) {
-      const state = WORST(era);
-      const L = landOf(state);
-      expect(eraOf(state.buildings.lighthouse)).toBe(era);
-      const merged = mergeFabric(fabricPlan(state, L), modelsOf(era), heightOf(L));
-      seen.push(`${era}: ${merged.triangles}`);
-      expect(merged.triangles, `era ${era}`).toBeLessThanOrEqual(TRIANGLES);
-      // Its indices fit the merged arrays.
-      for (const m of [merged.body, merged.windows]) expect(m.index.every((i) => i < m.position.length / 3)).toBe(true);
-    }
+    for (let era = 0; era <= 5; era++)
+      for (const [state, label] of [
+        [WORST(era), ""],
+        [WORST_HOUSED(era), " with Houses"],
+      ] as const) {
+        const L = landOf(state);
+        expect(eraOf(state.buildings.lighthouse)).toBe(era);
+        const merged = mergeFabric(fabricPlan(state, L), modelsOf(era), heightOf(L));
+        seen.push(`${era}${label}: ${merged.triangles}`);
+        expect(merged.triangles, `era ${era}${label}`).toBeLessThanOrEqual(TRIANGLES);
+        // Its indices fit the merged arrays.
+        for (const m of [merged.body, merged.windows]) expect(m.index.every((i) => i < m.position.length / 3)).toBe(true);
+      }
     console.log("fabric triangles, worst city by era:", seen.join(", "));
     const fabric = createFabric(() => {});
     // The body, the windows and the rotors: never more, whatever the city.
@@ -324,9 +379,9 @@ function apart(plan: FabricPlan, i: number, era: number, L: LandSlots): [THREE.O
 }
 
 describe("in the normal view, the fabric hides no building and each house and equipment stays mostly in sight", () => {
-  for (const [lh, rafts] of CITIES) {
-    it(`Lighthouse ${lh}, ${rafts} plots won: each building, house and equipment at least ${IN_SIGHT * 100} % in sight`, () => {
-      const state = city(lh, rafts);
+  for (const [lh, rafts, houses] of [...CITIES.map(([l, r]) => [l, r, 0] as const), ...HOUSED]) {
+    it(`Lighthouse ${lh}, ${rafts} plots won${houses ? `, ${houses} Houses` : ""}: each building, house and equipment at least ${IN_SIGHT * 100} % in sight`, () => {
+      const state = houses ? housed(lh, rafts, houses) : city(lh, rafts);
       const L = landOf(state);
       const era = eraOf(lh);
       const plan = fabricPlan(state, L);

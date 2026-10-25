@@ -297,7 +297,7 @@ describe("a modified client cannot change the rules", () => {
     await expectRefused(server, p, action({ type: "dockRaft", slot: outer[0]! }), "The Lighthouse's light doesn't reach this far yet");
     await expectApplied(server, p, action({ type: "dockRaft", slot: inner[1]! }));
     later(1000);
-    await expectRefused(server, p, action({ type: "dockRaft", slot: inner[2]! }), "Your builders on the shore are busy");
+    await expectRefused(server, p, action({ type: "dockRaft", slot: inner[2]! }), "Your builders are busy.");
 
     const full = await player({ ...lit, rafts: Object.fromEntries(inner.slice(0, raftCap(4)).map((k) => [k, sound])) });
     await expectRefused(server, full, action({ type: "dockRaft", slot: inner[raftCap(4)]! }), "Upgrade the Lighthouse to grow your city further");
@@ -343,8 +343,30 @@ describe("a modified client cannot change the rules", () => {
     await expectApplied(server, p, action({ type: "installOnRaft", slot: c, building: "watchtower" }));
     expect(p.ref.now().yard).toMatchObject({ slot: c, kind: "install", building: "watchtower" });
     later(1000);
-    await expectRefused(server, p, action({ type: "upgradeRaft", slot: b }), "Your builders on the shore are busy");
-    await expectRefused(server, p, action({ type: "dockRaft", slot: d }), "Your builders on the shore are busy");
+    await expectRefused(server, p, action({ type: "upgradeRaft", slot: b }), "Your builders are busy.");
+    await expectRefused(server, p, action({ type: "dockRaft", slot: d }), "Your builders are busy.");
+  });
+
+  it("Houses: as many as there are plots, no level past the Lighthouse's, none past 5, wood only", async () => {
+    const server = await buildApp({ db, now: () => clock });
+    const base = newPlayerState();
+    const inner = RAFT_SLOTS.filter((s) => s.ring === 3).map((s) => s.key);
+    const [a, b, c, d] = inner as [string, string, string, string];
+    const house = (level: number) => ({ hp: RAFT_MAX_HP, building: "house" as const, level });
+    const city = {
+      ...base,
+      buildings: { ...base.buildings, lighthouse: 13 },
+      stock: { oil: 0, fish: 0, wood: 9000, rope: 0 },
+      rafts: { [a]: house(2), [b]: house(1), [c]: house(1), [d]: { hp: RAFT_MAX_HP, building: null, level: 0 } },
+    };
+    const p = await player(city);
+    // The Lighthouse 13 allows level 2: no further.
+    await expectRefused(server, p, action({ type: "upgradeRaft", slot: a }), "Upgrade the Lighthouse first");
+    // A fourth House, with no oil nor fish: the House is paid in wood only.
+    await expectApplied(server, p, action({ type: "installOnRaft", slot: d, building: "house" }));
+    expect(p.ref.now().stock.wood).toBe(9000 - 600);
+    const top = await player({ ...city, buildings: { ...city.buildings, lighthouse: 30 }, rafts: { ...city.rafts, [a]: house(5) } });
+    await expectRefused(server, top, action({ type: "upgradeRaft", slot: a }), "Max level");
   });
 
   it("from shipyard to fleet: the server puts the Watchtower on its raft by its clock, then a fleet sails with it", async () => {
@@ -585,7 +607,7 @@ describe("a modified client cannot change the rules", () => {
     const order = action({ type: "repairRafts" });
     for (const extra of [{ slots: [a] }, { hp: RAFT_MAX_HP }, { oil: 0 }]) await expectInvalid(server, p, { action: { ...order, ...extra } });
     await expectApplied(server, p, action({ type: "repairRafts" }));
-    await expectRefused(server, p, action({ type: "repairRafts" }), "Your builders on the shore are busy");
+    await expectRefused(server, p, action({ type: "repairRafts" }), "Your builders are busy.");
     // 110 points missing: 110 / 35 × 6 minutes, on the server's clock.
     later(Math.floor((110 / 35) * 360 * 1000) - 1000);
     await expectRules(server, p);

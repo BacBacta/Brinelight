@@ -1021,6 +1021,18 @@
    }
   ]
  },
+ "house-1-age1": {
+  "kB": 24.8,
+  "triangles": 252,
+  "levels": [
+   {
+    "level": 0,
+    "indices": 756,
+    "height": 0.493,
+    "reach": 0.582
+   }
+  ]
+ },
  "infirmary-1": {
   "kB": 53.0,
   "triangles": 708,

@@ -8,6 +8,10 @@ Level 2 adds a detail, level 3 is their transformation (docs/tasks/week-8.md, "T
 - Smokehouse: a hut and its chimney; 2, a rack of hanging fish; 3, a taller chimney with a lit lantern, and a pile of wood;
 - Watchtower: a platform on four legs; 2, a shield and a spyglass on its rail; 3, a higher platform with a flag and a
   signal lamp.
+- House (step 2 of the population, owner, 25 October): on a raft, a small driftwood cabin under a roof of faded red
+  sailcloth (the Smokehouse keeps its planks), its door, a window and a washing line with three clothes; only at level 1
+  and of driftwood, the rafts floating only before the Lighthouse 5 (from then on the city fabric draws the
+  Houses on their land, client/src/city/fabric/plan.ts).
 
 Each stands on the middle of its raft's deck (y = 0 is the deck's top), facing the camera: the corners keep
 the raft's own things, the middles of its sides its walkways, and its front corner a damaged raft's mark.
@@ -15,7 +19,7 @@ the raft's own things, the middles of its sides its walkways, and its front corn
 import math
 
 from kit import barrel, box, cone, cylinder, flag, lantern, prism_roof, rod, sphere
-from parts import door, window
+from parts import door, washing_line, window
 from raft import AGES, LOOK
 
 # A building takes its deck's middle: x within ±0.46, z from -0.47 to 0.44 (client/test/village.test.ts).
@@ -142,9 +146,24 @@ def watchtower(level, age):
     return p
 
 
+def house(level, age):
+    look = LOOK[age]
+    hx, hz, w, d, h = 0.0, -0.06, 0.5, 0.4, 0.3
+    p = [box((w, h, d), (hx, h / 2, hz), WALL[age], bevel=0.008)]
+    # A sail's canvas for a roof, overhanging a little: never the Smokehouse's planks.
+    p.append(prism_roof(w + 0.12, d + 0.12, 0.2, (hx, h, hz), "sail_red"))
+    p += door(hx - 0.1, 0, hz + d / 2, w=0.11, h=0.2, color="dark")
+    p += window(hx + 0.11, 0.17, hz + d / 2, w=0.08, h=0.08, frame=look["post"])
+    # The washing on a line along the front edge, facing the camera, its clothes large enough to read from the normal view (owner, 25 October).
+    p += washing_line((-0.4, 0, 0.42), (0.4, 0, 0.42), colors=("cream", "navy", "white"), cloth=(0.14, 0.19))
+    return p
+
+
 BUILD = {"greenhouse": greenhouse, "smokehouse": smokehouse, "watchtower": watchtower}
 EXTRAS = {}
 for _id, _make in BUILD.items():
     for _age in AGES:
         for _level in (1, 2, 3):
             EXTRAS[f"{_id}-{_level}-age{_age}"] = (lambda m, l, a: lambda: m(l, a))(_make, _level, _age)
+# The House floats only before the Lighthouse 5: its cabin at level 1, of driftwood.
+EXTRAS["house-1-age1"] = lambda: house(1, 1)

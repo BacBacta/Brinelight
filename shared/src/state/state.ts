@@ -92,7 +92,7 @@ function mistLifts(s: PlayerState): PlayerState {
 
 /** The population's hour, at the clock's whole hour: fed if the city has fish left (rules/population.ts). */
 function populationAt(s: PlayerState): PlayerState {
-  const p = populationHour(s, { lighthouse: s.buildings.lighthouse, room: survivorRoom(s.buildings), fed: s.stock.fish > 0 });
+  const p = populationHour(s, { lighthouse: s.buildings.lighthouse, room: survivorRoom(s), fed: s.stock.fish > 0 });
   return { ...s, survivors: p.survivors, morale: p.morale, coming: p.coming };
 }
 
@@ -172,7 +172,7 @@ export function advance(state: PlayerState, seconds: number): PlayerState {
     s = withSea(s, f.state, f.reports);
     // The survivors the fleets back home bring, within the room.
     const rescued = f.home.reduce((n, fleet) => n + rescuedBy(fleet), 0);
-    if (rescued) s = { ...s, survivors: withRescued(s.survivors, survivorRoom(s.buildings), rescued) };
+    if (rescued) s = { ...s, survivors: withRescued(s.survivors, survivorRoom(s), rescued) };
     // The camps beaten in this step count for today and for the objectives.
     const beaten = f.reports.filter((r) => r.win && seaSite(r.site)?.kind === "camp").length;
     if (beaten) s = { ...s, progress: { ...s.progress, camps: s.progress.camps + beaten }, daily: countDaily(s.daily, s.clock, s.server, "camps", beaten) };
@@ -321,7 +321,7 @@ export function installOnRaft(state: PlayerState, slot: string, building: RaftBu
 
 /** Takes the building on the raft of a slot one level up with the shared rule; a refusal comes with its reason. */
 export function upgradeRaft(state: PlayerState, slot: string): ActionResult {
-  const r = startRaftUpgrade({ rafts: state.rafts, slot, stock: state.stock, yard: state.yard });
+  const r = startRaftUpgrade({ rafts: state.rafts, slot, lighthouse: state.buildings.lighthouse, stock: state.stock, yard: state.yard });
   return r.ok ? { ok: true, state: { ...state, stock: r.stock, yard: r.yard } } : r;
 }
 
