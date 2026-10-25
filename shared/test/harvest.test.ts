@@ -78,7 +78,7 @@ describe("A: the producers follow the costs", () => {
     // What the Lighthouse burns and the survivors eat do not change.
     const burn = netRates({ buildings: { ...STARTING_BUILDINGS, lighthouse: 4, refinery: 0, fishery: 0, lumberyard: 0 }, techs: {}, rafts: {}, survivors: 10, morale: 0 });
     expect(burn.oil).toBeCloseTo(-10);
-    expect(burn.fish).toBeCloseTo(-3);
+    expect(burn.fish).toBeCloseTo(-2);
   });
 });
 

@@ -10,7 +10,7 @@ const PROTO = {
   fishery: 1.4,
   lumberyard: 4.2,
   lighthouseBurn: 0.25,
-  survivorEats: 0.03,
+  survivorEats: 0.02,
   greenhouse: 0.45,
 };
 /**
@@ -21,7 +21,7 @@ export const producerLevel = (level: number): number => level + Math.min(level, 
 
 /** What a Kelp Greenhouse adds per level, in fish per real hour (prototype: 0.45 per prototype second). */
 export const GREENHOUSE_FISH_PER_HOUR = protoRatePerHour(PROTO.greenhouse);
-/** The fish a survivor eats per real hour: 0.3 (owner's decision, 25 October, with the population; the prototype's 0.6 before). */
+/** The fish a survivor eats per real hour: 0.2 (owner's decision, 25 October, with the population and the House; the prototype's 0.6 before). */
 export const SURVIVOR_EATS_PER_HOUR = protoRatePerHour(PROTO.survivorEats);
 /** The share of fish eaten a Smokehouse saves per level (prototype: 10%), down to half at most. */
 export const SMOKEHOUSE_SAVES = 0.1;

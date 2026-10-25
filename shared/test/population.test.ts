@@ -96,13 +96,13 @@ describe("an hour of the population", () => {
 });
 
 describe("the population in the city", () => {
-  it("a new city's 8 survivors fill the Shelters' room (10) and no more; they eat 0.3 fish an hour each (owner's decision, 25 October)", () => {
+  it("a new city's 8 survivors fill the Shelters' room (10) and no more; they eat 0.2 fish an hour each (owner's decision, 25 October)", () => {
     const s = newPlayerState(0);
     expect([s.survivors, s.coming]).toEqual([8, 0]);
     const later = hours(s, 48);
     expect(later.survivors).toBe(survivorRoom(s.buildings));
     const eat = (c: PlayerState) => netRates({ ...c, survivors: 0 }).fish - netRates(c).fish;
-    expect(eat(later)).toBeCloseTo(later.survivors * 0.3);
+    expect(eat(later)).toBeCloseTo(later.survivors * 0.2);
   });
 
   it("is applied on the clock's whole hours: the same city whatever the moments it is computed", () => {
