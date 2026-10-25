@@ -51,5 +51,6 @@ The milestones of the day sealed every night in one Solana transaction, checked 
 
 ## Later
 
+- **Saving for the Lighthouse, shown** (owner, 24 October, instead of the idle study's options, `docs/studies/idle.md`): on the Lighthouse's sheet and in the queue, "Saving for Lighthouse N", one bar for each resource still missing, and "ready in about X h" at the city's production. Interface only: no rule, no value.
 - **The late game's wall** (owner, 23 October): the Lighthouse's 25 to 30 is 156 days of building, and the other buildings' 29 to 30 takes years (8.8 to 11.7 years of building each). Measured in `docs/studies/resources.md`.
 - **Long expeditions for the casual player** (owner, 23 October): a fleet that harvests for several hours in a row, so that a player with three sessions a day draws at least 25 % of their wood and fish from the sea (13 % and 24 % with E).
