@@ -189,6 +189,12 @@ export function advance(state: PlayerState, seconds: number): PlayerState {
     s = { ...s, stock };
   }
 
+  if (p?.eats !== undefined && p.eats !== 1) {
+    // The survivors eat `eats` times the rules' fish: what they did not eat goes back to the stock, within the storage.
+    const back = (eaten * (1 - p.eats) * seconds) / rules.HOUR;
+    const cap = rules.storeCap(s.buildings.lighthouse, s.techs);
+    if (s.stock.fish < cap) s = { ...s, stock: { ...s.stock, fish: Math.min(cap, s.stock.fish + back) } };
+  }
   const fed = s.stock.fish > 0;
   if (p) {
     // The survivors the fleets back home bring: one a wreck salvaged, two a camp beaten.
@@ -229,7 +235,7 @@ export function advance(state: PlayerState, seconds: number): PlayerState {
   row.houseLevels = houseLevels(s);
   row.rafts = Object.keys(s.rafts).length;
   row.fishMade += (made * seconds) / rules.HOUR;
-  row.fishEaten += (eaten * seconds) / rules.HOUR;
+  row.fishEaten += (eaten * (p?.eats ?? 1) * seconds) / rules.HOUR;
   if (!fed) row.hungry += hours;
   row.fishFull = s.stock.fish >= rules.storeCap(s.buildings.lighthouse, s.techs) - 1;
   return s;

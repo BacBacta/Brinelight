@@ -29,6 +29,8 @@ export type Proposal = {
   house: { cost: Cost; growth: number; roomPerLevel: number; maxLevel: number; levelEvery: number } | null;
   /** The survivors at which the third, then the fourth builder comes (never for sale). Empty: the rules' two. */
   builders: readonly number[];
+  /** How much of the rules' fish a survivor eats (the rules: 0.6 an hour; 0.5 here: 0.3 an hour). Absent: the rules'. */
+  eats?: number;
 };
 
 /** The study's starting values. */

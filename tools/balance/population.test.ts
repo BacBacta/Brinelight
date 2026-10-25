@@ -67,6 +67,15 @@ describe("the population study's rules, on a city", () => {
     expect(s.stock.fish).toBeLessThan(100_000 + 14 * 25 * 24 * 30);
   });
 
+  it("survivors who eat half the rules' fish (the House study's options 5 and 6) leave half of it in the stock", () => {
+    const fed = { ...city(), buildings: { ...city().buildings, fishery: 0 }, stock: { ...city().stock, fish: 10_000 } };
+    R.begin(START);
+    const full = R.advance(fed, 3600);
+    R.begin({ ...START, eats: 0.5 });
+    const half = R.advance(fed, 3600);
+    expect(10_000 - half.stock.fish).toBeCloseTo((10_000 - full.stock.fish) / 2, 0);
+  });
+
   it("a House goes past the raft buildings' level 3, up to what the Lighthouse allows", () => {
     R.begin(START);
     let s = R.newPlayerState(0);

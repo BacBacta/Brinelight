@@ -66,6 +66,18 @@ const SETUPS: readonly Setup[] = [
   { key: "A-start", name: "A and the population, 2 builders", proposal: P.START, production: 3.5 },
   { key: `A-b${PROPOSED.join("-")}`, name: `A and the population, ${withBuilders(PROPOSED).name}`, proposal: withBuilders(PROPOSED), production: 3.5 },
 ];
+/** The House's costs and the survivors' eating, for the owner's request of 25 October (step 2). */
+const H = P.START.house!;
+const HOUSE_OPTIONS: readonly Setup[] = [
+  { key: "start", name: "The starting values: 600 wood and 300 fish, ×3 a level; 0.6 fish an hour", proposal: P.START },
+  { key: "h-fish0", name: "1. No fish: 600 wood, ×3 a level; 0.6 fish an hour", proposal: { ...P.START, house: { ...H, cost: { wood: 600 } } } },
+  { key: "h-g2", name: "2. A gentler rise: 600 wood and 300 fish, ×2 a level; 0.6 fish an hour", proposal: { ...P.START, house: { ...H, growth: 2 } } },
+  { key: "h-fish0-room3", name: "3. No fish, 3 room a level: 600 wood, ×3 a level; 0.6 fish an hour", proposal: { ...P.START, house: { ...H, cost: { wood: 600 }, roomPerLevel: 3 } } },
+  { key: "h-fish0-eat075", name: "4. No fish, and 0.45 fish an hour", proposal: { ...P.START, eats: 0.75, house: { ...H, cost: { wood: 600 } } } },
+  { key: "h-fish0-eat05", name: "5. No fish, and 0.3 fish an hour", proposal: { ...P.START, eats: 0.5, house: { ...H, cost: { wood: 600 } } } },
+  { key: "h-fish100-eat05", name: "6. 600 wood and 100 fish, ×3 a level, and 0.3 fish an hour", proposal: { ...P.START, eats: 0.5, house: { ...H, cost: { wood: 600, fish: 100 } } } },
+];
+
 /** A city short of fish: its Fishery kept at level 2, never at sea (no shoal), every other choice the balance's. */
 const SHORT: Setup = { key: "short", name: "The Fishery kept at level 2, never at sea", proposal: P.START, fisheryMax: 2, profile: { noSea: true } };
 
@@ -96,7 +108,7 @@ const get = (s: Setup, p: Profile) => {
 const MAIN = PROFILES.slice(0, 3);
 const regular = PROFILES[1]!;
 const neverStokes = MORE_PROFILES.find((p) => p.id === "neverStokes")!;
-const setup = (key: string) => SETUPS.find((s) => s.key === key)!;
+const setup = (key: string) => [...SETUPS, ...HOUSE_OPTIONS].find((s) => s.key === key)!;
 
 const n = (v: number) => Math.round(v).toLocaleString("en-US");
 const pct = (v: number) => `${Math.round(v * 100)} %`;
@@ -200,6 +212,20 @@ function hungerTable(): string {
     if ([0, 6, 12, 24, 48, 54, 60, 72, 96].includes(h)) line(h);
     if (h === 48) s = { ...s, buildings: { ...s.buildings, fishery: 10 } };
     s = R.advance(s, 3600);
+  }
+  return rows.join("\n");
+}
+
+function houseCostsTable(): string {
+  const rows = [
+    "| Option | Player | Sessions short of fish: until the city is done | the first year | Lighthouse 30 | Whole city at 30 | Survivors, day 365 | The Houses cost: wood | fish |",
+    "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+  ];
+  const fishShort = (r: Played, until: number) => r.run.days.slice(0, until).reduce((k, d) => k + Number(d.blockedBy.match(/fish (\d+)/)?.[1] ?? 0), 0);
+  for (const s of [setup("rules"), ...HOUSE_OPTIONS]) for (const p of MAIN) {
+    const r = get(s, p);
+    const city = cityAt30(r);
+    rows.push(`| ${s.name} | ${p.name} | ${fishShort(r, city ?? DAYS)} | ${fishShort(r, 365)} | ${day(r.run.lighthouse[30])} | ${city === null ? "not in 2 years" : `day ${city}`} | ${at(r, 365).survivors} | ${n(r.spent.houses.wood)} | ${n(r.spent.houses.fish)} |`);
   }
   return rows.join("\n");
 }
@@ -365,7 +391,10 @@ const tables = [
   "### 7. The regular player's rafts and Houses",
   housesTable(),
   "### 8. What the Houses and the rafts cost (two years)",
-  spentTable(),
+  spentTable(),,
+  "### 9. The House's costs and the survivors' eating (step 2, the owner's request of 25 October)",
+  "The sessions that ended with a builder free and the first thing to start short of fish, until the whole city is at 30 (as section 4b) and in the first year. Target for the regular player: about 150 at most, Lighthouse 30 no more than a week later than the rules (day 190.9).",
+  houseCostsTable()
 ].join("\n\n");
 
 const file = `${docs}studies/population.md`;

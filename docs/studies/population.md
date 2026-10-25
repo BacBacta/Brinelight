@@ -1,5 +1,12 @@
 # The population (study)
 
+> **The owner's decisions of 24 October 2026**, delivered in this order, each step in its own pull request:
+> 1. **The population, with the Shelters' room only: every value accepted** (the arrivals, the fleets, the eating, the morale, below). In the game from step 1's pull request.
+> 2. **The House: the principle accepted** (a building on a plot won, 4 room a level, 5 levels, one more every 7 Lighthouse levels, the city fabric's houses), **not its costs**: the sessions short of fish must stay at about 150 at most for the regular player, Lighthouse 30 no more than a week later. Measured below ("Step 2: the House's costs"); not coded.
+> 3. **The builders: a third at 100 survivors, a fourth at 250**, never for sale, with a celebration. After step 2.
+>
+> Later: the morale's bonus at 90, out of reach today (parks, feasts?), in `docs/tasks/roadmap.md`.
+
 A study only, at the owner's request of 24 October, after a game report: the island's population never grows (8/22), no new house can be built, and there are only 2 builders. It measures, by simulation, a population that grows, a House to build on the plots won, and builders that come with the survivors, on today's economy (E, the slower build times, the costs past 15); and it says, point by point, what the game would need. **It changes no value: nothing goes into the game without the owner's agreement, value by value.**
 
 ## Today
@@ -69,6 +76,37 @@ A study only, at the owner's request of 24 October, after a game report: the isl
 - **Models:** none.
 - **Difficulty and time:** small, about 1 day.
 - **Risks:** none on the saves; the queue's captures move. They do not speed the game (section 6): their worth is in the feel of the sessions, not in the pace.
+
+## Step 2: the House's costs (the owner's request of 25 October)
+
+The sessions short of fish (section 4b) went from 53 to 793 for the regular player with the starting values. That count runs until the whole city is at 30 (544 days); in the first year alone, 53 become 115. Most come after Lighthouse 30, while the other buildings catch up and 786 survivors eat. Six options, played by the three players (section 9), to keep about 150 at most for the regular player, with Lighthouse 30 no more than a week later than the rules (day 190.9).
+
+**What it shows:**
+
+- **The Houses' fish is the smaller part.** A House without fish (option 1) still leaves 418; a gentler rise (×2, option 2), 725. The survivors' eating is the larger part: at the end, 786 survivors eat about 5,700 fish a day, Smokehouses included.
+- **Less room helps, but not enough.** A House with 3 room a level instead of 4 (option 3) leaves 171, with 605 survivors instead of 770.
+- **Eating less does it.** With Houses that cost no fish:
+  - at 0.45 fish an hour a survivor (option 4), 145: on the target, with no margin;
+  - at 0.3 (option 5), 42: fewer than the rules' 53.
+- **Lighthouse 30 stays within the week** for every option: day 186.9 to 190.2 for the regular player. The whole city at 30 comes 16 to 36 days later than the rules (day 479), instead of 65.
+- **The count is uneven from one player to the next.** It hangs on what each player tries first at each session, and the rules alone give 277, 53 and 539 for the three players. Option 5 gives 448, 42 and 116: worse than the rules for the casual player, better for the dedicated one.
+
+**Recommended: option 5.**
+
+- **The House costs wood only:** 600 for level 1, ×3 a level (level 5: 48,600 wood).
+- **A survivor eats 0.3 fish an hour:** half the rules' 0.6, the Smokehouses still saving up to half of that.
+- **The result for the regular player:** 42 sessions short of fish, Lighthouse 30 on day 188.7 (+4.8 days), the whole city at 30 on day 496 (+17).
+- **It changes a value accepted for step 1:** the eating. 0.6 stays in step 1, with the Shelters' room only (126 survivors at most: 1,814 fish a day at most, half that with the Smokehouses). It would go to 0.3 with step 2, or with step 1 if the owner prefers.
+
+**The display budget of the Houses (to build with step 2):**
+
+- **The houses' models are light:** 32 to 84 triangles for a small house, 180 for a terraced row or a block of apartments (the fabric's era files, `client/public/city/fabric-<era>.bin`). The fabric's worst city today is 11,026 triangles (its test allows 14,000).
+- **A fixed number of pieces a plot:** two pieces on each plot with a House, whatever its level. Levels 1 and 2 are two small houses; levels 3 and 4 a large one and a small one; level 5 two large ones (a terraced row from the industry era, apartments in the modern one). At most 33 × 360 = 11,880 triangles for the Houses.
+- **What makes room for them:**
+  - the plots with a House lose their fields and gardens, whose rows weigh as much (11.8 k at the Lighthouse 9 with 39 gardens);
+  - the island's own houses fall back to the Lighthouse's minimum once Houses stand.
+- **To measure:** with the fabric test (the worst city of each era, every plot with a House at its level) and `?demo=phare30`.
+- **Draw calls:** unchanged, the Houses join the fabric's merged meshes.
 
 ## The proposed starting values (for the owner's decision, value by value)
 
@@ -249,5 +287,38 @@ Shares of the builders' time, as in `docs/studies/idle.md`; at Lighthouse 21 to 
 | Casual (3 sessions) | 2,395,800 | 1,197,900 | 4,250 | 1,234,570 |
 | Regular (6 sessions) | 2,395,800 | 1,197,900 | 4,250 | 1,234,570 |
 | Dedicated (10 sessions) | 2,395,800 | 1,197,900 | 4,250 | 1,234,570 |
+
+
+
+### 9. The House's costs and the survivors' eating (step 2, the owner's request of 25 October)
+
+The sessions that ended with a builder free and the first thing to start short of fish, until the whole city is at 30 (as section 4b) and in the first year. Target for the regular player: about 150 at most, Lighthouse 30 no more than a week later than the rules (day 190.9).
+
+| Option | Player | Sessions short of fish: until the city is done | the first year | Lighthouse 30 | Whole city at 30 | Survivors, day 365 | The Houses cost: wood | fish |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| The rules (8 survivors, 2 builders) | Casual (3 sessions) | 277 | 0 | day 246.6 | day 588 | 8 | 0 | 0 |
+| The rules (8 survivors, 2 builders) | Regular (6 sessions) | 53 | 53 | day 183.9 | day 479 | 8 | 0 | 0 |
+| The rules (8 survivors, 2 builders) | Dedicated (10 sessions) | 539 | 101 | day 162.8 | day 435 | 8 | 0 | 0 |
+| The starting values: 600 wood and 300 fish, ×3 a level; 0.6 fish an hour | Casual (3 sessions) | 595 | 2 | day 252.1 | day 689 | 678 | 2,395,800 | 1,197,900 |
+| The starting values: 600 wood and 300 fish, ×3 a level; 0.6 fish an hour | Regular (6 sessions) | 793 | 115 | day 189.9 | day 544 | 770 | 2,395,800 | 1,197,900 |
+| The starting values: 600 wood and 300 fish, ×3 a level; 0.6 fish an hour | Dedicated (10 sessions) | 1653 | 466 | day 169.1 | day 537 | 770 | 2,395,800 | 1,197,900 |
+| 1. No fish: 600 wood, ×3 a level; 0.6 fish an hour | Casual (3 sessions) | 532 | 8 | day 251.6 | day 667 | 686 | 2,395,800 | 0 |
+| 1. No fish: 600 wood, ×3 a level; 0.6 fish an hour | Regular (6 sessions) | 418 | 6 | day 188.6 | day 515 | 770 | 2,395,800 | 0 |
+| 1. No fish: 600 wood, ×3 a level; 0.6 fish an hour | Dedicated (10 sessions) | 882 | 75 | day 167.9 | day 499 | 770 | 2,395,800 | 0 |
+| 2. A gentler rise: 600 wood and 300 fish, ×2 a level; 0.6 fish an hour | Casual (3 sessions) | 649 | 1 | day 251.6 | day 664 | 710 | 613,800 | 306,900 |
+| 2. A gentler rise: 600 wood and 300 fish, ×2 a level; 0.6 fish an hour | Regular (6 sessions) | 725 | 32 | day 187.9 | day 512 | 774 | 613,800 | 306,900 |
+| 2. A gentler rise: 600 wood and 300 fish, ×2 a level; 0.6 fish an hour | Dedicated (10 sessions) | 1634 | 612 | day 169.7 | day 500 | 774 | 613,800 | 306,900 |
+| 3. No fish, 3 room a level: 600 wood, ×3 a level; 0.6 fish an hour | Casual (3 sessions) | 367 | 4 | day 249.6 | day 651 | 536 | 2,395,800 | 0 |
+| 3. No fish, 3 room a level: 600 wood, ×3 a level; 0.6 fish an hour | Regular (6 sessions) | 171 | 31 | day 188.6 | day 498 | 605 | 2,395,800 | 0 |
+| 3. No fish, 3 room a level: 600 wood, ×3 a level; 0.6 fish an hour | Dedicated (10 sessions) | 645 | 79 | day 167.2 | day 485 | 609 | 2,395,800 | 0 |
+| 4. No fish, and 0.45 fish an hour | Casual (3 sessions) | 408 | 1 | day 249.1 | day 654 | 686 | 2,395,800 | 0 |
+| 4. No fish, and 0.45 fish an hour | Regular (6 sessions) | 145 | 19 | day 187.7 | day 495 | 770 | 2,395,800 | 0 |
+| 4. No fish, and 0.45 fish an hour | Dedicated (10 sessions) | 468 | 15 | day 166.7 | day 483 | 774 | 2,395,800 | 0 |
+| 5. No fish, and 0.3 fish an hour | Casual (3 sessions) | 448 | 2 | day 248.8 | day 637 | 686 | 2,395,800 | 0 |
+| 5. No fish, and 0.3 fish an hour | Regular (6 sessions) | 42 | 39 | day 188.7 | day 496 | 770 | 2,395,800 | 0 |
+| 5. No fish, and 0.3 fish an hour | Dedicated (10 sessions) | 116 | 0 | day 167.0 | day 476 | 774 | 2,395,800 | 0 |
+| 6. 600 wood and 100 fish, ×3 a level, and 0.3 fish an hour | Casual (3 sessions) | 372 | 6 | day 248.8 | day 648 | 690 | 2,395,800 | 399,300 |
+| 6. 600 wood and 100 fish, ×3 a level, and 0.3 fish an hour | Regular (6 sessions) | 127 | 35 | day 186.9 | day 498 | 774 | 2,395,800 | 399,300 |
+| 6. 600 wood and 100 fish, ×3 a level, and 0.3 fish an hour | Dedicated (10 sessions) | 572 | 225 | day 167.0 | day 478 | 774 | 2,395,800 | 399,300 |
 
 <!-- population:generated:end -->
