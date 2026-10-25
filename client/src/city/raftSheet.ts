@@ -134,8 +134,8 @@ export function raftSheetHtml(state: PlayerState, slot: string, speed: number, l
         head +
         box(
           `Upgrade to level ${raft.level + 1}`,
-          costLine(state.stock, raftBuildingCost(raft.building, raft.level)) +
-            `<p class="p" style="font-size:12.5px;margin-top:6px">Time: ${formatDuration(raftUpgradeTime(raft.level) / speed)} · Power +${RAFT_LEVEL_POWER}</p>`,
+          // The cost and the time on one line: the Upgrade stays whole on the S22's 384 × 699 (owner, 25 October).
+          `<div class="row">${costLine(state.stock, raftBuildingCost(raft.building, raft.level))}<span class="p" style="font-size:12.5px">Time: ${formatDuration(raftUpgradeTime(raft.level) / speed)} · Power +${RAFT_LEVEL_POWER}</span></div>`,
         ) +
         // Still tappable when refused: the tap shows the reason in a toast too.
         act("Upgrade", check, "gold xl", "upgrade-raft"),
