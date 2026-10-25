@@ -2,7 +2,7 @@ import { EARLY_INSTALL, EARLY_RAFT, earlyCapped } from "./early.js";
 import { OK, canPay, payCost, refuse, roundCost, type Check, type Cost, type Stock } from "./types.js";
 import { protoSeconds } from "./time.js";
 
-export type RaftBuildingId = "greenhouse" | "smokehouse" | "watchtower";
+export type RaftBuildingId = "greenhouse" | "smokehouse" | "watchtower" | "house";
 export type Raft = { hp: number; building: RaftBuildingId | null; level: number };
 /** Key "q,r" in axial hex coordinates. */
 export type Rafts = Record<string, Raft>;
@@ -11,12 +11,33 @@ export const RAFT_BUILDINGS: Record<RaftBuildingId, { name: string; effect: stri
   greenhouse: { name: "Kelp Greenhouse", effect: "+0.45 fish per prototype second per level", base: { wood: 200, oil: 80 } },
   smokehouse: { name: "Smokehouse", effect: "−10% fish eaten per level", base: { wood: 220, fish: 100 } },
   watchtower: { name: "Watchtower", effect: "+5% fleet attack per level", base: { wood: 260, oil: 120 } },
+  house: { name: "House", effect: "+4 room for survivors per level", base: { wood: 600 } },
 };
 
+/** The last level of the Kelp Greenhouse, the Smokehouse and the Watchtower. */
 export const RAFT_BUILDING_MAX_LEVEL = 3;
+/**
+ * The House (owner's decision, 25 October, option 5 of docs/studies/population.md): room for survivors on a plot won,
+ * in wood only, 600 at level 1 and ×3 a level; 4 room a level, 5 levels, one more every 7 Lighthouse levels; as many as
+ * there are plots. Never for sale.
+ */
+export const HOUSE_MAX_LEVEL = 5;
+export const HOUSE_LEVEL_EVERY = 7;
+export const HOUSE_ROOM = 4;
+const HOUSE_GROWTH = 3;
+/** The House's last level at this Lighthouse level: 1 from the start, 2 from Lighthouse 7, 5 from 28. */
+export const houseLevelCap = (lighthouse: number): number => Math.min(HOUSE_MAX_LEVEL, 1 + Math.floor(Math.max(0, lighthouse) / HOUSE_LEVEL_EVERY));
+/** A raft building's last level. */
+export const raftBuildingMaxLevel = (id: RaftBuildingId): number => (id === "house" ? HOUSE_MAX_LEVEL : RAFT_BUILDING_MAX_LEVEL);
+/** The level a raft building can reach now, at this Lighthouse level. */
+export const raftBuildingLevelCap = (id: RaftBuildingId, lighthouse: number): number => (id === "house" ? houseLevelCap(lighthouse) : RAFT_BUILDING_MAX_LEVEL);
+/** The Houses' levels added up: 4 room each (`population.ts`), whatever the plot's condition. */
+export const houseLevels = (rafts: Rafts): number => Object.values(rafts).reduce((n, r) => n + (r.building === "house" ? r.level : 0), 0);
 /** A raft's sturdiness when new or repaired (the prototype's 100). */
 export const RAFT_MAX_HP = 100;
+/** How many rafts may carry each of the Kelp Greenhouse, the Smokehouse and the Watchtower; the House has no limit but the plots. */
 export const RAFT_BUILDING_MAX_COPIES = 2;
+export const raftBuildingMaxCopies = (id: RaftBuildingId): number => (id === "house" ? RAFT_MAX : RAFT_BUILDING_MAX_COPIES);
 /** Condition below which a raft runs at half capacity. */
 export const RAFT_DAMAGED_BELOW = 60;
 /** Condition lost when a Mist ends that the Lighthouse did not hold. */
@@ -60,7 +81,8 @@ export const RAFT_BUILD_TIME = protoSeconds(12);
 
 export function raftBuildingCost(id: RaftBuildingId, level: number): Cost {
   const raw: Cost = {};
-  for (const [k, v] of Object.entries(RAFT_BUILDINGS[id].base) as [keyof Cost, number][]) raw[k] = v * 1.6 ** level;
+  const growth = id === "house" ? HOUSE_GROWTH : 1.6;
+  for (const [k, v] of Object.entries(RAFT_BUILDINGS[id].base) as [keyof Cost, number][]) raw[k] = v * growth ** level;
   return roundCost(raw);
 }
 
@@ -158,7 +180,7 @@ export function canInstall(id: RaftBuildingId, ctx: { rafts: Rafts; slot: string
   const raft = ctx.rafts[ctx.slot];
   if (!raft) return refuse("There is nothing here yet");
   if (raft.building) return refuse("There is already a building here");
-  if (raftBuildingCopies(id, ctx.rafts, ctx.yard) >= RAFT_BUILDING_MAX_COPIES) return refuse(`You can build each type ${RAFT_BUILDING_MAX_COPIES === 2 ? "twice" : `${RAFT_BUILDING_MAX_COPIES} times`}`);
+  if (raftBuildingCopies(id, ctx.rafts, ctx.yard) >= raftBuildingMaxCopies(id)) return refuse(`You can build each type ${RAFT_BUILDING_MAX_COPIES === 2 ? "twice" : `${RAFT_BUILDING_MAX_COPIES} times`}`);
   if (ctx.yard) return refuse("Your builders on the shore are busy");
   if (!canPay(ctx.stock, raftBuildingCost(id, 0))) return refuse("Not enough resources");
   return OK;
@@ -175,12 +197,13 @@ export function startInstall(id: RaftBuildingId, ctx: { rafts: Rafts; slot: stri
   };
 }
 
-/** Can you take the building on this raft one level up now? */
-export function canUpgradeRaft(ctx: { rafts: Rafts; slot: string; stock: Stock; yard: YardJob | null }): Check {
+/** Can you take the building on this raft one level up now? A House only up to what the Lighthouse allows. */
+export function canUpgradeRaft(ctx: { rafts: Rafts; slot: string; lighthouse: number; stock: Stock; yard: YardJob | null }): Check {
   const raft = ctx.rafts[ctx.slot];
   if (!raft) return refuse("There is nothing here yet");
   if (!raft.building) return refuse("Put a building here first");
-  if (raft.level >= RAFT_BUILDING_MAX_LEVEL) return refuse("Max level");
+  if (raft.level >= raftBuildingMaxLevel(raft.building)) return refuse("Max level");
+  if (raft.level >= raftBuildingLevelCap(raft.building, ctx.lighthouse)) return refuse("Upgrade the Lighthouse first");
   if (raft.hp < RAFT_DAMAGED_BELOW) return refuse("Mend this first");
   if (ctx.yard) return refuse("Your builders on the shore are busy");
   if (!canPay(ctx.stock, raftBuildingCost(raft.building, raft.level))) return refuse("Not enough resources");
@@ -188,7 +211,7 @@ export function canUpgradeRaft(ctx: { rafts: Rafts; slot: string; stock: Stock; 
 }
 
 /** Takes the building on a raft one level up: checked with canUpgradeRaft, paid at once, done after raftUpgradeTime. */
-export function startRaftUpgrade(ctx: { rafts: Rafts; slot: string; stock: Stock; yard: YardJob | null }): StartYard {
+export function startRaftUpgrade(ctx: { rafts: Rafts; slot: string; lighthouse: number; stock: Stock; yard: YardJob | null }): StartYard {
   const check = canUpgradeRaft(ctx);
   if (!check.ok) return check;
   const raft = ctx.rafts[ctx.slot]!;
@@ -230,5 +253,5 @@ export function advanceYard(rafts: Rafts, job: YardJob | null, seconds: number):
   // The raft is always there: nothing removes one while the shipyard works on it.
   if (!raft) return { rafts, yard: null };
   if (job.kind === "install") return { rafts: { ...rafts, [job.slot]: { ...raft, building: job.building, level: 1 } }, yard: null };
-  return { rafts: { ...rafts, [job.slot]: { ...raft, level: Math.min(RAFT_BUILDING_MAX_LEVEL, raft.level + 1) } }, yard: null };
+  return { rafts: { ...rafts, [job.slot]: { ...raft, level: raft.building ? Math.min(raftBuildingMaxLevel(raft.building), raft.level + 1) : raft.level } }, yard: null };
 }

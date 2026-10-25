@@ -1,12 +1,13 @@
 /**
  * The population (owner's decision, 24 October; docs/studies/population.md, step 1): survivors come with time while
  * the city has room in its Shelters and fish, faster at a higher Lighthouse and a higher morale; the fleets bring some
- * home. Each eats fish every hour (`economy.ts`). Out of fish, no one comes and the morale falls: no one ever dies or
+ * home. The room is the Shelters' and the Houses' (step 2). Each eats fish every hour (`economy.ts`). Out of fish, no one comes and the morale falls: no one ever dies or
  * leaves. Nothing here is for sale.
  *
  * It is applied on the clock's whole hours (`state.ts`), so a city is the same whatever the moments it is computed.
  */
 import { survivorCap } from "./economy.js";
+import { HOUSE_ROOM, houseLevels, type Rafts } from "./rafts.js";
 import { seaSite, type Fleet } from "./sea.js";
 import { STARTING_MORALE } from "./start.js";
 import type { Buildings } from "./types.js";
@@ -25,8 +26,8 @@ export const MORALE_MIST_MISSED = 5;
 export const RESCUE_WRECK = 1;
 export const RESCUE_CAMP = 2;
 
-/** The room for survivors: the Shelters' (6 + 4 a level). */
-export const survivorRoom = (buildings: Buildings): number => survivorCap(buildings.shelters);
+/** The room for survivors: the Shelters' (6 + 4 a level) and the Houses' (4 a level, since step 2). */
+export const survivorRoom = (city: { buildings: Buildings; rafts: Rafts }): number => survivorCap(city.buildings.shelters) + HOUSE_ROOM * houseLevels(city.rafts);
 
 /** Survivors who come per real hour, at this Lighthouse level and morale. */
 export const arrivalsPerHour = (lighthouse: number, morale: number): number => (ARRIVALS_BASE + ARRIVALS_PER_LEVEL * lighthouse) * (morale / MORALE_FED);

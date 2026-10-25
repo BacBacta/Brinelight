@@ -617,6 +617,7 @@ With the gardens in rows, the Mist's windows, the camp 1.3 times larger, the Har
 | `?demo=phare30` | 45, 57.4 k |
 
 - The gardens' and the kelp's rows stand in the fabric's mesh: no draw call more. The fabric's worst city is 11.8 k triangles (39 gardens at the Lighthouse 9), under the 14 k of its test.
+- The Houses (step 2, 25 October): two pieces on each House's plot, in the fabric's mesh (no draw call more); the island's own houses give way to them down to the Lighthouse's minimum, and the street lamps stop at 40 (a street through every House's plot put 148). The worst city with Houses (33 Houses at their level, the six raft buildings, the Shelters at 30) is 13.6 k triangles in the Modern era, 2.4 to 11.2 k before, under the same 14 k. The S22 must say its frame time on a city with every plot a House.
 - The Harbor's pier: 692 to 768 triangles a model, 50 to 60 kB (it was 460 to 780, 43 to 59 kB). Its boats floated under the sea since the style pass raised it by 0.2; they float on it now.
 
 Time to the first image (10 Mbit/s, 40 ms, cache off, five runs, median; quality 0 measured twice). "The game's count" is what `?fps` shows; "the page" is when the test sees the loading screen go, which in the container comes later (it draws without a graphics chip: a frame at quality 0 takes about a second to reach the screen):

@@ -209,7 +209,7 @@ describe("the raft actions", () => {
     expect(parseAction({ id: ID, type: "upgradeRaft", slot: A, level: 3 })).toBeNull();
     expect(parseAction({ id: ID, type: "installOnRaft", slot: A, building: "greenhouse", level: 3 })).toBeNull();
     expect(parseAction({ id: ID, type: "installOnRaft", slot: A })).toBeNull();
-    expect(Object.keys(RAFT_BUILDINGS)).toEqual(["greenhouse", "smokehouse", "watchtower"]);
+    expect(Object.keys(RAFT_BUILDINGS)).toEqual(["greenhouse", "smokehouse", "watchtower", "house"]);
   });
 });
 

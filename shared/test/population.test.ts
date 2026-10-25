@@ -53,9 +53,9 @@ describe("the population: the values (owner's decision, 24 October)", () => {
     expect(moraleAfterMist(99, true)).toBe(100);
   });
 
-  it("the room is the Shelters' only: 6 + 4 a level", () => {
-    expect(survivorRoom(city(10, 4).buildings)).toBe(survivorCap(4));
-    expect(survivorRoom(city(30, 30).buildings)).toBe(126);
+  it("the room is the Shelters' (6 + 4 a level), with no House", () => {
+    expect(survivorRoom(city(10, 4))).toBe(survivorCap(4));
+    expect(survivorRoom(city(30, 30))).toBe(126);
   });
 });
 
@@ -100,7 +100,7 @@ describe("the population in the city", () => {
     const s = newPlayerState(0);
     expect([s.survivors, s.coming]).toEqual([8, 0]);
     const later = hours(s, 48);
-    expect(later.survivors).toBe(survivorRoom(s.buildings));
+    expect(later.survivors).toBe(survivorRoom(s));
     const eat = (c: PlayerState) => netRates({ ...c, survivors: 0 }).fish - netRates(c).fish;
     expect(eat(later)).toBeCloseTo(later.survivors * 0.2);
   });

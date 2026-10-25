@@ -33,7 +33,7 @@ describe("the rafts' words: land from the Lighthouse 5, rafts before (owner)", (
     const done = { ...r.state, yard: null, rafts: { [slot]: { hp: 40, building: null, level: 0 } } };
     const empty = raftSheetHtml(done, slot, 1, true)!;
     expect(empty.title).toBe("Plot");
-    expect(empty.body).toContain("An empty plot. Put a building on it. You can build each type twice.");
+    expect(empty.body).toContain("An empty plot. Put a building on it. You can build each type twice, and as many Houses as you like.");
     expect(empty.body).toContain("Dike");
     expect(empty.body).toContain("flooded, half efficiency");
     expect(empty.body).toContain("Drain the flooded plot");

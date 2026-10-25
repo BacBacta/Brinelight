@@ -6,7 +6,7 @@ import type { HealingJob } from "../rules/healing.js";
 import { HUNT_DURATION, type LeviathanState } from "../rules/leviathan.js";
 import { OBJECTIVES, type Progress } from "../rules/objectives.js";
 import type { MistState } from "../rules/mist.js";
-import { RAFT_BUILDINGS, RAFT_BUILDING_MAX_COPIES, RAFT_BUILDING_MAX_LEVEL, RAFT_MAX_HP, RAFT_SLOTS, raftBuildingCopies, type RaftBuildingId, type Rafts, type YardJob } from "../rules/rafts.js";
+import { RAFT_BUILDINGS, RAFT_MAX_HP, RAFT_SLOTS, raftBuildingCopies, raftBuildingLevelCap, raftBuildingMaxCopies, raftBuildingMaxLevel, type RaftBuildingId, type Rafts, type YardJob } from "../rules/rafts.js";
 import { TECHS, techLevel, type ResearchJob, type TechId, type Techs } from "../rules/research.js";
 import { ATTACK_STAY, COLLECT_STAY, HARVEST_REFILL, SEA_SITES, WRECK_REFILL, fleetsMax, gathers, harvestAmount, hospitalCapacity, seaSite, type Fleet, type SeaWorld } from "../rules/sea.js";
 import { PROMOTE_BARRACKS, PROMOTE_COUNT, TRAIN_PER_LEVEL, type TrainingJob } from "../rules/training.js";
@@ -51,7 +51,7 @@ const isCaptains = (c: unknown) =>
   );
 const isShards = (c: unknown) => isObj(c) && Object.entries(c).every(([id, v]) => has(CAPTAINS, id) && isWhole(v));
 const SLOTS = new Set(RAFT_SLOTS.map((s) => s.key));
-/** A raft on a known slot: with no building at level 0, or with a known building at level 1 to RAFT_BUILDING_MAX_LEVEL. */
+/** A raft on a known slot: with no building at level 0, or with a known building at level 1 to its last level (the Lighthouse's own cap is checked with the city). */
 const isRafts = (r: unknown) =>
   isObj(r) &&
   Object.entries(r).every(
@@ -61,7 +61,7 @@ const isRafts = (r: unknown) =>
       isNum(v.hp) &&
       v.hp >= 0 &&
       v.hp <= RAFT_MAX_HP &&
-      (v.building === null ? v.level === 0 : typeof v.building === "string" && has(RAFT_BUILDINGS, v.building) && isWhole(v.level, 1, RAFT_BUILDING_MAX_LEVEL)),
+      (v.building === null ? v.level === 0 : typeof v.building === "string" && has(RAFT_BUILDINGS, v.building) && isWhole(v.level, 1, raftBuildingMaxLevel(v.building as RaftBuildingId))),
   );
 
 /** The Mist as the city knows it: the order to stoke, the Lighthouse dark or not, and whole counts of Mists. */
@@ -187,7 +187,7 @@ function parseResearch(raw: unknown, techs: Techs): ResearchJob | null | undefin
  * a raft building below its highest level taken one level up, or a repair of rafts the city has; with its time left
  * brought back between 0 and its duration. Anything else refuses the city.
  */
-function parseYard(raw: unknown, rafts: Rafts): YardJob | null | undefined {
+function parseYard(raw: unknown, rafts: Rafts, lighthouse: number): YardJob | null | undefined {
   if (raw === null) return null;
   if (!isObj(raw)) return undefined;
   const { slot, kind, left, duration } = raw;
@@ -208,7 +208,7 @@ function parseYard(raw: unknown, rafts: Rafts): YardJob | null | undefined {
     if (keys !== "building,duration,kind,left,slot" || typeof b !== "string" || !has(RAFT_BUILDINGS, b) || !raft || raft.building) return undefined;
     return { slot, kind, building: b as RaftBuildingId, ...time };
   }
-  if (kind === "upgrade") return keys === "duration,kind,left,slot" && raft?.building && raft.level < RAFT_BUILDING_MAX_LEVEL ? { slot, kind, ...time } : undefined;
+  if (kind === "upgrade") return keys === "duration,kind,left,slot" && raft?.building && raft.level < raftBuildingLevelCap(raft.building, lighthouse) ? { slot, kind, ...time } : undefined;
   return undefined;
 }
 
@@ -386,13 +386,15 @@ export function parseState(raw: unknown): PlayerState | null {
     if (!world) return null;
     const research = parseResearch(s.research, s.techs as Techs);
     if (research === undefined) return null;
-    const yard = parseYard(s.yard, s.rafts as Rafts);
+    const yard = parseYard(s.yard, s.rafts as Rafts, (s.buildings as PlayerState["buildings"]).lighthouse);
     if (yard === undefined) return null;
-    // At most RAFT_BUILDING_MAX_COPIES rafts per building type, the one being put on a raft included.
-    if ((Object.keys(RAFT_BUILDINGS) as RaftBuildingId[]).some((id) => raftBuildingCopies(id, s.rafts as Rafts, yard) > RAFT_BUILDING_MAX_COPIES)) return null;
+    // At most RAFT_BUILDING_MAX_COPIES rafts per building type (the House: the plots), the one being put on a raft included.
+    if ((Object.keys(RAFT_BUILDINGS) as RaftBuildingId[]).some((id) => raftBuildingCopies(id, s.rafts as Rafts, yard) > raftBuildingMaxCopies(id))) return null;
     const buildings = s.buildings as PlayerState["buildings"];
-    // Never more survivors than the Shelters' room, or the 8 every city starts with.
-    if ((s.survivors as number) > Math.max(STARTING_SURVIVORS, survivorRoom(buildings))) return null;
+    // No House past the level its Lighthouse allows: the Lighthouse never goes down.
+    if (Object.values(s.rafts as Rafts).some((r) => r.building && r.level > raftBuildingLevelCap(r.building, buildings.lighthouse))) return null;
+    // Never more survivors than the Shelters' and the Houses' room, or the 8 every city starts with.
+    if ((s.survivors as number) > Math.max(STARTING_SURVIVORS, survivorRoom({ buildings, rafts: s.rafts as Rafts }))) return null;
     const training = parseTraining(s.training, buildings.barracks, s.techs as Techs);
     if (training === undefined) return null;
     const healing = parseHealing(s.healing, buildings.infirmary);

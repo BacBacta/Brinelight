@@ -1,14 +1,13 @@
 /**
  * The sheet of a raft slot, as in the prototype: a free slot shows what a new raft costs and takes, and why it
- * cannot be started; the slot the shipyard works on shows the time left; a free raft lists the three buildings it
- * can carry; a raft with a building shows its effect and its next level. Every raft shows its sturdiness, and, while
+ * cannot be started; the slot the shipyard works on shows the time left; a free raft lists the four buildings it
+ * can carry (the House as many times as there are plots); a raft with a building shows its effect and its next level. Every raft shows its sturdiness, and, while
  * some are damaged, the repair of all of them.
  */
 import {
   GREENHOUSE_FISH_PER_HOUR,
+  HOUSE_ROOM,
   RAFT_BUILDINGS,
-  RAFT_BUILDING_MAX_COPIES,
-  RAFT_BUILDING_MAX_LEVEL,
   RAFT_DAMAGED_BELOW,
   RAFT_LEVEL_POWER,
   RAFT_MAX_HP,
@@ -23,6 +22,8 @@ import {
   installTime,
   raftBuildingCopies,
   raftBuildingCost,
+  raftBuildingMaxCopies,
+  raftBuildingMaxLevel,
   raftCap,
   raftBuildTime,
   raftCost,
@@ -45,10 +46,11 @@ const R = raftWords(false);
 export const RAFT_TEXT = { free: R.free, working: R.working, raft: R.empty, build: R.build, rope: R.rope, max: R.max } as const;
 
 const tenth = (n: number): string => String(Number(n.toFixed(1)));
-/** What a raft building does at `level` levels, in the player's units: "+4.5 fish/h", "−10% fish eaten", "+5% fleet attack". */
+/** What a raft building does at `level` levels, in the player's units: "+4.5 fish/h", "−10% fish eaten", "+5% fleet attack", "+4 room for survivors". */
 export function raftEffectText(id: RaftBuildingId, level: number): string {
   if (id === "greenhouse") return `+${tenth(GREENHOUSE_FISH_PER_HOUR * level)} fish/h`;
   if (id === "smokehouse") return `−${tenth(SMOKEHOUSE_SAVES * 100 * level)}% fish eaten`;
+  if (id === "house") return `+${HOUSE_ROOM * level} room for survivors`;
   return `+${tenth(WATCHTOWER_ATTACK * 100 * level)}% fleet attack`;
 }
 
@@ -116,8 +118,8 @@ export function raftSheetHtml(state: PlayerState, slot: string, speed: number, l
   if (raft && raft.building) {
     const b = RAFT_BUILDINGS[raft.building];
     const head = `<p class="p">${b.name} level ${raft.level}: ${raftEffectText(raft.building, raft.level)}.</p>${sturdiness(raft, w)}${repairHtml(state, speed, w)}`;
-    if (raft.level >= RAFT_BUILDING_MAX_LEVEL) return { title: b.name, body: `${head}<p class="p">${w.max}</p>` };
-    const check = canUpgradeRaft({ rafts: state.rafts, slot, stock: state.stock, yard: state.yard });
+    if (raft.level >= raftBuildingMaxLevel(raft.building)) return { title: b.name, body: `${head}<p class="p">${w.max}</p>` };
+    const check = canUpgradeRaft({ rafts: state.rafts, slot, lighthouse, stock: state.stock, yard: state.yard });
     return {
       title: b.name,
       body:
@@ -138,7 +140,7 @@ export function raftSheetHtml(state: PlayerState, slot: string, speed: number, l
       return listRow(
         b.name,
         `<small>${raftEffectText(id, 1)} per level</small>` +
-          `<small>${costText(raftBuildingCost(id, 0))} · ${formatDuration(installTime(state.buildings.lighthouse) / speed)} · ${raftBuildingCopies(id, state.rafts, state.yard)}/${RAFT_BUILDING_MAX_COPIES}</small>`,
+          `<small>${costText(raftBuildingCost(id, 0))} · ${formatDuration(installTime(state.buildings.lighthouse) / speed)}${id === "house" ? "" : ` · ${raftBuildingCopies(id, state.rafts, state.yard)}/${raftBuildingMaxCopies(id)}`}</small>`,
         // Still tappable when refused: the tap shows the reason in a toast, as for an upgrade.
         button("Install", "sm", "install", ` data-building="${id}"`, !check.ok),
         "",

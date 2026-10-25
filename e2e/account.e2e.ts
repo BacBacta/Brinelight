@@ -9,7 +9,7 @@ import type { BrowserContext, Locator, Page } from "playwright-core";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import * as THREE from "three";
 import { parseProofFile } from "@brinelight/shared";
-import { BUILDINGS, BUILDING_IDS, HOUR, PROMOTE_TIME, RAFT_SLOTS, advance, heal, installOnRaft, installTime, newPlayerState, promote, raftUpgradeTime, research, sail, upgrade, type ActionResult, type PlayerState, type RaftBuildingId } from "@brinelight/shared";
+import { BUILDINGS, BUILDING_IDS, HOUR, PROMOTE_TIME, RAFT_SLOTS, advance, heal, houseLevelCap, installOnRaft, installTime, newPlayerState, promote, raftUpgradeTime, research, sail, upgrade, type ActionResult, type PlayerState, type RaftBuildingId } from "@brinelight/shared";
 import { CITY_ANGLE, CITY_FILL, CITY_FOV, cityFraming } from "../client/src/scene/framing.js";
 import { ERA_PLOTS } from "../client/src/city/plots.js";
 import { terrainCoast } from "../client/src/scene/terrainCoast.js";
@@ -935,6 +935,38 @@ describe("short motions", () => {
   });
 });
 
+describe("the Houses in the city (step 2)", () => {
+  it("a few, then every plot, at the Lighthouses 7, 14, 22 and 30: captured for the owner, with the draw calls and FPS (?fps)", async () => {
+    const rows: string[] = [];
+    for (const [lighthouse, plots, houses] of [
+      [7, 10, 3],
+      [14, 17, 8],
+      [22, 33, 20],
+      [30, RAFT_SLOTS.length, RAFT_SLOTS.length - 6],
+    ] as const) {
+      const base = newPlayerState();
+      const others = ["greenhouse", "greenhouse", "smokehouse", "smokehouse", "watchtower", "watchtower"] as const;
+      const rafts = Object.fromEntries(
+        RAFT_SLOTS.slice(0, plots).map((r, i) => [r.key, i < houses ? { hp: 100, building: "house" as const, level: houseLevelCap(lighthouse) } : i - houses < others.length ? { hp: 100, building: others[i - houses]!, level: 3 } : { hp: 100, building: null, level: 0 }]),
+      );
+      const level = Math.min(lighthouse, 30);
+      const city: PlayerState = { ...base, rafts, buildings: { lighthouse, refinery: level, fishery: level, lumberyard: level, shelters: level, barracks: level, harbor: level, observatory: level, infirmary: level } };
+      const p = await newPlayer(false);
+      await p.context.addInitScript(({ key, file }) => localStorage.setItem(key, file), { key: SAVE_KEY, file: JSON.stringify({ v: 1, savedAt: Date.now(), state: city }) });
+      const page = await p.context.newPage();
+      await page.goto(`${GAME}/?quality=2&fps`);
+      await page.waitForSelector(".loading", { state: "detached", timeout: 60_000 });
+      await page.waitForSelector(".labels.city .bl", { state: "attached" });
+      await page.waitForTimeout(1500);
+      await page.screenshot({ path: `e2e/.shots/shot-houses-${lighthouse}.png` });
+      await page.waitForTimeout(12_000);
+      rows.push(`Lighthouse ${lighthouse}, ${houses} Houses: ${(await page.locator(".fps").textContent())!.replace(/\n/g, " · ")}`);
+      await p.context.close();
+    }
+    console.log(rows.join("\n"));
+  });
+});
+
 describe("the buildings' eras", () => {
   it("every building at level 1, 5 and 10, captured, with the draw calls and FPS (?fps)", async () => {
     const rows: string[] = [];
@@ -1212,6 +1244,14 @@ describe("the look", () => {
       await look(page, page.locator(".quest"), `quest-${w}`, "", true);
       await page.locator('.rail [data-v="tasks"]').click();
       await look(page, page.locator(".sheet.daily"), `daily-${w}`);
+      await page.context().close();
+
+      // A House (step 2) at level 1 on a plot, the Lighthouse at 7: its room, and its level 2 to build.
+      const housed: PlayerState = { ...town, buildings: { ...town.buildings, lighthouse: 7 }, rafts: { ...town.rafts, [clear[0]!.slot]: { hp: 100, building: "house", level: 1 } } };
+      page = await frozenGame(size, housed);
+      await page.mouse.click(clear[0]!.x, clear[0]!.y);
+      await page.locator(".raft-sheet:not([hidden])").waitFor();
+      await look(page, page.locator(".raft-sheet"), `raft-house-${w}`);
       await page.context().close();
 
       // A poor city after a victory: the report opens by itself; a refused upgrade; a free slot; the sea's sheets.

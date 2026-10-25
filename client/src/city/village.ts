@@ -67,7 +67,8 @@ export function villageModels(slots: readonly VillageSlot[], rafts: PlayerState[
   for (const s of slots) {
     out.set(s.key, s.view === "free" ? "raft-free" : s.view === "damaged" ? `raft-damaged-age${RAFT_AGE}${LITE}` : s.view === "building" ? `raft-yard-age${RAFT_AGE}` : deckName(s.variant));
     const raft = rafts[s.key];
-    if (raft?.building && s.view !== "free" && s.view !== "building") buildings.set(s.key, raftBuildingName(raft.building, raft.level, age));
+    // A House has no model of its own: the city fabric draws its two pieces (fabric/plan.ts).
+    if (raft?.building && raft.building !== "house" && s.view !== "free" && s.view !== "building") buildings.set(s.key, raftBuildingName(raft.building, raft.level, age));
   }
   return { slots: out, buildings, walk: `raft-walk-age${RAFT_AGE}`, moor: `raft-moor-age${RAFT_AGE}` };
 }

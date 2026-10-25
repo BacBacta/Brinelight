@@ -7,6 +7,9 @@
  *   follows the Lighthouse up to 10, so the city moves from the first levels. On the island's free plots first (six
  *   around each plot's middle), then on the plots won; their style by era, the last era's on the outskirts. Each one
  *   where the normal view sees it and where it hides no building nor house (sight.ts).
+ * - The Houses built on the plots won (the rule's, step 2): two pieces on each, whatever its level (housePieces). They
+ *   stand for as many of the Shelters' houses, down to the Lighthouse's minimum: the city keeps its number of
+ *   houses, and the Houses' plots carry them (the display's budget, docs/studies/population.md).
  * - One equipment per era in the middle of a free plot, kept as the city grows; the wind turbines on the far coast.
  * - The camp's small details, one more at each Lighthouse level from 1 to 7: a fire, drying racks, washing, barrels, a
  *   rowboat pulled up on the beach.
@@ -61,6 +64,36 @@ const STYLES: readonly { small: readonly string[]; big?: { model: string; worth:
 ];
 /** The houses' models, and their worth in houses. */
 export const HOUSE_WORTH: Record<string, number> = { tent: 1, hut: 1, wooden: 1, brick: 1, "lit-house": 1, "solar-house": 1, row: 3, apartments: 6 };
+
+/**
+ * The two pieces of a House at its level, in an era (owner, 25 October: two pieces a plot): two small houses at levels
+ * 1 and 2, a big one and a small one at 3 and 4, two big ones at 5. The big one is the era's (a terraced row from the
+ * industry era, apartments in the modern one); before the industry era, a small one.
+ */
+export function housePieces(level: number, era: number): [string, string] {
+  const style = STYLES[Math.min(5, Math.max(0, era))]!;
+  const small = style.small[style.small.length - 1]!;
+  const big = style.big?.model ?? small;
+  return level >= 5 ? [big, big] : level >= 3 ? [big, small] : [small, small];
+}
+/** Where a House's two pieces stand on its plot, from its middle: two big ones side by side, or a big one and a small one, or two small ones. */
+const HOUSE_SPOTS: Record<"big" | "mixed" | "small", [number, number][]> = {
+  big: [
+    [-0.34, 0.1],
+    [0.34, 0.1],
+  ],
+  mixed: [
+    [-0.3, 0.05],
+    [0.42, 0.12],
+  ],
+  small: [
+    [-0.3, 0],
+    [0.3, 0.12],
+  ],
+};
+
+/** The most street lamps a city shows (the worst city without Houses has 23; with a street through every House's plot, 148). */
+export const MAX_LAMPS = 40;
 
 /** The camp's details, one more a Lighthouse level from 1 to 7, kept until the workshop era. */
 export const CAMP = ["campfire", "drying-rack", "laundry-line", "barrels", "rowboat", "drying-rack", "laundry-line"] as const;
@@ -122,6 +155,14 @@ function wonPlots(state: PlayerState): At[] {
     return r && !r.building && r.hp >= RAFT_DAMAGED_BELOW && s.key !== filling;
   })
     .map((s) => ({ x: hexX(s.q, s.r), z: hexZ(s.r) }))
+    .sort((a, b) => Math.hypot(a.x, a.z) - Math.hypot(b.x, b.z) || b.z - a.z);
+}
+
+/** The Houses built on the plots won, on land (from the Lighthouse 5), nearest the Lighthouse first, with their levels. */
+function housePlots(state: PlayerState, L: LandSlots): (At & { level: number })[] {
+  return RAFT_SLOTS.filter((s) => state.rafts[s.key]?.building === "house")
+    .map((s) => ({ x: hexX(s.q, s.r), z: hexZ(s.r), level: state.rafts[s.key]!.level }))
+    .filter((p) => L.won.some((w) => Math.hypot(w.x - p.x, w.z - p.z) < 0.01))
     .sort((a, b) => Math.hypot(a.x, a.z) - Math.hypot(b.x, b.z) || b.z - a.z);
 }
 
@@ -234,6 +275,34 @@ export function fabricPlan(state: PlayerState, L: LandSlots): FabricPlan {
 
   // What the normal view sees: the buildings at their levels, then the fabric as it is put.
   const view = createView(buildingBoxes(state.buildings));
+
+  // The Houses on the plots won (on land only), first: they are the player's buildings, always shown. Two big ones
+  // that would hide too much give way to smaller ones.
+  let houseWorth = 0;
+  for (const h of housePlots(state, L)) {
+    const pair = housePieces(h.level, era);
+    const tries: [string, string][] = [pair, [pair[1], pair[1]], housePieces(1, era)];
+    const placed = tries.map((t) => {
+      const spots = HOUSE_SPOTS[t[0] === t[1] ? (t[0] === style.big?.model ? "big" : "small") : "mixed"];
+      return t.map((m, k) => ({ m, x: h.x + spots[k]![0], z: h.z + spots[k]![1] }));
+    });
+    const box = (q: { m: string; x: number; z: number }) => boxOf(q.m, q.x, q.z, houseScale(q.m))!;
+    let fits = placed.find((t) => t.every((q) => view.fits(box(q))));
+    if (!fits) {
+      // Two small houses on the plot's two lots the view sees best (behind a tall building, a plot is never all in sight).
+      const small = housePieces(1, era)[0];
+      const spots = lots(h, era)
+        .map((l) => ({ m: small, x: l.x, z: l.z }))
+        .sort((a, b) => view.hidden(box(a)) - view.hidden(box(b)));
+      fits = [spots[0]!, spots.find((q) => q !== spots[0] && Math.hypot(q.x - spots[0]!.x, q.z - spots[0]!.z) > 0.5) ?? spots[1]!];
+    }
+    for (const q of fits) {
+      put(q.m, q.x, q.z, 0, houseScale(q.m), litOf(q.x, q.z));
+      view.put(boxOf(q.m, q.x, q.z, houseScale(q.m))!);
+      houseWorth += HOUSE_WORTH[q.m] ?? 0;
+    }
+    take(h);
+  }
   // The equipment, in the middles of the island's free plots, kept from era to era: where it stays in sight with the
   // buildings at their tallest.
   const middles = new Set<string>();
@@ -273,12 +342,13 @@ export function fabricPlan(state: PlayerState, L: LandSlots): FabricPlan {
   }
 
   // The houses: the big ones first, on whole plots of their own at the back; then the small ones, nearest the
-  // Lighthouse first, the last fifth in the era before's style (the outskirts).
-  let left = need;
+  // Lighthouse first, the last fifth in the era before's style (the outskirts). The Houses' plots carry their share.
+  const island = Math.max(minHouses(lighthouse), need - houseWorth);
+  let left = island;
   const whole = new Set<string>();
   if (style.big) {
     const backs = plots.filter((p) => !p.won && !isCamp(p) && !middles.has(keyOf(p))).sort((a, b) => a.z - b.z);
-    let n = Math.max(1, Math.round(need / 3 / style.big.worth));
+    let n = Math.max(1, Math.round(island / 3 / style.big.worth));
     for (const p of backs) {
       if (n <= 0 || left <= 0) break;
       // A row and its workshop behind it (the industry and electricity eras), or two blocks side by side.
@@ -323,7 +393,7 @@ export function fabricPlan(state: PlayerState, L: LandSlots): FabricPlan {
     take(l.plot);
     i++;
   }
-  const houses = need;
+  const houses = island + houseWorth;
   const yards = [...taken.values()];
 
   // The streets: the trails, and a street through each plot with houses, to the Lighthouse's square.
@@ -380,10 +450,15 @@ export function fabricPlan(state: PlayerState, L: LandSlots): FabricPlan {
   const reach = (x: number, z: number) => Math.min(...BUILT.map((b) => hexReach(x - b.x, z - b.z)));
   const onLand = (x: number, z: number) => landDepth(x, z, L).depth > 0.15;
   const clearOf = (x: number, z: number, room: number) => reach(x, z) > 0.95 + room && onLand(x, z) && pieces.every((p) => Math.hypot(p.x - x, p.z - z) > 0.26);
+  // At most MAX_LAMPS, the trails' first, then the plots' nearest the Lighthouse (the display's budget with the Houses).
+  let lamps = 0;
   if (era >= 2)
     for (const [x, z, a] of along(streets, era < 4 ? 0.9 : 0.7)) {
       const [ox, oz] = [x - Math.sin(a) * 0.14, z + Math.cos(a) * 0.14];
-      if (clearOf(ox, oz, 0.05)) put("lamp", ox, oz, 0, 1, litOf(ox, oz) * 0.5);
+      if (lamps < MAX_LAMPS && clearOf(ox, oz, 0.05)) {
+        put("lamp", ox, oz, 0, 1, litOf(ox, oz) * 0.5);
+        lamps++;
+      }
     }
   const wires: [number, number, number, number][] = [];
   if (era >= 4) {

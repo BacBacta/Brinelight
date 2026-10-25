@@ -60,7 +60,7 @@ export function landSlotsOf(state: PlayerState): LandSlots {
 export function landModels(state: PlayerState): string[] {
   const age = villageAge(state.buildings.lighthouse);
   const buildings = Object.values(state.rafts)
-    .filter((r) => r.building)
+    .filter((r) => r.building && r.building !== "house")
     .map((r) => raftBuildingName(r.building!, r.level, age));
   const free = raftSlots(state).some((s) => s.view === "free");
   return [...new Set([`land-${plantLook(state.buildings.lighthouse)}`, ...buildings, ...(free ? ["raft-free"] : [])])];

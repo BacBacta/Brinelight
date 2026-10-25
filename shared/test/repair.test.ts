@@ -86,10 +86,10 @@ describe("repairing the rafts", () => {
 
   it("a raft below 60 cannot be upgraded until it is repaired", () => {
     const s = worn();
-    expect(canUpgradeRaft({ rafts: s.rafts, slot: C, stock: s.stock, yard: null })).toEqual({ ok: false, reason: "Mend this first" });
-    expect(canUpgradeRaft({ rafts: s.rafts, slot: B, stock: s.stock, yard: null }).ok).toBe(true);
+    expect(canUpgradeRaft({ rafts: s.rafts, slot: C, lighthouse: s.buildings.lighthouse, stock: s.stock, yard: null })).toEqual({ ok: false, reason: "Mend this first" });
+    expect(canUpgradeRaft({ rafts: s.rafts, slot: B, lighthouse: s.buildings.lighthouse, stock: s.stock, yard: null }).ok).toBe(true);
     const repaired = advance(ok(repairRafts(s)), HOUR);
-    expect(canUpgradeRaft({ rafts: repaired.rafts, slot: C, stock: repaired.stock, yard: null }).ok).toBe(true);
+    expect(canUpgradeRaft({ rafts: repaired.rafts, slot: C, lighthouse: repaired.buildings.lighthouse, stock: repaired.stock, yard: null }).ok).toBe(true);
   });
 
   it("a Mist not held while the rafts are repaired is mended with them", () => {

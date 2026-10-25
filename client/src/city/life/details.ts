@@ -37,7 +37,8 @@ export function sources(state: PlayerState, land = landShown(state.buildings.lig
     put(spots[stageName(id, level)], level, { x: hexX(q, r), y: 0, z: hexZ(r) }, null, buildingScale(id));
   }
   for (const [key, raft] of Object.entries(state.rafts)) {
-    if (!raft.building || raft.level < 1) continue;
+    // A House's chimneys and lamps are the fabric's (fabric/plan.ts).
+    if (!raft.building || raft.building === "house" || raft.level < 1) continue;
     const c = slotPosition(key);
     // On the land won (from the Lighthouse 5), on its ground and still; on a raft, on its deck, bobbing with it.
     put(spots[raftBuildingName(raft.building, raft.level, villageAge(state.buildings.lighthouse))], raft.level, { x: c.x, y: land ? LAND_Y : DECK_Y, z: c.z }, land ? null : key);
