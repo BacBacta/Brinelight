@@ -525,9 +525,10 @@ function elapse(s: SeaState, dt: number): SeaState {
  * Advances the fleets by `seconds` real seconds. Each step (arrival and combat, end of the stay, return, the
  * Leviathan killed) happens at its exact time; steps at the same moment happen in the order the fleets left.
  */
-export function advanceFleets(state: SeaState, seconds: number): { state: SeaState; reports: CombatReport[] } {
+export function advanceFleets(state: SeaState, seconds: number): { state: SeaState; reports: CombatReport[]; home: Fleet[] } {
   let s = state;
   const reports: CombatReport[] = [];
+  const home: Fleet[] = [];
   let rest = Math.max(0, seconds);
   for (;;) {
     const rate = huntRate(s);
@@ -586,7 +587,8 @@ export function advanceFleets(state: SeaState, seconds: number): { state: SeaSta
       fleets = fleets.map((g, j) => (j === i ? f : g));
     }
     s = { ...s, fleets: fleets.filter((f) => !done.includes(f)) };
+    home.push(...done);
   }
   s = elapse(s, rest);
-  return { state: s, reports };
+  return { state: s, reports, home };
 }

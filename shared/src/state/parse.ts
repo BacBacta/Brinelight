@@ -11,6 +11,8 @@ import { TECHS, techLevel, type ResearchJob, type TechId, type Techs } from "../
 import { ATTACK_STAY, COLLECT_STAY, HARVEST_REFILL, SEA_SITES, WRECK_REFILL, fleetsMax, gathers, harvestAmount, hospitalCapacity, seaSite, type Fleet, type SeaWorld } from "../rules/sea.js";
 import { PROMOTE_BARRACKS, PROMOTE_COUNT, TRAIN_PER_LEVEL, type TrainingJob } from "../rules/training.js";
 import type { Troops } from "../rules/types.js";
+import { survivorRoom } from "../rules/population.js";
+import { STARTING_SURVIVORS } from "../rules/start.js";
 import { MAX_REPORTS } from "./state.js";
 import type { PlayerState, Report } from "./types.js";
 
@@ -329,7 +331,8 @@ const isReport = (r: unknown): r is Report =>
 /**
  * Reads a city sent or stored as JSON. Strict: a missing or invalid field gives null, and nothing is filled in,
  * so a city sent without Pearls or without its sea is refused instead of getting starting values back.
- * Levels, troops, survivors and Pearls are whole numbers; resources and morale may hold decimals; nothing is below 0.
+ * Levels, troops, survivors and Pearls are whole numbers; resources, morale (at most 100) and the survivors on their way
+ * (less than one) may hold decimals; nothing is below 0; never more survivors than the room or the starting 8.
  * The only tolerance: bad jobs and fleets are dropped and their time left is brought within bounds
  * (cleanQueue, cleanFleets), which can only make the player lose something, never gain. Never throws.
  */
@@ -350,6 +353,10 @@ export function parseState(raw: unknown): PlayerState | null {
       !isWhole(s.survivors) ||
       !isNum(s.morale) ||
       s.morale < 0 ||
+      s.morale > 100 ||
+      !isNum(s.coming) ||
+      s.coming < 0 ||
+      s.coming >= 1 ||
       !isWhole(s.pearls) ||
       !Array.isArray(s.queue) ||
       // The lead captain is one you own.
@@ -384,6 +391,8 @@ export function parseState(raw: unknown): PlayerState | null {
     // At most RAFT_BUILDING_MAX_COPIES rafts per building type, the one being put on a raft included.
     if ((Object.keys(RAFT_BUILDINGS) as RaftBuildingId[]).some((id) => raftBuildingCopies(id, s.rafts as Rafts, yard) > RAFT_BUILDING_MAX_COPIES)) return null;
     const buildings = s.buildings as PlayerState["buildings"];
+    // Never more survivors than the Shelters' room, or the 8 every city starts with.
+    if ((s.survivors as number) > Math.max(STARTING_SURVIVORS, survivorRoom(buildings))) return null;
     const training = parseTraining(s.training, buildings.barracks, s.techs as Techs);
     if (training === undefined) return null;
     const healing = parseHealing(s.healing, buildings.infirmary);
@@ -399,6 +408,7 @@ export function parseState(raw: unknown): PlayerState | null {
       shards: { ...(s.shards as PlayerState["shards"]) },
       survivors: s.survivors,
       morale: s.morale,
+      coming: s.coming,
       pearls: s.pearls,
       queue: cleanQueue(s.queue),
       research,

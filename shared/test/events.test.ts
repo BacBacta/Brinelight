@@ -35,6 +35,8 @@ const rich = (): PlayerState => {
     stock: { oil: 90000, fish: 90000, wood: 90000, rope: 50 },
     troops: { boarders: 60, harpooners: 60, crossbowmen: 60 },
     wounded: { boarders: 5, harpooners: 3, crossbowmen: 0 },
+    // Its Shelters full: no survivor comes in these tests (told apart, in population.test.ts).
+    survivors: 14,
   };
 };
 /** The city once every work in progress is done. */

@@ -33,8 +33,8 @@ describe("economy", () => {
     const r = netRates(base);
     // oil: 1.1 × 2 − 0.25 × 2 = 1.7 /proto s → 17 /h
     expect(r.oil).toBeCloseTo(17, 6);
-    // fish: 1.4 × 2 − 8 × 0.06 = 2.32 → 23.2 /h
-    expect(r.fish).toBeCloseTo(23.2, 6);
+    // fish: 1.4 × 2 − 8 × 0.02 = 2.64 → 26.4 /h (a survivor eats 0.2 fish an hour, owner's decision, 25 October)
+    expect(r.fish).toBeCloseTo(26.4, 6);
     // wood: 4.2 × 2 /proto s → 84 /h (the prototype's 1.4 tripled, docs/balance.md)
     expect(r.wood).toBeCloseTo(84, 6);
   });

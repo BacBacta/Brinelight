@@ -18,6 +18,7 @@ import {
   parseState,
   power,
   protoRatePerHour,
+  SURVIVOR_EATS_PER_HOUR,
   raftBuildingCost,
   raftUpgradeTime,
   sail,
@@ -170,7 +171,7 @@ describe("the effects start at the exact end of the work", () => {
   it("Smokehouse: 10% less fish eaten per level, from the end of the work", () => {
     const s = ok(installOnRaft(moored(), A, "smokehouse"));
     const without = { ...s, yard: null };
-    const eaten = s.survivors * protoRatePerHour(0.06);
+    const eaten = s.survivors * SURVIVOR_EATS_PER_HOUR;
     expect(advance(s, RAFT_INSTALL_TIME - 1).stock.fish).toBeCloseTo(advance(without, RAFT_INSTALL_TIME - 1).stock.fish, 9);
     expect(fishRate(advance(s, RAFT_INSTALL_TIME)) - fishRate(without)).toBeCloseTo(eaten * 0.1, 9);
     const two = advance(ok(upgradeRaft(advance(s, RAFT_INSTALL_TIME), A)), raftUpgradeTime(1));

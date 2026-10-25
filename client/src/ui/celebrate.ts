@@ -38,6 +38,8 @@ export function eventText(e: GameEvent, land = false): string {
       return `${trainingName({ kind: "promote", troop: e.troop, count: e.count })} ready`;
     case "healed":
       return `${e.count} wounded healed`;
+    case "survivors":
+      return e.count === 1 ? "A survivor reached your city" : `${e.count} survivors reached your city`;
     case "captain":
       return `${CAPTAINS[e.captain].name} reached level ${e.level}`;
     case "mistHeld":

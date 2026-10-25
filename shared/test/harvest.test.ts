@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  CITY_SHAPE,
   COLLECT_STAY,
   HARVEST_GROWTH,
   HARVEST_REFILL,
@@ -79,7 +78,7 @@ describe("A: the producers follow the costs", () => {
     // What the Lighthouse burns and the survivors eat do not change.
     const burn = netRates({ buildings: { ...STARTING_BUILDINGS, lighthouse: 4, refinery: 0, fishery: 0, lumberyard: 0 }, techs: {}, rafts: {}, survivors: 10, morale: 0 });
     expect(burn.oil).toBeCloseTo(-10);
-    expect(burn.fish).toBeCloseTo(-6);
+    expect(burn.fish).toBeCloseTo(-2);
   });
 });
 
@@ -172,6 +171,6 @@ describe("C: the Wooded Isles and Fish Shoals, harvested by the fleets", () => {
   it("a city stored before the isles opened: every isle and shoal full", () => {
     const { harvest: _h, ...world } = newPlayerState(8 * HOUR).world;
     const old = { ...JSON.parse(JSON.stringify(newPlayerState(8 * HOUR))), world };
-    expect(migrateCity(old, CITY_SHAPE - 1, { clock: 8 * HOUR })).toEqual(newPlayerState(8 * HOUR));
+    expect(migrateCity(old, 11, { clock: 8 * HOUR })).toEqual(newPlayerState(8 * HOUR));
   });
 });

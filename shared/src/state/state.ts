@@ -10,10 +10,12 @@ import { MIST_HELD_PEARLS, isLit, mistAt, seaReach, startingMist } from "../rule
 import { DEFAULT_SERVER, type ServerId } from "../rules/servers.js";
 import { advanceYard, applyMistDamage, startInstall, startRaft, startRaftUpgrade, startRepair, type RaftBuildingId } from "../rules/rafts.js";
 import { advanceResearch, startResearch, type TechId } from "../rules/research.js";
+import { moraleAfterMist, populationHour, rescuedBy, survivorRoom, withRescued } from "../rules/population.js";
 import { advanceFleets, canSendFleet, leadOf, seaSite, sendFleet, startingSeaWorld, type CombatReport, type SeaState, type Sight } from "../rules/sea.js";
 import type { Check } from "../rules/types.js";
 import { STARTING_CAPTAIN, STARTING_LEAD, STARTING_MORALE, STARTING_PEARLS, STARTING_STOCK, STARTING_SURVIVORS, STARTING_TROOPS } from "../rules/start.js";
 import { advanceTraining, startPromotion, startTraining } from "../rules/training.js";
+import { HOUR } from "../rules/time.js";
 import { emptyTroops, type BuildingId, type TroopType } from "../rules/types.js";
 import type { PlayerState } from "./types.js";
 
@@ -37,6 +39,7 @@ export function newPlayerState(clock = 0, server: ServerId = DEFAULT_SERVER): Pl
     shards: {},
     survivors: STARTING_SURVIVORS,
     morale: STARTING_MORALE,
+    coming: 0,
     pearls: STARTING_PEARLS,
     queue: [],
     research: null,
@@ -80,10 +83,17 @@ function untilOutOfOil(s: PlayerState): number {
  * MIST_RAFT_DAMAGE, never below RAFT_MIN_HP. The Lighthouse is ready for the next one.
  */
 function mistLifts(s: PlayerState): PlayerState {
-  if (!s.mist.dark) return { ...s, pearls: s.pearls + MIST_HELD_PEARLS, mist: { ...s.mist, held: s.mist.held + 1 }, daily: countDaily(s.daily, s.clock, s.server, "mists") };
+  const morale = moraleAfterMist(s.morale, !s.mist.dark);
+  if (!s.mist.dark) return { ...s, morale, pearls: s.pearls + MIST_HELD_PEARLS, mist: { ...s.mist, held: s.mist.held + 1 }, daily: countDaily(s.daily, s.clock, s.server, "mists") };
   const rafts = applyMistDamage(s.rafts, false);
   const damaged = Object.keys(rafts).filter((k) => rafts[k]!.hp < s.rafts[k]!.hp).length;
-  return { ...s, rafts, mist: { ...s.mist, dark: false, missed: s.mist.missed + 1, damaged } };
+  return { ...s, morale, rafts, mist: { ...s.mist, dark: false, missed: s.mist.missed + 1, damaged } };
+}
+
+/** The population's hour, at the clock's whole hour: fed if the city has fish left (rules/population.ts). */
+function populationAt(s: PlayerState): PlayerState {
+  const p = populationHour(s, { lighthouse: s.buildings.lighthouse, room: survivorRoom(s.buildings), fed: s.stock.fish > 0 });
+  return { ...s, survivors: p.survivors, morale: p.morale, coming: p.coming };
 }
 
 /** The part of the city the sea rules read and change. */
@@ -145,7 +155,9 @@ export function advance(state: PlayerState, seconds: number): PlayerState {
     const change = w.on ? w.end : w.start;
     // The server's reset (00:00 UTC on s1): the daily tasks start again; a day's counts never straddle two days.
     const midnight = s.clock + untilReset(s.clock, s.server);
-    const ends = [...s.queue.map((j) => j.left), ...(s.research ? [s.research.left] : []), ...(s.yard ? [s.yard.left] : []), ...(s.training ? [s.training.left] : []), ...(s.healing ? [s.healing.left] : []), ...s.fleets.map((f) => f.left), change - s.clock, midnight - s.clock, outOfOil];
+    // The next whole hour of the clock: the population's.
+    const hour = (Math.floor(s.clock / HOUR) + 1) * HOUR;
+    const ends = [...s.queue.map((j) => j.left), ...(s.research ? [s.research.left] : []), ...(s.yard ? [s.yard.left] : []), ...(s.training ? [s.training.left] : []), ...(s.healing ? [s.healing.left] : []), ...s.fleets.map((f) => f.left), change - s.clock, midnight - s.clock, hour - s.clock, outOfOil];
     const next = Math.min(rest, ...ends.map((left) => Math.max(0, left)));
     const wasOn = w.on;
     s = produce(s, next);
@@ -158,10 +170,16 @@ export function advance(state: PlayerState, seconds: number): PlayerState {
     s = { ...s, buildings: q.buildings, queue: q.queue, techs: r.techs, research: r.research, rafts: y.rafts, yard: y.yard, troops: hl.troops, veterans: t.veterans, training: t.training, healing: hl.healing };
     const f = advanceFleets(seaState(s), next);
     s = withSea(s, f.state, f.reports);
+    // The survivors the fleets back home bring, within the room.
+    const rescued = f.home.reduce((n, fleet) => n + rescuedBy(fleet), 0);
+    if (rescued) s = { ...s, survivors: withRescued(s.survivors, survivorRoom(s.buildings), rescued) };
     // The camps beaten in this step count for today and for the objectives.
     const beaten = f.reports.filter((r) => r.win && seaSite(r.site)?.kind === "camp").length;
     if (beaten) s = { ...s, progress: { ...s.progress, camps: s.progress.camps + beaten }, daily: countDaily(s.daily, s.clock, s.server, "camps", beaten) };
-    s = { ...s, clock: next === change - s.clock ? change : next === midnight - s.clock ? midnight : s.clock + next };
+    const atHour = next === hour - s.clock;
+    s = { ...s, clock: next === change - s.clock ? change : next === midnight - s.clock ? midnight : atHour ? hour : s.clock + next };
+    // The hour's population, before a Mist that lifts at that moment moves the morale.
+    if (atHour) s = populationAt(s);
     if (s.daily.day !== dayOf(s.clock, s.server)) s = { ...s, daily: dailyOn(s.daily, s.clock, s.server) };
     if (next === outOfOil) s = { ...s, mist: { ...s.mist, dark: true } };
     const on = mistAt(s.clock, s.server).on;

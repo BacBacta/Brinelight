@@ -1,7 +1,7 @@
 /**
- * What happened between two cities: the works that ended, the captains who rose a level and the Mists that lifted. Pure: the client compares
- * the city it showed with the one it shows now (or, at launch, with the last city seen on the device) to celebrate
- * them. It works the same for a city advanced on the device and for the city the server sends. No rule here.
+ * What happened between two cities: the works that ended, the survivors who came, the captains who rose a level and
+ * the Mists that lifted. Pure: the client compares the city it showed with the one it shows now (or, at launch, with
+ * the last city seen on the device) to celebrate them. It works the same for a city advanced on the device and for the city the server sends. No rule here.
  */
 import { BUILDING_IDS } from "../rules/buildings.js";
 import type { CaptainId } from "../rules/captains.js";
@@ -20,6 +20,7 @@ export type GameEvent =
   | { kind: "troops"; troop: TroopType; count: number }
   | { kind: "veterans"; troop: TroopType; count: number }
   | { kind: "healed"; count: number }
+  | { kind: "survivors"; count: number }
   | { kind: "captain"; captain: CaptainId; level: number }
   | { kind: "mistHeld"; count: number; pearls: number }
   | { kind: "mistMissed"; count: number; rafts: number };
@@ -30,8 +31,8 @@ const goesOn = <J extends Job>(before: J, after: J, same: (a: NonNullable<J>, b:
   !!before && !!after && same(before as NonNullable<J>, after as NonNullable<J>) && after.left <= before.left;
 
 /**
- * The events between `before` and `after`, in a fixed order: buildings, research, rafts, troops, healing, captains,
- * Mists. Several Mists in between give one event for those held (with their Pearls) and one for those not held (with
+ * The events between `before` and `after`, in a fixed order: buildings, research, rafts, troops, healing, survivors
+ * who came, captains, Mists. Several Mists in between give one event for those held (with their Pearls) and one for those not held (with
  * the rafts the last one damaged).
  * A building or a research that rose several levels gives one event, with its new level. A captain recruited in
  * between is not a level up.
@@ -55,6 +56,7 @@ export function eventsBetween(before: PlayerState, after: PlayerState): GameEven
   if (h && !goesOn(h, after.healing, (a, b) => JSON.stringify(a.wounded) === JSON.stringify(b.wounded))) {
     out.push({ kind: "healed", count: Object.values(h.wounded).reduce((n, v) => n + v, 0) });
   }
+  if (after.survivors > before.survivors) out.push({ kind: "survivors", count: after.survivors - before.survivors });
   for (const [id, c] of Object.entries(after.captains) as [CaptainId, { level: number }][]) {
     const was = before.captains[id];
     if (was && c.level > was.level) out.push({ kind: "captain", captain: id, level: c.level });

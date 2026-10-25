@@ -897,6 +897,8 @@ The study (pull request #12, a draft not merged: `docs/studies/depletion.md` on 
 
 The survivors never grow in the rules: 8 from the start to the end (the top bar shows "8/10", then "8/62" at the Shelters 14). A real growth of the population is to be designed with the economy, in this task. No rule and no value change now: until then, the city fabric's houses (display only) follow the room the Shelters give (6 + 4 per level, two survivors to a house), not the survivors.
 
+**Since 24 October** (owner's decision, `docs/studies/population.md`): the survivors grow, up to the Shelters' room (step 1); the House and the third and fourth builders come next.
+
 ---
 
 ## Not this week
