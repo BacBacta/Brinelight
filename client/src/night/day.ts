@@ -36,7 +36,29 @@ export function effectLine(b: N.CityBuilding, c: N.PortalCity): string {
   }
 }
 
-function row(b: N.CityBuilding, c: N.PortalCity): string {
+/** The Days the guide shows for: a new player's first ones. */
+export const GUIDE_DAYS = 3;
+
+const WHY: Readonly<Record<N.CityBuilding, string>> = {
+  lighthouse: "Upgrade the Lighthouse: your beam burns harder.",
+  refinery: "Upgrade the Refinery: more oil for the Night.",
+  infirmary: "Build the Infirmary: a second chance each Night.",
+};
+
+/** What to do next, in the first Days: an upgrade you can pay (the Lighthouse first, else the cheapest), or the next Night. */
+export function dayGuide(c: N.PortalCity): { target: N.CityBuilding | "night"; text: string } | null {
+  if (c.played > GUIDE_DAYS) return null;
+  const able = N.CITY_BUILDINGS.filter((b) => N.upgradeCity(c, b).ok);
+  if (able.length === 0) return { target: "night", text: "Start the next Night to bring back more." };
+  const cost = (b: N.CityBuilding) => {
+    const k = N.upgradeCost(b, c.buildings[b]);
+    return k.wood + k.fish;
+  };
+  const pick = able.includes("lighthouse") ? "lighthouse" : able.reduce((a, b) => (cost(b) < cost(a) ? b : a));
+  return { target: pick, text: WHY[pick] };
+}
+
+function row(b: N.CityBuilding, c: N.PortalCity, guided: boolean): string {
   const level = c.buildings[b];
   const r = N.upgradeCity(c, b);
   const top = level >= N.CITY_MAX_LEVEL;
@@ -47,18 +69,20 @@ function row(b: N.CityBuilding, c: N.PortalCity): string {
     `<span>${esc(effectLine(b, c))}</span>` +
     (top ? "" : `<span class="cost">${cost.wood} wood · ${cost.fish} fish</span>`) +
     (r.ok ? "" : `<span class="why">${esc(r.reason)}</span>`) +
-    `</div>${top ? "" : `<button class="b ${r.ok ? "gold" : ""}" data-act="upgrade" data-b="${b}"${r.ok ? "" : " disabled"}>${label}</button>`}</div>`
+    `</div>${top ? "" : `<button class="b ${r.ok ? "gold" : ""}${guided ? " guide" : ""}" data-act="upgrade" data-b="${b}"${r.ok ? "" : " disabled"}>${label}</button>`}</div>`
   );
 }
 
 /** The Day's panel: the store, each building, and the next Night. */
 export function dayHtml(c: N.PortalCity): string {
   const s = c.stock;
+  const g = dayGuide(c);
   return (
     `<div class="day-stock" aria-label="${DAY_TEXT.stock}"><span>${ICONS.wood}<b>${s.wood}</b></span><span>${ICONS.fish}<b>${s.fish}</b></span><span>${ICONS.pearl}<b>${s.pearls}</b></span></div>` +
     `<h2>${DAY_TEXT.title}</h2>` +
-    N.CITY_BUILDINGS.map((b) => row(b, c)).join("") +
-    `<button class="b gold xl day-night" data-act="night">Start Night ${N.nextNight(c)}</button>`
+    (g ? `<p class="day-guide" role="status">${esc(g.text)}</p>` : "") +
+    N.CITY_BUILDINGS.map((b) => row(b, c, g?.target === b)).join("") +
+    `<button class="b gold xl day-night${g?.target === "night" ? " guide" : ""}" data-act="night">Start Night ${N.nextNight(c)}</button>`
   );
 }
 

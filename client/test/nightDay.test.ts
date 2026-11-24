@@ -33,3 +33,27 @@ describe("the Day: your city between the Nights", () => {
     for (const t of Object.values(DAY_TEXT)) expect(t.length).toBeLessThan(60);
   });
 });
+
+describe("the first Days' guide", async () => {
+  const { dayGuide, GUIDE_DAYS } = await import("../src/night/day.js");
+  it("an upgrade you can pay: the Lighthouse first, else the cheapest", () => {
+    const g = dayGuide(city({ stock: { wood: 200, fish: 200, pearls: 0 }, played: 1 }));
+    expect(g).toEqual({ target: "lighthouse", text: "Upgrade the Lighthouse: your beam burns harder." });
+    const lit = city({ buildings: { lighthouse: 2, refinery: 1, infirmary: 0 }, stock: { wood: 70, fish: 30, pearls: 0 }, played: 2 });
+    expect(dayGuide(lit)).toEqual({ target: "refinery", text: "Upgrade the Refinery: more oil for the Night." });
+  });
+
+  it("nothing to pay: the next Night", () => {
+    expect(dayGuide(city({ played: 1 }))).toEqual({ target: "night", text: "Start the next Night to bring back more." });
+  });
+
+  it("only in the first Days", () => {
+    expect(dayGuide(city({ played: GUIDE_DAYS + 1, stock: { wood: 999, fish: 999, pearls: 0 } }))).toBe(null);
+  });
+
+  it("the panel marks what the guide points at, and says it", () => {
+    const html = dayHtml(city({ stock: { wood: 200, fish: 200, pearls: 0 }, played: 1 }));
+    expect(html).toContain("Upgrade the Lighthouse: your beam burns harder.");
+    expect(html).toMatch(/class="b gold guide" data-act="upgrade" data-b="lighthouse"/);
+  });
+});
