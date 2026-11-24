@@ -44,6 +44,7 @@ describe("what the city makes while you are away", () => {
     expect(newCity().away).toBe(0);
     const v4 = { ...newCity(), v: 4 } as Record<string, unknown>;
     delete v4.away;
+    delete v4.daily;
     expect(parseCity(v4)).toEqual({ ...newCity(), v: CITY_SHAPE });
   });
 });

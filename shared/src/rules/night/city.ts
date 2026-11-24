@@ -4,10 +4,11 @@
  * Brinelight on Solana's city: its own buildings, its own values.
  */
 import { CAPTAIN_IDS, newCaptains, type Captains } from "./captains.js";
+import { PORTAL_TASK_IDS, newDaily, type PortalDaily } from "./daily.js";
 import { NIGHTS, SHARDS_TO_UNLOCK } from "./values.js";
 
 /** The shape of the city's data: raised when it changes, so that an old save is migrated knowingly. */
-export const CITY_SHAPE = 5;
+export const CITY_SHAPE = 6;
 
 /**
  * The buildings with an effect on the Night today: the Lighthouse (the beam), the Refinery (the oil a Night starts
@@ -38,9 +39,11 @@ export type PortalCity = {
   record: number;
   /** When the city was last seen, by the device's clock (seconds; 0: not yet): what it made since comes at the next visit. */
   away: number;
+  /** Today's tasks, chests and recruitment. */
+  daily: PortalDaily;
 };
 
-export const newCity = (): PortalCity => ({ v: CITY_SHAPE, buildings: { ...CITY_MIN_LEVEL }, stock: { wood: 0, fish: 0, pearls: 0 }, won: 0, played: 0, captains: newCaptains(), record: 0, away: 0 });
+export const newCity = (): PortalCity => ({ v: CITY_SHAPE, buildings: { ...CITY_MIN_LEVEL }, stock: { wood: 0, fish: 0, pearls: 0 }, won: 0, played: 0, captains: newCaptains(), record: 0, away: 0, daily: newDaily() });
 
 /** The Night to play next: the one after the last won, never past the last. */
 export const nextNight = (c: PortalCity): number => Math.min(c.won + 1, NIGHTS);
@@ -59,9 +62,14 @@ export function parseCity(input: unknown): PortalCity | null {
     if (isObj(raw) && raw.v === 1 && isObj(raw.buildings)) raw = { ...raw, v: 2, buildings: { ...raw.buildings, barracks: 0, harbor: 0, observatory: 0 } };
     if (isObj(raw) && raw.v === 2) raw = { ...raw, v: 3, captains: newCaptains() };
     if (isObj(raw) && raw.v === 3) raw = { ...raw, v: 4, record: 0 };
-    if (isObj(raw) && raw.v === 4) raw = { ...raw, v: CITY_SHAPE, away: 0 };
-    if (!isObj(raw) || !exactKeys(raw, ["v", "buildings", "stock", "won", "played", "captains", "record", "away"]) || raw.v !== CITY_SHAPE) return null;
+    if (isObj(raw) && raw.v === 4) raw = { ...raw, v: 5, away: 0 };
+    if (isObj(raw) && raw.v === 5) raw = { ...raw, v: CITY_SHAPE, daily: newDaily() };
+    if (!isObj(raw) || !exactKeys(raw, ["v", "buildings", "stock", "won", "played", "captains", "record", "away", "daily"]) || raw.v !== CITY_SHAPE) return null;
     if (!isWhole(raw.record) || !isWhole(raw.away)) return null;
+    const dy = raw.daily;
+    if (!isObj(dy) || !exactKeys(dy, ["day", "counts", "chests", "recruited"]) || !isWhole(dy.day, -1) || typeof dy.recruited !== "boolean") return null;
+    const ct = dy.counts;
+    if (!isObj(ct) || !exactKeys(ct, PORTAL_TASK_IDS) || !PORTAL_TASK_IDS.every((k) => isWhole(ct[k])) || !Array.isArray(dy.chests) || !dy.chests.every((x) => isWhole(x))) return null;
     const cap = raw.captains;
     const isCaptain = (x: unknown) => typeof x === "string" && (CAPTAIN_IDS as readonly string[]).includes(x);
     if (!isObj(cap) || !exactKeys(cap, ["lead", "unlocked", "shards"]) || !isCaptain(cap.lead) || !Array.isArray(cap.unlocked) || !cap.unlocked.every(isCaptain)) return null;
@@ -80,6 +88,7 @@ export function parseCity(input: unknown): PortalCity | null {
       played,
       record: raw.record as number,
       away: raw.away as number,
+      daily: { day: dy.day as number, counts: { ...(ct as PortalDaily["counts"]) }, chests: [...(dy.chests as number[])], recruited: dy.recruited as boolean },
       captains: { lead: cap.lead as Captains["lead"], unlocked: cap.unlocked as Captains["unlocked"], shards: { ...(sh as Captains["shards"]) } },
     };
   } catch {

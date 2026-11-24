@@ -42,6 +42,7 @@ export function startPortal(d: PortalDeps): { city(): N.PortalCity } {
 
   const keep = () => saveCity(d.store, city);
   const showDay = () => {
+    city = N.dailyNow(city, Date.now() / 1000);
     d.showLevels(city.buildings);
     day.show(city);
   };
@@ -52,11 +53,28 @@ export function startPortal(d: PortalDeps): { city(): N.PortalCity } {
         d.toast(r.reason, true);
         return;
       }
-      city = r.city;
+      city = N.dailyAfterUpgrade(r.city, Date.now() / 1000);
       keep();
       showDay();
     },
     night: (k) => begin(k),
+    chest(points) {
+      const r = N.openDailyChest(city, Date.now() / 1000, points);
+      if (!r.ok) return d.toast(r.reason, true);
+      city = r.city;
+      keep();
+      showDay();
+    },
+    recruit() {
+      const r = N.recruitDaily(city, Date.now() / 1000);
+      if (!r.ok) return d.toast(r.reason, true);
+      city = r.city;
+      keep();
+      const p = N.CAPTAIN_POWERS[r.captain];
+      const rank = r.rarity[0]!.toUpperCase() + r.rarity.slice(1);
+      d.toast(city.captains.unlocked.includes(r.captain) && city.captains.shards[r.captain] >= N.SHARDS_TO_UNLOCK ? `${p.captain} (${rank}) joins you!` : `${p.captain} (${rank}): ${N.RECRUIT_SHARDS[r.rarity]} shards.`);
+      showDay();
+    },
     lead(id) {
       const r = N.setLead(city, id);
       if (!r.ok) {
@@ -81,7 +99,7 @@ export function startPortal(d: PortalDeps): { city(): N.PortalCity } {
         measure.save();
         const r = N.dawn(city, n);
         if (r.ok) {
-          city = r.city;
+          city = N.dailyAfterNight(r.city, n, Date.now() / 1000);
           keep();
         }
       },

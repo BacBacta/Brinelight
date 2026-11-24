@@ -2,7 +2,7 @@
  * The Day (Hold the Light): your city between the Nights. Each building says what it does for the Night, its cost, and
  * Upgrade, or why not in the rules' own words; the next Night is always one tap away. Pure where it can be.
  */
-import { night as N } from "@brinelight/shared";
+import { RECRUIT_ODDS, night as N } from "@brinelight/shared";
 import { esc } from "../ui/components.js";
 import { ICONS } from "../ui/icons.js";
 
@@ -114,6 +114,21 @@ export function captainsHtml(c: N.PortalCity): string {
   return `<h3 class="day-sub">Captains</h3>${rows}<p class="day-note">A Night won brings a captain closer to joining you.</p>`;
 }
 
+/** Today: the tasks and their progress, the chests, and the free recruitment with its published odds. */
+export function todayHtml(c: N.PortalCity): string {
+  const pts = N.dailyPointsOf(c);
+  const tasks = N.PORTAL_TASKS.map((t) => `<li class="${c.daily.counts[t.id] >= t.goal ? "done" : ""}">${esc(t.text)} <small>${Math.min(c.daily.counts[t.id], t.goal)}/${t.goal}</small></li>`).join("");
+  const chests = N.DAILY_CHESTS.map((k) => {
+    const open = c.daily.chests.includes(k.points);
+    return `<button class="b${!open && pts >= k.points ? " gold" : ""}" data-act="chest" data-p="${k.points}"${open || pts < k.points ? " disabled" : ""}>${open ? "✓" : `${k.points} pts`}</button>`;
+  }).join("");
+  const odds = `Admiral ${RECRUIT_ODDS.admiral}% · Commander ${RECRUIT_ODDS.commander}% · Officer ${RECRUIT_ODDS.officer}%`;
+  const recruit = c.daily.recruited
+    ? `<button class="b" data-act="recruit" disabled>Recruited. Come back tomorrow</button>`
+    : `<button class="b gold" data-act="recruit">Recruit, free</button>`;
+  return `<h3 class="day-sub">Today <small>${pts}/100</small></h3><ul class="tasks">${tasks}</ul><div class="chests">${chests}</div><div class="recruit">${recruit}<small>Free once a day. Odds: ${odds}.</small></div>`;
+}
+
 /** The sea chart: a dot a Night, won ones marked, the next lit, later ones locked; the one chosen named. */
 export function chartHtml(c: N.PortalCity, chosen: number): string {
   const next = N.nextNight(c);
@@ -140,13 +155,17 @@ export function dayHtml(c: N.PortalCity, chosen: number = N.nextNight(c)): strin
     (g ? `<p class="day-guide" role="status">${esc(g.text)}</p>` : "") +
     N.CITY_BUILDINGS.map((b) => row(b, c, g?.target === b)).join("") +
     captainsHtml(c) +
+    todayHtml(c) +
     chartHtml(c, chosen) +
     `<button class="b gold xl day-night${g?.target === "night" ? " guide" : ""}" data-act="night">${chosen === N.ENDLESS ? "Start the Endless Night" : `Start Night ${chosen}`}</button>`
   );
 }
 
 /** The Day on screen. */
-export function createDay(root: HTMLElement, actions: { upgrade(b: N.CityBuilding): void; night(k: number): void; lead(id: N.CaptainId): void }) {
+export function createDay(
+  root: HTMLElement,
+  actions: { upgrade(b: N.CityBuilding): void; night(k: number): void; lead(id: N.CaptainId): void; chest(points: number): void; recruit(): void },
+) {
   let city: N.PortalCity | null = null;
   let chosen = 1;
   const el = document.createElement("section");
@@ -159,6 +178,8 @@ export function createDay(root: HTMLElement, actions: { upgrade(b: N.CityBuildin
     if (!b || b.disabled) return;
     if (b.dataset.act === "night") actions.night(chosen);
     if (b.dataset.act === "lead" && b.dataset.c) actions.lead(b.dataset.c as N.CaptainId);
+    if (b.dataset.act === "chest") actions.chest(Number(b.dataset.p));
+    if (b.dataset.act === "recruit") actions.recruit();
     if (b.dataset.act === "pick" && city) {
       chosen = Number(b.dataset.night);
       el.innerHTML = dayHtml(city, chosen);

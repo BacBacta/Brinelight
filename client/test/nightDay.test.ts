@@ -114,3 +114,19 @@ describe("the Endless Night in the Day", async () => {
     expect(dayHtml(c, N.ENDLESS)).toContain("Start the Endless Night");
   });
 });
+
+describe("today, in the Day", async () => {
+  const { todayHtml } = await import("../src/night/day.js");
+  it("the tasks and their progress, the chests, the free recruitment and its published odds", () => {
+    const c = city({ daily: { day: 5, counts: { nights: 2, wins: 1, burned: 140, waves: 6, upgrades: 0 }, chests: [30], recruited: false } });
+    const html = todayHtml(c);
+    expect(html).toContain("Play 3 Nights");
+    expect(html).toContain("2/3");
+    expect(html).toContain("100/100");
+    expect(html).toMatch(/data-act="chest" data-p="30"[^>]*disabled/);
+    expect(html).toMatch(/data-act="chest" data-p="60"[^>]*disabled/);
+    expect(html).toMatch(/data-act="recruit"(?![^>]*disabled)/);
+    expect(html).toContain("Admiral 5% · Commander 25% · Officer 70%");
+    expect(todayHtml(city({ daily: { ...c.daily, recruited: true } }))).toContain("Come back tomorrow");
+  });
+});

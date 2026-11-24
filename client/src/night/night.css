@@ -465,3 +465,14 @@ body.portal .nav {
 .day .captain .leading { color: var(--gold); }
 .day .day-note { margin: 4px 0 0; font: 700 12px var(--f-b); color: var(--soft); }
 .day .chart .endless { color: var(--violet); border-color: var(--violet); font-size: 18px; }
+
+/* Today: the tasks, the chests and the free recruitment. */
+.day .day-sub small { color: var(--soft); font-weight: 800; }
+.day .tasks { margin: 4px 0; padding-left: 18px; font: 700 13px/1.5 var(--f-b); }
+.day .tasks .done { color: var(--green); }
+.day .tasks small { color: var(--soft); }
+.day .chests { display: flex; gap: 6px; }
+.day .chests button { flex: 1; min-height: 44px; }
+.day .recruit { display: grid; gap: 4px; margin-top: 8px; }
+.day .recruit button { min-height: 44px; }
+.day .recruit small { color: var(--soft); font: 700 12px var(--f-b); }

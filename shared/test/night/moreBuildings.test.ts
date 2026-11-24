@@ -45,6 +45,6 @@ describe("the Barracks, the Harbor and the Observatory", () => {
 
   it("a city saved before them is read with the three at 0", () => {
     const old = { v: 1, buildings: { lighthouse: 3, refinery: 2, infirmary: 1 }, stock: { wood: 5, fish: 6, pearls: 7 }, won: 2, played: 3 };
-    expect(parseCity(old)).toEqual({ ...old, v: CITY_SHAPE, buildings: { ...old.buildings, barracks: 0, harbor: 0, observatory: 0 }, captains: newCity().captains, record: 0, away: 0 });
+    expect(parseCity(old)).toEqual({ ...old, v: CITY_SHAPE, buildings: { ...old.buildings, barracks: 0, harbor: 0, observatory: 0 }, captains: newCity().captains, record: 0, away: 0, daily: newCity().daily });
   });
 });
