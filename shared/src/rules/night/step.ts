@@ -2,8 +2,10 @@
  * A Night advances by one step of 1/30 s (Hold the Light). The client gives the beam's angle; the rules do the rest:
  * the enemies come, the beam burns what it lights, the coast is raided. Pure: the Night given is never changed.
  */
+import { COUNTER_BONUS } from "../combat.js";
+import type { TroopType } from "../types.js";
 import { nextFloat, type Rng } from "./random.js";
-import type { Enemy, NightPhase, NightState } from "./state.js";
+import { TROOPS, type Enemy, type NightPhase, type NightState } from "./state.js";
 import {
   BEAM_WIDTH,
   COAST_RADIUS,
@@ -16,6 +18,9 @@ import {
   NIGHT1_GRACE_WAVES,
   NIGHT_GROWTH,
   NIGHT_WAVES,
+  POST_ARC,
+  POST_DPS,
+  POST_RANGE,
   SEA_RADIUS,
   SPAWN_BURST,
   SPAWN_SPACING,
@@ -26,8 +31,19 @@ import {
   WAVE_PAUSE,
 } from "./values.js";
 
-/** What the player does in a step: where the beam points, in degrees. */
-export type NightInput = { beam: number };
+/** What the player does in a step: where the beam points, in degrees; and maybe a troop put on a post. */
+export type NightInput = { beam: number; post?: { slot: number; troop: TroopType } };
+
+/** The troop that beats each family, on the troops' triangle (boarders > harpooners > crossbowmen > boarders). */
+export const COUNTERED_BY: Readonly<Record<Family, TroopType>> = { raider: "crossbowmen", beast: "harpooners", wraith: "boarders" };
+
+/** Where post `i` of `count` stands around the island, in degrees: evenly, the first at 45°. */
+export const postBearing = (i: number, count: number): number => (45 + (i * 360) / count) % 360;
+
+const angleApart = (a: number, b: number): number => {
+  const d = Math.abs(a - b) % 360;
+  return Math.min(d, 360 - d);
+};
 
 /** Below this, an enemy is on the coast: the float sums of its way never miss it by a rounding. */
 const ON_COAST = COAST_RADIUS + 1e-9;
@@ -78,6 +94,12 @@ export function stepNight(n: NightState, input: NightInput): NightState {
   if (n.phase === "won" || n.phase === "lost") return n;
   const t = n.step;
   const beam = toBearing(input.beam) ?? n.beam;
+  let posts = n.posts;
+  const order = input.post;
+  if (order && Number.isInteger(order.slot) && order.slot >= 0 && order.slot < posts.length && TROOPS.includes(order.troop)) {
+    posts = posts.slice();
+    posts[order.slot] = order.troop;
+  }
   let phase: NightPhase = n.phase;
   let { wave, pauseEnd, spawned, nextSpawn, rng, nextId } = n;
 
@@ -109,11 +131,21 @@ export function stepNight(n: NightState, input: NightInput): NightState {
   let oil = n.oil;
   let burned = n.burned;
   const enemies: Enemy[] = [];
-  for (const e of [...n.enemies, ...coming]) {
+  const sea = [...n.enemies, ...coming];
+  // The posts fire on their own: each at the enemy nearest the coast in its reach, harder at the family its troop beats.
+  const hits = new Map<number, number>();
+  posts.forEach((troop, i) => {
+    if (!troop) return;
+    const at = postBearing(i, posts.length);
+    let target: Enemy | null = null;
+    for (const e of sea) if (e.distance <= POST_RANGE && angleApart(at, e.bearing) <= POST_ARC / 2 && (!target || e.distance < target.distance)) target = e;
+    if (target) hits.set(target.id, (hits.get(target.id) ?? 0) + POST_DPS * STEP * (COUNTERED_BY[target.family] === troop ? COUNTER_BONUS : 1));
+  });
+  for (const e of sea) {
     // The beam burns first: what it lights this step never reaches the coast in it. A faded Wraith it goes through.
     const fading = e.fade > 0;
     const lit = !fading && inBeam(beam, e.bearing);
-    const health = lit ? e.health - n.power.beamDps * STEP : e.health;
+    const health = (lit ? e.health - n.power.beamDps * STEP : e.health) - (hits.get(e.id) ?? 0);
     let litFor = lit ? e.lit + 1 : 0;
     let fade = fading ? e.fade - 1 : 0;
     if (e.family === "wraith" && litFor >= FADE_AFTER_STEPS) {
@@ -146,5 +178,5 @@ export function stepNight(n: NightState, input: NightInput): NightState {
       pauseEnd = t + 1 + PAUSE_STEPS;
     }
   }
-  return { ...n, step: t + 1, beam, oil, phase, wave, pauseEnd, spawned, nextSpawn, rng, nextId, burned, enemies, rescued };
+  return { ...n, step: t + 1, beam, oil, phase, wave, pauseEnd, spawned, nextSpawn, rng, nextId, burned, enemies, rescued, posts };
 }

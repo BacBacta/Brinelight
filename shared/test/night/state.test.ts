@@ -15,7 +15,7 @@ const enemy = { id: 1, family: "raider", bearing: 90, distance: 20, health: 30, 
 describe("a new Night", () => {
   it("starts at step 0, its oil full, its first wave coming, the beam to the north, nothing on the sea", () => {
     const n = night();
-    expect(n).toMatchObject({ v: NIGHT_SHAPE, night: 1, seed: 1234, step: 0, oil: START_OIL, wave: 1, phase: "wave", enemies: [], beam: 0 });
+    expect(n).toMatchObject({ v: NIGHT_SHAPE, night: 1, seed: 1234, step: 0, oil: START_OIL, wave: 1, phase: "wave", enemies: [], beam: 0, posts: [null, null] });
     expect(STEPS_PER_SECOND).toBe(30);
   });
 
@@ -45,7 +45,7 @@ describe("parseNight: a Night read back (a save, a replay) is strict", () => {
 
   it("refuses each field missing, unknown or out of its range", () => {
     const bad: [string, unknown][] = [
-      ["v", 1],
+      ["v", 2],
       ["night", 0],
       ["seed", -1],
       ["seed", 1.5],

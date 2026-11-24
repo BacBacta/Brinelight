@@ -2,12 +2,13 @@
  * A Night's state (Hold the Light): everything needed to go on from here or to replay it, as plain data. The rules
  * change it by whole steps only (step.ts, task 1.3 onward); the client gives intentions (the beam's angle), never results.
  */
+import type { TroopType } from "../types.js";
 import { BASE_POWERS, type NightPowers } from "./powers.js";
 import { seedRng, type Rng } from "./random.js";
 import { FAMILIES, NIGHTS, type Family } from "./values.js";
 
 /** The shape of a Night's data: raised when it changes, so that an old save or replay is read knowingly. */
-export const NIGHT_SHAPE = 2;
+export const NIGHT_SHAPE = 3;
 
 export type Enemy = {
   /** Whole, from 1, never reused in a Night. */
@@ -57,7 +58,11 @@ export type NightState = {
   power: NightPowers;
   /** The second chance spent. */
   rescued: boolean;
+  /** The troop on each post (as many as `power.posts`), or none yet. */
+  posts: (TroopType | null)[];
 };
+
+export const TROOPS: readonly TroopType[] = ["boarders", "harpooners", "crossbowmen"];
 
 const isUint32 = (x: unknown): x is number => Number.isInteger(x) && (x as number) >= 0 && (x as number) < 2 ** 32;
 const isWhole = (x: unknown, min = 0): x is number => Number.isSafeInteger(x) && (x as number) >= min;
@@ -73,11 +78,11 @@ const exactKeys = (o: Record<string, unknown>, keys: readonly string[]): boolean
 export function newNight(seed: number, night: number, power: NightPowers = BASE_POWERS): NightState {
   if (!isUint32(seed)) throw new RangeError(`A Night's seed is a whole 32-bit number, not ${seed}`);
   if (!Number.isInteger(night) || night < 1 || night > NIGHTS) throw new RangeError(`There is no Night ${night}`);
-  return { v: NIGHT_SHAPE, night, seed, rng: seedRng(seed), step: 0, oil: power.startOil, wave: 1, phase: "wave", pauseEnd: -1, spawned: 0, nextSpawn: 0, enemies: [], nextId: 1, burned: 0, beam: 0, power: { ...power }, rescued: false };
+  return { v: NIGHT_SHAPE, night, seed, rng: seedRng(seed), step: 0, oil: power.startOil, wave: 1, phase: "wave", pauseEnd: -1, spawned: 0, nextSpawn: 0, enemies: [], nextId: 1, burned: 0, beam: 0, power: { ...power }, rescued: false, posts: new Array<TroopType | null>(power.posts).fill(null) };
 }
 
 const ENEMY_KEYS = ["id", "family", "bearing", "distance", "health", "lit", "fade"] as const;
-const NIGHT_KEYS = ["v", "night", "seed", "rng", "step", "oil", "wave", "phase", "pauseEnd", "spawned", "nextSpawn", "enemies", "nextId", "burned", "beam", "power", "rescued"] as const;
+const NIGHT_KEYS = ["v", "night", "seed", "rng", "step", "oil", "wave", "phase", "pauseEnd", "spawned", "nextSpawn", "enemies", "nextId", "burned", "beam", "power", "rescued", "posts"] as const;
 const PHASES: readonly string[] = ["wave", "pause", "won", "lost"];
 
 function parseEnemy(raw: unknown): Enemy | null {
@@ -98,7 +103,9 @@ export function parseNight(raw: unknown): NightState | null {
     if (typeof o.phase !== "string" || !PHASES.includes(o.phase) || !isWhole(o.pauseEnd, -1) || !isWhole(o.spawned) || !isWhole(o.nextSpawn)) return null;
     if (!isAngle(o.beam) || !isWhole(o.nextId, 1) || !isWhole(o.burned) || !Array.isArray(o.enemies) || typeof o.rescued !== "boolean") return null;
     const p = o.power;
-    if (!isObj(p) || !exactKeys(p, ["beamDps", "startOil", "rescue"]) || !isNum(p.beamDps) || p.beamDps <= 0 || !isNum(p.startOil) || p.startOil <= 0 || !isNum(p.rescue) || p.rescue < 0 || p.rescue > 1) return null;
+    if (!isObj(p) || !exactKeys(p, ["beamDps", "startOil", "rescue", "posts"]) || !isNum(p.beamDps) || p.beamDps <= 0 || !isNum(p.startOil) || p.startOil <= 0 || !isNum(p.rescue) || p.rescue < 0 || p.rescue > 1 || !isWhole(p.posts) || (p.posts as number) > 12) return null;
+    const posts = o.posts;
+    if (!Array.isArray(posts) || posts.length !== p.posts || !posts.every((t) => t === null || (typeof t === "string" && (TROOPS as readonly string[]).includes(t)))) return null;
     const enemies: Enemy[] = [];
     const ids = new Set<number>();
     for (const e of o.enemies) {
@@ -123,7 +130,8 @@ export function parseNight(raw: unknown): NightState | null {
       nextId: o.nextId,
       burned: o.burned,
       beam: o.beam,
-      power: { beamDps: p.beamDps, startOil: p.startOil, rescue: p.rescue },
+      power: { beamDps: p.beamDps, startOil: p.startOil, rescue: p.rescue, posts: p.posts as number },
+      posts: posts as (TroopType | null)[],
       rescued: o.rescued,
     };
   } catch {

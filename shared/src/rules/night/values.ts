@@ -96,3 +96,12 @@ export const OIL_PER_REFINERY = 15;
 export const RESCUE_BASE = 0.3;
 /** …and this much more for each level above 1. */
 export const RESCUE_PER_LEVEL = 0.05;
+
+/** The posts on the rafts: how many a city has before its Harbor (task 3.9), and what each one does. */
+export const POSTS_BASE = 2;
+/** A post's damage a second, to one enemy at a time (the nearest to the coast in its reach). */
+export const POST_DPS = 20;
+/** How far out a post reaches, from the Lighthouse, in sea units… */
+export const POST_RANGE = 16;
+/** …and how wide, in degrees around its own bearing. */
+export const POST_ARC = 60;
