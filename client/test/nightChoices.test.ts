@@ -42,3 +42,12 @@ describe("what to do, in the panel", () => {
     expect(hudParts(N.newNight(1, 1)).hint).not.toBe(CHOICE_TEXT.postsHint);
   });
 });
+
+describe("each card's picture", async () => {
+  const { CARD_ICONS } = await import("../src/night/choices.js");
+  const { ICON_NAMES } = await import("../src/ui/icons.js");
+  it("every card has one of the game's icons, drawn on it", () => {
+    for (const id of N.CARD_IDS) expect(ICON_NAMES, id).toContain(CARD_ICONS[id]);
+    expect(cardsHtml(["wide", "shoal", "star"])).toMatch(/<img class="icon"/);
+  });
+});
