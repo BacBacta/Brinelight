@@ -101,6 +101,19 @@ export function startPortal(d: PortalDeps): { city(): N.PortalCity } {
   d.canvas.addEventListener("pointerdown", tap);
   d.canvas.addEventListener("pointerup", tap);
 
+  // What the city made while you were away (the device's clock, given to the rules), at each return.
+  const arrive = () => {
+    const r = N.collectAway(city, Date.now() / 1000);
+    city = r.city;
+    keep();
+    if (r.gained.wood > 0 || r.gained.fish > 0) {
+      d.toast(`While you were away: ${r.gained.wood} wood and ${r.gained.fish} fish.`);
+      if (day.shown) showDay();
+    }
+  };
+  document.addEventListener("visibilitychange", () => !document.hidden && arrive());
+  arrive();
+
   d.showLevels(city.buildings);
   if (city.played === 0) begin();
   else showDay();

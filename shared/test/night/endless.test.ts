@@ -42,6 +42,7 @@ describe("the Endless Night", () => {
     expect(newCity().record).toBe(0);
     const v3 = { ...newCity(), v: 3 } as Record<string, unknown>;
     delete v3.record;
+    delete v3.away;
     expect(parseCity(v3)).toEqual({ ...newCity(), v: CITY_SHAPE });
   });
 });

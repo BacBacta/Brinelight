@@ -44,7 +44,7 @@ describe("the six captains", () => {
 
   it("a city saved before the captains is read with Old Tom alone", () => {
     const v2 = { v: 2, buildings: { ...newCity().buildings }, stock: { wood: 1, fish: 2, pearls: 3 }, won: 1, played: 2 };
-    expect(parseCity(v2)).toEqual({ ...v2, v: CITY_SHAPE, captains: newCity().captains, record: 0 });
+    expect(parseCity(v2)).toEqual({ ...v2, v: CITY_SHAPE, captains: newCity().captains, record: 0, away: 0 });
   });
 });
 

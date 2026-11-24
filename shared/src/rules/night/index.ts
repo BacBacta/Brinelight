@@ -11,3 +11,4 @@ export * from "./powers.js";
 export * from "./cards.js";
 export * from "./chart.js";
 export * from "./captains.js";
+export * from "./away.js";
