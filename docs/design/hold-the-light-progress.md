@@ -210,11 +210,14 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
 
 ## Step 7 · To CrazyGames
 
-- [ ] **7.1** Read CrazyGames' requirement pages again and write any change here.
-- [ ] **7.2** e2e captures at 821 × 462, 907 × 510, 1216 × 684, 1920 × 1080, 800 × 450, 1080 × 607 and 384 × 699, at a pixel ratio of 1: no text cut, no button under another.
+- [x] **7.1** Read CrazyGames' requirement pages again and write any change here.
+  - Done 24 November, read again: four more frame sizes than the morning's reading (1077 × 606 and, fullscreen, 1366 × 768, 1536 × 864, 1280 × 720), now in 7.2's e2e; "show the keyboard or mouse controls" (a guideline): Night 1's line now says "(mouse, finger or ← →)"; "do not detect a device by touch": the game never does to choose its controls. The rest as read in the morning: 50 MB in all (20 MB for the mobile home page), 1,500 files, relative paths, gameplay within 20 s, 60 to 165 Hz alike, English, PEGI 12, no fullscreen button, no outside link, no Escape. CrazyGames' search shows no list without a browser: whether "Brinelight: Hold the Light" is taken is checked in the developer portal at submission.
+- [x] **7.2** e2e captures at 821 × 462, 907 × 510, 1216 × 684, 1920 × 1080, 800 × 450, 1080 × 607 and 384 × 699, at a pixel ratio of 1: no text cut, no button under another.
+  - Done 24 November: `e2e/portal.e2e.ts`, at the 11 sizes CrazyGames lists (821 × 462 to 1920 × 1080, 800 × 450, 1080 × 607) and a phone upright (384 × 699), at a pixel ratio of 1, by Day and by Night: no page wider than the frame, the next Night's button whole, the oil, the wave and the power's button on screen and apart. Passed (8 minutes here). Captures kept in `e2e/.shots/portal-day-*.png` and `portal-night-*.png` (not committed), for the owner to look at.
 - [x] **7.3** The same Night at 60, 144 and 165 Hz (a test of the accumulator); sound starts on iOS after the first tap.
   - Done 24 November: a Night fed at 60, 144 and 165 frames a second for 20 s is the same, field for field (`shared/test/night/waves.test.ts`). The sound starts at the first tap (its AudioContext is made then, `night/audio.ts`), as iOS asks; not tried on an iOS device here.
-- [ ] **7.4** The checks of task 0.5 on the final build; no outside link anywhere.
+- [x] **7.4** The checks of task 0.5 on the final build; no outside link anywhere.
+  - Done 24 November: task 0.5's checks run on every build in `npm run check` (`client/test/portalFiles.test.ts`: under 1,500 files and 20 MB, relative addresses, none of the wallet's or a server's words, no web address but three.js's two in text) and `e2e/portal.e2e.ts` (nothing fetched outside the folder, the first Night under 5 MB). No link in the portal's screens.
 - [ ] **7.5** The covers (1920 × 1080, 800 × 1200, 800 × 800, the title as the only text) and the two videos (15 to 20 s, no sound, 1080p in 16:9 and in 2:3), captured from the game.
 - [ ] **7.6** The description and the controls in English, under the name the owner chose: "Brinelight: Hold the Light". Check it is not taken on CrazyGames.
 - [ ] **7.7** The upload folder (`client/dist-portal/` zipped) and a checklist of the developer portal's fields.

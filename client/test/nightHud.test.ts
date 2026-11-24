@@ -61,7 +61,8 @@ describe("the end of a Night", () => {
 
   it("plain English, short, in the second person", () => {
     for (const t of Object.values(NIGHT_TEXT)) {
-      expect(t.length).toBeLessThan(60);
+      // The first Night's line names the controls too (CrazyGames: show them): a little longer.
+      expect(t.length).toBeLessThan(t === NIGHT_TEXT.hint ? 90 : 60);
       expect(t).not.toMatch(/\b(player|user|HP|spawn|seed)\b/i);
     }
   });

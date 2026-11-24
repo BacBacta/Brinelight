@@ -13,7 +13,7 @@ export const NIGHT_TEXT = {
   oilLabel: "Oil: the Lighthouse's life",
   boss: "The Mist Galleon",
   flare: "Flare",
-  hint: "Turn the light onto the boats. Boats that land steal oil.",
+  hint: "Turn the light onto the boats (mouse, finger or ← →). Boats that land steal oil.",
   lost: "The Lighthouse went dark",
   won: "Dawn",
   bring: "You bring back",

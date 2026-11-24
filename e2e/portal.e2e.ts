@@ -188,4 +188,36 @@ describe("the portal, from a folder of its own", () => {
     await expect.poll(async () => (await page.locator(".night-hud").innerText()).replace(/\s+/g, " "), { timeout: 30_000 }).toContain("Wave 2 of 8");
     await context.close();
   }, 200_000);
+
+  it("at every size CrazyGames shows a game: nothing runs off the page, the next Night's button whole, the Night's panels apart", async () => {
+    // docs.crazygames.com/requirements/gameplay (read again on 24 November): desktop 907 × 510, 1216 × 684, 1077 × 606,
+    // 821 × 462, fullscreen 1366 × 768, 1920 × 1080, 1536 × 864, 1280 × 720, mobile 800 × 450, tablet 1080 × 607; and a phone upright.
+    const sizes: [number, number][] = [[821, 462], [907, 510], [1077, 606], [1216, 684], [1280, 720], [1366, 768], [1536, 864], [1920, 1080], [800, 450], [1080, 607], [384, 699]];
+    const inside = (b: { x: number; y: number; width: number; height: number } | null, w: number, h: number) => !!b && b.x >= -1 && b.y >= -1 && b.x + b.width <= w + 1 && b.y + b.height <= h + 1;
+    const apart = (a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }) =>
+      a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y;
+    for (const [w, h] of sizes) {
+      const context = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
+      await context.addInitScript(() =>
+        localStorage.setItem("brinelight-portal-v1/hold-the-light-city", JSON.stringify({ v: 1, city: { v: 2, buildings: { lighthouse: 4, refinery: 3, infirmary: 1, barracks: 1, harbor: 1, observatory: 1 }, stock: { wood: 400, fish: 300, pearls: 20 }, won: 5, played: 8 } })),
+      );
+      const page = await context.newPage();
+      await page.goto(`http://127.0.0.1:${PORT}${FOLDER}`);
+      await page.waitForSelector(".day:not([hidden])", { timeout: 60_000 });
+      await page.waitForTimeout(800);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${w}×${h}: no page wider than the frame`).toBe(true);
+      expect(inside(await page.locator(".day-night").boundingBox(), w, h), `${w}×${h}: Start Night whole`).toBe(true);
+      await page.screenshot({ path: `e2e/.shots/portal-day-${w}x${h}.png` });
+      await page.locator(".day-night").click();
+      await page.waitForSelector(".night-hud", { timeout: 10_000 });
+      await page.waitForTimeout(1500);
+      const oil = (await page.locator(".night-hud .oil").boundingBox())!;
+      const wave = (await page.locator(".night-hud .wave").boundingBox())!;
+      const flare = (await page.locator(".night-flare").boundingBox())!;
+      for (const [name, b] of [["oil", oil], ["wave", wave], ["flare", flare]] as const) expect(inside(b, w, h), `${w}×${h}: ${name} on screen`).toBe(true);
+      expect(apart(oil, wave) && apart(oil, flare) && apart(wave, flare), `${w}×${h}: the Night's panels apart`).toBe(true);
+      await page.screenshot({ path: `e2e/.shots/portal-night-${w}x${h}.png` });
+      await context.close();
+    }
+  }, 600_000);
 });
