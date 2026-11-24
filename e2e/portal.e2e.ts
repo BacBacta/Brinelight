@@ -44,8 +44,17 @@ afterAll(async () => {
   await new Promise((resolve) => server?.close(resolve));
 });
 
+/** The Night's panel and end card, as the player reads them. */
+const read = (page: import("playwright-core").Page) =>
+  page.evaluate(() => ({
+    wave: document.querySelector(".night-hud .wave b")?.textContent ?? "",
+    oil: document.querySelector(".night-hud .oil b")?.textContent ?? "",
+    end: !(document.querySelector<HTMLElement>(".night-end")?.hidden ?? true),
+    beam: Number(document.querySelector<HTMLCanvasElement>("canvas")?.dataset.beam ?? Number.NaN),
+  }));
+
 describe("the portal, from a folder of its own", () => {
-  it("opens the city with no error, fetches nothing outside its folder, saves under brinelight-portal-v1/", async () => {
+  it("opens in its first Night with no error, fetches nothing outside its folder, saves under brinelight-portal-v1/", async () => {
     const context = await browser.newContext({ viewport: { width: 907, height: 510 } });
     const page = await context.newPage();
     const errors: string[] = [];
@@ -53,18 +62,53 @@ describe("the portal, from a folder of its own", () => {
     page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
     page.on("pageerror", (e) => errors.push(e.message));
     page.on("response", (r) => r.status() >= 400 && failed.push(`${r.status()} ${r.url()}`));
+    const opened = Date.now();
     await page.goto(`http://127.0.0.1:${PORT}${FOLDER}`);
-    await page.waitForSelector("canvas[data-view]", { timeout: 60_000 });
+    // The Night starts at once: no menu, no title, within 10 s of the page.
+    await page.waitForSelector(".night-hud", { timeout: 10_000 });
+    expect(Date.now() - opened).toBeLessThan(10_000);
     expect(await page.title()).toBe("Brinelight: Hold the Light");
-    // A tap on the Power card (a plain click can land on the 3D view that lies over it as it loads).
-    await page.locator('[aria-label="Profile"]').first().evaluate((e) => (e as HTMLElement).click());
-    await expect.poll(() => page.locator(".sheet:not([hidden]) h3, .sheet:not([hidden]) h2").first().textContent()).toContain("Settings");
+    await expect.poll(async () => (await read(page)).wave).toBe("Wave 1 of 5");
+    expect((await read(page)).oil).toBe("100");
     const keys = await page.evaluate(() => Object.keys(localStorage));
-    expect(keys.length).toBeGreaterThan(0);
     expect(keys.every((k) => k.startsWith("brinelight-portal-v1/"))).toBe(true);
     expect(errors).toEqual([]);
     expect(failed).toEqual([]);
     expect(outside).toEqual([]);
     await context.close();
   });
+
+  it("the beam follows the mouse, and the keys turn it", async () => {
+    const context = await browser.newContext({ viewport: { width: 907, height: 510 } });
+    const page = await context.newPage();
+    await page.goto(`http://127.0.0.1:${PORT}${FOLDER}`);
+    await page.waitForSelector("canvas[data-beam]", { timeout: 60_000 });
+    // Far to the right of the screen: the water east of the Lighthouse.
+    await page.mouse.move(890, 160);
+    await expect.poll(async () => (await read(page)).beam).toBeGreaterThan(45);
+    expect((await read(page)).beam).toBeLessThan(135);
+    // Far to the left: west.
+    await page.mouse.move(15, 160);
+    await expect.poll(async () => (await read(page)).beam).toBeGreaterThan(225);
+    expect((await read(page)).beam).toBeLessThan(315);
+    const before = (await read(page)).beam;
+    await page.keyboard.down("ArrowRight");
+    await expect.poll(async () => (await read(page)).beam !== before).toBe(true);
+    await page.keyboard.up("ArrowRight");
+    await context.close();
+  });
+
+  it("a Night left alone ends on its card; Again starts a new one", async () => {
+    const context = await browser.newContext({ viewport: { width: 384, height: 699 } });
+    const page = await context.newPage();
+    await page.goto(`http://127.0.0.1:${PORT}${FOLDER}`);
+    await page.waitForSelector(".night-end:not([hidden])", { timeout: 170_000 });
+    const end = await page.locator(".night-end").innerText();
+    expect(end).toContain("The Lighthouse went dark");
+    expect(end).toMatch(/You held \d waves of 5\./);
+    expect(end).toContain("You bring back:");
+    await page.locator('.night-end [data-act="again"]').click();
+    await expect.poll(async () => await read(page)).toMatchObject({ end: false, oil: "100", wave: "Wave 1 of 5" });
+    await context.close();
+  }, 200_000);
 });

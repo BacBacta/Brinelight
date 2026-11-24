@@ -62,9 +62,13 @@ export function startNight(
   let shown = -1;
   const place = new THREE.Object3D();
 
+  let beamShown = -1;
   const draw = () => {
     const n = clock.night;
     beam.rotation.y = -n.beam * RAD;
+    // Where the beam points, on the canvas, for the end-to-end tests (as data-view): written only when it moves.
+    const deg = Math.round(n.beam);
+    if (deg !== beamShown) canvas.dataset.beam = String((beamShown = deg));
     let i = 0;
     for (const e of n.enemies) {
       if (i >= MAX_DRAWN) break;
