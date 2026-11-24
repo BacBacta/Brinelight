@@ -24,7 +24,10 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
 - [x] **0.4** On a branch preview only (the `CF_PAGES_BRANCH` condition the demos use), the main build also serves the portal build at `/portal/`, so testers can play it. Never in the production build: a test builds as Cloudflare does for `main` and checks it.
   - Does: when Cloudflare builds a branch other than `main` (`previewBuild`), the game's own build ends by building the portal into `dist/portal/` (`client/vite.config.ts`); Cloudflare's command stays `npm run build`. Tested by: `client/test/portalPreview.test.ts`, a build as Cloudflare does for a branch (the portal at `portal/`, relative, no prototype in it, the game's own prototype kept) and for `main` (no `portal/`).
   - Done 24 November: `npm run check` green (1,273 tests); the branch's build takes about 6 s, `main`'s 2.4 s. e2e at the end of the step.
-- [ ] **0.5** A test of the portal's files: no absolute path, none of "wallet", "Solana", "Phantom", "USDC" or a server address, under 20 MB, under 1,500 files. An e2e opens it from a sub-folder (`/some/folder/`) with no error in the console.
+- [x] **0.5** A test of the portal's files: no absolute path, none of "wallet", "Solana", "Phantom", "USDC" or a server address, under 20 MB, under 1,500 files. An e2e opens it from a sub-folder (`/some/folder/`) with no error in the console.
+  - Does: `client/test/portalFiles.test.ts` (in `npm run check`): under 1,500 files and 20 MB, no `prototype/`, only relative addresses in the page and the code, none of the wallet's, Solana's or a server's words in the code and the page, no web address but the two three.js carries as text; `e2e/portal.e2e.ts`: the portal served from `/games/brinelight-hold-the-light/` opens the city with no error, fetches nothing outside its folder, opens Settings and keeps everything under `brinelight-portal-v1/`. The page now has an empty icon (`data:,`): without one the browser asked for `/favicon.ico` at the root, outside the folder (a 404 in both builds).
+  - Does not: check the style sheet's class names for the words (the shared sheet keeps the Profile's `.wallet`, never shown; renaming it would touch the wallet's sign-in, a protected area).
+  - Done 24 November: `npm run check` green (1,276 tests); e2e at the end of the step.
 
 ## Step 1 · A Night in the rules
 

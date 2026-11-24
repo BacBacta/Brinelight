@@ -8,6 +8,7 @@ dist-portal/
 .DS_Store
 coverage/
 e2e/.dist/
+e2e/.dist-portal/
 e2e/.shots/
 deploy/.local-*
 deploy/.env
