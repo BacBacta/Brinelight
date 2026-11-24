@@ -42,6 +42,8 @@ export function startNight(
     onOver(n: N.NightState): void;
     /** "To your city" was tapped on the end card. */
     onDone(): void;
+    /** The hand moved the beam (the pointer, a finger or a key). */
+    onAim?(): void;
   },
 ): NightHandle {
   document.body.classList.add("night");
@@ -97,7 +99,10 @@ export function startNight(
   const follow = (e: PointerEvent) => {
     if (e.pointerType !== "mouse" && e.buttons === 0 && e.type === "pointermove") return;
     const b = pointerBearing(e.clientX, e.clientY, canvas.getBoundingClientRect(), scene.cityCamera, water);
-    if (b !== null) aimed = b;
+    if (b !== null) {
+      aimed = b;
+      opts.onAim?.();
+    }
   };
   canvas.addEventListener("pointermove", follow);
   canvas.style.touchAction = "none";
@@ -129,7 +134,9 @@ export function startNight(
     if (document.hidden) return;
     const dt = last === null ? 0 : now - last;
     last = now;
-    aimed = turnBy(aimed, keyTurn(), dt);
+    const turn = keyTurn();
+    if (turn !== 0) opts.onAim?.();
+    aimed = turnBy(aimed, turn, dt);
     clock = N.feedTime(clock, dt, { beam: aimed });
     draw();
     if (clock.night.step !== shown) {

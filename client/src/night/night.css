@@ -254,3 +254,24 @@ body.portal .nav {
 @media (prefers-reduced-motion: reduce) {
   .day .guide { animation: none; outline: 3px solid var(--gold); }
 }
+
+/* ?measure: the sessions on this device, over the game, for the tester to read out. */
+.measure {
+  position: fixed;
+  inset: 10px;
+  z-index: 20;
+  overflow: auto;
+  padding: 14px 16px;
+  background: rgba(10, 26, 51, 0.97);
+  border: 2px solid var(--edge);
+  border-radius: 18px;
+  font: 700 14px/1.4 var(--f-b);
+  user-select: text;
+}
+.measure h2 {
+  margin: 0 0 8px;
+  color: var(--gold);
+}
+.measure li {
+  margin-bottom: 8px;
+}

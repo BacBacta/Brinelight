@@ -116,7 +116,8 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
     | aims at the nearest | 20/20 | 1 · 1 · 1 · 1 · 1 | 14 | 5 · 5 · 4 |
 
     What it says: with a new city's beam, the hand-speed bot loses Night 5 every time and Night 4 one time in three; the city it grows (Lighthouse 5, Refinery 5, Infirmary 4) wins them at the first try. A player's hand is slower and less steady than the bot's: they will lose some Nights, and the city is what wins them back. To judge at gate A.
-- [ ] **4.8** `?measure`: the game counts, on the device only, each session's length, the Nights started and reached, and the time to the first card; a hidden page shows them for the tester to read out. Nothing is sent.
+- [x] **4.8** `?measure`: the game counts, on the device only, each session's length, the Nights started and reached, and the time to the first card; a hidden page shows them for the tester to read out. Nothing is sent.
+  - Done 24 November: `client/src/portal/measure.ts`: each session's length, the time before the beam first moved, and each Night's end (its number, the wave, won or lost), kept under `brinelight-portal-v1/hold-the-light-measure` (the last 20 sessions), saved every 15 s, when the page is hidden and at each Night's end; with `?measure` a panel over the game lists them, a line a session, for the tester to read out. Nothing is sent. Not counted yet: the time to the first card (the cards come with step 3). 3 tests.
 - [ ] **4.9** e2e: Night, dawn, upgrade, Night again; reload keeps the city.
 - [ ] **Gate A · Is the loop fun?** Moved after step 4 (owner, 24 November): five people who never saw the game play a Night, spend its loot in the city, and play again, with nothing explained. Passed if four of five start a second Night on their own and none asks what to do.
   - Packet (24 November):

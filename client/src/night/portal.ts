@@ -5,6 +5,7 @@
  */
 import { night as N } from "@brinelight/shared";
 import type { SceneHandle } from "../scene/index.js";
+import { createMeasure, measureHtml, readMeasures } from "../portal/measure.js";
 import { openCity, saveCity } from "../portal/save.js";
 import type { PortalStore } from "../portal/store.js";
 import { createDay } from "./day.js";
@@ -28,6 +29,16 @@ export function startPortal(d: PortalDeps): { city(): N.PortalCity } {
   let city = opened.city;
   if (opened.rejected) d.toast("Your saved city could not be read. A copy was kept.", true);
   let night: NightHandle | null = null;
+  // ?measure (gates A and B): counted on the device only, read out by the tester.
+  const measure = createMeasure(d.store, () => Date.now());
+  setInterval(() => measure.save(), 15_000);
+  document.addEventListener("visibilitychange", () => document.hidden && measure.save());
+  if (new URLSearchParams(location.search).has("measure")) {
+    const panel = document.createElement("section");
+    panel.className = "measure card";
+    panel.innerHTML = `<h2>Sessions on this device</h2>${measureHtml(readMeasures(d.store))}<p><small>Kept on this device only. Nothing is sent.</small></p>`;
+    d.root.append(panel);
+  }
 
   const keep = () => saveCity(d.store, city);
   const showDay = () => {
@@ -54,7 +65,10 @@ export function startPortal(d: PortalDeps): { city(): N.PortalCity } {
       night: N.nextNight(city),
       seed: d.newSeed(),
       powers: N.cityPowers(city),
+      onAim: () => measure.beamMoved(),
       onOver(n) {
+        measure.nightEnded(n.night, n.wave, n.phase === "won" ? "won" : "lost");
+        measure.save();
         const r = N.dawn(city, n);
         if (r.ok) {
           city = r.city;
