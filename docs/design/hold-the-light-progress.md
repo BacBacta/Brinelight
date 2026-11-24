@@ -240,6 +240,13 @@ The owner played the build of steps 0 to 7: "the gameplay is very light, you do 
 - [ ] **P.2** The owner plays the three and says which one they want to play again, or what is missing in all three.
 - [ ] **P.3** The game is rebuilt on the one chosen (a new plan, short, with a play test by the owner at each step, not at the end).
 
+## Territory of Light (24 November)
+
+The owner did not want the three prototypes ("not an existing model; a real strategy game, original"). After an analysis of CrazyGames' strategy games (territory conquest leads: FrontWars.io 9.7 on 354 k votes, Openfront 492 k votes but 3.8; Kiomet 9.0 with supply lines), the owner chose to try the concept "territory is light".
+
+- [x] **L.1** One playable map (`client/public/proto/light/`, a plain 2D page, on branch previews only at `/proto/light/`): you and two AI nations on a sea of 26 islands, in real time, about 10 minutes. Your light is your land; you build lighthouses on islands inside it; beams between lighthouses within reach are your supply lines, and a lighthouse no longer linked to your capital goes dark (no boats, no oil, its boats fading). Boats are sent from a lighthouse to take pirates' islands and rivals' lighthouses; taking a relay cuts off everything behind it. Every 70 s the Mist shortens every beam for 18 s unless you stoke your lights. Win at 65 % of the islands, or both rival capitals. A goal at a time on screen. Fast-forwarded in a browser: no error; a player doing nothing loses on time, a simple greedy player loses their capital in about 6 minutes; the AIs fight each other too.
+- [ ] **L.2** The owner plays it and says whether this is the game to build, and what to change.
+
 ## Found on the way
 
 (The loop writes here what it finds outside its task: a test that fails before any change, a bug in the main game, a page of CrazyGames that changed.)

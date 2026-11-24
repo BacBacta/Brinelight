@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Brinelight · Territory of Light</title>
+<link rel="icon" href="data:,">
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#050b16;color:#fff;font-family:system-ui,sans-serif;user-select:none;-webkit-user-select:none;touch-action:none}
+  canvas{display:block;width:100vw;height:100vh}
+  #top{position:fixed;left:8px;right:8px;top:8px;display:flex;gap:6px;flex-wrap:wrap;pointer-events:none;z-index:3}
+  .pill{background:rgba(6,16,36,.85);border:1px solid rgba(255,255,255,.15);border-radius:99px;padding:5px 10px;font:800 14px system-ui}
+  .pill.gold{color:#FFC83A}.pill.mist{color:#c9b8ff}
+  #hint{position:fixed;left:50%;transform:translateX(-50%);top:48px;max-width:min(92vw,520px);background:rgba(6,16,36,.92);border:2px solid #FFC83A;border-radius:14px;padding:8px 14px;font:700 15px/1.35 system-ui;text-align:center;z-index:3;pointer-events:none}
+  #hint:empty{display:none}
+  #bar{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:6px;padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));z-index:3;flex-wrap:wrap}
+  button{font:800 15px system-ui;color:#2b1a00;background:linear-gradient(180deg,#FFD866,#FFC83A);border:0;border-bottom:4px solid #B9770A;border-radius:12px;padding:10px 14px;min-height:46px;cursor:pointer}
+  button:disabled{opacity:.45;cursor:default}
+  button.alt{background:#163A63;color:#fff;border-bottom-color:#0C1F3A}
+  .ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(3,8,18,.86);z-index:5}
+  .ov[hidden]{display:none}
+  .box{width:min(92vw,540px);max-height:92vh;overflow:auto;padding:18px 20px;border-radius:18px;background:#0C1F3A;border:2px solid #2E5C8F}
+  h1{margin:0 0 8px;color:#FFC83A;font-size:26px;text-align:center} h2{margin:0 0 8px;color:#FFC83A;text-align:center}
+  .box p,.box li{color:#C6D8F2;font-size:15px;line-height:1.4} .box ul{padding-left:18px;margin:6px 0}
+  .box b{color:#fff} .center{text-align:center}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="top"></div>
+<div id="hint"></div>
+<div id="bar"></div>
+<div id="ov" class="ov"></div>
+<script>
+"use strict";
+/*
+ * Brinelight · Territory of Light. A throwaway prototype of one map, for the owner to judge the concept:
+ * real-time conquest where light is the territory and the beams between lighthouses are the supply lines.
+ * Plain 2D canvas, no build, no rule of the game. Nothing saved but the best result.
+ */
+const cv=document.getElementById("c"),g=cv.getContext("2d"),top_=document.getElementById("top"),hintEl=document.getElementById("hint"),bar=document.getElementById("bar"),ov=document.getElementById("ov");
+const TAU=Math.PI*2;
+let W=0,H=0,S=1,OX=0,OY=0,WW=100,WH=100;
+function fit(){const d=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;g.setTransform(d,0,0,d,0,0);
+  // The world is 160 × 100 in landscape and 100 × 160 upright; it fills the screen above the bar.
+  const land=W>=H;WW=land?160:100;WH=land?100:160;const usableH=H-60;S=Math.min(W/WW,usableH/WH);OX=(W-WW*S)/2;OY=(usableH-WH*S)/2+4}
+addEventListener("resize",()=>{fit();if(game)layout()});
+const X=x=>OX+x*S,Y=y=>OY+y*S;
+let seed=1;const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
+
+// ── Values: starting points for the owner's test, none of them balance ──
+const V={
+  build:25,buildStep:12,           // a lighthouse's cost, and how much each next one costs more
+  up:[0,40,80],                    // upgrade to level 2, 3
+  radius:[0,16,20,24],             // the light around a lighthouse, by level
+  link:[0,27,31,35],               // how far its beam reaches another lighthouse, by level
+  grow:[0,.5,.8,1.1],              // boats a second it makes while powered
+  cap:[0,25,45,70],
+  oilLit:.25,oilHouse:.6,          // oil a second: each island in your light, each lighthouse
+  speed:14,                        // boats' speed, world units a second
+  mistEvery:70,mistLast:18,mistLink:.7,stoke:20,
+  decay:.6,                        // boats lost a second by a lighthouse cut off from the capital
+  win:.65,                         // the share of lighthouses that wins
+  length:720,                      // a match's length, seconds (then the most islands wins)
+};
+const COL=["#FFC83A","#ff5a4e","#b48cff"],NAME=["You","the Crimson League","the Violet Pact"],GLOW=["255,200,58","255,90,78","180,140,255"];
+
+let game=null;
+function newGame(){
+  seed=(Date.now()&0xffffff)||7;fit();
+  const isl=[];const land=WW>WH;
+  const caps=land?[[14,WH-14],[WW-14,14],[WW-14,WH-14]]:[[14,WH-14],[WW-14,14],[14,14]];
+  for(const c of caps)isl.push({x:c[0],y:c[1]});
+  // Two free islands in each capital's light, toward the middle: the first lighthouses are always there to build.
+  for(const c of caps){const a=Math.atan2(WH/2-c[1],WW/2-c[0]);for(const da of[-.55,.55]){const d=10+rnd()*2.5;isl.push({x:c[0]+Math.cos(a+da)*d,y:c[1]+Math.sin(a+da)*d})}}
+  let tries=0;while(isl.length<26&&tries<5000){tries++;const p={x:8+rnd()*(WW-16),y:8+rnd()*(WH-16)};if(isl.every(q=>Math.hypot(q.x-p.x,q.y-p.y)>13))isl.push(p)}
+  isl.forEach((p,i)=>{p.id=i;p.r=2.2+rnd()*1.6;p.owner=-1;p.level=0;p.boats=0;p.pirate=0});
+  // Pirate islands: a garrison to beat before you can light them.
+  const far=isl.slice(3).sort((a,b)=>Math.hypot(b.x-WW/2,b.y-WH/2)-Math.hypot(a.x-WW/2,a.y-WH/2));
+  isl.filter(p=>p.id>=9).sort(()=>rnd()-.5).slice(0,6).forEach(p=>{p.pirate=8+Math.floor(rnd()*14);p.boats=p.pirate});
+  for(let k=0;k<3;k++){const c=isl[k];c.owner=k;c.level=2;c.boats=12;c.cap=true}
+  game={t:0,isl,oil:[30,30,30],fleets:[],sel:null,over:false,mist:false,mistT:V.mistEvery,stoked:[false,false,false],aiT:[0,1,2],built:[1,1,1],steps:new Set(),msg:[]};
+  layout();ov.hidden=true;
+}
+function layout(){}
+
+// ── The network: a player's lighthouses linked by beams; only those linked to the capital are powered ──
+function linkRange(p,k){return V.link[p.level]*(game.mist&&!game.stoked[k]?V.mistLink:1)}
+function houses(k){return game.isl.filter(p=>p.owner===k&&p.level>0)}
+function network(k){
+  const hs=houses(k),cap=hs.find(p=>p.cap&&p.owner===k);const edges=[];
+  for(let i=0;i<hs.length;i++)for(let j=i+1;j<hs.length;j++){const a=hs[i],b=hs[j];if(Math.hypot(a.x-b.x,a.y-b.y)<=Math.max(linkRange(a,k),linkRange(b,k)))edges.push([a,b])}
+  const on=new Set();if(cap){const st=[cap];on.add(cap);while(st.length){const a=st.pop();for(const [p,q] of edges){const o=p===a?q:q===a?p:null;if(o&&!on.has(o)){on.add(o);st.push(o)}}}}
+  return {hs,edges,on,cap};
+}
+let NET=[];
+function lightOf(k,p){return NET[k].on.has(p)?V.radius[p.level]*(game.mist&&!game.stoked[k]?.75:1):0}
+/** Who lights an island: the powered lighthouse nearest it, within its light. */
+function litBy(p){let best=-1,bd=1e9;for(let k=0;k<3;k++)for(const h of NET[k].on){const d=Math.hypot(h.x-p.x,h.y-p.y);if(d<=lightOf(k,h)&&d<bd){bd=d;best=k}}return best}
+
+function buildCost(k){return V.build+V.buildStep*(game.built[k]-1)}
+function canBuild(k,p){return p.owner===-1&&p.pirate===0&&litBy(p)===k&&game.oil[k]>=buildCost(k)}
+function build(k,p){game.oil[k]-=buildCost(k);game.built[k]++;p.owner=k;p.level=1;p.boats=3;if(k===0){game.steps.add("built");pop(p,"Lit!",COL[0])}}
+function upgrade(k,p){const c=V.up[p.level];if(p.level>=3||game.oil[k]<c)return false;game.oil[k]-=c;p.level++;if(k===0){game.steps.add("up");pop(p,"Level "+p.level,COL[0])}return true}
+function send(k,from,to,share){const n=Math.floor(from.boats*share);if(n<1||from===to)return;from.boats-=n;game.fleets.push({k,n,x:from.x,y:from.y,to,from});if(k===0)game.steps.add("sent")}
+const pops=[];function pop(p,s,c){pops.push({x:p.x,y:p.y,s,c,t:0})}
+
+function arrive(f){
+  const p=f.to;
+  if(p.owner===f.k){p.boats=Math.min(p.boats+f.n,V.cap[p.level]*2);return}
+  const def=p.owner===-1?p.pirate>0?p.boats:0:p.boats;
+  if(f.n>def){
+    const was=p.owner,wasCap=p.cap;p.boats=f.n-def;
+    if(p.owner===-1&&p.pirate>0){p.pirate=0;p.owner=f.k;p.level=1;game.oil[f.k]+=25;if(f.k===0){game.steps.add("pirate");pop(p,"Pirates beaten! +25 oil",COL[0])}}
+    else if(p.owner>=0){p.owner=f.k;p.level=Math.max(1,p.level-1);p.cap=false;
+      if(f.k===0){game.steps.add("took");pop(p,wasCap?"CAPITAL TAKEN!":"Taken!",COL[0])}
+      if(wasCap)say(`${NAME[f.k]==="You"?"You":NAME[f.k]} took the capital of ${NAME[was]}! Its lights go dark.`)}
+    else if(p.owner===-1){p.owner=f.k;p.level=1}
+  }else{p.boats=def-f.n;if(p.owner===-1&&p.pirate>0)p.pirate=p.boats}
+}
+function say(s){game.msg.push({s,t:0})}
+
+// ── The AI nations: build in their light, upgrade, stoke the Mist, strike the weakest, the relays first ──
+function ai(k){
+  const n=NET[k];if(!n.cap)return;
+  if(game.mist&&!game.stoked[k]&&game.oil[k]>=V.stoke+10){game.oil[k]-=V.stoke;game.stoked[k]=true}
+  const free=game.isl.filter(p=>canBuild(k,p));
+  if(free.length){free.sort((a,b)=>score(b)-score(a));build(k,free[0]);return}
+  const up=[...n.on].filter(p=>p.level<3&&game.oil[k]>=V.up[p.level]+15).sort((a,b)=>(b.cap?1:0)-(a.cap?1:0));
+  if(up.length&&Math.random()<.5){upgrade(k,up[0]);return}
+  // Strike: from its strongest lighthouse, helped by the next one when they can reach the same target together.
+  const mine=[...n.on].filter(p=>p.boats>=10).sort((a,b)=>b.boats-a.boats);
+  const late=Math.min(1,game.t/300);
+  for(const from of mine){
+    const helper=mine.find(q=>q!==from);
+    let best=null,bs=-1e9,both=false;
+    for(const p of game.isl){if(p.owner===k)continue;const d=Math.hypot(p.x-from.x,p.y-from.y);if(d>55)continue;
+      const def=p.owner===-1?(p.pirate>0?p.boats:999):p.boats;const alone=from.boats*.7,help=helper&&Math.hypot(p.x-helper.x,p.y-helper.y)<55?helper.boats*.7:0;
+      if(def>=(alone+help)*.85)continue;
+      let s=-d*.4-def;if(p.owner>=0){s+=12;const deg=NET[p.owner].edges.filter(e=>e[0]===p||e[1]===p).length;s+=deg*6;if(p.cap)s+=25;if(p.owner===0)s+=4+10*late}else s+=8;
+      if(s>bs){bs=s;best=p;both=def>=alone*.85}}
+    if(best){send(k,from,best,.7);if(both&&helper)send(k,helper,best,.7);return}
+  }
+}
+function score(p){let s=0;for(const q of game.isl)if(q.owner===-1&&Math.hypot(q.x-p.x,q.y-p.y)<20)s++;return s-Math.hypot(p.x-WW/2,p.y-WH/2)*.02}
+
+// ── The step ──
+function step(dt){
+  const G=game;G.t+=dt;
+  NET=[0,1,2].map(network);
+  G.mistT-=dt;if(G.mistT<=0){G.mist=!G.mist;G.mistT=G.mist?V.mistLast:V.mistEvery;G.stoked=[false,false,false];
+    if(G.mist)say("The Mist rolls in: beams reach less. Stoke your lights to hold your network.");else say("The Mist lifts.")}
+  for(let k=0;k<3;k++){
+    const n=NET[k];let oil=0;
+    for(const p of G.isl){if(p.level>0&&p.owner===k){
+      if(n.on.has(p)){p.boats=Math.min(V.cap[p.level],p.boats+V.grow[p.level]*dt*(k?0.92:1));oil+=V.oilHouse}
+      else p.boats=Math.max(0,p.boats-V.decay*dt*(G.mist?2:1))}}
+    for(const p of G.isl)if(p.level===0&&litBy(p)===k)oil+=V.oilLit;
+    G.oil[k]+=oil*dt;
+    if(k){G.aiT[k]-=dt;if(G.aiT[k]<=0){G.aiT[k]=1.1+Math.random()*.6;ai(k)}}
+  }
+  for(let i=G.fleets.length-1;i>=0;i--){const f=G.fleets[i],dx=f.to.x-f.x,dy=f.to.y-f.y,d=Math.hypot(dx,dy),m=V.speed*dt;
+    if(d<=m){G.fleets.splice(i,1);arrive(f)}else{f.x+=dx/d*m;f.y+=dy/d*m}}
+  // The end: your capital lost, both capitals taken, 65% of the lighthouses, or time.
+  const all=G.isl.filter(p=>p.level>0).length,mine=houses(0).length;
+  const capsLeft=[0,1,2].map(k=>G.isl.some(p=>p.cap&&p.owner===k));
+  if(!capsLeft[0])return finish(false,"Your capital fell. Your lights went dark.");
+  if(!capsLeft[1]&&!capsLeft[2])return finish(true,"Both rival capitals are yours.");
+  if(mine/G.isl.length>=V.win)return finish(true,`Your light covers ${Math.round(mine/G.isl.length*100)}% of the islands.`);
+  if(G.t>=V.length){const best=[0,1,2].map(k=>houses(k).length);return finish(best[0]>=Math.max(best[1],best[2]),`Dawn. You hold ${best[0]} lighthouses, the others ${best[1]} and ${best[2]}.`)}
+}
+function finish(won,why){
+  game.over=true;const t=Math.floor(game.t),key="htl-light-best";const best=+(localStorage.getItem(key)||0);const sc=won?Math.max(1,1000-t):0;if(sc>best)localStorage.setItem(key,sc);
+  ov.hidden=false;ov.innerHTML=`<div class="box center"><h2>${won?"The light is yours":"The Mist wins"}</h2><p>${why}</p><p>Time: <b>${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}</b> · lighthouses built: <b>${game.built[0]-1}</b></p>
+  <button id="again">Play again</button></div>`;document.getElementById("again").onclick=newGame;
+}
+
+// ── Taps: your lighthouse, then a target; or a lit island to build on ──
+function at(x,y){let best=null,bd=1e9;for(const p of game.isl){const d=Math.hypot(p.x-x,p.y-y);if(d<Math.max(p.r+3,5.5)&&d<bd){bd=d;best=p}}return best}
+cv.addEventListener("pointerdown",e=>{
+  if(!game||game.over)return;const x=(e.clientX-OX)/S,y=(e.clientY-OY)/S,p=at(x,y);
+  if(!p){game.sel=null;ui();return}
+  const s=game.sel;
+  if(s&&s.owner===0&&s!==p){send(0,s,p,s.boats>=2?.6:1);game.sel=null;ui();return}
+  game.sel=p;ui();
+});
+function ui(){
+  bar.innerHTML="";const p=game&&game.sel;if(!p||game.over)return;
+  const b=(t,f,dis)=>{const x=document.createElement("button");x.innerHTML=t;x.disabled=!!dis;x.onclick=()=>{f();ui()};bar.append(x)};
+  if(p.owner===0&&p.level>0){
+    if(p.level<3)b(`Upgrade to level ${p.level+1} · ${V.up[p.level]} oil`,()=>upgrade(0,p),game.oil[0]<V.up[p.level]);
+    const c=document.createElement("button");c.className="alt";c.textContent="Now tap a target to send 60% of the boats";c.disabled=true;bar.append(c);
+  }else if(p.owner===-1&&p.pirate===0){
+    if(litBy(p)===0)b(`Build a lighthouse · ${buildCost(0)} oil`,()=>{if(canBuild(0,p)){build(0,p);game.sel=null}},game.oil[0]<buildCost(0));
+    else{const c=document.createElement("button");c.className="alt";c.disabled=true;c.textContent="Out of your light: light it first";bar.append(c)}
+  }
+  if(game.mist&&!game.stoked[0])b(`Stoke your lights · ${V.stoke} oil`,()=>{if(game.oil[0]>=V.stoke){game.oil[0]-=V.stoke;game.stoked[0]=true;game.steps.add("stoke")}},game.oil[0]<V.stoke);
+}
+
+// ── The guide: one goal at a time ──
+function hint(){
+  const s=game.steps,G=game;
+  if(G.mist&&!G.stoked[0])return "The Mist is here: your beams reach less and cut-off lights fade. Tap your lighthouse and STOKE.";
+  if(!s.has("built"))return "Your light is gold. Tap a glowing island inside it, then BUILD a lighthouse.";
+  if(!s.has("sent"))return "Lighthouses make boats. Tap one of yours, then tap another island to send boats.";
+  if(!s.has("pirate"))return "Islands with a skull hold pirates: send more boats than their number to take them.";
+  if(!s.has("took"))return "A lighthouse not linked to its capital goes dark. Take a rival's RELAY to cut off everything behind it.";
+  if(!s.has("up"))return "Upgrade a lighthouse: more light, a longer beam, more boats.";
+  return "";
+}
+
+// ── Drawing ──
+function draw(dt){
+  const G=game;g.fillStyle="#061224";g.fillRect(0,0,W,H);
+  const sea=g.createLinearGradient(0,OY,0,OY+WH*S);sea.addColorStop(0,"#0b2340");sea.addColorStop(1,"#071a30");g.fillStyle=sea;g.fillRect(OX,OY,WW*S,WH*S);
+  // The light: each player's territory.
+  g.save();g.globalCompositeOperation="lighter";
+  for(let k=0;k<3;k++)for(const h of NET[k].on){const r=lightOf(k,h)*S;const gr=g.createRadialGradient(X(h.x),Y(h.y),0,X(h.x),Y(h.y),r);gr.addColorStop(0,`rgba(${GLOW[k]},.42)`);gr.addColorStop(.7,`rgba(${GLOW[k]},.16)`);gr.addColorStop(1,`rgba(${GLOW[k]},0)`);g.fillStyle=gr;g.beginPath();g.arc(X(h.x),Y(h.y),r,0,TAU);g.fill()}
+  g.restore();
+  // The Mist: a veil over everything.
+  if(G.mist){g.fillStyle="rgba(150,140,190,.18)";g.fillRect(OX,OY,WW*S,WH*S)}
+  // The beams: the supply lines.
+  for(let k=0;k<3;k++){for(const [a,b] of NET[k].edges){const on=NET[k].on.has(a)&&NET[k].on.has(b);g.strokeStyle=on?`rgba(${GLOW[k]},.85)`:`rgba(${GLOW[k]},.2)`;g.lineWidth=on?3:1.5;g.setLineDash(on?[]:[4,6]);g.beginPath();g.moveTo(X(a.x),Y(a.y));g.lineTo(X(b.x),Y(b.y));g.stroke()}}
+  g.setLineDash([]);
+  // The islands.
+  for(const p of G.isl){
+    const lit=litBy(p);g.fillStyle=p.level>0?"#6d8f55":"#4f6b45";g.beginPath();g.arc(X(p.x),Y(p.y),p.r*S,0,TAU);g.fill();
+    g.strokeStyle="#e8d6a0";g.lineWidth=1.5;g.stroke();
+    if(p.level>0){const k=p.owner,on=NET[k].on.has(p);g.fillStyle=on?COL[k]:"#555";g.beginPath();g.arc(X(p.x),Y(p.y),(1.4+p.level*.5)*S,0,TAU);g.fill();
+      if(p.cap){g.strokeStyle="#fff";g.lineWidth=2;g.beginPath();g.arc(X(p.x),Y(p.y),(2.4+p.level*.5)*S,0,TAU);g.stroke()}
+      g.fillStyle="#fff";g.font=`800 ${Math.max(11,S*2.6)}px system-ui`;g.textAlign="center";g.fillText(Math.floor(p.boats),X(p.x),Y(p.y)-p.r*S-4);
+      if(!on){g.fillStyle="#ff9d9d";g.font=`700 ${Math.max(9,S*1.8)}px system-ui`;g.fillText("cut off",X(p.x),Y(p.y)+p.r*S+11)}}
+    else if(p.pirate>0){g.fillStyle="#fff";g.font=`800 ${Math.max(11,S*2.4)}px system-ui`;g.textAlign="center";g.fillText("☠ "+Math.ceil(p.boats),X(p.x),Y(p.y)+4)}
+    else if(lit===0){g.strokeStyle=`rgba(255,200,58,${.5+.5*Math.sin(G.t*4)})`;g.lineWidth=2;g.beginPath();g.arc(X(p.x),Y(p.y),(p.r+1.2)*S,0,TAU);g.stroke()}
+    if(G.sel===p){g.strokeStyle="#fff";g.lineWidth=3;g.beginPath();g.arc(X(p.x),Y(p.y),(p.r+2)*S,0,TAU);g.stroke();
+      if(p.owner===0&&p.level>0){g.strokeStyle="rgba(255,255,255,.18)";g.lineWidth=1;g.beginPath();g.arc(X(p.x),Y(p.y),linkRange(p,0)*S,0,TAU);g.stroke()}}
+  }
+  // The boats under way.
+  for(const f of G.fleets){g.fillStyle=COL[f.k];g.beginPath();g.arc(X(f.x),Y(f.y),Math.max(3,S*1.1),0,TAU);g.fill();g.fillStyle="#fff";g.font="700 11px system-ui";g.textAlign="center";g.fillText(f.n,X(f.x),Y(f.y)-7)}
+  for(let i=pops.length-1;i>=0;i--){const q=pops[i];q.t+=dt;if(q.t>1.4){pops.splice(i,1);continue}g.globalAlpha=1-q.t/1.4;g.fillStyle=q.c;g.font="800 15px system-ui";g.textAlign="center";g.fillText(q.s,X(q.x),Y(q.y)-20-q.t*18);g.globalAlpha=1}
+  // The top bar.
+  const mine=houses(0).length,share=Math.round(mine/G.isl.length*100),left=Math.max(0,V.length-Math.floor(G.t));
+  const msg=G.msg.length?G.msg[G.msg.length-1]:null;if(msg){msg.t+=dt;if(msg.t>5)G.msg.shift()}
+  top_.innerHTML=`<span class="pill gold">Oil ${Math.floor(G.oil[0])}</span><span class="pill">Lighthouses ${mine} · ${share}% (win at ${Math.round(V.win*100)}%)</span><span class="pill">${Math.floor(left/60)}:${String(left%60).padStart(2,"0")}</span><span class="pill mist">${G.mist?`Mist! ${Math.ceil(G.mistT)} s`:`Mist in ${Math.ceil(G.mistT)} s`}</span>`;
+  hintEl.textContent=msg?msg.s:hint();
+  hintEl.style.top=(top_.offsetTop+top_.offsetHeight+8)+"px";
+}
+
+let last=performance.now();
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(game){if(!game.over&&!document.hidden)step(dt);if(NET.length)draw(dt)}requestAnimationFrame(frame)}
+function intro(){
+  ov.hidden=false;ov.innerHTML=`<div class="box"><h1>Territory of Light</h1>
+  <p>In the Mist, only what your Lighthouses light belongs to you. Two rival nations want the same sea.</p>
+  <ul>
+   <li><b>Your light is your land.</b> Build a lighthouse on any island inside it: your light grows.</li>
+   <li><b>Beams are your supply lines.</b> A lighthouse linked to your capital makes boats and oil. Cut off, it goes dark and loses its boats.</li>
+   <li><b>Send boats</b> from a lighthouse to take pirates' islands and your rivals' lighthouses. Take a <b>relay</b>: everything behind it goes dark.</li>
+   <li><b>The Mist</b> comes every minute: beams reach less. Stoke your lights, or your network breaks.</li>
+  </ul>
+  <p>Win by holding <b>${Math.round(V.win*100)}%</b> of the islands, or both rival capitals. About 10 minutes.</p>
+  <div class="center"><button id="go">Light the first lamp</button></div></div>`;
+  document.getElementById("go").onclick=()=>newGame();
+}
+fit();intro();requestAnimationFrame(frame);
+</script>
+</body>
+</html>
