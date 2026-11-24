@@ -73,7 +73,8 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
 
 ## Step 4 · The city between the Nights (before step 3: owner, 24 November)
 
-- [ ] **4.1** The portal city's state in the rules: buildings and their levels, the stock, the Nights won; a strict parse with a version.
+- [x] **4.1** The portal city's state in the rules: buildings and their levels, the stock, the Nights won; a strict parse with a version.
+  - Done 24 November: `city.ts` (`newCity`, `nextNight`, `parseCity`, shape 1): three buildings for now, the Lighthouse and the Refinery from level 1 and the Infirmary from 0 (to be built), 10 levels at most; the store holds wood, fish and Pearls; the highest Night won and the Nights played (never fewer). 5 tests.
 - [ ] **4.2** The loot at dawn added to the stock; an upgrade at once, its cost from `values.ts`, refused with its reason when the stock is short. Tests.
 - [ ] **4.3** The effects that exist without step 3, read by the Night's rules when a Night starts: the Lighthouse (the beam's damage), the Refinery (the oil a Night starts with), the Infirmary (one second chance a Night). One test each. The Barracks, the Harbor and the Observatory get theirs in step 3 (task 3.9), with the posts and the cards; the Fishery, the Lumberyard and the Shelters in step 5 (what the city makes while you are away).
 - [ ] **4.4** The save on the device: written after each Night and each upgrade; old versions migrated; a bad save set aside and a new city started. Tests, and an e2e with a save edited by hand.
