@@ -158,7 +158,16 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
   - Done 24 November: the city's six buildings (shape 2; a city saved before gets the three new ones at 0). The Barracks: the posts' troops 20 % harder a level (built for 100 wood, 80 fish). The Harbor: one more raft at levels 1, 3, 5… (120, 60). The Observatory: the cards open by tiers, the first 8 for every city, 6 more a level, all 26 at level 3 (90, 90). The Day shows each with what it does for the Night, and the guide a line for each; the island shows their levels. The Night's shape is 7. 8 tests.
   - Step 3 measured (`npm run night`, 20 seeds, the bots taking the first card and placing no troop): the hand-speed bot's campaign wins Nights 1 to 4 at once and Night 5 in 2 tries (22 minutes; Lighthouse 6, Refinery 4, Infirmary 2 at the end, the rest spread on the new buildings). The curve the testers meet at gate B is a person's, not the bots'.
 - [ ] **Gate B · Does a session hold?** (After step 3 now.) Ten new players, read from `?measure`. Passed if the median first session is over 10 minutes, eight of ten play a minute or more, and six of ten reach the third Night.
-  - Packet: (the loop writes it here)
+  - Packet (24 November, for step 3's build):
+    - **Where:** https://ccr-9319aa6a-txz4sk.brinelight.pages.dev/portal/ (it follows every push, a minute or two after). Each player on a device that never opened it, or in a private window.
+    - **Who:** ten people who never saw the game. Five of them on a phone, five on a computer, if you can.
+    - **What to tell them:** nothing. Let them play as long as they like; note their questions, do not answer them while they play.
+    - **What they meet:** Night 1 at once (Raiders only, one line on the beam); the city between the Nights with six buildings; from Night 2 the rafts' troops (tap ＋), Beasts and three cards between waves; from Night 4 Wraiths and, in wave 10, the Mist Galleon; the Flare (button, Space or F). Plain shapes, no sound in the Night.
+    - **What the game counts:** after each player, open `…/portal/?measure` on the same device and copy the session's line (its length, when the beam first moved, each Night's end).
+    - **Passed if:** the median first session is over 10 minutes, eight of ten play a minute or more, and six of ten reach the third Night.
+    - **Worth noting too:** whether they find the rafts' ＋ alone, whether they read the cards, whether a Night felt unfair, when and why they stopped.
+    - **On the S22:** `…/portal/?fps` during wave 10 of Night 4 (the Galleon and its Raiders), the FPS line.
+    - **Write here:** passed or not, the ten `?measure` lines and a line of notes each, and what to rework if not passed.
   - Result (owner): 
 
 ## Step 5 · Content and return
