@@ -42,7 +42,23 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
 - [x] **1.5** Waves from the seed: each wave's enemies and when they come, the pause between waves, the Night won after its last wave, lost when the oil reaches 0, and its loot either way. Tests: the same seed and inputs give the same state hash after 10,000 steps; feeding 1/15 s of time gives the same state as two feeds of 1/30 s; a Night with no input is lost at a known step; Night 1 cannot be lost before wave 3.
   - Done 24 November: `stepNight` sends each wave's Raiders from the edge, one every 1.5 s at a bearing drawn from the seed; a wave ends when all are sent and none is left, then 6 s of pause; the Night is won after its last wave and lost at 0 oil; Night 1's first 2 waves leave a drop of oil. `clock.ts`: `feedTime` turns a frame's time into whole steps (8 at most). `loot.ts`: 40 wood and 30 fish a wave cleared, 2 wood a Raider burned, 10 Pearls if won, 60 wood at least. The state counts what the beam burned (`burned`). 16 tests.
   - Measured (seed 5): a player who aims at the nearest enemy at once wins Nights 1 to 5 in 1.3, 3.2, 4.3, 5.5 and 7.8 minutes **without losing any oil**; a beam left at 0° loses Night 1 at wave 4 (76 s) and Nights 2 to 5 at waves 3 to 2 (about a minute). To tune with the simulator (1.6) and at gate A: Night 1 is shorter than the design's 3 minutes, and a perfect aim meets no threat until the families and the posts (step 3).
-- [ ] **1.6** `tools/night/`: a simulator with two bots, one that never moves the beam and one that always aims at the nearest enemy. `npm run night` prints each bot's wave reached and loot on Nights 1 to 5. Its numbers go in this file.
+- [x] **1.6** `tools/night/`: a simulator with two bots, one that never moves the beam and one that always aims at the nearest enemy. `npm run night` prints each bot's wave reached and loot on Nights 1 to 5. Its numbers go in this file.
+  - Done 24 November: `tools/night/` (`simulate.ts`, `run.ts`, a test); the Night exported from the shared rules as `night`, apart from the Brinelight on Solana's names. `npm run night`, 20 seeds:
+
+    | Night | Bot | Won | Wave reached (median) | Minutes (median) | Oil left | Wood | Fish |
+    | --- | --- | --- | --- | --- | --- | --- | --- |
+    | 1 | still beam | 0/20 | 4 | 1.3 | 0 | 126 | 90 |
+    | 1 | aims at the nearest | 20/20 | 5 | 1.3 | 100 | 280 | 150 |
+    | 2 | still beam | 0/20 | 3 | 1.1 | 0 | 84 | 60 |
+    | 2 | aims at the nearest | 20/20 | 8 | 3.2 | 100 | 528 | 240 |
+    | 3 | still beam | 0/20 | 3 | 1.1 | 0 | 86 | 60 |
+    | 3 | aims at the nearest | 20/20 | 9 | 4.3 | 100 | 648 | 270 |
+    | 4 | still beam | 0/20 | 2 | 0.9 | 0 | 60 | 30 |
+    | 4 | aims at the nearest | 20/20 | 10 | 5.5 | 100 | 780 | 300 |
+    | 5 | still beam | 0/20 | 2 | 0.9 | 0 | 60 | 30 |
+    | 5 | aims at the nearest | 20/20 | 12 | 7.8 | 100 | 1032 | 360 |
+
+    What it says: doing nothing always loses, within about a minute; a perfect aim never loses oil. The space between is the player's hand, which the bots do not have: measured at gate A, where the beam must feel worth holding.
 
 ## Step 2 · A Night you can play, in plain shapes
 

@@ -23,6 +23,7 @@
     "check": "npm run typecheck && npm test && npm run build && npm run build:portal",
     "e2e": "vitest run --config e2e/vitest.config.ts",
     "balance": "tsx tools/balance/run.ts",
+    "night": "tsx tools/night/run.ts",
     "load": "tsx tools/load/run.ts",
     "proof:check": "tsx tools/proof/run.ts"
   },

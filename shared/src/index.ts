@@ -23,3 +23,5 @@ export * from "./rules/daily.js";
 export * from "./rules/proofs.js";
 export * from "./rules/notary.js";
 export * from "./state/index.js";
+// The portal edition's Night, apart: its names never mix with the Brinelight on Solana's.
+export * as night from "./rules/night/index.js";
