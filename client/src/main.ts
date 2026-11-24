@@ -122,7 +122,8 @@ if (!PORTAL && new URLSearchParams(location.search).has("rules")) {
   const refresh = () => {
     city?.update(state);
     // An unread report opens by itself, wherever you are (sea/index.ts): its sheet comes with the sea, fetched now.
-    if (city && state.reports.some((r) => !r.read)) openSea();
+    // The portal never opens the sea map (its Nights are drawn around the island): none of its names reach the player.
+    if (!PORTAL && city && state.reports.some((r) => !r.read)) openSea();
     sea?.update(state);
     captains.update(state);
     daily.update(state);
@@ -133,7 +134,7 @@ if (!PORTAL && new URLSearchParams(location.search).has("rules")) {
   };
 
   const showView = (v: View) => {
-    if (v === "sea") openSea();
+    if (v === "sea" && !PORTAL) openSea();
     scene.setView(v);
     document.body.classList.toggle("at-sea", v === "sea");
     scene.reframe();

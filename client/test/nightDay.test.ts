@@ -130,3 +130,10 @@ describe("today, in the Day", async () => {
     expect(todayHtml(city({ daily: { ...c.daily, recruited: true } }))).toContain("Come back tomorrow");
   });
 });
+
+describe("the portal speaks English", () => {
+  it("no French name of the Brinelight on Solana's sea in what the Day shows", () => {
+    const c = city({ won: 12, played: 20, record: 4, captains: { lead: "tom", unlocked: [...N.CAPTAIN_IDS], shards: N.newCity().captains.shards } });
+    for (let k = 1; k <= N.ENDLESS; k++) expect(dayHtml(c, Math.min(k, 13))).not.toMatch(/Murène|Vorace|Barbe-Sel|Lierre|Orme|Perle|Ondine|Topaze|Gaspard|Krake\b/);
+  });
+});
