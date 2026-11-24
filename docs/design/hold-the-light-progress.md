@@ -6,10 +6,11 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
 
 ## Step 0 · The portal build
 
-- [ ] **0.1** Move the Lighthouse kit the scene still loads from `client/public/prototype/assets/phare.glb` to `client/public/models/`, and load it from there. The main game looks the same (its look references unchanged).
+- [x] **0.1** Move the Lighthouse kit the scene still loads from `client/public/prototype/assets/phare.glb` to `client/public/models/`, and load it from there. The main game looks the same (its look references unchanged).
   - Does: a copy of the kit at `client/public/models/phare.glb` (the prototype is never modified, `CLAUDE.md`), and the scene loads that copy (`kitUrl`, `client/src/scene/models.ts`).
   - Does not: remove or shrink the kit; leave the prototype's copy out of a build (task 0.3).
   - Tested by: `client/test/models.test.ts`: the kit's address is under `models/`, its file is byte for byte the prototype's, and no source of the client loads anything from `prototype/assets/`.
+  - Done 24 November: `npm run check` green (1,263 tests), `npm run e2e` 40 of 40 (with `E2E_CHROMIUM`). The kit (2.9 MB) still loads on your first visit at sea, now from `/models/`; the e2e that counts the sea's models counts it.
 - [ ] **0.2** The portal's entry: `client/portal.html` and `client/src/portal.ts`. It opens the city with no account, no server address and no import from `client/src/account/`. Its own save key, `brinelight-portal-v1`.
 - [ ] **0.3** `npm run build:portal`: Vite in a `portal` mode, base `./`, output `client/dist-portal/`, without the `prototype/` folder. Added to `npm run check`.
 - [ ] **0.4** On a branch preview only (the `CF_PAGES_BRANCH` condition the demos use), the main build also serves the portal build at `/portal/`, so testers can play it. Never in the production build: a test builds as Cloudflare does for `main` and checks it.
@@ -97,3 +98,5 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
 ## Found on the way
 
 (The loop writes here what it finds outside its task: a test that fails before any change, a bug in the main game, a page of CrazyGames that changed.)
+
+- 24 November: the e2e's Playwright (1.56.1) expects a Chromium build a cloud container may not have; `E2E_CHROMIUM` names another one (`e2e/harness.ts`). CI sets none.
