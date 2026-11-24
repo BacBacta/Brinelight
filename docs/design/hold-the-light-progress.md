@@ -194,7 +194,8 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
 
 ## Step 6 · The look and the sound
 
-- [ ] **6.1** The three families' models and the three bosses (made in `assets/blender/`, one instanced draw call a family).
+- [x] **6.1** The three families' models and the three bosses (made in `assets/blender/`, one instanced draw call a family).
+  - Done 24 November: `assets/blender/night_enemies.py` (the kit, the palette; bpy 5.2.2 in `.venv-blender`, as the city's models) and `serve_night.py` (the city's own converter, into `client/public/night/`): the Raider's skiff and red sail, the Beast's humped back, the Wraith's pale shroud, the Galleon's dark hull and navy sails, the Kraken's red dome and tentacles, the Leviathan's long back; 178 to 744 triangles, 17 to 49 KB each, 173 KB in all. The Night fetches them once it has begun and puts them in place of the plain shapes (still one InstancedMesh a family; a faded Wraith is its model, ghostly). 2 tests on the files. Seen in Night 4 at 907 × 510, no console error.
 - [ ] **6.2** The beam, the Mist, the hits and the deaths: effects within the frame budget.
 - [ ] **6.3** The Night's sounds and its music, each file's origin and license written in `docs/decisions.md`; muted when the page is hidden.
 - [ ] **6.4** The cards' pictures.

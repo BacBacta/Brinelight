@@ -11,6 +11,7 @@ import type { SceneHandle } from "../scene/index.js";
 import { SHORE } from "../scene/shore.js";
 import { cardsHtml, postButtonHtml, troopsHtml } from "./choices.js";
 import { createNightHud } from "./hud.js";
+import { loadNightModels } from "./models.js";
 import { NIGHT_REACH, pointerBearing, seaToWorld, turnBy } from "./view.js";
 import "./night.css";
 
@@ -71,6 +72,29 @@ export function startNight(
     galleon: shape(new THREE.BoxGeometry(1.4, 1.1, 3.2), new THREE.MeshLambertMaterial({ color: 0x241a2e, emissive: 0x3a0f18 })),
     faded: shape(new THREE.OctahedronGeometry(0.42).scale(1, 1.5, 1), new THREE.MeshBasicMaterial({ color: 0xc9b8ff, transparent: true, opacity: 0.22, depthWrite: false })),
   };
+
+  // The models made in Blender take the plain shapes' place once fetched; a faded Wraith is its model, ghostly.
+  let gone = false;
+  loadNightModels().then(
+    (models) => {
+      if (gone) return;
+      for (const k of ["raider", "beast", "wraith", "galleon", "kraken", "leviathan"] as const) {
+        meshes[k].geometry.dispose();
+        (meshes[k].material as THREE.Material).dispose();
+        meshes[k].geometry = models[k].geometry;
+        meshes[k].material = models[k].material;
+      }
+      meshes.faded.geometry.dispose();
+      (meshes.faded.material as THREE.Material).dispose();
+      meshes.faded.geometry = models.wraith.geometry;
+      const ghost = models.wraith.material.clone();
+      ghost.transparent = true;
+      ghost.opacity = 0.25;
+      ghost.depthWrite = false;
+      meshes.faded.material = ghost;
+    },
+    (err: unknown) => console.warn("The Night's models could not be fetched: plain shapes stay.", err),
+  );
 
   // The beam: a wedge of light on the water from the Lighthouse's foot to the edge of the sea, pointing north at 0°.
   const wedge = new THREE.RingGeometry(1, NIGHT_REACH, 24, 1, (90 - N.BEAM_WIDTH / 2) * RAD, N.BEAM_WIDTH * RAD).rotateX(-Math.PI / 2);
@@ -261,6 +285,7 @@ export function startNight(
     },
     hold: follow,
     dispose() {
+      gone = true;
       stopFrames();
       hud.dispose();
       document.removeEventListener("visibilitychange", onVisibility);
