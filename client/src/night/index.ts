@@ -10,6 +10,7 @@ import { coastAt } from "../scene/coast.js";
 import type { SceneHandle } from "../scene/index.js";
 import { SHORE } from "../scene/shore.js";
 import { cardsHtml, postButtonHtml, troopsHtml } from "./choices.js";
+import { beamWedge, burnedBetween, createBursts } from "./effects.js";
 import { createNightHud } from "./hud.js";
 import { loadNightModels } from "./models.js";
 import { NIGHT_REACH, pointerBearing, seaToWorld, turnBy } from "./view.js";
@@ -97,8 +98,12 @@ export function startNight(
   );
 
   // The beam: a wedge of light on the water from the Lighthouse's foot to the edge of the sea, pointing north at 0°.
-  const wedge = new THREE.RingGeometry(1, NIGHT_REACH, 24, 1, (90 - N.BEAM_WIDTH / 2) * RAD, N.BEAM_WIDTH * RAD).rotateX(-Math.PI / 2);
-  const beam = new THREE.Mesh(wedge, new THREE.MeshBasicMaterial({ color: 0xffe9a8, transparent: true, opacity: 0.28, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const beam = beamWedge(1, NIGHT_REACH, N.BEAM_WIDTH);
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const bursts = createBursts((o) => scene.add(o), reduced);
+  let lastEnemies: readonly N.Enemy[] = [];
+  const warm = new THREE.Color(1.5, 1.25, 0.9);
+  const plain = new THREE.Color(1, 1, 1);
   beam.position.y = y + 0.02;
   scene.add(beam);
 
@@ -132,12 +137,25 @@ export function startNight(
       place.position.set(p.x, y + 0.12, p.z);
       place.lookAt(0, y + 0.12, 0);
       place.updateMatrix();
+      // What the beam lights now is tinted warm.
+      meshes[kind].setColorAt(counts[kind], e.lit > 0 ? warm : plain);
       meshes[kind].setMatrixAt(counts[kind]++, place.matrix);
     }
     for (const k of ["raider", "beast", "wraith", "galleon", "kraken", "leviathan", "faded"] as const) {
       meshes[k].count = counts[k];
       meshes[k].instanceMatrix.needsUpdate = true;
+      if (meshes[k].instanceColor) meshes[k].instanceColor.needsUpdate = true;
     }
+    // A burst where an enemy burned since the last frame.
+    const now = performance.now() / 1000;
+    if (n.enemies !== lastEnemies) {
+      for (const b of burnedBetween(lastEnemies, n.enemies)) {
+        const w = seaToWorld(b.bearing, b.distance, coastAt);
+        bursts.burst(w.x, y + 0.15, w.z, now);
+      }
+      lastEnemies = n.enemies;
+    }
+    bursts.update(now);
     placePosts(n);
     showCards(n);
   };
@@ -286,6 +304,7 @@ export function startNight(
     hold: follow,
     dispose() {
       gone = true;
+      bursts.dispose();
       stopFrames();
       hud.dispose();
       document.removeEventListener("visibilitychange", onVisibility);
@@ -305,7 +324,7 @@ export function startNight(
         (m.material as THREE.Material).dispose();
       }
       beam.removeFromParent();
-      wedge.dispose();
+      beam.geometry.dispose();
       (beam.material as THREE.Material).dispose();
       scene.setReach([]);
     },

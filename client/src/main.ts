@@ -389,7 +389,8 @@ if (!PORTAL && new URLSearchParams(location.search).has("rules")) {
     showLighthouse();
     // The Mist comes and lifts on the city's clock: the 3D view fades into its look and out of it.
     const m = seaMood(state, preview);
-    if (m !== mood) scene.setMood((mood = m));
+    // The portal's Nights set their own look (night/index.ts): the Brinelight on Solana's Mist hours do not.
+    if (!PORTAL && m !== mood) scene.setMood((mood = m));
     // The interface follows the state 4 times a second, and at once when an upgrade, a fleet step or a combat happens.
     const sig = signature(state);
     const changed = sig !== shown;

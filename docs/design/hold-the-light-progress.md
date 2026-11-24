@@ -196,7 +196,8 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
 
 - [x] **6.1** The three families' models and the three bosses (made in `assets/blender/`, one instanced draw call a family).
   - Done 24 November: `assets/blender/night_enemies.py` (the kit, the palette; bpy 5.2.2 in `.venv-blender`, as the city's models) and `serve_night.py` (the city's own converter, into `client/public/night/`): the Raider's skiff and red sail, the Beast's humped back, the Wraith's pale shroud, the Galleon's dark hull and navy sails, the Kraken's red dome and tentacles, the Leviathan's long back; 178 to 744 triangles, 17 to 49 KB each, 173 KB in all. The Night fetches them once it has begun and puts them in place of the plain shapes (still one InstancedMesh a family; a faded Wraith is its model, ghostly). 2 tests on the files. Seen in Night 4 at 907 × 510, no console error.
-- [ ] **6.2** The beam, the Mist, the hits and the deaths: effects within the frame budget.
+- [x] **6.2** The beam, the Mist, the hits and the deaths: effects within the frame budget.
+  - Done 24 November: `client/src/night/effects.ts`. The beam's light strong at the Lighthouse and fading out to sea (vertex colors, additive, no fog); what it lights tinted warm (each instance's color); a burst of sparks where an enemy burns (a pool of 32 rings, reused; none with reduced motion). No new light, no new draw call but the bursts' one. Not done: the Mist's look during the Night. The scene lights the city's own Lighthouse beam in the Mist, a second beam that read as the player's; the Night keeps the calm look. 1 test (which enemies burned). Seen in Night 4, no console error.
 - [ ] **6.3** The Night's sounds and its music, each file's origin and license written in `docs/decisions.md`; muted when the page is hidden.
 - [ ] **6.4** The cards' pictures.
 - [ ] **6.5** Loading in two parts: what Night 1 needs first (under 5 MB), the rest during it. Measured.
