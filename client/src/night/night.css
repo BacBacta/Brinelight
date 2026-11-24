@@ -1,0 +1,480 @@
+/* The portal (Hold the Light): the Brinelight on Solana's panels make way, by Night and by Day. */
+body.portal .hud,
+body.portal .sub,
+body.portal .rail,
+body.portal .queue,
+body.portal .quest,
+body.portal .more-up,
+body.portal .labels,
+body.portal .nav {
+  display: none !important;
+}
+
+/* The Night's panel: the oil at the top left, the wave at the top centre. */
+.night-hud {
+  position: fixed;
+  inset: calc(10px + env(safe-area-inset-top, 0px)) 10px auto 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  z-index: 5;
+  pointer-events: none;
+}
+.night-hud .left {
+  display: grid;
+  gap: 6px;
+}
+.night-hud .oil {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.night-hud .oil .icon,
+.night-hud .earned .icon {
+  width: 26px;
+  height: 26px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+.night-hud .oil .bar {
+  position: relative;
+  width: min(38vw, 200px);
+  height: 26px;
+  border-radius: 99px;
+  background: rgba(6, 16, 36, 0.78);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+.night-hud .earned {
+  display: flex;
+  gap: 8px;
+}
+.night-hud .earned span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px 2px 3px;
+  border-radius: 99px;
+  background: rgba(6, 16, 36, 0.78);
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  font: 900 15px var(--f-b);
+}
+.night-hud .earned span.up {
+  animation: night-up 0.6s ease-out;
+}
+@keyframes night-up {
+  0% { transform: scale(1.25); border-color: var(--gold); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .night-hud .earned span.up { animation: none; }
+}
+/* What to do, in Night 1 until the first boat burns. */
+.night-hint {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 6;
+  margin: 0;
+  width: max-content;
+  max-width: min(90vw, 440px);
+  padding: 10px 16px;
+  border-radius: 14px;
+  background: rgba(6, 16, 36, 0.86);
+  border: 2px solid var(--gold);
+  font: 800 16px/1.3 var(--f-b);
+  text-align: center;
+  pointer-events: none;
+}
+.night-hud .oil .bar i {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--gold2), var(--gold));
+  transform-origin: left;
+}
+.night-hud .oil .bar b {
+  position: relative;
+  display: block;
+  font: 900 14px/22px var(--f-b);
+  text-align: center;
+  /* Readable on the full gauge and on the empty one. */
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85), 0 0 4px rgba(0, 0, 0, 0.6);
+}
+.night-hud .wave {
+  display: grid;
+  justify-items: end;
+  font: 900 16px var(--f-h, var(--f-b));
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+.night-hud .wave small {
+  font: 800 13px var(--f-b);
+  color: var(--soft);
+}
+/* The end of a Night: in the middle, over everything. */
+.night-end {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 8;
+  width: min(86vw, 340px);
+  padding: 18px 18px 20px;
+  text-align: center;
+  background: rgba(10, 26, 51, 0.94);
+  border: 2px solid var(--edge);
+  border-radius: 18px;
+}
+.night-end h2 {
+  margin: 0 0 6px;
+  font: 400 26px var(--f-h, var(--f-b));
+  color: var(--gold);
+}
+.night-end p {
+  margin: 6px 0;
+  font: 700 15px var(--f-b);
+}
+.night-end .bring {
+  color: var(--soft);
+}
+.night-end button {
+  margin-top: 12px;
+  min-width: 160px;
+  min-height: 48px;
+}
+
+/* The Day: your city between the Nights, at the bottom (a phone) or at the right (a wide screen). */
+.day {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  z-index: 6;
+  max-height: 62vh;
+  overflow-y: auto;
+  padding: 12px 14px 14px;
+  background: rgba(10, 26, 51, 0.94);
+  border: 2px solid var(--edge);
+  border-radius: 18px;
+}
+@media (min-width: 760px) {
+  .day {
+    left: auto;
+    top: 10px;
+    width: 360px;
+    max-height: none;
+  }
+}
+.day h2 {
+  margin: 4px 0 8px;
+  font: 400 22px var(--f-h, var(--f-b));
+  color: var(--gold);
+}
+.day-stock {
+  display: flex;
+  gap: 8px;
+}
+.day-stock span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px 2px 3px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  font: 900 15px var(--f-b);
+}
+.day-stock .icon,
+.day-row > .icon {
+  width: 26px;
+  height: 26px;
+}
+.day-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.day-row > .icon {
+  width: 34px;
+  height: 34px;
+  flex: none;
+}
+.day-row .txt {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  font: 700 13px/1.3 var(--f-b);
+}
+.day-row .txt b {
+  font: 900 15px var(--f-b);
+}
+.day-row .txt small {
+  font-weight: 700;
+  color: var(--soft);
+}
+.day-row .cost {
+  color: var(--soft);
+}
+.day-row .why {
+  color: #ffb39b;
+}
+.day-row button {
+  flex: none;
+  min-width: 92px;
+  min-height: 44px;
+}
+/* The next Night stays in sight, however long the list. */
+.day-night {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  min-height: 52px;
+  margin-top: 10px;
+  box-shadow: 0 -8px 12px rgba(10, 26, 51, 0.94);
+}
+
+/* The first Days' guide: one line, and the button it points at glows. */
+.day-guide {
+  margin: 0 0 6px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 2px solid var(--gold);
+  font: 800 14px/1.3 var(--f-b);
+}
+.day .guide {
+  animation: day-guide 1.4s ease-in-out infinite;
+}
+@keyframes day-guide {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 200, 58, 0.7); }
+  50% { box-shadow: 0 0 0 8px rgba(255, 200, 58, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .day .guide { animation: none; outline: 3px solid var(--gold); }
+}
+
+/* ?measure: the sessions on this device, over the game, for the tester to read out. */
+.measure {
+  position: fixed;
+  inset: 10px;
+  z-index: 20;
+  overflow: auto;
+  padding: 14px 16px;
+  background: rgba(10, 26, 51, 0.97);
+  border: 2px solid var(--edge);
+  border-radius: 18px;
+  font: 700 14px/1.4 var(--f-b);
+  user-select: text;
+}
+.measure h2 {
+  margin: 0 0 8px;
+  color: var(--gold);
+}
+.measure li {
+  margin-bottom: 8px;
+}
+
+/* The rafts' posts: a round button over each raft, ＋ when empty, its troop's icon when held. */
+.night-posts {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.night-post {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  background: rgba(6, 16, 36, 0.82);
+  color: var(--gold);
+  font: 900 22px/1 var(--f-b);
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.night-post .icon {
+  width: 30px;
+  height: 30px;
+}
+/* The troops to choose from, and the cards: in the middle, over the sea. */
+.night-troops,
+.night-cards {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9;
+  width: min(92vw, 520px);
+  padding: 14px;
+  background: rgba(10, 26, 51, 0.95);
+  border: 2px solid var(--edge);
+  border-radius: 18px;
+  display: grid;
+  gap: 8px;
+}
+.night-cards h2 {
+  margin: 0;
+  text-align: center;
+  font: 400 22px var(--f-h, var(--f-b));
+  color: var(--gold);
+}
+.night-cards .cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+.night-card,
+.night-troops .troop {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  min-height: 48px;
+  padding: 12px 10px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+  font: 700 14px/1.3 var(--f-b);
+  text-align: center;
+  cursor: pointer;
+}
+.night-card:hover,
+.night-card:focus-visible,
+.night-troops .troop:hover,
+.night-troops .troop:focus-visible {
+  border-color: var(--gold);
+}
+.night-card b,
+.night-troops .troop b {
+  font: 900 16px var(--f-b);
+  color: var(--gold);
+}
+.night-card kbd {
+  font: 800 11px var(--f-b);
+  color: var(--soft);
+}
+.night-troops .troop .icon {
+  width: 34px;
+  height: 34px;
+}
+.night-troops .troop small {
+  color: var(--soft);
+}
+/* `hidden` wins over the display above. */
+.night-troops[hidden],
+.night-cards[hidden] {
+  display: none;
+}
+/* The troops' chooser at the bottom, above the cards: it is the one you just opened. */
+.night-troops {
+  top: auto;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  grid-template-columns: repeat(3, 1fr);
+  z-index: 10;
+}
+
+/* The boss's health, at the top in the middle, while it is on the sea. */
+.night-hud .boss {
+  position: fixed;
+  left: 50%;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  font: 900 13px var(--f-b);
+  color: #ffb39b;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+.night-hud .boss[hidden] {
+  display: none;
+}
+.night-hud .boss .bar {
+  position: relative;
+  width: min(36vw, 220px);
+  height: 12px;
+  border-radius: 99px;
+  background: rgba(6, 16, 36, 0.8);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+.night-hud .boss .bar i {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #a32b1f, var(--red));
+  transform-origin: left;
+}
+
+/* The captain's flare: at the bottom right, waiting its seconds after a burst. */
+.night-flare {
+  position: fixed;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  z-index: 6;
+  min-width: 96px;
+  min-height: 48px;
+}
+.night-flare[hidden] {
+  display: none;
+}
+
+/* The sea chart: a dot a Night. */
+.day .chart {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  margin-top: 10px;
+}
+.day .chart .dot {
+  min-height: 40px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--soft);
+  font: 800 13px var(--f-b);
+  cursor: pointer;
+}
+.day .chart .won { color: var(--green); }
+.day .chart .next { border-color: var(--gold); color: var(--gold); }
+.day .chart .locked { opacity: 0.35; cursor: default; }
+.day .chart .chosen { background: rgba(255, 200, 58, 0.25); outline: 2px solid var(--gold); }
+.day .chart-name {
+  margin: 6px 0 0;
+  text-align: center;
+  font: 800 14px var(--f-b);
+  color: var(--gold);
+}
+
+/* The captains in the Day. */
+.day .day-sub {
+  margin: 12px 0 2px;
+  font: 900 15px var(--f-b);
+  color: var(--gold);
+}
+.day .captain.locked { opacity: 0.6; }
+.day .captain .shards,
+.day .captain .leading { flex: none; font: 800 12px var(--f-b); color: var(--soft); }
+.day .captain .leading { color: var(--gold); }
+.day .day-note { margin: 4px 0 0; font: 700 12px var(--f-b); color: var(--soft); }
+.day .chart .endless { color: var(--violet); border-color: var(--violet); font-size: 18px; }
+
+/* Today: the tasks, the chests and the free recruitment. */
+.day .day-sub small { color: var(--soft); font-weight: 800; }
+.day .tasks { margin: 4px 0; padding-left: 18px; font: 700 13px/1.5 var(--f-b); }
+.day .tasks .done { color: var(--green); }
+.day .tasks small { color: var(--soft); }
+.day .chests { display: flex; gap: 6px; }
+.day .chests button { flex: 1; min-height: 44px; }
+.day .recruit { display: grid; gap: 4px; margin-top: 8px; }
+.day .recruit button { min-height: 44px; }
+.day .recruit small { color: var(--soft); font: 700 12px var(--f-b); }
+.day .day-sound { width: 100%; min-height: 44px; margin-top: 10px; }
+.night-card .icon { width: 40px; height: 40px; }

@@ -1,5 +1,7 @@
 node_modules/
 dist/
+dist-portal/
+brinelight-hold-the-light.zip
 .env
 .env.*
 !.env.example
@@ -7,6 +9,7 @@ dist/
 .DS_Store
 coverage/
 e2e/.dist/
+e2e/.dist-portal/
 e2e/.shots/
 deploy/.local-*
 deploy/.env

@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { tierOf } from "./buildings.js";
-import { ISLAND_ANISOTROPY, filterTexture, loadModels, type Models } from "./models.js";
+import { ISLAND_ANISOTROPY, filterTexture, kitUrl, loadModels, type Models } from "./models.js";
 import { createCamera, createControls, frameCity } from "./camera.js";
 import { CITY_MANIFEST, SEA_RISE, cityModelUrl, gridIsland } from "./cityLook.js";
 import { CITY_ANGLE, CITY_FILL, buildingPoints, cityFraming, clearView, type Volume } from "./framing.js";
@@ -74,7 +74,7 @@ export type SceneHandle = {
   /** Screen position (CSS pixels) of a point of the shown view. */
   project(x: number, y: number, z: number): ScreenPoint;
   /** Called on every drawn frame, before rendering, with the scene clock in seconds and the shown view. */
-  onFrame(cb: (now: number, view: View) => void): void;
+  onFrame(cb: (now: number, view: View) => void): () => void;
   /** How much nearer the city's camera is than in the normal view: 1 there, more when zoomed in or in the close view. */
   closeness(): number;
   /** The city's camera, to tell what is on screen. */
@@ -99,6 +99,10 @@ export type SceneHandle = {
   reframe(): void;
   /** The rafts moored around the island (and the shipyard at work): the foam goes around them, and the normal view keeps them on screen. */
   setMoored(discs: readonly Disc[]): void;
+  /** Points of the water the normal view keeps on screen besides the city: the portal's Night, the edge of its sea. */
+  setReach(points: readonly { x: number; z: number }[]): void;
+  /** Fingers no longer turn or zoom the city's camera (the portal's Night: they steer the beam). */
+  lockCamera(locked: boolean): void;
   /**
    * The land won on the sea (city/land, from the Lighthouse 5): its ground takes the island's place (the
    * island's own model hidden) and the shore's foam is measured from it; null gives the island back. `edge`: points of
@@ -137,8 +141,6 @@ export type SceneOptions = {
   /** The top of the sheet open at the bottom of the screen, if one is (CSS pixels): the close view stays above it. */
   sheetTop?: () => number | null;
 };
-
-const KIT_URL = `${import.meta.env.BASE_URL}prototype/assets/phare.glb`;
 
 /** The two views of the prototype: the city (island, Lighthouse) and the sea map. */
 export function startScene(canvas: HTMLCanvasElement, options: SceneOptions): SceneHandle {
@@ -244,13 +246,15 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions): Sc
   };
   // The buildings' room: each one's top and foot stays in the normal view's band.
   let volumes: readonly Volume[] = [];
+  let reach: readonly { x: number; z: number }[] = [];
+  let cameraLocked = false;
   let framedBand = { top: 0, bottom: 0 };
   let stale = false;
   const cityFramingNow = () => {
     const band = (options.cityBand ?? options.band)?.() ?? { top: 0, bottom: innerHeight };
     framedBand = band;
     // The Lighthouse made in Blender is taller: its top stays on screen too.
-    const tops = [...(lighthouseStaged ? [{ x: 0, y: lighthouseTop, z: 0 }] : []), ...volumes.flatMap(buildingPoints), ...landEdge.map((p) => ({ x: p.x, y: 0, z: p.z }))];
+    const tops = [...(lighthouseStaged ? [{ x: 0, y: lighthouseTop, z: 0 }] : []), ...volumes.flatMap(buildingPoints), ...landEdge.map((p) => ({ x: p.x, y: 0, z: p.z })), ...reach.map((p) => ({ x: p.x, y: 0, z: p.z }))];
     // The city spans three quarters of the screen's width (owner, after the style pass).
     return cityFraming({ width: innerWidth, height: innerHeight, ...band }, moored, tops, { share: CITY_FILL, coast: terrainCoast });
   };
@@ -458,12 +462,12 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions): Sc
       glideTo(normal.target.clone().addScaledVector(CITY_ANGLE, normal.distance), normal.target.clone());
     },
     loadSea() {
-      seaModels ??= Promise.all([loader.loadAsync(KIT_URL), loadModels(loader), cityDone]).then(([gltf, models]) => ({ kit: kitOf(gltf), models }));
+      seaModels ??= Promise.all([loader.loadAsync(kitUrl), loadModels(loader), cityDone]).then(([gltf, models]) => ({ kit: kitOf(gltf), models }));
       return seaModels;
     },
     setView(v) {
       view = v;
-      controls.enabled = v === "city";
+      controls.enabled = v === "city" && !cameraLocked;
       sea.controls.enabled = v === "sea";
     },
     get view() {
@@ -520,6 +524,14 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions): Sc
       measureShore();
       if (changed) layout();
     },
+    lockCamera(locked) {
+      cameraLocked = locked;
+      controls.enabled = view === "city" && !locked;
+    },
+    setReach(points) {
+      reach = points;
+      layout();
+    },
     stats() {
       if (posted && post) return { step, forced: forced !== null, mood, ...post.scene, post: post.passes, firstImage };
       return { step, forced: forced !== null, mood, calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, firstImage };
@@ -562,6 +574,11 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions): Sc
     },
     onFrame(cb) {
       frameCallbacks.push(cb);
+      // Stops this callback (the portal's Night, when it ends).
+      return () => {
+        const i = frameCallbacks.indexOf(cb);
+        if (i >= 0) frameCallbacks.splice(i, 1);
+      };
     },
     dispose() {
       frameCallbacks.length = 0;

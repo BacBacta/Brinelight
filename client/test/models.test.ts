@@ -1,8 +1,8 @@
-import { readFileSync, statSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import * as THREE from "three";
 import { describe, expect, it } from "vitest";
-import { MODEL_IDS, filterTexture, modelUrl } from "../src/scene/models.js";
+import { MODEL_IDS, filterTexture, kitUrl, modelUrl } from "../src/scene/models.js";
 
 const PUBLIC = fileURLToPath(new URL("../public", import.meta.url));
 /** The sea's models. */
@@ -57,5 +57,20 @@ describe("a texture seen at a slant", () => {
     expect(map.generateMipmaps).toBe(true);
     expect(map.minFilter).toBe(THREE.LinearMipmapLinearFilter);
     expect(map.anisotropy).toBe(8);
+  });
+});
+
+describe("the prototype's kit (phare.glb), served from models/", () => {
+  it("the scene loads it from models/, the very file of the prototype", () => {
+    expect(kitUrl).toBe(`${import.meta.env.BASE_URL}models/phare.glb`);
+    const copy = readFileSync(`${PUBLIC}${kitUrl}`);
+    const prototype = readFileSync(`${PUBLIC}/prototype/assets/phare.glb`);
+    expect(copy.equals(prototype)).toBe(true);
+  });
+
+  it("no source of the client loads anything from the prototype's assets", () => {
+    const SRC = fileURLToPath(new URL("../src", import.meta.url));
+    const sources = readdirSync(SRC, { recursive: true, encoding: "utf8" }).filter((f) => f.endsWith(".ts"));
+    for (const f of sources) expect(readFileSync(`${SRC}/${f}`, "utf8"), f).not.toMatch(/prototype\/assets/);
   });
 });
