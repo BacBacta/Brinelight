@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Hold the Light · three prototypes</title>
+<link rel="icon" href="data:,">
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#0A1A33;color:#fff;font-family:system-ui,sans-serif;user-select:none;-webkit-user-select:none;touch-action:none}
+  canvas{display:block;width:100vw;height:100vh}
+  .ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(6,16,36,.82);z-index:5}
+  .ov[hidden]{display:none}
+  .box{width:min(92vw,560px);max-height:92vh;overflow:auto;padding:18px;border-radius:18px;background:#0C1F3A;border:2px solid #2E5C8F;text-align:center}
+  h1{margin:0 0 6px;color:#FFC83A;font-size:24px} h2{margin:0 0 10px;color:#FFC83A;font-size:20px}
+  p{margin:6px 0;color:#C6D8F2;font-size:15px;line-height:1.35}
+  button{font:800 16px system-ui;color:#2b1a00;background:linear-gradient(180deg,#FFD866,#FFC83A);border:0;border-bottom:4px solid #B9770A;border-radius:14px;padding:12px 14px;margin:6px;min-height:48px;cursor:pointer}
+  button.alt{background:#163A63;color:#fff;border-bottom-color:#0C1F3A}
+  .pick{display:grid;gap:8px} .pick button{text-align:left;margin:0} .pick b{display:block;font-size:17px} .pick span{font-weight:600;font-size:13px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+  .cards button{margin:0;min-height:86px} .cards small{display:block;font-weight:600;font-size:13px;margin-top:4px}
+  #bar{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:6px;padding:8px;z-index:4;flex-wrap:wrap}
+  #bar button{margin:0;padding:8px 12px;font-size:14px;min-height:44px}
+  #menu{position:fixed;right:8px;top:8px;z-index:6;padding:6px 10px;min-height:36px;font-size:13px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="bar"></div>
+<button id="menu" class="alt" hidden>Menu</button>
+<div id="ov" class="ov"></div>
+<script>
+"use strict";
+// Hold the Light: three throwaway prototypes of the core mechanic, for the owner to play and choose from.
+// Plain canvas, no build, nothing saved but a best score. Not the game: nothing here is a rule or a value of it.
+const cv=document.getElementById("c"),g=cv.getContext("2d"),ov=document.getElementById("ov"),bar=document.getElementById("bar"),menuB=document.getElementById("menu");
+let W=0,H=0,S=1,CX=0,CY=0,EDGE=110;
+function fit(){const d=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;g.setTransform(d,0,0,d,0,0);S=Math.min(W,H)/100;CX=W/2;CY=H/2;EDGE=Math.hypot(W,H)/2/S+6}
+addEventListener("resize",fit);fit();
+const R_ISLE=13,TAU=Math.PI*2,rnd=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.floor(Math.random()*a.length)];
+const P={x:0,y:-40,down:false,ang:-Math.PI/2,justDown:false,justUp:false,downAt:0};
+function setP(e){const x=(e.clientX-CX)/S,y=(e.clientY-CY)/S;P.x=x;P.y=y;if(Math.hypot(x,y)>2)P.ang=Math.atan2(y,x)}
+cv.addEventListener("pointermove",setP);
+cv.addEventListener("pointerdown",e=>{setP(e);P.down=true;P.justDown=true;P.downAt=performance.now()});
+addEventListener("pointerup",e=>{if(P.down){P.down=false;P.justUp=true}});
+const keys={};addEventListener("keydown",e=>{keys[e.code]=true;if(game&&game.key)game.key(e.code)});addEventListener("keyup",e=>keys[e.code]=false);
+let game=null,shake=0,flash=0;const fx=[],texts=[];
+function boom(x,y,col,n=8){for(let i=0;i<n;i++){const a=rnd(0,TAU),v=rnd(8,30);fx.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,t:0,l:rnd(.25,.6),col})}}
+function say(x,y,s,col="#fff",big=false){texts.push({x,y,s,col,t:0,big})}
+function hurt(n){game.oil=Math.max(0,game.oil-n);shake=.35;flash=.35;say(0,-R_ISLE-4,"-"+n+" oil","#ff6b5a",true)}
+function X(x){return CX+x*S}function Y(y){return CY+y*S}
+function drawWorld(){
+  const sx=shake>0?rnd(-1,1)*shake*10:0,sy=shake>0?rnd(-1,1)*shake*10:0;g.save();g.translate(sx,sy);
+  const gr=g.createRadialGradient(CX,CY,R_ISLE*S,CX,CY,EDGE*S);gr.addColorStop(0,"#1FB5C4");gr.addColorStop(.35,"#12708f");gr.addColorStop(1,"#0A2A4A");g.fillStyle=gr;g.fillRect(-20,-20,W+40,H+40);
+  g.fillStyle="#f1dba0";g.beginPath();g.arc(CX,CY,(R_ISLE+1.6)*S,0,TAU);g.fill();
+  g.fillStyle="#6fae4a";g.beginPath();g.arc(CX,CY,R_ISLE*S,0,TAU);g.fill();
+  g.fillStyle="#fff";g.beginPath();g.arc(CX,CY,3.2*S,0,TAU);g.fill();g.fillStyle="#d8402c";g.beginPath();g.arc(CX,CY,2*S,0,TAU);g.fill();g.fillStyle="#FFE9A8";g.beginPath();g.arc(CX,CY,1*S,0,TAU);g.fill();
+}
+function drawFx(dt){
+  for(let i=fx.length-1;i>=0;i--){const p=fx[i];p.t+=dt;if(p.t>p.l){fx.splice(i,1);continue}p.x+=p.vx*dt;p.y+=p.vy*dt;g.globalAlpha=1-p.t/p.l;g.fillStyle=p.col;g.fillRect(X(p.x)-2,Y(p.y)-2,4,4)}
+  g.globalAlpha=1;g.textAlign="center";
+  for(let i=texts.length-1;i>=0;i--){const t=texts[i];t.t+=dt;if(t.t>.9){texts.splice(i,1);continue}g.globalAlpha=1-t.t/.9;g.fillStyle=t.col;g.font=`800 ${t.big?22:14}px system-ui`;g.fillText(t.s,X(t.x),Y(t.y)-t.t*26)}
+  g.globalAlpha=1;g.restore();
+  if(flash>0){g.fillStyle=`rgba(255,60,40,${flash*.5})`;g.fillRect(0,0,W,H)}
+}
+function hud(lines,hint){
+  const w=Math.min(W*.42,220);g.fillStyle="rgba(6,16,36,.8)";g.fillRect(10,10,w,22);g.fillStyle=game.oil>30?"#FFC83A":"#ff6b5a";g.fillRect(10,10,w*game.oil/game.oilMax,22);
+  g.fillStyle="#fff";g.font="800 14px system-ui";g.textAlign="center";g.fillText("OIL "+Math.ceil(game.oil),10+w/2,26);
+  g.textAlign="left";g.font="800 15px system-ui";lines.forEach((l,i)=>{g.fillStyle="rgba(0,0,0,.5)";g.fillText(l,13,55+i*20);g.fillStyle="#fff";g.fillText(l,12,54+i*20)});
+  if(hint){g.textAlign="center";g.font="800 18px system-ui";const tw=g.measureText(hint).width+28;g.fillStyle="rgba(6,16,36,.86)";g.fillRect(CX-tw/2,H*.2-24,tw,36);g.strokeStyle="#FFC83A";g.lineWidth=2;g.strokeRect(CX-tw/2,H*.2-24,tw,36);g.fillStyle="#fff";g.fillText(hint,CX,H*.2)}
+}
+function hpBar(e){if(e.hp>=e.max)return;const w=Math.max(10,e.r*S*2);g.fillStyle="rgba(0,0,0,.6)";g.fillRect(X(e.x)-w/2,Y(e.y)-e.r*S-8,w,4);g.fillStyle="#7CFC8A";g.fillRect(X(e.x)-w/2,Y(e.y)-e.r*S-8,w*Math.max(0,e.hp/e.max),4)}
+function blob(e){g.fillStyle=e.col;g.beginPath();g.arc(X(e.x),Y(e.y),e.r*S,0,TAU);g.fill();if(e.ring){g.strokeStyle=e.ring;g.lineWidth=3;g.stroke()}hpBar(e)}
+function spawnAt(a,o){return Object.assign({x:Math.cos(a)*EDGE,y:Math.sin(a)*EDGE,a},o,{max:o.hp})}
+function arrows(list){for(const e of list){const d=Math.hypot(e.x,e.y);if(d*S<Math.min(W,H)/2-10)continue;const a=Math.atan2(e.y,e.x),r=Math.min(W,H)/2-16;g.save();g.translate(CX+Math.cos(a)*r*(W>H?Math.min(W/H,1.6):1),CY+Math.sin(a)*r*(H>W?Math.min(H/W,1.6):1));g.rotate(a);g.fillStyle="#ff6b5a";g.beginPath();g.moveTo(8,0);g.lineTo(-6,-7);g.lineTo(-6,7);g.fill();g.restore()}}
+function end(title,lines,key,score){
+  const best=Math.max(score,+(localStorage.getItem("htl-proto-"+key)||0));localStorage.setItem("htl-proto-"+key,best);const id=game.id;game.over=true;
+  ov.hidden=false;ov.innerHTML=`<div class="box"><h2>${title}</h2>${lines.map(l=>`<p>${l}</p>`).join("")}<p>Best: <b>${best}</b></p><button id="ag">Again</button><button class="alt" id="mn">Other prototypes</button></div>`;
+  document.getElementById("ag").onclick=()=>start(id);document.getElementById("mn").onclick=menu;
+}
+
+// ───── A · HORDE: a beam you sweep and focus, hordes, a level-up every few seconds ─────
+function A(){
+  const s={id:"A",oil:100,oilMax:100,t:0,kills:0,xp:0,lvl:1,need:6,E:[],orbs:[],spawn:0,heat:0,hot:0,width:.7,dmg:55,beams:1,chain:0,lanterns:0,strike:0,strikeT:0,cold:0,boss:false,picking:false};
+  const UP=[
+    ["Wider beam","+35% width",()=>s.width*=1.35],["Brighter beam","+40% damage",()=>s.dmg*=1.4],["Twin beam","One more beam",()=>s.beams++,()=>s.beams<4],
+    ["Chain spark","Kills zap a neighbour",()=>s.chain+=45],["Lantern","A light circles your island",()=>s.lanterns++,()=>s.lanterns<5],
+    ["Lightning","Strikes the nearest boat",()=>s.strike+=1],["Cold light","Lit boats 25% slower",()=>s.cold=Math.min(.6,s.cold+.25)],["Oil barrel","+30 oil, refilled",()=>{s.oilMax+=30;s.oil=s.oilMax}]];
+  function levelUp(){s.picking=true;const pool=UP.filter(u=>!u[3]||u[3]()),c=[];while(c.length<3){const u=pick(pool);if(!c.includes(u))c.push(u)}
+    ov.hidden=false;ov.innerHTML=`<div class="box"><h2>Level ${s.lvl+1}! Choose a power</h2><div class="cards">${c.map((u,i)=>`<button data-i="${i}">${i+1}. ${u[0]}<small>${u[1]}</small></button>`).join("")}</div></div>`;
+    const take=i=>{c[i][2]();s.lvl++;s.xp=0;s.need=Math.round(s.need*1.28+2);s.picking=false;ov.hidden=true};
+    ov.querySelectorAll("button").forEach(b=>b.onclick=()=>take(+b.dataset.i));s.key=k=>{const i=["Digit1","Digit2","Digit3"].indexOf(k);if(s.picking&&i>=0)take(i)}}
+  function kill(e,i){s.E.splice(i,1);s.kills++;boom(e.x,e.y,e.col,e.boss?40:7);s.orbs.push({x:e.x,y:e.y,v:e.xp});
+    if(s.chain){let n=null,b=18;for(const o of s.E){const d=Math.hypot(o.x-e.x,o.y-e.y);if(d<b){b=d;n=o}}if(n){n.hp-=s.chain;fx.push({x:n.x,y:n.y,vx:0,vy:0,t:0,l:.2,col:"#9fe8ff"});say(n.x,n.y,"zap","#9fe8ff")}}
+    if(e.boss){s.won=true}}
+  s.step=dt=>{
+    if(s.picking)return;s.t+=dt;
+    const focus=P.down&&s.hot<=0;if(focus){s.heat+=dt/2.2;if(s.heat>=1){s.hot=1.8;say(0,-20,"OVERHEAT","#ff6b5a",true)}}else s.heat=Math.max(0,s.heat-dt/1.5);if(s.hot>0)s.hot-=dt;
+    const w=s.width*(focus?.38:1),d=s.dmg*(focus?3.2:1)*(s.hot>0?.4:1);
+    s.spawn-=dt;const rate=1.6+s.t/7;if(s.spawn<=0&&!s.boss){s.spawn=1/rate;const a=rnd(0,TAU),k=Math.random();
+      if(s.t>75&&k<.12)s.E.push(spawnAt(a,{hp:260+s.t*2,v:5,r:3.2,col:"#3d6b46",dm:20,xp:6}));
+      else if(s.t>35&&k<.3)s.E.push(spawnAt(a,{hp:14+s.t*.2,v:17,r:1.1,col:"#ffd166",dm:3,xp:1}));
+      else s.E.push(spawnAt(a,{hp:32+s.t*.55,v:8.5,r:1.8,col:"#b0372b",dm:5,xp:1}))}
+    if(s.t>150&&!s.boss){s.boss=true;s.E.push(spawnAt(rnd(0,TAU),{hp:9000,v:2.6,r:7,col:"#2a1736",ring:"#ff6b5a",dm:100,xp:50,boss:true}));say(0,-30,"THE LEVIATHAN","#ff6b5a",true)}
+    s.strikeT-=dt;if(s.strike&&s.strikeT<=0&&s.E.length){s.strikeT=2.4/s.strike;const n=s.E.reduce((a,e)=>Math.hypot(e.x,e.y)<Math.hypot(a.x,a.y)?e:a);n.hp-=160;boom(n.x,n.y,"#fff",10);say(n.x,n.y,"160","#fff")}
+    for(let i=s.E.length-1;i>=0;i--){const e=s.E[i],ea=Math.atan2(e.y,e.x);let lit=false;
+      for(let b=0;b<s.beams;b++){let da=Math.abs(((ea-(P.ang+b*TAU/s.beams))%TAU+TAU+Math.PI)%TAU-Math.PI);if(da<w/2){lit=true;break}}
+      if(lit){e.hp-=d*dt;e.lit=.1}else e.lit=Math.max(0,(e.lit||0)-dt);
+      for(let l=0;l<s.lanterns;l++){const la=s.t*1.6+l*TAU/s.lanterns,lx=Math.cos(la)*24,ly=Math.sin(la)*24;if(Math.hypot(e.x-lx,e.y-ly)<e.r+3)e.hp-=90*dt}
+      if(e.hp<=0){kill(e,i);continue}
+      const dist=Math.hypot(e.x,e.y),v=e.v*(lit?1-s.cold:1);e.x-=e.x/dist*v*dt;e.y-=e.y/dist*v*dt;
+      if(dist<R_ISLE+e.r){s.E.splice(i,1);hurt(e.dm);boom(e.x,e.y,"#ff6b5a",10)}}
+    for(let i=s.orbs.length-1;i>=0;i--){const o=s.orbs[i],dd=Math.hypot(o.x,o.y);o.x-=o.x/dd*70*dt;o.y-=o.y/dd*70*dt;if(dd<4){s.orbs.splice(i,1);s.xp+=o.v;if(s.xp>=s.need)levelUp()}}
+    if(s.oil<=0)end("The light went out",[`You held <b>${Math.floor(s.t)} s</b> and burned <b>${s.kills}</b> boats, level ${s.lvl}.`],"A",s.kills);
+    else if(s.won)end("Dawn! The Leviathan burned",[`<b>${s.kills}</b> boats burned, level ${s.lvl}.`],"A",s.kills+500);
+  };
+  s.draw=()=>{
+    const focus=P.down&&s.hot<=0,w=s.width*(focus?.38:1);
+    for(let b=0;b<s.beams;b++){const a=P.ang+b*TAU/s.beams,gr=g.createRadialGradient(CX,CY,0,CX,CY,EDGE*S);gr.addColorStop(0,focus?"rgba(255,255,255,.95)":"rgba(255,233,168,.75)");gr.addColorStop(1,"rgba(255,233,168,0)");
+      g.fillStyle=s.hot>0?"rgba(255,120,90,.25)":gr;g.beginPath();g.moveTo(CX,CY);g.arc(CX,CY,EDGE*S,a-w/2,a+w/2);g.fill()}
+    for(let l=0;l<s.lanterns;l++){const la=s.t*1.6+l*TAU/s.lanterns;g.fillStyle="#FFE9A8";g.beginPath();g.arc(X(Math.cos(la)*24),Y(Math.sin(la)*24),3*S,0,TAU);g.fill()}
+    for(const o of s.orbs){g.fillStyle="#7CFC8A";g.beginPath();g.arc(X(o.x),Y(o.y),3,0,TAU);g.fill()}
+    for(const e of s.E){blob(e);if(e.lit>0){g.strokeStyle="#fff";g.lineWidth=2;g.beginPath();g.arc(X(e.x),Y(e.y),e.r*S+2,0,TAU);g.stroke()}}
+    arrows(s.E.filter(e=>e.boss||e.r>3));
+    const xw=Math.min(W*.42,220);g.fillStyle="rgba(6,16,36,.8)";g.fillRect(10,36,xw,8);g.fillStyle="#7CFC8A";g.fillRect(10,36,xw*s.xp/s.need,8);
+    g.fillStyle="rgba(6,16,36,.8)";g.fillRect(CX-60,H-70,120,10);g.fillStyle=s.hot>0?"#ff6b5a":"#fff";g.fillRect(CX-60,H-70,120*(s.hot>0?1:s.heat),10);
+    g.fillStyle="#fff";g.font="700 12px system-ui";g.textAlign="center";g.fillText(s.hot>0?"cooling…":"hold = FOCUS (3× damage)",CX,H-78);
+    hud([`Level ${s.lvl}   Boats ${s.kills}`,s.boss?"THE LEVIATHAN":`Dawn in ${Math.max(0,150-Math.floor(s.t))} s`],s.t<5?"Sweep the light over the boats":s.t<11?"Hold the button to FOCUS the beam":s.t<16?"Green sparks fill your level":"");
+  };return s}
+
+// ───── B · DEFENSE: lanes, towers you place and merge on the rafts, waves you send ─────
+function B(){
+  const s={id:"B",oil:100,oilMax:100,t:0,coins:90,wave:0,left:0,spawnT:0,E:[],T:[],shots:[],sel:null,kills:0,between:true,auto:6,flareT:0};
+  const LANES=[0,1,2].map(i=>{const a0=-Math.PI/2+i*TAU/3,pts=[];for(let k=0;k<=24;k++){const u=k/24,r=EDGE-(EDGE-R_ISLE)*u,a=a0+Math.sin(u*Math.PI*1.5)*.55*(i%2?1:-1);pts.push([Math.cos(a)*r,Math.sin(a)*r])}return pts});
+  const SLOTS=[...Array(9)].map((_,i)=>{const a=-Math.PI/2+TAU/18+i*TAU/9;return{x:Math.cos(a)*27,y:Math.sin(a)*27,t:null}});
+  const KIND={bow:{n:"Crossbow",d:"fast shots",c:40,col:"#FFC83A",dmg:11,cd:.35,range:34},harp:{n:"Harpoon",d:"heavy, pierces",c:60,col:"#9fe8ff",dmg:70,cd:1.5,range:44,pierce:true},net:{n:"Net",d:"slows a zone",c:50,col:"#b48cff",dmg:4,cd:.5,range:30,slow:.5}};
+  function ui(){bar.innerHTML="";if(s.over)return;
+    if(s.sel!==null&&!SLOTS[s.sel].t)for(const k in KIND){const b=document.createElement("button");b.innerHTML=`${KIND[k].n} · ${KIND[k].c}<br><small>${KIND[k].d}</small>`;b.disabled=s.coins<KIND[k].c;b.style.opacity=b.disabled?.5:1;b.onclick=()=>{if(s.coins>=KIND[k].c){s.coins-=KIND[k].c;SLOTS[s.sel].t={k,l:1,cd:0};s.sel=null;ui()}};bar.append(b)}
+    if(s.between){const b=document.createElement("button");b.textContent=`Send wave ${s.wave+1}`;b.onclick=next;bar.append(b)}}
+  function next(){s.wave++;s.between=false;s.left=7+s.wave*3;s.spawnT=0;if(s.wave%5===0)s.bossDue=true;ui()}
+  function tap(){const near=(x,y)=>Math.hypot(P.x-x,P.y-y);let hit=-1;SLOTS.forEach((sl,i)=>{if(near(sl.x,sl.y)<6)hit=i});
+    if(hit<0){if(s.flareT<=0){s.flareT=3.5;boom(P.x,P.y,"#FFE9A8",24);for(const e of s.E)if(near(e.x,e.y)<11){e.hp-=45;say(e.x,e.y,"45","#FFE9A8")}}s.sel=null;ui();return}
+    const a=s.sel!==null?SLOTS[s.sel].t:null,b=SLOTS[hit].t;
+    if(a&&b&&hit!==s.sel&&a.k===b.k&&a.l===b.l){b.l++;SLOTS[s.sel].t=null;s.sel=null;boom(SLOTS[hit].x,SLOTS[hit].y,"#fff",20);say(SLOTS[hit].x,SLOTS[hit].y-4,"MERGED! level "+b.l,"#FFC83A",true)}else s.sel=hit;ui()}
+  s.step=dt=>{s.t+=dt;if(P.justDown)tap();s.flareT-=dt;
+    if(s.between){if(s.wave>0){s.auto-=dt;if(s.auto<=0)next()}}
+    else{s.spawnT-=dt;if(s.left>0&&s.spawnT<=0){s.spawnT=Math.max(.35,1-s.wave*.05);s.left--;const k=Math.random(),hpS=Math.pow(1.24,s.wave-1),ln=Math.floor(rnd(0,3));
+        const o=k<.2&&s.wave>2?{hp:150*hpS,v:5,r:2.8,col:"#3d6b46",dm:15,c:9}:k<.45&&s.wave>1?{hp:20*hpS,v:15,r:1.2,col:"#ffd166",dm:4,c:3}:{hp:42*hpS,v:8,r:1.8,col:"#b0372b",dm:6,c:4};
+        s.E.push(Object.assign({ln,u:0,x:LANES[ln][0][0],y:LANES[ln][0][1],slow:0},o,{max:o.hp}));
+        if(s.bossDue){s.bossDue=false;const hp=1400*hpS;s.E.push({ln,u:0,x:0,y:0,slow:0,hp,max:hp,v:3,r:5.5,col:"#2a1736",ring:"#ff6b5a",dm:60,c:60,boss:true});say(0,-34,"BOSS","#ff6b5a",true)}}
+      if(s.left<=0&&!s.E.length){s.between=true;s.auto=7;s.coins+=25+s.wave*5;say(0,-22,`Wave ${s.wave} held! +${25+s.wave*5}`,"#7CFC8A",true);if(s.wave>=12)s.won=true;ui()}}
+    for(let i=s.E.length-1;i>=0;i--){const e=s.E[i],L=LANES[e.ln];e.u+=e.v*(1-e.slow)*dt/((EDGE-R_ISLE)/24);e.slow=Math.max(0,e.slow-dt*2);
+      const k=Math.min(23,Math.floor(e.u)),f=e.u-k;if(e.u>=24){s.E.splice(i,1);hurt(e.dm);continue}e.x=L[k][0]+(L[k+1][0]-L[k][0])*f;e.y=L[k][1]+(L[k+1][1]-L[k][1])*f;
+      if(e.hp<=0){s.E.splice(i,1);s.kills++;s.coins+=e.c;say(e.x,e.y,"+"+e.c,"#FFC83A");boom(e.x,e.y,e.col,e.boss?40:7);ui()}}
+    for(const sl of SLOTS){const t=sl.t;if(!t)continue;const K=KIND[t.k],m=Math.pow(2.3,t.l-1);t.cd-=dt;if(t.cd>0)continue;
+      let tg=null,best=-1;for(const e of s.E){if(Math.hypot(e.x-sl.x,e.y-sl.y)<K.range&&e.u>best){best=e.u;tg=e}}if(!tg)continue;t.cd=K.cd;
+      if(K.slow){for(const e of s.E)if(Math.hypot(e.x-tg.x,e.y-tg.y)<9+t.l*2){e.slow=Math.min(.75,K.slow+t.l*.08);e.hp-=K.dmg*m}fx.push({x:tg.x,y:tg.y,vx:0,vy:0,t:0,l:.3,col:K.col})}
+      else if(K.pierce){const a=Math.atan2(tg.y-sl.y,tg.x-sl.x);for(const e of s.E){const dx=e.x-sl.x,dy=e.y-sl.y,al=dx*Math.cos(a)+dy*Math.sin(a),pp=Math.abs(-dx*Math.sin(a)+dy*Math.cos(a));if(al>0&&al<K.range+10&&pp<e.r+1.5){e.hp-=K.dmg*m;say(e.x,e.y,""+Math.round(K.dmg*m),K.col)}}s.shots.push({x:sl.x,y:sl.y,x2:sl.x+Math.cos(a)*(K.range+10),y2:sl.y+Math.sin(a)*(K.range+10),t:.15,col:K.col,w:3})}
+      else{tg.hp-=K.dmg*m;s.shots.push({x:sl.x,y:sl.y,x2:tg.x,y2:tg.y,t:.08,col:K.col,w:2})}}
+    for(let i=s.shots.length-1;i>=0;i--){s.shots[i].t-=dt;if(s.shots[i].t<=0)s.shots.splice(i,1)}
+    if(s.oil<=0)end("The light went out",[`You held <b>${s.wave-1}</b> waves and sank <b>${s.kills}</b> boats.`],"B",s.wave-1);
+    else if(s.won)end("Dawn! All 12 waves held",[`<b>${s.kills}</b> boats sunk.`],"B",12+Math.round(s.oil));
+  };
+  s.draw=()=>{
+    g.lineWidth=7*S/2;g.strokeStyle="rgba(255,255,255,.13)";g.lineCap="round";for(const L of LANES){g.beginPath();L.forEach((p,i)=>i?g.lineTo(X(p[0]),Y(p[1])):g.moveTo(X(p[0]),Y(p[1])));g.stroke()}
+    SLOTS.forEach((sl,i)=>{g.fillStyle="#8C6B4A";g.beginPath();g.arc(X(sl.x),Y(sl.y),4.2*S,0,TAU);g.fill();g.lineWidth=3;g.strokeStyle=s.sel===i?"#fff":"#FFC83A";g.stroke();
+      if(sl.t){const K=KIND[sl.t.k];g.fillStyle=K.col;g.beginPath();g.arc(X(sl.x),Y(sl.y),2.8*S,0,TAU);g.fill();g.fillStyle="#0C1F3A";g.font="900 13px system-ui";g.textAlign="center";g.fillText(sl.t.l,X(sl.x),Y(sl.y)+5);
+        if(s.sel===i){g.strokeStyle="rgba(255,255,255,.35)";g.lineWidth=1;g.beginPath();g.arc(X(sl.x),Y(sl.y),K.range*S,0,TAU);g.stroke()}}
+      else{g.fillStyle="#FFC83A";g.font="900 18px system-ui";g.textAlign="center";g.fillText("+",X(sl.x),Y(sl.y)+6)}});
+    for(const e of s.E)blob(e);for(const h of s.shots){g.strokeStyle=h.col;g.lineWidth=h.w;g.beginPath();g.moveTo(X(h.x),Y(h.y));g.lineTo(X(h.x2),Y(h.y2));g.stroke()}
+    const hint=s.wave===0?(SLOTS.some(x=>x.t)?"Now press “Send wave 1”":s.sel!==null?"Choose a tower below":"Tap a + raft to build a tower"):s.wave===1&&s.between?"Two same towers? Tap one, then the other: MERGE":s.wave<=2&&!s.between?"Tap the sea: a flare burns boats there":"";
+    hud([`Coins ${s.coins}   Wave ${s.wave}/12`,s.between&&s.wave>0?`Next wave in ${Math.ceil(s.auto)} s`:`Boats sunk ${s.kills}`,s.flareT>0?`Flare in ${Math.ceil(s.flareT)} s`:"Flare ready: tap the sea"],hint);
+  };setTimeout(ui,0);return s}
+
+// ───── C · SHOOTER: you fire bolts of light; hold to charge; combos and chain blasts ─────
+function C(){
+  const s={id:"C",oil:100,oilMax:100,t:0,E:[],bolts:[],score:0,combo:0,best:0,spawn:0,charge:0,kills:0};
+  function fire(power){const a=P.ang,big=power>.55;s.bolts.push({x:Math.cos(a)*4,y:Math.sin(a)*4,vx:Math.cos(a)*(big?150:190),vy:Math.sin(a)*(big?150:190),dmg:big?260:32,r:big?3.2:1.2,big,hit:false,life:1.4})}
+  function die(e,i,chain){s.E.splice(i,1);s.kills++;s.combo++;s.best=Math.max(s.best,s.combo);const pts=10*Math.min(10,1+Math.floor(s.combo/5));s.score+=pts;say(e.x,e.y,"+"+pts,"#FFC83A");boom(e.x,e.y,e.col,10);
+    if(s.combo%10===0){say(0,-24,s.combo+" COMBO! Light burst","#7CFC8A",true);for(const o of s.E)if(Math.hypot(o.x,o.y)<42)o.hp-=80;boom(0,0,"#FFE9A8",60)}
+    if(e.kind==="bomb"){boom(e.x,e.y,"#ff9d3c",34);for(const o of s.E)if(Math.hypot(o.x-e.x,o.y-e.y)<13)o.hp-=120;shake=.2}
+    if(e.kind==="split")for(let k=0;k<3;k++){const a=Math.atan2(e.y,e.x)+rnd(-.5,.5);s.E.push({x:e.x+rnd(-3,3),y:e.y+rnd(-3,3),hp:20,max:20,v:13,r:1.1,col:"#ffd166",dm:3,kind:"mini"})}}
+  s.step=dt=>{s.t+=dt;
+    if(P.down)s.charge=Math.min(1,s.charge+dt/.75);if(P.justUp){fire(s.charge);s.charge=0}
+    s.spawn-=dt;const rate=.9+s.t/11;if(s.spawn<=0){s.spawn=1/rate;const a=rnd(0,TAU),k=Math.random();
+      if(s.t>20&&k<.16)s.E.push(spawnAt(a,{hp:240,v:5.5,r:3,col:"#5b6b7a",ring:"#cfd8e3",dm:18,kind:"armor"}));
+      else if(s.t>12&&k<.34)s.E.push(spawnAt(a,{hp:30,v:14,r:1.7,col:"#ff9d3c",ring:"#fff",dm:14,kind:"bomb"}));
+      else if(s.t>40&&k<.5)s.E.push(spawnAt(a,{hp:60,v:7.5,r:2.4,col:"#b48cff",dm:8,kind:"split"}));
+      else s.E.push(spawnAt(a,{hp:30,v:9,r:1.8,col:"#b0372b",dm:6,kind:"skiff"}))}
+    for(let i=s.bolts.length-1;i>=0;i--){const b=s.bolts[i];b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;
+      for(const e of s.E){if(e.hitBy===b)continue;if(Math.hypot(e.x-b.x,e.y-b.y)<e.r+b.r){e.hp-=b.dmg;e.hitBy=b;b.hit=true;say(e.x,e.y,""+b.dmg,b.big?"#fff":"#FFE9A8");if(!b.big){b.life=0;break}}}
+      if(b.life<=0){if(!b.hit&&s.combo>0){say(b.x*.5,b.y*.5,"combo lost","#ff6b5a");s.combo=0}s.bolts.splice(i,1)}}
+    for(let i=s.E.length-1;i>=0;i--){const e=s.E[i];if(e.hp<=0){die(e,i);continue}const d=Math.hypot(e.x,e.y);e.x-=e.x/d*e.v*dt;e.y-=e.y/d*e.v*dt;if(d<R_ISLE+e.r){s.E.splice(i,1);hurt(e.dm);s.combo=0}}
+    if(s.oil<=0||s.t>=150)end(s.oil<=0?"The light went out":"Dawn!",[`Score <b>${s.score}</b> · best combo <b>${s.best}</b> · ${s.kills} boats.`],"C",s.score);
+  };
+  s.draw=()=>{
+    g.strokeStyle="rgba(255,255,255,.35)";g.setLineDash([6,8]);g.lineWidth=2;g.beginPath();g.moveTo(CX,CY);g.lineTo(CX+Math.cos(P.ang)*EDGE*S,CY+Math.sin(P.ang)*EDGE*S);g.stroke();g.setLineDash([]);
+    if(s.charge>0){g.strokeStyle=s.charge>.55?"#fff":"#FFE9A8";g.lineWidth=5;g.beginPath();g.arc(CX,CY,(5+s.charge*4)*S,-Math.PI/2,-Math.PI/2+TAU*s.charge);g.stroke()}
+    for(const e of s.E){blob(e);if(e.kind==="armor"){g.fillStyle="#fff";g.font="700 11px system-ui";g.textAlign="center";g.fillText("CHARGE",X(e.x),Y(e.y)+e.r*S+12)}}
+    for(const b of s.bolts){g.fillStyle=b.big?"#fff":"#FFE9A8";g.beginPath();g.arc(X(b.x),Y(b.y),b.r*S,0,TAU);g.fill()}
+    arrows(s.E.filter(e=>e.kind==="bomb"||e.kind==="armor"));
+    hud([`Score ${s.score}`,`Combo ${s.combo}  (×${Math.min(10,1+Math.floor(s.combo/5))})`,`Dawn in ${Math.max(0,150-Math.floor(s.t))} s`],s.t<5?"Aim, then click or tap to fire":s.t<12?"Orange boats explode: shoot them in a crowd":s.t<28&&s.t>20?"Grey boats: HOLD to charge, then release":"");
+  };return s}
+
+function start(id){ov.hidden=true;bar.innerHTML="";fx.length=0;texts.length=0;shake=flash=0;menuB.hidden=false;game=({A,B,C})[id]()}
+function menu(){game=null;bar.innerHTML="";menuB.hidden=true;ov.hidden=false;const b=k=>localStorage.getItem("htl-proto-"+k)||"–";
+  ov.innerHTML=`<div class="box"><h1>Hold the Light</h1><p>Three prototypes of the game's heart. Play each for two minutes, then say which one you want to play again.</p><div class="pick">
+  <button data-g="A"><b>A · Horde</b><span>Sweep the beam over hordes, hold to focus it, pick a new power every few seconds. Best: ${b("A")}</span></button>
+  <button data-g="B"><b>B · Defense</b><span>Build towers on the rafts, merge two alike, send the waves, drop flares. Best: ${b("B")}</span></button>
+  <button data-g="C"><b>C · Shooter</b><span>Fire bolts of light, charge for the armored, chain explosions, keep your combo. Best: ${b("C")}</span></button></div></div>`;
+  ov.querySelectorAll("[data-g]").forEach(x=>x.onclick=()=>start(x.dataset.g))}
+menuB.onclick=menu;
+let last=performance.now();
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(game){if(!game.over&&!document.hidden)game.step(dt);shake=Math.max(0,shake-dt);flash=Math.max(0,flash-dt);drawWorld();game.draw();drawFx(dt)}
+  else{g.fillStyle="#0A2A4A";g.fillRect(0,0,W,H)}
+  P.justDown=P.justUp=false;requestAnimationFrame(frame)}
+menu();requestAnimationFrame(frame);
+</script>
+</body>
+</html>

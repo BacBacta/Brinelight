@@ -12,7 +12,9 @@ export const PORTAL_PREVIEW = "portal";
 /** The game's name on CrazyGames (owner, 24 November 2026). */
 export const PORTAL_TITLE = "Brinelight: Hold the Light";
 /** The public folders the portal does not ship: the reference prototype (4 MB; the scene loads its kit from models/). */
-export const PORTAL_DROPPED: readonly string[] = ["prototype"];
+export const PORTAL_DROPPED: readonly string[] = ["prototype", "proto"];
+/** The owner's play-test prototypes (client/public/proto/): on branch previews only, never in production. */
+export const PREVIEW_ONLY: readonly string[] = ["proto"];
 
 /** The page's title, for the portal. */
 export const portalTitle = (html: string): string => html.replace(/<title>[^<]*<\/title>/, `<title>${PORTAL_TITLE}</title>`);

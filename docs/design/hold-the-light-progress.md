@@ -232,6 +232,14 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
     - **Passed if** you say yes to submitting.
   - Result (owner): 
 
+## The owner's verdict, and the prototypes (24 November)
+
+The owner played the build of steps 0 to 7: "the gameplay is very light, you do not understand what to do, the game does not make me want to stay", everywhere, and it is the whole mechanic, not its finish. Gates A and B, skipped, were there to hear this sooner. **Gate C: not passed. Nothing is submitted.**
+
+- [x] **P.1** Three throwaway prototypes of the game's heart, in one plain page (`client/public/proto/index.html`, a 2D canvas, no build, no rule of the game): A · Horde (a beam you sweep and focus, hordes, a power chosen every few seconds, the Leviathan at 2:30), B · Defense (three lanes, towers built and merged on nine rafts, 12 waves you send, flares), C · Shooter (bolts of light, a charged shot for the armored, bombs that chain, a combo). Each explains itself as it goes, with health bars, damage numbers, the oil lost shown, arrows to what comes from off screen. Served at `/proto/` on branch previews only (never in production, never in the portal's files; tested).
+- [ ] **P.2** The owner plays the three and says which one they want to play again, or what is missing in all three.
+- [ ] **P.3** The game is rebuilt on the one chosen (a new plan, short, with a play test by the owner at each step, not at the end).
+
 ## Found on the way
 
 (The loop writes here what it finds outside its task: a test that fails before any change, a bug in the main game, a page of CrazyGames that changed.)

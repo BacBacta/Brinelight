@@ -2,7 +2,7 @@ import { build, defineConfig, type Plugin } from "vite";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { previewBuild } from "./src/preview.js";
-import { PORTAL_DROPPED, PORTAL_OUT, PORTAL_PREVIEW, dropFolders, portalTitle } from "./src/portal/build.js";
+import { PORTAL_DROPPED, PORTAL_OUT, PORTAL_PREVIEW, PREVIEW_ONLY, dropFolders, portalTitle } from "./src/portal/build.js";
 
 /** On a branch preview, the game's own build ends with the portal's, at /portal/, for its testers (never on main). */
 function portalOnPreview(): Plugin {
@@ -16,7 +16,11 @@ function portalOnPreview(): Plugin {
       out = resolve(c.root, c.build.outDir);
     },
     async closeBundle() {
-      if (!previewBuild(process.env)) return;
+      if (!previewBuild(process.env)) {
+        // Production and local builds: the play-test prototypes stay out.
+        dropFolders(out, PREVIEW_ONLY);
+        return;
+      }
       await build({ root, configFile: fileURLToPath(import.meta.url), mode: "portal", logLevel: "warn", build: { outDir: resolve(out, PORTAL_PREVIEW), emptyOutDir: true } });
     },
   };

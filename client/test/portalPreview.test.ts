@@ -30,6 +30,9 @@ describe("the portal on a branch preview, for its testers", () => {
       expect(page).toMatch(/src="\.\/assets\//);
       expect(existsSync(join(out, "portal/models/phare.glb"))).toBe(true);
       expect(existsSync(join(out, "portal/prototype"))).toBe(false);
+      // The owner's play-test prototypes: on the preview, at /proto/, not in the portal's own files.
+      expect(existsSync(join(out, "proto/index.html"))).toBe(true);
+      expect(existsSync(join(out, "portal/proto"))).toBe(false);
       expect(existsSync(join(out, "prototype/index.html"))).toBe(true);
       expect(readFileSync(join(out, "index.html"), "utf8")).toContain("<title>Brinelight</title>");
     } finally {
@@ -42,6 +45,7 @@ describe("the portal on a branch preview, for its testers", () => {
     try {
       expect(existsSync(join(out, "index.html"))).toBe(true);
       expect(existsSync(join(out, "portal"))).toBe(false);
+      expect(existsSync(join(out, "proto"))).toBe(false);
     } finally {
       rmSync(out, { recursive: true, force: true });
     }

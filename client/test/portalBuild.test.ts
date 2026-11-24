@@ -26,7 +26,7 @@ describe("the portal's build (vite build --mode portal)", () => {
     for (const d of ["prototype/assets", "models", "city"]) mkdirSync(join(out, d), { recursive: true });
     writeFileSync(join(out, "prototype/assets/phare.glb"), "x");
     writeFileSync(join(out, "models/phare.glb"), "x");
-    expect(PORTAL_DROPPED).toEqual(["prototype"]);
+    expect(PORTAL_DROPPED).toEqual(["prototype", "proto"]);
     dropFolders(out, PORTAL_DROPPED);
     expect(existsSync(join(out, "prototype"))).toBe(false);
     expect(existsSync(join(out, "models/phare.glb"))).toBe(true);
