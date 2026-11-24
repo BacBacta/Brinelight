@@ -268,7 +268,8 @@ describe("city labels", () => {
     expect(icons.length).toBeGreaterThanOrEqual(11);
     expect(icons.every(Boolean)).toBe(true);
     await page.locator('.nav button[data-v="sea"]').click();
-    await expect.poll(() => [...models].sort(), NET).toEqual(["boat", "camp", "wreck"].map((id) => `/models/${id}.glb`));
+    // With them, the prototype's kit (phare.glb, served from /models/ since the portal edition's task 0.1).
+    await expect.poll(() => [...models].sort(), NET).toEqual(["boat", "camp", "phare", "wreck"].map((id) => `/models/${id}.glb`));
     await page.waitForTimeout(1500);
     await page.screenshot({ path: "e2e/.shots/shot-sea.png" });
     await page.mouse.move(206, 500);
