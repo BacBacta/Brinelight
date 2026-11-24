@@ -73,6 +73,8 @@ describe("the boss's health", () => {
     const g = { id: 1, family: "galleon" as const, bearing: 0, distance: 20, health: N.FAMILY.galleon.health / 2, lit: 0, fade: 0, stage: 1 };
     expect(hudParts({ ...base, enemies: [g] }).boss).toBe(0.5);
     expect(NIGHT_TEXT.boss).toBe("The Mist Galleon");
+    expect(hudParts({ ...base, enemies: [g] }).bossName).toBe("The Mist Galleon");
+    expect(hudParts({ ...base, enemies: [{ ...g, family: "leviathan", health: N.FAMILY.leviathan.health }] })).toMatchObject({ bossName: "The Leviathan", boss: 1 });
   });
 });
 

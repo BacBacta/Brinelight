@@ -66,6 +66,8 @@ export function startNight(
     raider: shape(new THREE.BoxGeometry(0.45, 0.3, 0.9), new THREE.MeshLambertMaterial({ color: 0x8e2b22 })),
     beast: shape(new THREE.SphereGeometry(0.55, 10, 6).scale(1, 0.55, 1.4), new THREE.MeshLambertMaterial({ color: 0x2f5d3a })),
     wraith: shape(new THREE.OctahedronGeometry(0.42).scale(1, 1.5, 1), new THREE.MeshLambertMaterial({ color: 0xc9b8ff, emissive: 0x2a1f55 })),
+    kraken: shape(new THREE.SphereGeometry(1.2, 12, 8).scale(1.3, 0.6, 1.3), new THREE.MeshLambertMaterial({ color: 0x5a1f3f, emissive: 0x2a0a1c })),
+    leviathan: shape(new THREE.CapsuleGeometry(1, 4, 4, 10).rotateX(Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0x0f3a4a, emissive: 0x06202a })),
     galleon: shape(new THREE.BoxGeometry(1.4, 1.1, 3.2), new THREE.MeshLambertMaterial({ color: 0x241a2e, emissive: 0x3a0f18 })),
     faded: shape(new THREE.OctahedronGeometry(0.42).scale(1, 1.5, 1), new THREE.MeshBasicMaterial({ color: 0xc9b8ff, transparent: true, opacity: 0.22, depthWrite: false })),
   };
@@ -96,7 +98,7 @@ export function startNight(
     // Where the beam points, on the canvas, for the end-to-end tests (as data-view): written only when it moves.
     const deg = Math.round(n.beam);
     if (deg !== beamShown) canvas.dataset.beam = String((beamShown = deg));
-    const counts = { raider: 0, beast: 0, wraith: 0, galleon: 0, faded: 0 };
+    const counts = { raider: 0, beast: 0, wraith: 0, galleon: 0, kraken: 0, leviathan: 0, faded: 0 };
     for (const e of n.enemies) {
       const kind = e.family === "wraith" && e.fade > 0 ? "faded" : e.family;
       if (counts[kind] >= MAX_DRAWN) continue;
@@ -108,7 +110,7 @@ export function startNight(
       place.updateMatrix();
       meshes[kind].setMatrixAt(counts[kind]++, place.matrix);
     }
-    for (const k of ["raider", "beast", "wraith", "galleon", "faded"] as const) {
+    for (const k of ["raider", "beast", "wraith", "galleon", "kraken", "leviathan", "faded"] as const) {
       meshes[k].count = counts[k];
       meshes[k].instanceMatrix.needsUpdate = true;
     }

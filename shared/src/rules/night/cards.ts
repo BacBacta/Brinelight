@@ -86,7 +86,7 @@ export function cardMods(held: readonly CardId[]) {
     netSlow: 1 - 0.25 * n("nets"),
     extraOil: TANK_OIL * n("tanks"),
     oilPerWave: 3 * n("tar"),
-    steal: { raider: Math.max(1, FAMILY.raider.oil - n("patch")), beast: Math.max(5, FAMILY.beast.oil - 5 * n("seawall")), wraith: FAMILY.wraith.oil, galleon: FAMILY.galleon.oil },
+    steal: { raider: Math.max(1, FAMILY.raider.oil - n("patch")), beast: Math.max(5, FAMILY.beast.oil - 5 * n("seawall")), wraith: FAMILY.wraith.oil, galleon: FAMILY.galleon.oil, kraken: FAMILY.kraken.oil, leviathan: FAMILY.leviathan.oil },
     speed: 0.85 ** n("tide"),
     raiderSpeed: 0.8 ** n("headwind"),
     woodPerBurned: 2 * n("salvage"),

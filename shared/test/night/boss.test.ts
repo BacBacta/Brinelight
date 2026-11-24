@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { newNight, parseNight, type Enemy, type NightState } from "../../src/rules/night/state.js";
 import { COUNTERED_BY, stepNight, wavesOf } from "../../src/rules/night/step.js";
-import { BOSS_RAGE, BOSS_SUMMON, BOSS_WAVE, FAMILY, STEP } from "../../src/rules/night/values.js";
+import { BOSSES, BOSS_RAGE, FAMILY, STEP } from "../../src/rules/night/values.js";
+const BOSS_SUMMON = BOSSES.galleon.count;
+const BOSS_WAVE = 10;
 
 const galleon = (health = FAMILY.galleon.health, stage = 0, distance = 28): Enemy => ({ id: 1, family: "galleon", bearing: 0, distance, health, lit: 0, fade: 0, stage });
 const alone = (e: Enemy, night = 4): NightState => ({ ...newNight(1, night), phase: "pause", pauseEnd: 1_000_000, enemies: [e], nextId: 2 });

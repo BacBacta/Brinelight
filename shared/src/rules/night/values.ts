@@ -24,7 +24,7 @@ export const BEAM_WIDTH = 40;
 export const BEAM_DPS = 60;
 
 /** The enemies' families. */
-export const FAMILIES = ["raider", "beast", "wraith", "galleon"] as const;
+export const FAMILIES = ["raider", "beast", "wraith", "galleon", "kraken", "leviathan"] as const;
 export type Family = (typeof FAMILIES)[number];
 
 export const FAMILY: Readonly<Record<Family, { speed: number; health: number; oil: number }>> = {
@@ -36,12 +36,21 @@ export const FAMILY: Readonly<Record<Family, { speed: number; health: number; oi
   wraith: { speed: 3, health: 90, oil: 10 },
   /** The Mist Galleon, wave 10's boss: 24 s from the edge, 25 s in the beam alone. */
   galleon: { speed: 1, health: 1500, oil: 50 },
+  /** The Kraken, wave 20's boss. */
+  kraken: { speed: 0.8, health: 3500, oil: 80 },
+  /** The Leviathan, wave 30's: the last Night's last wave. */
+  leviathan: { speed: 0.6, health: 7000, oil: 100 },
 };
 
-/** The wave a boss comes with, in the Nights that have it. */
-export const BOSS_WAVE = 10;
-/** Raiders the Galleon sends around it at two thirds of its health. */
-export const BOSS_SUMMON = 3;
+/** The bosses, by the wave they come with. */
+export const BOSS_AT: Readonly<Record<number, Family>> = { 10: "galleon", 20: "kraken", 30: "leviathan" };
+/** What each boss sends around it at two thirds of its health. */
+export const BOSSES: Readonly<Partial<Record<Family, { summon: Family; count: number }>>> & Record<"galleon" | "kraken" | "leviathan", { summon: Family; count: number }> = {
+  galleon: { summon: "raider", count: 3 },
+  kraken: { summon: "beast", count: 2 },
+  leviathan: { summon: "wraith", count: 4 },
+};
+
 /** How much faster it comes at a third of its health. */
 export const BOSS_RAGE = 1.6;
 

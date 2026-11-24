@@ -6,6 +6,8 @@ import { ICONS } from "../ui/icons.js";
 /** Said once the beam is learnt, while every raft is empty (choices.ts has it too). */
 const POSTS_HINT = "Tap ＋ on a raft to put troops there. They fire on their own.";
 
+const BOSS_NAMES = { galleon: "The Mist Galleon", kraken: "The Kraken", leviathan: "The Leviathan" } as const;
+
 export const NIGHT_TEXT = {
   oil: "Oil",
   oilLabel: "Oil: the Lighthouse's life",
@@ -19,7 +21,7 @@ export const NIGHT_TEXT = {
 } as const;
 
 /** What the panel shows of a Night. */
-export function hudParts(n: N.NightState): { oil: number; oilText: string; wave: string; next: string; wood: number; fish: number; hint: string; boss: number | null; flare: string; flareReady: boolean } {
+export function hudParts(n: N.NightState): { oil: number; oilText: string; wave: string; next: string; wood: number; fish: number; hint: string; boss: number | null; bossName: string; flare: string; flareReady: boolean } {
   const waves = N.wavesOf(n.night);
   const next = n.phase === "pause" ? `Next wave in ${Math.max(1, Math.ceil((n.pauseEnd - n.step) / N.STEPS_PER_SECOND))} s` : "";
   const earned = N.lootSoFar(n);
@@ -31,12 +33,13 @@ export function hudParts(n: N.NightState): { oil: number; oilText: string; wave:
         ? POSTS_HINT
         : "";
   // The Galleon's health, as a share, while it is on the sea.
-  const galleon = n.enemies.find((e) => e.family === "galleon");
-  const boss = galleon ? Math.max(0, galleon.health / N.FAMILY.galleon.health) : null;
+  const big = n.enemies.find((e) => N.BOSSES[e.family]);
+  const boss = big ? Math.max(0, big.health / N.FAMILY[big.family].health) : null;
+  const bossName = big ? BOSS_NAMES[big.family as keyof typeof BOSS_NAMES] : "";
   // The flare: ready, or the seconds it still waits.
   const flareReady = n.cooldown === 0;
   const flare = flareReady ? NIGHT_TEXT.flare : `${NIGHT_TEXT.flare} ${Math.ceil(n.cooldown / N.STEPS_PER_SECOND)} s`;
-  return { flare, flareReady, boss, oil: Math.max(0, Math.min(1, n.oil / (n.power.startOil + N.cardMods(n.cards).extraOil))), oilText: String(Math.ceil(n.oil)), wave: `Wave ${Math.min(n.wave, waves)} of ${waves}`, next, wood: earned.wood, fish: earned.fish, hint };
+  return { bossName, flare, flareReady, boss, oil: Math.max(0, Math.min(1, n.oil / (n.power.startOil + N.cardMods(n.cards).extraOil))), oilText: String(Math.ceil(n.oil)), wave: `Wave ${Math.min(n.wave, waves)} of ${waves}`, next, wood: earned.wood, fish: earned.fish, hint };
 }
 
 /** The end card's inside: the Night won or lost, the waves held, what you bring back, and the way to your city. */
@@ -116,6 +119,8 @@ export function createNightHud(root: HTMLElement, onDone: () => void, onFlare: (
       flareButton.hidden = n.phase === "won" || n.phase === "lost";
       bossBar.hidden = p.boss === null;
       if (p.boss !== null) {
+        bossBar.querySelector("b")!.textContent = p.bossName;
+        bossBar.setAttribute("aria-label", p.bossName);
         bossFill.style.transform = `scaleX(${p.boss})`;
         bossBar.setAttribute("aria-valuenow", String(Math.round(p.boss * 100)));
       }

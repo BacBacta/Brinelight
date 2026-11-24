@@ -34,7 +34,7 @@ describe("the posts on the rafts", () => {
     expect(FAMILY.raider.health - plain.health).toBeCloseTo(POST_DPS * STEP, 9);
     const counter = stepNight(sea([enemy("raider", b)], [COUNTERED_BY.raider, null]), { beam: (b + 180) % 360 }).enemies[0]!;
     expect(FAMILY.raider.health - counter.health).toBeCloseTo(POST_DPS * STEP * COUNTER_BONUS, 9);
-    expect(COUNTERED_BY).toEqual({ raider: "crossbowmen", beast: "harpooners", wraith: "boarders", galleon: "harpooners" });
+    expect(COUNTERED_BY).toEqual({ raider: "crossbowmen", beast: "harpooners", wraith: "boarders", galleon: "harpooners", kraken: "boarders", leviathan: "harpooners" });
   });
 
   it("out of its reach (too far, or round the island), a post does nothing; an empty post never fires", () => {

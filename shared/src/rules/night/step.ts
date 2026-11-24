@@ -11,8 +11,8 @@ import {
   BEAM_WIDTH,
   COAST_RADIUS,
   BOSS_RAGE,
-  BOSS_SUMMON,
-  BOSS_WAVE,
+  BOSSES,
+  BOSS_AT,
   FAMILIES,
   FLARE_SHARE,
   FAMILY,
@@ -32,7 +32,7 @@ import {
 export type NightInput = { beam: number; post?: { slot: number; troop: TroopType }; card?: CardId; power?: boolean };
 
 /** The troop that beats each family, on the troops' triangle (boarders > harpooners > crossbowmen > boarders). */
-export const COUNTERED_BY: Readonly<Record<Family, TroopType>> = { raider: "crossbowmen", beast: "harpooners", wraith: "boarders", galleon: "harpooners" };
+export const COUNTERED_BY: Readonly<Record<Family, TroopType>> = { raider: "crossbowmen", beast: "harpooners", wraith: "boarders", galleon: "harpooners", kraken: "boarders", leviathan: "harpooners" };
 
 /** Where post `i` of `count` stands around the island, in degrees: evenly, the first at 45°. */
 export const postBearing = (i: number, count: number): number => (45 + (i * 360) / count) % 360;
@@ -130,11 +130,12 @@ export function stepNight(n: NightState, input: NightInput): NightState {
   }
   const size = waveSize(n.night, wave);
   const coming: Enemy[] = [];
-  // Wave 10, in a Night that has one: the Mist Galleon comes first, from the seed's bearing.
-  if (phase === "wave" && wave === BOSS_WAVE && spawned === 0 && t >= nextSpawn && !n.enemies.some((e) => e.family === "galleon")) {
+  // Waves 10, 20 and 30, in the Nights that have them: their boss comes first, from the seed's bearing.
+  const bossFamily = BOSS_AT[wave];
+  if (phase === "wave" && bossFamily && spawned === 0 && t >= nextSpawn && !n.enemies.some((e) => e.family === bossFamily)) {
     const [f, next] = nextFloat(rng);
     rng = next;
-    coming.push({ id: nextId, family: "galleon", bearing: f * 360, distance: SEA_RADIUS, health: FAMILY.galleon.health, lit: 0, fade: 0, stage: 0 });
+    coming.push({ id: nextId, family: bossFamily, bearing: f * 360, distance: SEA_RADIUS, health: FAMILY[bossFamily].health, lit: 0, fade: 0, stage: 0 });
     nextId += 1;
   }
   if (phase === "wave" && spawned < size && t >= nextSpawn) {
@@ -186,17 +187,18 @@ export function stepNight(n: NightState, input: NightInput): NightState {
       burned += 1;
       continue;
     }
-    // The Galleon's stages: at two thirds it sends Raiders around it, at a third it rages.
+    // A boss's stages: at two thirds it sends its own around it, at a third it rages.
     let stage = e.stage;
-    if (e.family === "galleon") {
-      if (stage === 0 && health <= (FAMILY.galleon.health * 2) / 3) {
+    const bossOf = BOSSES[e.family];
+    if (bossOf) {
+      if (stage === 0 && health <= (FAMILY[e.family].health * 2) / 3) {
         stage = 1;
-        for (let k = 0; k < BOSS_SUMMON; k++) {
-          sent.push({ id: nextId, family: "raider", bearing: (e.bearing + (k - 1) * 12 + 360) % 360, distance: e.distance, health: FAMILY.raider.health, lit: 0, fade: 0, stage: 0 });
+        for (let k = 0; k < bossOf.count; k++) {
+          sent.push({ id: nextId, family: bossOf.summon, bearing: (e.bearing + (k - (bossOf.count - 1) / 2) * 12 + 360) % 360, distance: e.distance, health: FAMILY[bossOf.summon].health, lit: 0, fade: 0, stage: 0 });
           nextId += 1;
         }
       }
-      if (stage === 1 && health <= FAMILY.galleon.health / 3) stage = 2;
+      if (stage === 1 && health <= FAMILY[e.family].health / 3) stage = 2;
     }
     const speed = FAMILY[e.family].speed * (chart.rule === "swift" ? 1.25 : 1) * (stage === 2 ? BOSS_RAGE : 1) * mods.speed * (e.family === "raider" ? mods.raiderSpeed : 1) * (netted.has(e.id) ? mods.netSlow : 1);
     const distance = e.distance - speed * STEP;

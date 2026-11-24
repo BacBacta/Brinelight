@@ -58,7 +58,7 @@ describe("the three families", () => {
 describe("which family comes, Night by Night", () => {
   const draw = (night: number, n = 2000) => {
     let r = seedRng(night * 101);
-    const count = { raider: 0, beast: 0, wraith: 0, galleon: 0 };
+    const count = { raider: 0, beast: 0, wraith: 0, galleon: 0, kraken: 0, leviathan: 0 };
     for (let i = 0; i < n; i++) {
       const [f, next] = familyAt(night, r);
       count[f] += 1;
@@ -68,7 +68,7 @@ describe("which family comes, Night by Night", () => {
   };
 
   it("Night 1: Raiders only; Beasts from Night 2; Wraiths from Night 4, as the mix says", () => {
-    expect(draw(1)).toEqual({ raider: 2000, beast: 0, wraith: 0, galleon: 0 });
+    expect(draw(1)).toEqual({ raider: 2000, beast: 0, wraith: 0, galleon: 0, kraken: 0, leviathan: 0 });
     expect(draw(2).beast).toBeGreaterThan(300);
     expect(draw(3).wraith).toBe(0);
     expect(draw(4).wraith).toBeGreaterThan(300);
