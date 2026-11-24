@@ -3,9 +3,9 @@ import { newNight, type Enemy, type NightState } from "../../src/rules/night/sta
 import { stepNight } from "../../src/rules/night/step.js";
 import { COAST_RADIUS, FAMILY, START_OIL, STEPS_PER_SECOND } from "../../src/rules/night/values.js";
 
-/** A Night with these enemies on the sea, its waves held back (nothing more comes) and the beam turned away. */
+/** A Night with these enemies on the sea, its waves held back (nothing more comes) and the beam turned away. Night 2: no grace. */
 const sea = (enemies: Omit<Enemy, "id">[], oil = START_OIL): NightState => ({
-  ...newNight(1, 1),
+  ...newNight(1, 2),
   oil,
   phase: "pause",
   pauseEnd: 1_000_000,

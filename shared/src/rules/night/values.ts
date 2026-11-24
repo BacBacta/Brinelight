@@ -34,3 +34,26 @@ export const FAMILY: Readonly<Record<Family, { speed: number; health: number; oi
 
 /** The Nights there are: Nights 1 to 5 first (step 4), then the chart (step 5). */
 export const NIGHTS = 5;
+
+/** The waves of each Night, from Night 1: Night 1 is short (about 3 minutes). */
+export const NIGHT_WAVES: readonly number[] = [5, 8, 9, 10, 12];
+/** A wave's Raiders: 4 in Night 1's first wave, 2 more each wave, 2 more each Night. */
+export const WAVE_FIRST = 4;
+export const WAVE_GROWTH = 2;
+export const NIGHT_GROWTH = 2;
+/** Between two enemies of a wave, in seconds. */
+export const SPAWN_SPACING = 1.5;
+/** The pause after a wave, in seconds: the cards will be chosen in it (step 3). */
+export const WAVE_PAUSE = 6;
+/** Night 1's first waves cannot put the Lighthouse out: a new player learns the beam before they can lose. */
+export const NIGHT1_GRACE_WAVES = 2;
+
+/** What a Night brings back at dawn, won or lost. */
+export const LOOT_PER_WAVE = { wood: 40, fish: 30 } as const;
+export const LOOT_PER_BURNED = { wood: 2 } as const;
+export const LOOT_DAWN_PEARLS = 10;
+/** A lost Night still pays at least this, so the next one starts a little stronger. */
+export const LOOT_FLOOR = { wood: 60 } as const;
+
+/** The most steps a frame may run: a slow frame slows the Night rather than jumping it ahead. */
+export const MAX_STEPS_PER_FEED = 8;

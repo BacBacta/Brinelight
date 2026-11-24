@@ -44,6 +44,8 @@ export type NightState = {
   nextSpawn: number;
   enemies: Enemy[];
   nextId: number;
+  /** Enemies burned by the beam in this Night. */
+  burned: number;
   /** Where the beam points, in degrees, [0, 360). */
   beam: number;
 };
@@ -62,11 +64,11 @@ const exactKeys = (o: Record<string, unknown>, keys: readonly string[]): boolean
 export function newNight(seed: number, night: number): NightState {
   if (!isUint32(seed)) throw new RangeError(`A Night's seed is a whole 32-bit number, not ${seed}`);
   if (!Number.isInteger(night) || night < 1 || night > NIGHTS) throw new RangeError(`There is no Night ${night}`);
-  return { v: NIGHT_SHAPE, night, seed, rng: seedRng(seed), step: 0, oil: START_OIL, wave: 1, phase: "wave", pauseEnd: -1, spawned: 0, nextSpawn: 0, enemies: [], nextId: 1, beam: 0 };
+  return { v: NIGHT_SHAPE, night, seed, rng: seedRng(seed), step: 0, oil: START_OIL, wave: 1, phase: "wave", pauseEnd: -1, spawned: 0, nextSpawn: 0, enemies: [], nextId: 1, burned: 0, beam: 0 };
 }
 
 const ENEMY_KEYS = ["id", "family", "bearing", "distance", "health"] as const;
-const NIGHT_KEYS = ["v", "night", "seed", "rng", "step", "oil", "wave", "phase", "pauseEnd", "spawned", "nextSpawn", "enemies", "nextId", "beam"] as const;
+const NIGHT_KEYS = ["v", "night", "seed", "rng", "step", "oil", "wave", "phase", "pauseEnd", "spawned", "nextSpawn", "enemies", "nextId", "burned", "beam"] as const;
 const PHASES: readonly string[] = ["wave", "pause", "won", "lost"];
 
 function parseEnemy(raw: unknown): Enemy | null {
@@ -85,7 +87,7 @@ export function parseNight(raw: unknown): NightState | null {
     if (o.v !== NIGHT_SHAPE || !Number.isInteger(o.night) || (o.night as number) < 1 || (o.night as number) > NIGHTS) return null;
     if (!isUint32(o.seed) || !isUint32(o.rng) || !isWhole(o.step) || !isNum(o.oil) || o.oil < 0 || !isWhole(o.wave, 1)) return null;
     if (typeof o.phase !== "string" || !PHASES.includes(o.phase) || !isWhole(o.pauseEnd, -1) || !isWhole(o.spawned) || !isWhole(o.nextSpawn)) return null;
-    if (!isAngle(o.beam) || !isWhole(o.nextId, 1) || !Array.isArray(o.enemies)) return null;
+    if (!isAngle(o.beam) || !isWhole(o.nextId, 1) || !isWhole(o.burned) || !Array.isArray(o.enemies)) return null;
     const enemies: Enemy[] = [];
     const ids = new Set<number>();
     for (const e of o.enemies) {
@@ -108,6 +110,7 @@ export function parseNight(raw: unknown): NightState | null {
       nextSpawn: o.nextSpawn,
       enemies,
       nextId: o.nextId,
+      burned: o.burned,
       beam: o.beam,
     };
   } catch {

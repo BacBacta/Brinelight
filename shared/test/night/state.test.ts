@@ -62,6 +62,7 @@ describe("parseNight: a Night read back (a save, a replay) is strict", () => {
       ["beam", 360],
       ["beam", -1],
       ["nextId", 0],
+      ["burned", -1],
       ["enemies", {}],
       ["extra", 1],
     ];
