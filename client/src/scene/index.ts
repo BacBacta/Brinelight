@@ -74,7 +74,7 @@ export type SceneHandle = {
   /** Screen position (CSS pixels) of a point of the shown view. */
   project(x: number, y: number, z: number): ScreenPoint;
   /** Called on every drawn frame, before rendering, with the scene clock in seconds and the shown view. */
-  onFrame(cb: (now: number, view: View) => void): void;
+  onFrame(cb: (now: number, view: View) => void): () => void;
   /** How much nearer the city's camera is than in the normal view: 1 there, more when zoomed in or in the close view. */
   closeness(): number;
   /** The city's camera, to tell what is on screen. */
@@ -574,6 +574,11 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions): Sc
     },
     onFrame(cb) {
       frameCallbacks.push(cb);
+      // Stops this callback (the portal's Night, when it ends).
+      return () => {
+        const i = frameCallbacks.indexOf(cb);
+        if (i >= 0) frameCallbacks.splice(i, 1);
+      };
     },
     dispose() {
       frameCallbacks.length = 0;

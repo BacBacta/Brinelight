@@ -38,7 +38,7 @@ import { createDailySheet, createQuest, createTasksButton } from "./ui/daily.js"
 import { createUi } from "./ui/index.js";
 import { createSettings } from "./ui/settings.js";
 import { portalStore } from "./portal/store.js";
-import { startNight } from "./night/index.js";
+import { startPortal } from "./night/portal.js";
 import { mistPreview, seaMood } from "./ui/values.js";
 import { createSound, type SoundId } from "./ui/sound.js";
 import { DEVICE, DEV_SPEED, SAVE_EVERY_MS, accountOwner, awayEvents, browserStore, elapse, eventsBetween, openSave, readSeen, saveGame, writeSeen, type PlayerState } from "./state/index.js";
@@ -77,7 +77,8 @@ if (!PORTAL && new URLSearchParams(location.search).has("rules")) {
     }
   })();
   // The portal keeps its city, its sounds and its news apart from the Brinelight on Solana's, even at the same address.
-  const store = demo ? memoryStore() : PORTAL ? portalStore(deviceStore) : browserStore();
+  const portalCityStore = PORTAL ? portalStore(deviceStore) : null;
+  const store = demo ? memoryStore() : PORTAL ? portalCityStore : browserStore();
   // The last city seen on this device, read before anything writes it: at launch, what ended since is told once.
   const seen = readSeen(store);
   // Sounds: none before your first tap, and none when turned off on this device.
@@ -341,8 +342,21 @@ if (!PORTAL && new URLSearchParams(location.search).has("rules")) {
     onLoaded: () => {
       status.remove();
       fps?.modelsLoaded();
-      // The portal opens in its first Night at once: no menu, no title (Hold the Light).
-      if (PORTAL) startNight(scene, canvas, app, { night: 1, newSeed: () => Math.floor(Math.random() * 2 ** 32) });
+      // The portal (Hold the Light): its own city and its Nights; a new player starts in Night 1 at once, no menu.
+      if (PORTAL)
+        startPortal({
+          scene,
+          canvas,
+          root: app,
+          store: portalCityStore,
+          newSeed: () => Math.floor(Math.random() * 2 ** 32),
+          showLevels: (b) => {
+            state = { ...state, buildings: { ...state.buildings, lighthouse: b.lighthouse, refinery: b.refinery, infirmary: b.infirmary } };
+            refresh();
+            showLighthouse();
+          },
+          toast: (text, bad) => ui.toast(text, bad ? "bad" : "", bad ? "!" : "i"),
+        });
       city = createCity(scene, canvas, app, { state: () => state, upgrade: (building) => act({ type: "upgrade", building }), research: (tech) => act({ type: "research", tech }), train: (troop) => act({ type: "train", troop }), promote: (troop) => act({ type: "promote", troop }), heal: () => act({ type: "heal" }), stoke: (on) => act({ type: "stoke", on }), dockRaft: (slot) => act({ type: "dockRaft", slot }), installOnRaft: (slot, building) => act({ type: "installOnRaft", slot, building }), upgradeRaft: (slot) => act({ type: "upgradeRaft", slot }), repairRafts: () => act({ type: "repairRafts" }), toCity: () => ui.showView("city"), speed });
       refresh();
     },

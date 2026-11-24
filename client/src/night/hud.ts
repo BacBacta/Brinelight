@@ -10,7 +10,7 @@ export const NIGHT_TEXT = {
   lost: "The Lighthouse went dark",
   won: "Dawn",
   bring: "You bring back",
-  again: "Again",
+  toCity: "To your city",
 } as const;
 
 /** What the panel shows of a Night. */
@@ -23,7 +23,7 @@ export function hudParts(n: N.NightState): { oil: number; oilText: string; wave:
   return { oil: Math.max(0, Math.min(1, n.oil / n.power.startOil)), oilText: String(Math.ceil(n.oil)), wave: `Wave ${Math.min(n.wave, waves)} of ${waves}`, next, wood: earned.wood, fish: earned.fish, hint };
 }
 
-/** The end card's inside: the Night won or lost, the waves held, the loot, and Again. */
+/** The end card's inside: the Night won or lost, the waves held, what you bring back, and the way to your city. */
 export function endHtml(n: N.NightState, loot: N.Loot): string {
   const waves = N.wavesOf(n.night);
   const won = n.phase === "won";
@@ -33,12 +33,12 @@ export function endHtml(n: N.NightState, loot: N.Loot): string {
     `<h2>${won ? NIGHT_TEXT.won : NIGHT_TEXT.lost}</h2>` +
     `<p>${esc(held)}</p>` +
     `<p class="bring">${NIGHT_TEXT.bring}: ${items.map(esc).join(" · ")}</p>` +
-    `<button class="b gold xl" data-act="again">${NIGHT_TEXT.again}</button>`
+    `<button class="b gold xl" data-act="done">${NIGHT_TEXT.toCity}</button>`
   );
 }
 
 /** The panel and the end card, over the 3D view. */
-export function createNightHud(root: HTMLElement, onAgain: () => void) {
+export function createNightHud(root: HTMLElement, onDone: () => void) {
   const panel = document.createElement("div");
   panel.className = "night-hud";
   panel.innerHTML =
@@ -53,7 +53,7 @@ export function createNightHud(root: HTMLElement, onAgain: () => void) {
   end.setAttribute("role", "dialog");
   end.hidden = true;
   end.addEventListener("click", (e) => {
-    if ((e.target as HTMLElement).closest("[data-act=again]")) onAgain();
+    if ((e.target as HTMLElement).closest("[data-act=done]")) onDone();
   });
   root.append(panel, hint, end);
   const fill = panel.querySelector<HTMLElement>(".oil i")!;
@@ -96,7 +96,7 @@ export function createNightHud(root: HTMLElement, onAgain: () => void) {
       if (over && end.hidden) {
         end.innerHTML = endHtml(n, N.nightLoot(n));
         end.hidden = false;
-        end.querySelector<HTMLButtonElement>("[data-act=again]")?.focus();
+        end.querySelector<HTMLButtonElement>("[data-act=done]")?.focus();
       } else if (!over) end.hidden = true;
     },
     dispose() {

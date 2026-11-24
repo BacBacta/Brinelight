@@ -22,16 +22,27 @@ export type NightHandle = {
   state(): N.NightState;
   /** Where the beam is told to point, in degrees. */
   aim(bearing: number): void;
+  /** A finger down or up on the 3D view: the portal hands it over (it keeps those taps from the city's own sheets). */
+  hold(e: PointerEvent): void;
   /** Stops it and takes its shapes off the water. */
   dispose(): void;
 };
 
-/** Starts a Night on the island's water; `onChange` hears each step that changed what the screen shows. */
+/** Starts a Night on the island's water, with what its city gives it. */
 export function startNight(
   scene: SceneHandle,
   canvas: HTMLCanvasElement,
   root: HTMLElement,
-  opts: { night: number; newSeed(): number; onChange?(n: N.NightState): void },
+  opts: {
+    night: number;
+    seed: number;
+    /** What the city gives this Night. */
+    powers: N.NightPowers;
+    /** The Night is over, won or lost: once, at once (its loot goes home now, before any tap). */
+    onOver(n: N.NightState): void;
+    /** "To your city" was tapped on the end card. */
+    onDone(): void;
+  },
 ): NightHandle {
   document.body.classList.add("night");
   // Fingers steer the beam: they no longer turn the camera.
@@ -51,12 +62,9 @@ export function startNight(
   beam.position.y = y + 0.02;
   scene.add(beam);
 
-  let clock: N.NightClock = { night: N.newNight(opts.newSeed(), opts.night), spare: 0 };
-  // Again: the same Night from a new seed, at once.
-  const hud = createNightHud(root, () => {
-    clock = { night: N.newNight(opts.newSeed(), opts.night), spare: 0 };
-    shown = -1;
-  });
+  let clock: N.NightClock = { night: N.newNight(opts.seed, opts.night, opts.powers), spare: 0 };
+  let over = false;
+  const hud = createNightHud(root, () => opts.onDone());
   let aimed = 0;
   let last: number | null = null;
   let shown = -1;
@@ -91,13 +99,7 @@ export function startNight(
     const b = pointerBearing(e.clientX, e.clientY, canvas.getBoundingClientRect(), scene.cityCamera, water);
     if (b !== null) aimed = b;
   };
-  const hold = (e: PointerEvent) => {
-    e.stopImmediatePropagation();
-    follow(e);
-  };
   canvas.addEventListener("pointermove", follow);
-  canvas.addEventListener("pointerdown", hold);
-  canvas.addEventListener("pointerup", hold);
   canvas.style.touchAction = "none";
   // The keys: ← → or A D (by their place on the keyboard: Q D on AZERTY) turn the beam while held.
   const held = new Set<string>();
@@ -123,7 +125,7 @@ export function startNight(
   };
   document.addEventListener("visibilitychange", onVisibility);
 
-  scene.onFrame((now) => {
+  const stopFrames = scene.onFrame((now) => {
     if (document.hidden) return;
     const dt = last === null ? 0 : now - last;
     last = now;
@@ -133,7 +135,11 @@ export function startNight(
     if (clock.night.step !== shown) {
       shown = clock.night.step;
       hud.update(clock.night);
-      opts.onChange?.(clock.night);
+      const p = clock.night.phase;
+      if (!over && (p === "won" || p === "lost")) {
+        over = true;
+        opts.onOver(clock.night);
+      }
     }
   });
 
@@ -142,12 +148,12 @@ export function startNight(
     aim(bearing) {
       aimed = bearing;
     },
+    hold: follow,
     dispose() {
+      stopFrames();
       hud.dispose();
       document.removeEventListener("visibilitychange", onVisibility);
       canvas.removeEventListener("pointermove", follow);
-      canvas.removeEventListener("pointerdown", hold);
-      canvas.removeEventListener("pointerup", hold);
       removeEventListener("keydown", onKey);
       removeEventListener("keyup", onKey);
       canvas.style.touchAction = "";

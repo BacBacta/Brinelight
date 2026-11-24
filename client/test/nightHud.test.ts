@@ -39,14 +39,14 @@ describe("what you earn, and what to do, during the Night", () => {
 });
 
 describe("the end of a Night", () => {
-  it("lost: the Lighthouse went dark, the waves held, what you bring back, Again", () => {
+  it("lost: the Lighthouse went dark, the waves held, what you bring back, the way to your city", () => {
     const lost = { ...base, phase: "lost" as const, oil: 0, wave: 4, burned: 12 };
     const html = endHtml(lost, N.nightLoot(lost));
     expect(html).toContain(NIGHT_TEXT.lost);
     expect(html).toContain("You held 3 waves of 5.");
     expect(html).toContain(`${N.nightLoot(lost).wood} wood`);
-    expect(html).toContain(`data-act="again"`);
-    expect(html).toContain(NIGHT_TEXT.again);
+    expect(html).toContain(`data-act="done"`);
+    expect(html).toContain(NIGHT_TEXT.toCity);
     expect(html).not.toContain("Pearls");
   });
 

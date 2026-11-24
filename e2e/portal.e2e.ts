@@ -98,7 +98,7 @@ describe("the portal, from a folder of its own", () => {
     await context.close();
   });
 
-  it("a Night left alone ends on its card; Again starts a new one", async () => {
+  it("a Night left alone ends on its card; its loot goes to your city, where the Lighthouse is upgraded; the city stays after a reload", async () => {
     const context = await browser.newContext({ viewport: { width: 384, height: 699 } });
     const page = await context.newPage();
     await page.goto(`http://127.0.0.1:${PORT}${FOLDER}`);
@@ -107,8 +107,17 @@ describe("the portal, from a folder of its own", () => {
     expect(end).toContain("The Lighthouse went dark");
     expect(end).toMatch(/You held \d waves of 5\./);
     expect(end).toContain("You bring back:");
-    await page.locator('.night-end [data-act="again"]').click();
-    await expect.poll(async () => await read(page)).toMatchObject({ end: false, oil: "100", wave: "Wave 1 of 5" });
+    await page.locator('.night-end [data-act="done"]').click();
+    const day = page.locator(".day:not([hidden])");
+    await expect.poll(() => day.count()).toBe(1);
+    expect(await day.innerText()).toContain("Lighthouse");
+    await page.locator('.day [data-act="upgrade"][data-b="lighthouse"]').click();
+    await expect.poll(async () => (await day.innerText()).replace(/\s+/g, " ")).toContain("Lighthouse level 2");
+    await page.reload();
+    await page.waitForSelector(".day:not([hidden])", { timeout: 60_000 });
+    expect((await page.locator(".day").innerText()).replace(/\s+/g, " ")).toContain("Lighthouse level 2");
+    await page.locator('.day [data-act="night"]').click();
+    await expect.poll(async () => await read(page)).toMatchObject({ end: false, wave: "Wave 1 of 5" });
     await context.close();
   }, 200_000);
 });
