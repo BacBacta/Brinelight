@@ -9,7 +9,7 @@ import { seedRng, type Rng } from "./random.js";
 import { FAMILIES, NIGHTS, type Family } from "./values.js";
 
 /** The shape of a Night's data: raised when it changes, so that an old save or replay is read knowingly. */
-export const NIGHT_SHAPE = 5;
+export const NIGHT_SHAPE = 6;
 
 export type Enemy = {
   /** Whole, from 1, never reused in a Night. */
@@ -67,6 +67,10 @@ export type NightState = {
   offer: CardId[];
   /** The cards chosen this Night, in order. */
   cards: CardId[];
+  /** Steps the lead captain's flare still burns. */
+  flare: number;
+  /** Steps before the flare can be fired again. */
+  cooldown: number;
 };
 
 export const TROOPS: readonly TroopType[] = ["boarders", "harpooners", "crossbowmen"];
@@ -85,11 +89,11 @@ const exactKeys = (o: Record<string, unknown>, keys: readonly string[]): boolean
 export function newNight(seed: number, night: number, power: NightPowers = BASE_POWERS): NightState {
   if (!isUint32(seed)) throw new RangeError(`A Night's seed is a whole 32-bit number, not ${seed}`);
   if (!Number.isInteger(night) || night < 1 || night > NIGHTS) throw new RangeError(`There is no Night ${night}`);
-  return { v: NIGHT_SHAPE, night, seed, rng: seedRng(seed), step: 0, oil: power.startOil, wave: 1, phase: "wave", pauseEnd: -1, spawned: 0, nextSpawn: 0, enemies: [], nextId: 1, burned: 0, beam: 0, power: { ...power }, rescued: false, posts: new Array<TroopType | null>(power.posts).fill(null), offer: [], cards: [] };
+  return { v: NIGHT_SHAPE, night, seed, rng: seedRng(seed), step: 0, oil: power.startOil, wave: 1, phase: "wave", pauseEnd: -1, spawned: 0, nextSpawn: 0, enemies: [], nextId: 1, burned: 0, beam: 0, power: { ...power }, rescued: false, posts: new Array<TroopType | null>(power.posts).fill(null), offer: [], cards: [], flare: 0, cooldown: 0 };
 }
 
 const ENEMY_KEYS = ["id", "family", "bearing", "distance", "health", "lit", "fade", "stage"] as const;
-const NIGHT_KEYS = ["v", "night", "seed", "rng", "step", "oil", "wave", "phase", "pauseEnd", "spawned", "nextSpawn", "enemies", "nextId", "burned", "beam", "power", "rescued", "posts", "offer", "cards"] as const;
+const NIGHT_KEYS = ["v", "night", "seed", "rng", "step", "oil", "wave", "phase", "pauseEnd", "spawned", "nextSpawn", "enemies", "nextId", "burned", "beam", "power", "rescued", "posts", "offer", "cards", "flare", "cooldown"] as const;
 const PHASES: readonly string[] = ["wave", "pause", "won", "lost"];
 
 function parseEnemy(raw: unknown): Enemy | null {
@@ -111,6 +115,7 @@ export function parseNight(raw: unknown): NightState | null {
     if (!isAngle(o.beam) || !isWhole(o.nextId, 1) || !isWhole(o.burned) || !Array.isArray(o.enemies) || typeof o.rescued !== "boolean") return null;
     const p = o.power;
     if (!isObj(p) || !exactKeys(p, ["beamDps", "startOil", "rescue", "posts"]) || !isNum(p.beamDps) || p.beamDps <= 0 || !isNum(p.startOil) || p.startOil <= 0 || !isNum(p.rescue) || p.rescue < 0 || p.rescue > 1 || !isWhole(p.posts) || (p.posts as number) > 12) return null;
+    if (!isWhole(o.flare) || !isWhole(o.cooldown)) return null;
     const isCard = (c: unknown) => typeof c === "string" && (CARD_IDS as readonly string[]).includes(c);
     const { offer, cards } = o;
     if (!Array.isArray(offer) || offer.length > 3 || !offer.every(isCard) || new Set(offer).size !== offer.length) return null;
@@ -143,6 +148,8 @@ export function parseNight(raw: unknown): NightState | null {
       beam: o.beam,
       power: { beamDps: p.beamDps, startOil: p.startOil, rescue: p.rescue, posts: p.posts as number },
       posts: posts as (TroopType | null)[],
+      flare: o.flare as number,
+      cooldown: o.cooldown as number,
       offer: offer as CardId[],
       cards: cards as CardId[],
       rescued: o.rescued,

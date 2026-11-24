@@ -412,3 +412,16 @@ body.portal .nav {
   background: linear-gradient(90deg, #a32b1f, var(--red));
   transform-origin: left;
 }
+
+/* The captain's flare: at the bottom right, waiting its seconds after a burst. */
+.night-flare {
+  position: fixed;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  z-index: 6;
+  min-width: 96px;
+  min-height: 48px;
+}
+.night-flare[hidden] {
+  display: none;
+}

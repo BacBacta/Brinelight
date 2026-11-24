@@ -3,16 +3,17 @@
  * never bought); you choose one and keep it until dawn. A card can be taken again, up to its most.
  */
 import { COUNTER_BONUS } from "../combat.js";
-import { BEAM_WIDTH, FAMILY, POST_ARC, POST_DPS, POST_RANGE, WRAITH_FADE_AFTER, WRAITH_HIDDEN } from "./values.js";
+import { BEAM_WIDTH, FAMILY, FLARE_COOLDOWN, FLARE_SECONDS, POST_ARC, POST_DPS, POST_RANGE, WRAITH_FADE_AFTER, WRAITH_HIDDEN } from "./values.js";
 
 export const CARD_IDS = [
   "wide", "bright", "sharp", "reach", "arc", "barrel", "tar", "tide",
   "focus", "hunter", "ghostlight", "ember", "drill", "foe", "raft", "nets",
   "tanks", "patch", "seawall", "salvage", "fog", "headwind", "shoal", "star",
+  "quick", "long",
 ] as const;
 export type CardId = (typeof CARD_IDS)[number];
 
-export type Card = { group: "beam" | "posts" | "oil" | "sea"; name: string; text: string; most: number };
+export type Card = { group: "beam" | "posts" | "oil" | "sea" | "captain"; name: string; text: string; most: number };
 
 export const CARDS: Readonly<Record<CardId, Card>> = {
   wide: { group: "beam", name: "Wider beam", text: "Your beam is 10° wider.", most: 3 },
@@ -39,6 +40,8 @@ export const CARDS: Readonly<Record<CardId, Card>> = {
   headwind: { group: "sea", name: "Headwind", text: "Raiders come 20% slower.", most: 2 },
   shoal: { group: "sea", name: "Fish shoal", text: "20 more fish for each wave held.", most: 3 },
   star: { group: "sea", name: "Lucky star", text: "5 more Pearls if you hold till dawn.", most: 2 },
+  quick: { group: "captain", name: "Quick hands", text: "Your flare is ready 25% sooner.", most: 2 },
+  long: { group: "captain", name: "Long flare", text: "Your flare burns a second longer.", most: 2 },
 };
 
 /** Oil a barrel gives at once. */
@@ -78,5 +81,7 @@ export function cardMods(held: readonly CardId[]) {
     woodPerBurned: 2 * n("salvage"),
     fishPerWave: 20 * n("shoal"),
     pearls: 5 * n("star"),
+    cooldown: FLARE_COOLDOWN * 0.75 ** n("quick"),
+    flare: FLARE_SECONDS + n("long"),
   };
 }

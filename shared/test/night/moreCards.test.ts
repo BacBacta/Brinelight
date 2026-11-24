@@ -17,9 +17,9 @@ const moved = (n: NightState, beam = 180) => n.enemies[0]!.distance - stepNight(
 /** A Night paused with this card offered, to choose it. */
 const offered = (card: NightState["cards"][number], over: Partial<NightState> = {}): NightState => ({ ...newNight(1, 2), phase: "pause", pauseEnd: 0, offer: [card], ...over });
 
-describe("the 24 cards", () => {
-  it("24 cards, each short and plain", () => {
-    expect(CARD_IDS).toHaveLength(24);
+describe("the 26 cards", () => {
+  it("26 cards (two of them the captains'), each short and plain", () => {
+    expect(CARD_IDS).toHaveLength(26);
     for (const id of CARD_IDS) expect(CARDS[id].text.length, id).toBeLessThan(50);
   });
 });

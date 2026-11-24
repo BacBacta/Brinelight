@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { feedTime, type NightClock } from "../../src/rules/night/clock.js";
+import { cardMods } from "../../src/rules/night/cards.js";
 import { nightLoot } from "../../src/rules/night/loot.js";
 import { newNight, type NightState } from "../../src/rules/night/state.js";
 import { stepNight, waveSize, wavesOf, type NightInput } from "../../src/rules/night/step.js";
@@ -65,14 +66,15 @@ describe("the waves", () => {
     expect(lost.wave).toBeGreaterThan(NIGHT1_GRACE_WAVES);
     // The same Night, the same end: replays rest on this.
     expect(lost.step).toBe(play(newNight(5, 1), (n) => ({ beam: 0, card: n.offer[0] })).step);
-    expect(lost.step).toMatchInlineSnapshot(`2205`);
+    expect(lost.step).toMatchInlineSnapshot(`2835`);
   });
 
   it("Night 1's first waves leave at least a drop of oil, even with nothing left", () => {
     let n: NightState = { ...newNight(5, 1), oil: 1 };
     while (n.phase !== "lost" && n.wave <= NIGHT1_GRACE_WAVES) n = stepNight(n, { beam: 180, card: n.offer[0] });
     expect(n.wave).toBe(NIGHT1_GRACE_WAVES + 1);
-    expect(n.oil).toBe(1);
+    // At least a drop: a card taken between waves may have poured some more.
+    expect(n.oil).toBeGreaterThanOrEqual(1);
     // Night 2 has no such grace.
     expect(play({ ...newNight(5, 2), oil: 1 }, (n) => ({ beam: 180, card: n.offer[0] }), 2000).phase).toBe("lost");
   });
@@ -112,15 +114,18 @@ describe("a Night is its seed and its inputs", () => {
 describe("the loot at dawn", () => {
   it("won: every wave's loot, a wood a Raider burned twice over, and Pearls", () => {
     const won = play(newNight(5, 1), aim);
-    expect(nightLoot(won)).toEqual({ wood: 5 * LOOT_PER_WAVE.wood + 2 * won.burned, fish: 5 * LOOT_PER_WAVE.fish, pearls: LOOT_DAWN_PEARLS });
+    // The cards taken between waves (Salvage, Fish shoal, Lucky star) add theirs.
+    const m = cardMods(won.cards);
+    expect(nightLoot(won)).toEqual({ wood: 5 * LOOT_PER_WAVE.wood + (2 + m.woodPerBurned) * won.burned, fish: 5 * (LOOT_PER_WAVE.fish + m.fishPerWave), pearls: LOOT_DAWN_PEARLS + m.pearls });
   });
 
   it("lost: the waves cleared, no Pearls, and never less than the floor", () => {
     const lost = play(newNight(5, 1), (n) => ({ beam: 0, card: n.offer[0] }));
     const loot = nightLoot(lost);
     expect(loot.pearls).toBe(0);
-    expect(loot.fish).toBe((lost.wave - 1) * LOOT_PER_WAVE.fish);
-    expect(loot.wood).toBe(Math.max(LOOT_FLOOR.wood, (lost.wave - 1) * LOOT_PER_WAVE.wood + 2 * lost.burned));
+    const m = cardMods(lost.cards);
+    expect(loot.fish).toBe((lost.wave - 1) * (LOOT_PER_WAVE.fish + m.fishPerWave));
+    expect(loot.wood).toBe(Math.max(LOOT_FLOOR.wood, (lost.wave - 1) * LOOT_PER_WAVE.wood + (2 + m.woodPerBurned) * lost.burned));
     expect(nightLoot({ ...newNight(1, 1), phase: "lost", oil: 0 })).toEqual({ wood: LOOT_FLOOR.wood, fish: 0, pearls: 0 });
   });
 });
@@ -134,6 +139,6 @@ describe("the loot as it grows, during the Night", () => {
     expect(lootSoFar(mid)).toEqual({ wood: 2 * LOOT_PER_WAVE.wood + 2 * 9, fish: 2 * LOOT_PER_WAVE.fish, pearls: 0 });
     // At dawn, what was earned is what you bring back.
     const won = play(newNight(5, 1), aim);
-    expect({ ...lootSoFar(won), pearls: LOOT_DAWN_PEARLS }).toEqual(nightLoot(won));
+    expect({ ...lootSoFar(won), pearls: LOOT_DAWN_PEARLS + cardMods(won.cards).pearls }).toEqual(nightLoot(won));
   });
 });

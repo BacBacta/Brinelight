@@ -78,7 +78,12 @@ export function startNight(
 
   let clock: N.NightClock = { night: N.newNight(opts.seed, opts.night, opts.powers), spare: 0 };
   let over = false;
-  const hud = createNightHud(root, () => opts.onDone());
+  let pendingPower = false;
+  const hud = createNightHud(
+    root,
+    () => opts.onDone(),
+    () => (pendingPower = true),
+  );
   let aimed = 0;
   let last: number | null = null;
   let shown = -1;
@@ -174,6 +179,12 @@ export function startNight(
     }
   };
   const onCardKey = (e: KeyboardEvent) => {
+    // Space or F: the captain's flare.
+    if (e.code === "Space" || e.code === "KeyF") {
+      e.preventDefault();
+      pendingPower = true;
+      return;
+    }
     const i = ["Digit1", "Digit2", "Digit3", "Numpad1", "Numpad2", "Numpad3"].indexOf(e.code) % 3;
     const offer = clock.night.offer;
     if (i >= 0 && offer[i]) pendingCard = offer[i]!;
@@ -223,7 +234,9 @@ export function startNight(
     const turn = keyTurn();
     if (turn !== 0) opts.onAim?.();
     aimed = turnBy(aimed, turn, dt);
-    clock = N.feedTime(clock, dt, { beam: aimed, ...(pendingCard ? { card: pendingCard } : {}), ...(pendingPost ? { post: pendingPost } : {}) });
+    const fired = clock.night.cooldown === 0 && pendingPower;
+    clock = N.feedTime(clock, dt, { beam: aimed, ...(pendingCard ? { card: pendingCard } : {}), ...(pendingPost ? { post: pendingPost } : {}), ...(pendingPower ? { power: true } : {}) });
+    if (fired || clock.night.cooldown > 0) pendingPower = false;
     // A choice is given to the steps of one frame (a frame may run none: the next one takes it).
     if (pendingCard && !clock.night.offer.includes(pendingCard)) pendingCard = null;
     if (pendingPost && clock.night.posts[pendingPost.slot] === pendingPost.troop) pendingPost = null;

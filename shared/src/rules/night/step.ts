@@ -13,6 +13,7 @@ import {
   BOSS_SUMMON,
   BOSS_WAVE,
   FAMILIES,
+  FLARE_SHARE,
   FAMILY,
   NIGHT_MIX,
   type Family,
@@ -30,7 +31,7 @@ import {
 } from "./values.js";
 
 /** What the player does in a step: where the beam points, in degrees; and maybe a troop put on a post. */
-export type NightInput = { beam: number; post?: { slot: number; troop: TroopType }; card?: CardId };
+export type NightInput = { beam: number; post?: { slot: number; troop: TroopType }; card?: CardId; power?: boolean };
 
 /** The troop that beats each family, on the troops' triangle (boarders > harpooners > crossbowmen > boarders). */
 export const COUNTERED_BY: Readonly<Record<Family, TroopType>> = { raider: "crossbowmen", beast: "harpooners", wraith: "boarders", galleon: "harpooners" };
@@ -103,6 +104,14 @@ export function stepNight(n: NightState, input: NightInput): NightState {
     if (input.card === "raft") posts = [...posts, null];
   }
   const mods = cardMods(cards);
+  // The lead captain's flare: fired when ready, it burns every enemy on the sea for a while.
+  let flare = Math.max(0, n.flare - 1);
+  let cooldown = Math.max(0, n.cooldown - 1);
+  if (input.power && n.cooldown === 0) {
+    flare = Math.round(mods.flare * STEPS_PER_SECOND) - 1;
+    cooldown = Math.round(mods.cooldown * STEPS_PER_SECOND) - 1;
+  }
+  const flaring = n.flare > 0 || (input.power === true && n.cooldown === 0);
   const oilCap = n.power.startOil + mods.extraOil;
   const order = input.post;
   if (order && Number.isInteger(order.slot) && order.slot >= 0 && order.slot < posts.length && TROOPS.includes(order.troop)) {
@@ -167,7 +176,7 @@ export function stepNight(n: NightState, input: NightInput): NightState {
     const fading = e.fade > 0;
     const lit = !fading && inBeam(beam, e.bearing, mods.beamWidth);
     const beamHit = n.power.beamDps * mods.beamMul * (e.family === "beast" ? mods.beastMul : 1) * (e.distance <= EMBER_NEAR ? mods.nearMul : 1) * STEP;
-    const health = (lit ? e.health - beamHit : e.health) - (hits.get(e.id) ?? 0);
+    const health = (lit ? e.health - beamHit : e.health) - (hits.get(e.id) ?? 0) - (flaring ? n.power.beamDps * FLARE_SHARE * STEP : 0);
     let litFor = lit ? e.lit + 1 : 0;
     let fade = fading ? e.fade - 1 : 0;
     if (e.family === "wraith" && litFor >= Math.round(mods.fadeAfter * STEPS_PER_SECOND)) {
@@ -220,5 +229,5 @@ export function stepNight(n: NightState, input: NightInput): NightState {
       rng = next;
     }
   }
-  return { ...n, step: t + 1, beam, oil, phase, wave, pauseEnd, spawned, nextSpawn, rng, nextId, burned, enemies, rescued, posts, offer, cards };
+  return { ...n, step: t + 1, beam, oil, phase, wave, pauseEnd, spawned, nextSpawn, rng, nextId, burned, enemies, rescued, posts, offer, cards, flare, cooldown };
 }

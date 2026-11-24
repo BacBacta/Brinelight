@@ -10,6 +10,7 @@ export const NIGHT_TEXT = {
   oil: "Oil",
   oilLabel: "Oil: the Lighthouse's life",
   boss: "The Mist Galleon",
+  flare: "Flare",
   hint: "Turn the light onto the boats. Boats that land steal oil.",
   lost: "The Lighthouse went dark",
   won: "Dawn",
@@ -18,7 +19,7 @@ export const NIGHT_TEXT = {
 } as const;
 
 /** What the panel shows of a Night. */
-export function hudParts(n: N.NightState): { oil: number; oilText: string; wave: string; next: string; wood: number; fish: number; hint: string; boss: number | null } {
+export function hudParts(n: N.NightState): { oil: number; oilText: string; wave: string; next: string; wood: number; fish: number; hint: string; boss: number | null; flare: string; flareReady: boolean } {
   const waves = N.wavesOf(n.night);
   const next = n.phase === "pause" ? `Next wave in ${Math.max(1, Math.ceil((n.pauseEnd - n.step) / N.STEPS_PER_SECOND))} s` : "";
   const earned = N.lootSoFar(n);
@@ -32,7 +33,10 @@ export function hudParts(n: N.NightState): { oil: number; oilText: string; wave:
   // The Galleon's health, as a share, while it is on the sea.
   const galleon = n.enemies.find((e) => e.family === "galleon");
   const boss = galleon ? Math.max(0, galleon.health / N.FAMILY.galleon.health) : null;
-  return { boss, oil: Math.max(0, Math.min(1, n.oil / (n.power.startOil + N.cardMods(n.cards).extraOil))), oilText: String(Math.ceil(n.oil)), wave: `Wave ${Math.min(n.wave, waves)} of ${waves}`, next, wood: earned.wood, fish: earned.fish, hint };
+  // The flare: ready, or the seconds it still waits.
+  const flareReady = n.cooldown === 0;
+  const flare = flareReady ? NIGHT_TEXT.flare : `${NIGHT_TEXT.flare} ${Math.ceil(n.cooldown / N.STEPS_PER_SECOND)} s`;
+  return { flare, flareReady, boss, oil: Math.max(0, Math.min(1, n.oil / (n.power.startOil + N.cardMods(n.cards).extraOil))), oilText: String(Math.ceil(n.oil)), wave: `Wave ${Math.min(n.wave, waves)} of ${waves}`, next, wood: earned.wood, fish: earned.fish, hint };
 }
 
 /** The end card's inside: the Night won or lost, the waves held, what you bring back, and the way to your city. */
@@ -50,7 +54,7 @@ export function endHtml(n: N.NightState, loot: N.Loot): string {
 }
 
 /** The panel and the end card, over the 3D view. */
-export function createNightHud(root: HTMLElement, onDone: () => void) {
+export function createNightHud(root: HTMLElement, onDone: () => void, onFlare: () => void = () => {}) {
   const panel = document.createElement("div");
   panel.className = "night-hud";
   panel.innerHTML =
@@ -68,7 +72,11 @@ export function createNightHud(root: HTMLElement, onDone: () => void) {
   end.addEventListener("click", (e) => {
     if ((e.target as HTMLElement).closest("[data-act=done]")) onDone();
   });
-  root.append(panel, hint, end);
+  const flareButton = document.createElement("button");
+  flareButton.className = "night-flare b gold";
+  flareButton.setAttribute("aria-keyshortcuts", "Space F");
+  flareButton.addEventListener("click", () => onFlare());
+  root.append(panel, hint, end, flareButton);
   const fill = panel.querySelector<HTMLElement>(".oil i")!;
   const wood = panel.querySelector<HTMLElement>('[data-k="wood"]')!;
   const bossBar = panel.querySelector<HTMLElement>(".boss")!;
@@ -94,7 +102,7 @@ export function createNightHud(root: HTMLElement, onDone: () => void) {
   return {
     update(n: N.NightState) {
       const p = hudParts(n);
-      const key = `${p.oilText}|${p.wave}|${p.next}|${n.phase}|${p.wood}|${p.fish}|${p.hint}|${p.boss === null ? "" : p.boss.toFixed(2)}`;
+      const key = `${p.flare}|${p.oilText}|${p.wave}|${p.next}|${n.phase}|${p.wood}|${p.fish}|${p.hint}|${p.boss === null ? "" : p.boss.toFixed(2)}`;
       if (key === shown) return;
       shown = key;
       fill.style.transform = `scaleX(${p.oil})`;
@@ -103,6 +111,9 @@ export function createNightHud(root: HTMLElement, onDone: () => void) {
       meter.setAttribute("aria-valuemax", String(n.power.startOil + N.cardMods(n.cards).extraOil));
       wave.textContent = p.wave;
       next.textContent = p.next;
+      flareButton.textContent = p.flare;
+      flareButton.disabled = !p.flareReady;
+      flareButton.hidden = n.phase === "won" || n.phase === "lost";
       bossBar.hidden = p.boss === null;
       if (p.boss !== null) {
         bossFill.style.transform = `scaleX(${p.boss})`;
@@ -121,6 +132,7 @@ export function createNightHud(root: HTMLElement, onDone: () => void) {
     },
     dispose() {
       panel.remove();
+      flareButton.remove();
       hint.remove();
       end.remove();
     },

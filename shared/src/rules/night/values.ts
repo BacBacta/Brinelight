@@ -114,3 +114,10 @@ export const POST_DPS = 20;
 export const POST_RANGE = 16;
 /** …and how wide, in degrees around its own bearing. */
 export const POST_ARC = 60;
+
+/** The lead captain's power, the flare: it lights the whole sea this long (seconds)… */
+export const FLARE_SECONDS = 2;
+/** …burning every enemy at this share of the beam's strength… */
+export const FLARE_SHARE = 0.5;
+/** …then waits this long to be fired again. */
+export const FLARE_COOLDOWN = 20;

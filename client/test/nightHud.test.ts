@@ -75,3 +75,10 @@ describe("the boss's health", () => {
     expect(NIGHT_TEXT.boss).toBe("The Mist Galleon");
   });
 });
+
+describe("the flare's button", () => {
+  it("ready: Flare; fired: the seconds it waits", () => {
+    expect(hudParts(base)).toMatchObject({ flare: "Flare", flareReady: true });
+    expect(hudParts({ ...base, cooldown: 12 * N.STEPS_PER_SECOND - 5 })).toMatchObject({ flare: "Flare 12 s", flareReady: false });
+  });
+});
