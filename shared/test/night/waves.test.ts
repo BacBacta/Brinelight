@@ -142,3 +142,17 @@ describe("the loot as it grows, during the Night", () => {
     expect({ ...lootSoFar(won), pearls: LOOT_DAWN_PEARLS + cardMods(won.cards).pearls }).toEqual(nightLoot(won));
   });
 });
+
+describe("the same Night on every screen (CrazyGames: 60, 144, 165 Hz)", () => {
+  it("fed at 60, 144 and 165 frames a second for 20 s, the Night is the same, field for field", () => {
+    const feed = (hz: number): NightState => {
+      let c: NightClock = { night: newNight(77, 2), spare: 0 };
+      for (let i = 0; i < hz * 20; i++) c = feedTime(c, 1 / hz, { beam: (c.night.step * 3) % 360, card: c.night.offer[0] });
+      return c.night;
+    };
+    const at60 = feed(60);
+    expect(at60.step).toBe(600);
+    expect(feed(144)).toEqual(at60);
+    expect(feed(165)).toEqual(at60);
+  });
+});

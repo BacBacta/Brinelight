@@ -212,7 +212,8 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
 
 - [ ] **7.1** Read CrazyGames' requirement pages again and write any change here.
 - [ ] **7.2** e2e captures at 821 × 462, 907 × 510, 1216 × 684, 1920 × 1080, 800 × 450, 1080 × 607 and 384 × 699, at a pixel ratio of 1: no text cut, no button under another.
-- [ ] **7.3** The same Night at 60, 144 and 165 Hz (a test of the accumulator); sound starts on iOS after the first tap.
+- [x] **7.3** The same Night at 60, 144 and 165 Hz (a test of the accumulator); sound starts on iOS after the first tap.
+  - Done 24 November: a Night fed at 60, 144 and 165 frames a second for 20 s is the same, field for field (`shared/test/night/waves.test.ts`). The sound starts at the first tap (its AudioContext is made then, `night/audio.ts`), as iOS asks; not tried on an iOS device here.
 - [ ] **7.4** The checks of task 0.5 on the final build; no outside link anywhere.
 - [ ] **7.5** The covers (1920 × 1080, 800 × 1200, 800 × 800, the title as the only text) and the two videos (15 to 20 s, no sound, 1080p in 16:9 and in 2:3), captured from the game.
 - [ ] **7.6** The description and the controls in English, under the name the owner chose: "Brinelight: Hold the Light". Check it is not taken on CrazyGames.
