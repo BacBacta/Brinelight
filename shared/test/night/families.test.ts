@@ -78,7 +78,7 @@ describe("which family comes, Night by Night", () => {
     let n = newNight(9, 4);
     const seen = new Set<string>();
     for (let i = 0; i < 6000 && n.phase !== "won" && n.phase !== "lost"; i++) {
-      n = stepNight(n, { beam: (i * 3) % 360 });
+      n = stepNight(n, { beam: (i * 3) % 360, card: n.offer[0] });
       for (const e of n.enemies) seen.add(e.family);
     }
     expect([...seen].sort()).toEqual(["beast", "raider", "wraith"]);

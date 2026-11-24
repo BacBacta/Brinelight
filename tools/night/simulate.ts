@@ -34,9 +34,12 @@ export const BOTS: readonly Bot[] = [still, steady, aim];
 export type NightRun = { night: number; seed: number; bot: string; won: boolean; wave: number; waves: number; seconds: number; oil: number; loot: N.Loot };
 
 /** One Night, played to its end by a bot. */
+/** A bot's input, with the first card offered taken: the bots choose no better than that. */
+const play = (bot: Bot, n: N.NightState): N.NightInput => ({ ...bot.input(n), card: n.offer[0] });
+
 export function playNight(night: number, seed: number, bot: Bot, powers: N.NightPowers = N.BASE_POWERS): NightRun {
   let n = N.newNight(seed, night, powers);
-  while (n.phase !== "won" && n.phase !== "lost") n = N.stepNight(n, bot.input(n));
+  while (n.phase !== "won" && n.phase !== "lost") n = N.stepNight(n, play(bot, n));
   return { night, seed, bot: bot.name, won: n.phase === "won", wave: n.wave, waves: N.wavesOf(night), seconds: n.step / N.STEPS_PER_SECOND, oil: n.oil, loot: N.nightLoot(n) };
 }
 
@@ -100,7 +103,7 @@ export function campaign(bot: Bot, seed: number, maxNights = 60): Campaign {
   for (let i = 0; i < maxNights && city.won < N.NIGHTS; i++) {
     const night = N.nextNight(city);
     let n = N.newNight((seed * 7919 + i) >>> 0, night, N.cityPowers(city));
-    while (n.phase !== "won" && n.phase !== "lost") n = N.stepNight(n, bot.input(n));
+    while (n.phase !== "won" && n.phase !== "lost") n = N.stepNight(n, play(bot, n));
     seconds += n.step / N.STEPS_PER_SECOND;
     tries[night - 1]! += 1;
     const r = N.dawn(city, n);

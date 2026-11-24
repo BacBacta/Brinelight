@@ -137,7 +137,8 @@ export function startNight(
     const turn = keyTurn();
     if (turn !== 0) opts.onAim?.();
     aimed = turnBy(aimed, turn, dt);
-    clock = N.feedTime(clock, dt, { beam: aimed });
+    // Until the cards are on screen (task 3.8), the first card offered is taken.
+    clock = N.feedTime(clock, dt, { beam: aimed, card: clock.night.offer[0] });
     draw();
     if (clock.night.step !== shown) {
       shown = clock.night.step;

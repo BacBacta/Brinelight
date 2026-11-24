@@ -8,7 +8,7 @@ import { LOOT_DAWN_PEARLS, LOOT_FLOOR, LOOT_PER_WAVE, NIGHT1_GRACE_WAVES, SPAWN_
 /** Where a player who always aims at the nearest enemy points the beam. */
 const aim = (n: NightState): NightInput => {
   const near = n.enemies.reduce<NightState["enemies"][number] | null>((a, e) => (!a || e.distance < a.distance ? e : a), null);
-  return { beam: near ? near.bearing : n.beam };
+  return { beam: near ? near.bearing : n.beam, card: n.offer[0] };
 };
 const play = (n: NightState, input: (n: NightState) => NightInput, maxSteps = 200_000): NightState => {
   let s = n;
@@ -27,7 +27,7 @@ describe("the waves", () => {
     let n = newNight(77, 1);
     const seen: number[] = [];
     for (let i = 0; i < SPAWN_SPACING * STEPS_PER_SECOND * 3 + 1; i++) {
-      n = stepNight(n, { beam: 0 });
+      n = stepNight(n, { beam: 0, card: n.offer[0] });
       for (const e of n.enemies) if (!seen.includes(e.id)) seen.push(e.id);
     }
     expect(n.spawned).toBe(4);
@@ -60,21 +60,21 @@ describe("the waves", () => {
   });
 
   it("left alone, Night 1 is lost, never before its third wave, at a known step", () => {
-    const lost = play(newNight(5, 1), () => ({ beam: 0 }));
+    const lost = play(newNight(5, 1), (n) => ({ beam: 0, card: n.offer[0] }));
     expect(lost.phase).toBe("lost");
     expect(lost.wave).toBeGreaterThan(NIGHT1_GRACE_WAVES);
     // The same Night, the same end: replays rest on this.
-    expect(lost.step).toBe(play(newNight(5, 1), () => ({ beam: 0 })).step);
-    expect(lost.step).toMatchInlineSnapshot(`2160`);
+    expect(lost.step).toBe(play(newNight(5, 1), (n) => ({ beam: 0, card: n.offer[0] })).step);
+    expect(lost.step).toMatchInlineSnapshot(`2436`);
   });
 
   it("Night 1's first waves leave at least a drop of oil, even with nothing left", () => {
     let n: NightState = { ...newNight(5, 1), oil: 1 };
-    while (n.phase !== "lost" && n.wave <= NIGHT1_GRACE_WAVES) n = stepNight(n, { beam: 180 });
+    while (n.phase !== "lost" && n.wave <= NIGHT1_GRACE_WAVES) n = stepNight(n, { beam: 180, card: n.offer[0] });
     expect(n.wave).toBe(NIGHT1_GRACE_WAVES + 1);
     expect(n.oil).toBe(1);
     // Night 2 has no such grace.
-    expect(play({ ...newNight(5, 2), oil: 1 }, () => ({ beam: 180 }), 2000).phase).toBe("lost");
+    expect(play({ ...newNight(5, 2), oil: 1 }, (n) => ({ beam: 180, card: n.offer[0] }), 2000).phase).toBe("lost");
   });
 });
 
@@ -82,7 +82,7 @@ describe("a Night is its seed and its inputs", () => {
   it("the same seed and inputs give the same Night after 10,000 steps", () => {
     const run = () => {
       let n = newNight(424242, 3);
-      for (let i = 0; i < 10_000; i++) n = stepNight(n, { beam: (i * 7) % 360 });
+      for (let i = 0; i < 10_000; i++) n = stepNight(n, { beam: (i * 7) % 360, card: n.offer[0] });
       return JSON.stringify(n);
     };
     expect(run()).toBe(run());
@@ -116,7 +116,7 @@ describe("the loot at dawn", () => {
   });
 
   it("lost: the waves cleared, no Pearls, and never less than the floor", () => {
-    const lost = play(newNight(5, 1), () => ({ beam: 0 }));
+    const lost = play(newNight(5, 1), (n) => ({ beam: 0, card: n.offer[0] }));
     const loot = nightLoot(lost);
     expect(loot.pearls).toBe(0);
     expect(loot.fish).toBe((lost.wave - 1) * LOOT_PER_WAVE.fish);
