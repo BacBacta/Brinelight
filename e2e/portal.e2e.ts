@@ -120,4 +120,38 @@ describe("the portal, from a folder of its own", () => {
     await expect.poll(async () => await read(page)).toMatchObject({ end: false, wave: "Wave 1 of 5" });
     await context.close();
   }, 200_000);
+
+  it("a save edited by hand is set aside: a new city, Night 1 at once, and you are told", async () => {
+    const context = await browser.newContext({ viewport: { width: 907, height: 510 } });
+    await context.addInitScript(() => {
+      if (!sessionStorage.getItem("seeded")) {
+        sessionStorage.setItem("seeded", "1");
+        localStorage.setItem("brinelight-portal-v1/hold-the-light-city", JSON.stringify({ v: 1, city: { v: 1, buildings: { lighthouse: 99, refinery: 1, infirmary: 0 }, stock: { wood: 9e9, fish: 0, pearls: 0 }, won: 5, played: 5 } }));
+      }
+    });
+    const page = await context.newPage();
+    await page.goto(`http://127.0.0.1:${PORT}${FOLDER}`);
+    await page.waitForSelector(".night-hud", { timeout: 60_000 });
+    await expect.poll(() => page.locator("body").innerText()).toContain("Your saved city could not be read. A copy was kept.");
+    expect(await read(page)).toMatchObject({ wave: "Wave 1 of 5", oil: "100" });
+    const kept = await page.evaluate(() => localStorage.getItem("brinelight-portal-v1/hold-the-light-city-rejected"));
+    expect(kept).toContain('"lighthouse":99');
+    await context.close();
+  });
+
+  it("?measure lists the sessions kept on this device", async () => {
+    const context = await browser.newContext({ viewport: { width: 907, height: 510 } });
+    await context.addInitScript(() =>
+      localStorage.setItem("brinelight-portal-v1/hold-the-light-measure", JSON.stringify([{ start: 1, seconds: 754, firstMove: 2.5, nights: [{ night: 1, wave: 4, end: "lost" }] }])),
+    );
+    const page = await context.newPage();
+    await page.goto(`http://127.0.0.1:${PORT}${FOLDER}?measure`);
+    const panel = page.locator(".measure");
+    await expect.poll(() => panel.count(), { timeout: 60_000 }).toBe(1);
+    const text = await panel.innerText();
+    expect(text).toContain("12 min 34 s");
+    expect(text).toContain("Night 1: lost at wave 4");
+    expect(text).toContain("Nothing is sent.");
+    await context.close();
+  });
 });
