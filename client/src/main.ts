@@ -10,6 +10,8 @@
  * Week 6: what ends is celebrated, and at launch what ended while you were away (compared with the last city seen here);
  * light sounds of wood and rope, made by the game, that you can turn off in the Profile.
  * The reference prototype stays playable at /prototype/.
+ * The portal edition (Hold the Light, docs/design/hold-the-light.md) is this page built in the Vite mode `portal`: no
+ * account, no server, no demo, no rules table, and everything it keeps on the device under its own key.
  */
 import { BUILDING_IDS, HOME, applyAction, yardSlot, type GameAction } from "@brinelight/shared";
 import type { Wallet } from "@wallet-standard/base";
@@ -34,12 +36,17 @@ import { createCaptainsSheet } from "./ui/captains.js";
 import { createCelebrations } from "./ui/celebrate.js";
 import { createDailySheet, createQuest, createTasksButton } from "./ui/daily.js";
 import { createUi } from "./ui/index.js";
+import { createSettings } from "./ui/settings.js";
+import { portalStore } from "./portal/store.js";
 import { mistPreview, seaMood } from "./ui/values.js";
 import { createSound, type SoundId } from "./ui/sound.js";
 import { DEVICE, DEV_SPEED, SAVE_EVERY_MS, accountOwner, awayEvents, browserStore, elapse, eventsBetween, openSave, readSeen, saveGame, writeSeen, type PlayerState } from "./state/index.js";
 import "./style.css";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
+
+/** The portal build (`vite build --mode portal`): false in the game's own build, and its portal code is not in its files. */
+const PORTAL = import.meta.env.VITE_PORTAL === "1";
 
 /** The actions that start a work: they knock twice on wood. */
 const WORKS = new Set<ActionInput["type"]>(["upgrade", "research", "train", "promote", "heal", "dockRaft", "installOnRaft", "upgradeRaft", "repairRafts", "sail"]);
@@ -48,7 +55,7 @@ const WORKS = new Set<ActionInput["type"]>(["upgrade", "research", "train", "pro
 const signature = (s: PlayerState): string =>
   `${s.queue.map((j) => j.id).join()}|${s.research?.id ?? ""}|${JSON.stringify(s.techs)}|${s.yard ? `${s.yard.kind}${yardSlot(s.yard) ?? ""}` : ""}|${JSON.stringify(s.rafts)}|${s.training ? `${s.training.kind}${s.training.troop}` : ""}|${s.healing ? "h" : ""}|${JSON.stringify(s.troops)}|${JSON.stringify(s.veterans)}|${s.lead}|${JSON.stringify(s.captains)}|${JSON.stringify(s.shards)}|${s.reports.map((r) => `${r.id}${r.read ? "+" : "-"}`).join()}|${s.fleets.map((f) => f.phase).join()}|${s.mist.stoke}${s.mist.dark}${s.mist.held}.${s.mist.missed}`;
 
-if (new URLSearchParams(location.search).has("rules")) {
+if (!PORTAL && new URLSearchParams(location.search).has("rules")) {
   showRules(app);
 } else {
   document.body.classList.add("scene");
@@ -60,26 +67,27 @@ if (new URLSearchParams(location.search).has("rules")) {
 
   // ?demo=phare30 or phare15 (development and branch previews only): a demonstration city, kept in memory.
   // In production the condition is false when the game is built: the demos are not even in its files.
-  const demo = import.meta.env.DEV || import.meta.env.VITE_BRANCH_PREVIEW === "1" ? demoWanted(location.search, demoAllowed(import.meta.env, location.hostname)) : null;
-  const store = demo ? memoryStore() : browserStore();
-  // The last city seen on this device, read before anything writes it: at launch, what ended since is told once.
-  const seen = readSeen(store);
-  // Sounds: none before your first tap, and none when turned off on this device.
-  const sound = createSound(store);
-
-  // The account: only with a server address. Without one, or without signing in, nothing goes on the network.
-  const server = demo ? null : apiUrl();
-  const accountStore = (() => {
+  const demo = !PORTAL && (import.meta.env.DEV || import.meta.env.VITE_BRANCH_PREVIEW === "1") ? demoWanted(location.search, demoAllowed(import.meta.env, location.hostname)) : null;
+  const deviceStore = (() => {
     try {
       return window.localStorage;
     } catch {
       return null;
     }
   })();
+  // The portal keeps its city, its sounds and its news apart from the Brinelight on Solana's, even at the same address.
+  const store = demo ? memoryStore() : PORTAL ? portalStore(deviceStore) : browserStore();
+  // The last city seen on this device, read before anything writes it: at launch, what ended since is told once.
+  const seen = readSeen(store);
+  // Sounds: none before your first tap, and none when turned off on this device.
+  const sound = createSound(store);
+
+  // The account: only with a server address. Without one, or without signing in, nothing goes on the network.
+  const server = PORTAL || demo ? null : apiUrl();
   const account = server
     ? createAccount({
         api: createApi(server),
-        store: accountStore,
+        store: deviceStore,
         mono: () => performance.now(),
         wall: () => Date.now(),
         toast: (text, kind = "") => ui.toast(text, kind, kind === "bad" ? "!" : "i"),
@@ -388,13 +396,15 @@ if (new URLSearchParams(location.search).has("rules")) {
 
   let wallets: readonly Wallet[] = [];
   let signingIn = false;
-  const profile = createProfile(app, {
+  const toggleSound = () => {
+    sound.on = !sound.on;
+    sound.play("tap");
+  };
+  // The portal has no account: the Power card opens its Settings (the sounds).
+  const profile = PORTAL ? createSettings(app, { sound: () => sound.on, toggleSound }) : createProfile(app, {
     view: () => ({ available: !!account, wallet: account?.wallet ?? null, wallets, busy: signingIn }),
     sound: () => sound.on,
-    toggleSound: () => {
-      sound.on = !sound.on;
-      sound.play("tap");
-    },
+    toggleSound,
     signIn: async (wallet) => {
       if (!account || signingIn) return;
       signingIn = true;
