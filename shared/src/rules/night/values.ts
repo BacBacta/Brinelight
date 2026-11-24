@@ -57,3 +57,13 @@ export const LOOT_FLOOR = { wood: 60 } as const;
 
 /** The most steps a frame may run: a slow frame slows the Night rather than jumping it ahead. */
 export const MAX_STEPS_PER_FEED = 8;
+
+/** What an upgrade of the portal's city costs to reach its next level from level 1 (the Infirmary: to build it). */
+export const UPGRADE_BASE = {
+  // A lost Night 1 pays it even with no boat burned: its first two waves are always held (80 wood, 60 fish).
+  lighthouse: { wood: 80, fish: 60 },
+  refinery: { wood: 60, fish: 20 },
+  infirmary: { wood: 120, fish: 80 },
+} as const;
+/** Each level costs this much more than the one before. */
+export const UPGRADE_GROWTH = 1.6;
