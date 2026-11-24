@@ -52,10 +52,7 @@ If the task is too big for one iteration (more than about 400 changed lines with
 
 1. **While you build:** run only the tests of what you touch (`npx vitest run <files>`) and `npx tsc -p <package>`.
 2. **Before the commit:** `npm run check`, green. It is what CI runs and it is needed before every commit (`CLAUDE.md`).
-3. **The e2e (`npm run e2e`, about 10 minutes):** not after each task. Run it:
-   - at the end of each step, before its pull request;
-   - and after a task that changes what the Brinelight on Solana's own build shows or does (its scene, its sheets, its start-up, its saves), since the e2e covers that game.
-   Start it in the background and go on with the next task while it runs, but run no `npm run check` or build beside it: in a cloud container the two together pass its time limit (a whole run took over 28 minutes so, against about 10 alone). Give it an hour's limit. If it fails, fixing it comes before anything else. It runs on Vitest (Playwright's `--trace` flag does not apply); in a cloud container whose Chromium is not the build this Playwright expects, run it with `E2E_CHROMIUM=/opt/pw-browsers/chromium`.
+3. **The e2e:** only at the end of a step that changes what the portal shows (steps 2 to 7; not step 1, whose rules show nothing), before its pull request: `npm run e2e:portal`, the portal's own end-to-end tests. The Brinelight on Solana is frozen (owner, 24 November): its e2e (`e2e/account.e2e.ts`) is no longer run by this loop; `npm run check` still type-checks, tests and builds it, so a change to the shared start-up (`client/src/main.ts`) cannot break its build unseen. Start the e2e in the background and go on with the next task, but run no `npm run check` or build beside it (in a cloud container the two together pass its time limit); give it an hour's limit, and before it, make sure no `vitest` process of an earlier run is left (one that holds its ports stops the next run). It runs on Vitest (Playwright's `--trace` flag does not apply); in a cloud container whose Chromium is not the build this Playwright expects, run it with `E2E_CHROMIUM=/opt/pw-browsers/chromium`. If it fails, fixing it comes before anything else.
 4. Read your own diff as a reviewer would: `CLAUDE.md`'s rules, the principles never to break, dead code, a value without its test, a text that is not plain English.
 5. Tick the task **in the same commit as its code**, with the date and what you measured in one line (sizes, FPS, step counts, times). A task ticked whose e2e is still to run says so ("e2e at the end of the step").
 6. If you decided something, add one line to `docs/decisions.md`: what, and why.
@@ -101,6 +98,6 @@ Never: skip, disable or loosen a test to get green; change a look reference with
 
 ## Notes for the owner
 
-- One commit a task keeps each step small, green and easy to review; tasks follow one another without a pause, and the e2e runs once a step (and after a change to the main game), so a task takes minutes, not half an hour. You can stop the loop at any time.
+- One commit a task keeps each step small, green and easy to review; tasks follow one another without a pause, and the e2e runs once a step (and after a change to the main game), so a task takes minutes, not half an hour. The Brinelight on Solana is frozen: the loop changes it only where the portal shares its code, and runs only the portal's e2e. You can stop the loop at any time.
 - The loop stops at gates A, B and C: they need real players, and the decision is yours.
 - The three open questions of the design (the game's name, the sea's French names, ads) do not block before steps 5 and 7. The loop will ask then.

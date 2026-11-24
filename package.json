@@ -22,6 +22,7 @@
     "build:portal": "npm run build:portal -w client",
     "check": "npm run typecheck && npm test && npm run build && npm run build:portal",
     "e2e": "vitest run --config e2e/vitest.config.ts",
+    "e2e:portal": "vitest run --config e2e/vitest.config.ts e2e/portal.e2e.ts",
     "balance": "tsx tools/balance/run.ts",
     "night": "tsx tools/night/run.ts",
     "load": "tsx tools/load/run.ts",
