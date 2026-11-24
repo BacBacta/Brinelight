@@ -55,7 +55,7 @@ If the task is too big for one iteration (more than about 400 changed lines with
 3. **The e2e (`npm run e2e`, about 10 minutes):** not after each task. Run it:
    - at the end of each step, before its pull request;
    - and after a task that changes what the Brinelight on Solana's own build shows or does (its scene, its sheets, its start-up, its saves), since the e2e covers that game.
-   Start it in the background and go on with the next task while it runs; if it fails, fixing it comes before anything else. It runs on Vitest (Playwright's `--trace` flag does not apply); in a cloud container whose Chromium is not the build this Playwright expects, run it with `E2E_CHROMIUM=/opt/pw-browsers/chromium`.
+   Start it in the background and go on with the next task while it runs, but run no `npm run check` or build beside it: in a cloud container the two together pass its time limit (a whole run took over 28 minutes so, against about 10 alone). Give it an hour's limit. If it fails, fixing it comes before anything else. It runs on Vitest (Playwright's `--trace` flag does not apply); in a cloud container whose Chromium is not the build this Playwright expects, run it with `E2E_CHROMIUM=/opt/pw-browsers/chromium`.
 4. Read your own diff as a reviewer would: `CLAUDE.md`'s rules, the principles never to break, dead code, a value without its test, a text that is not plain English.
 5. Tick the task **in the same commit as its code**, with the date and what you measured in one line (sizes, FPS, step counts, times). A task ticked whose e2e is still to run says so ("e2e at the end of the step").
 6. If you decided something, add one line to `docs/decisions.md`: what, and why.
