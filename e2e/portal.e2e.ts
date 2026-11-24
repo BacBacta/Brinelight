@@ -89,15 +89,16 @@ describe("the portal, from a folder of its own", () => {
     await page.waitForSelector("canvas[data-beam]", { timeout: 60_000 });
     // Far to the right of the screen: the water east of the Lighthouse.
     await page.mouse.move(890, 160);
-    await expect.poll(async () => (await read(page)).beam).toBeGreaterThan(45);
+    // The headless browser draws a few frames a second: the beam follows within them.
+    await expect.poll(async () => (await read(page)).beam, { timeout: 10_000 }).toBeGreaterThan(45);
     expect((await read(page)).beam).toBeLessThan(135);
     // Far to the left: west.
     await page.mouse.move(15, 160);
-    await expect.poll(async () => (await read(page)).beam).toBeGreaterThan(225);
+    await expect.poll(async () => (await read(page)).beam, { timeout: 10_000 }).toBeGreaterThan(225);
     expect((await read(page)).beam).toBeLessThan(315);
     const before = (await read(page)).beam;
     await page.keyboard.down("ArrowRight");
-    await expect.poll(async () => (await read(page)).beam !== before).toBe(true);
+    await expect.poll(async () => (await read(page)).beam !== before, { timeout: 10_000 }).toBe(true);
     await page.keyboard.up("ArrowRight");
     await context.close();
   });
@@ -141,7 +142,7 @@ describe("the portal, from a folder of its own", () => {
     const page = await context.newPage();
     await page.goto(`http://127.0.0.1:${PORT}${FOLDER}`);
     await page.waitForSelector(".night-hud", { timeout: 60_000 });
-    await expect.poll(() => page.locator("body").innerText()).toContain("Your saved city could not be read. A copy was kept.");
+    await expect.poll(() => page.locator("body").innerText(), { timeout: 10_000 }).toContain("Your saved city could not be read. A copy was kept.");
     expect(await read(page)).toMatchObject({ wave: "Wave 1 of 5", oil: "100" });
     const kept = await page.evaluate(() => localStorage.getItem("brinelight-portal-v1/hold-the-light-city-rejected"));
     expect(kept).toContain('"lighthouse":99');
