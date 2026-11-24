@@ -7,6 +7,8 @@ import { isAbsolute, relative, resolve } from "node:path";
 
 /** Its output folder, beside the game's `dist`. */
 export const PORTAL_OUT = "dist-portal";
+/** Where a branch preview serves the portal, inside the game's own build: `<branch>.brinelight.pages.dev/portal/`. */
+export const PORTAL_PREVIEW = "portal";
 /** The game's name on CrazyGames (owner, 24 November 2026). */
 export const PORTAL_TITLE = "Brinelight: Hold the Light";
 /** The public folders the portal does not ship: the reference prototype (4 MB; the scene loads its kit from models/). */

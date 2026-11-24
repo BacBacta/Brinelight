@@ -1,7 +1,26 @@
-import { defineConfig } from "vite";
+import { build, defineConfig, type Plugin } from "vite";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { previewBuild } from "./src/preview.js";
-import { PORTAL_DROPPED, PORTAL_OUT, dropFolders, portalTitle } from "./src/portal/build.js";
+import { PORTAL_DROPPED, PORTAL_OUT, PORTAL_PREVIEW, dropFolders, portalTitle } from "./src/portal/build.js";
+
+/** On a branch preview, the game's own build ends with the portal's, at /portal/, for its testers (never on main). */
+function portalOnPreview(): Plugin {
+  let root = "";
+  let out = "";
+  return {
+    name: "brinelight-portal-preview",
+    apply: "build",
+    configResolved(c) {
+      root = c.root;
+      out = resolve(c.root, c.build.outDir);
+    },
+    async closeBundle() {
+      if (!previewBuild(process.env)) return;
+      await build({ root, configFile: fileURLToPath(import.meta.url), mode: "portal", logLevel: "warn", build: { outDir: resolve(out, PORTAL_PREVIEW), emptyOutDir: true } });
+    },
+  };
+}
 
 export default defineConfig(({ mode }) => ({
   server: { port: 5173 },
@@ -24,6 +43,7 @@ export default defineConfig(({ mode }) => ({
       })(),
     ],
   }),
+  ...(mode !== "portal" && { plugins: [portalOnPreview()] }),
   // A branch preview's build (Cloudflare Pages, not main): ?demo works there (src/demo.ts), never in production.
   define: {
     "import.meta.env.VITE_BRANCH_PREVIEW": JSON.stringify(previewBuild(process.env) ? "1" : ""),
