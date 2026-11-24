@@ -46,7 +46,7 @@ describe("the Night with its powers", () => {
   it("a stronger beam burns a Raider sooner", () => {
     const strong = cityPowers(city(5, 1, 0));
     const steps = Math.ceil((FAMILY.raider.health / strong.beamDps) * STEPS_PER_SECOND);
-    expect(steps).toBeLessThan(15);
+    expect(steps).toBeLessThan(Math.ceil((FAMILY.raider.health / BEAM_DPS) * STEPS_PER_SECOND));
     expect(run(one(strong), steps, 0).enemies).toEqual([]);
     expect(run(one(), steps, 0).enemies).toHaveLength(1);
   });

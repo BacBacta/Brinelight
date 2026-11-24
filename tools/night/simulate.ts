@@ -17,13 +17,25 @@ export const aim: Bot = {
     return { beam: near ? near.bearing : n.beam };
   },
 };
-export const BOTS: readonly Bot[] = [still, aim];
+/** Turns toward the nearest enemy at most this fast, as a hand on the keys does (180° a second): closer to a player. */
+export const steady: Bot = {
+  name: "turns at 180°/s",
+  input: (n) => {
+    let near: N.Enemy | null = null;
+    for (const e of n.enemies) if (!near || e.distance < near.distance) near = e;
+    if (!near) return { beam: n.beam };
+    const d = ((near.bearing - n.beam + 540) % 360) - 180;
+    const most = 180 * N.STEP;
+    return { beam: n.beam + Math.max(-most, Math.min(most, d)) };
+  },
+};
+export const BOTS: readonly Bot[] = [still, steady, aim];
 
 export type NightRun = { night: number; seed: number; bot: string; won: boolean; wave: number; waves: number; seconds: number; oil: number; loot: N.Loot };
 
 /** One Night, played to its end by a bot. */
-export function playNight(night: number, seed: number, bot: Bot): NightRun {
-  let n = N.newNight(seed, night);
+export function playNight(night: number, seed: number, bot: Bot, powers: N.NightPowers = N.BASE_POWERS): NightRun {
+  let n = N.newNight(seed, night, powers);
   while (n.phase !== "won" && n.phase !== "lost") n = N.stepNight(n, bot.input(n));
   return { night, seed, bot: bot.name, won: n.phase === "won", wave: n.wave, waves: N.wavesOf(night), seconds: n.step / N.STEPS_PER_SECOND, oil: n.oil, loot: N.nightLoot(n) };
 }
@@ -63,3 +75,47 @@ export const toTable = (rows: readonly NightSummary[]): string =>
     "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ...rows.map((r) => `| ${r.night} | ${r.bot} | ${r.won}/${r.runs} | ${r.wave} | ${r.minutes.toFixed(1)} | ${r.oil} | ${r.wood} | ${r.fish} |`),
   ].join("\n");
+
+/** What the guide would buy: the Lighthouse when it can, else the cheapest upgrade it can pay. */
+function buyAll(c: N.PortalCity): N.PortalCity {
+  let city = c;
+  for (;;) {
+    const able = N.CITY_BUILDINGS.filter((b) => N.upgradeCity(city, b).ok);
+    if (able.length === 0) return city;
+    const cost = (b: N.CityBuilding) => N.upgradeCost(b, city.buildings[b]).wood + N.upgradeCost(b, city.buildings[b]).fish;
+    const pick = able.includes("lighthouse") ? "lighthouse" : able.reduce((a, b) => (cost(b) < cost(a) ? b : a));
+    const r = N.upgradeCity(city, pick);
+    if (!r.ok) return city;
+    city = r.city;
+  }
+}
+
+export type Campaign = { bot: string; seed: number; tries: number[]; minutes: number; city: N.PortalCity; done: boolean };
+
+/** A new city played Night after Night by a bot, its loot spent as the guide says, until Night 5 is won (or `maxNights`). */
+export function campaign(bot: Bot, seed: number, maxNights = 60): Campaign {
+  let city = N.newCity();
+  const tries = new Array<number>(N.NIGHTS).fill(0);
+  let seconds = 0;
+  for (let i = 0; i < maxNights && city.won < N.NIGHTS; i++) {
+    const night = N.nextNight(city);
+    let n = N.newNight((seed * 7919 + i) >>> 0, night, N.cityPowers(city));
+    while (n.phase !== "won" && n.phase !== "lost") n = N.stepNight(n, bot.input(n));
+    seconds += n.step / N.STEPS_PER_SECOND;
+    tries[night - 1]! += 1;
+    const r = N.dawn(city, n);
+    if (r.ok) city = buyAll(r.city);
+  }
+  return { bot: bot.name, seed, tries, minutes: seconds / 60, city, done: city.won >= N.NIGHTS };
+}
+
+/** Campaigns over these seeds, as a Markdown table: the tries each Night took (median), the minutes, the city at the end. */
+export function campaignTable(seeds: readonly number[], bots: readonly Bot[] = [steady, aim]): string {
+  const rows = bots.map((bot) => {
+    const runs = seeds.map((seed) => campaign(bot, seed));
+    const tries = Array.from({ length: N.NIGHTS }, (_, k) => median(runs.map((r) => r.tries[k]!)));
+    const last = runs[Math.floor(runs.length / 2)]!.city.buildings;
+    return `| ${bot.name} | ${runs.filter((r) => r.done).length}/${runs.length} | ${tries.join(" · ")} | ${median(runs.map((r) => r.minutes)).toFixed(0)} | ${last.lighthouse} · ${last.refinery} · ${last.infirmary} |`;
+  });
+  return ["| Bot | Night 5 won | Tries for Nights 1 to 5 (median) | Minutes (median) | Lighthouse · Refinery · Infirmary at the end |", "| --- | --- | --- | --- | --- |", ...rows].join("\n");
+}

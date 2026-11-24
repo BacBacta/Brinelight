@@ -12,6 +12,7 @@ import {
   NIGHT_GROWTH,
   NIGHT_WAVES,
   SEA_RADIUS,
+  SPAWN_BURST,
   SPAWN_SPACING,
   STEP,
   STEPS_PER_SECOND,
@@ -41,6 +42,8 @@ export function inBeam(beam: number, bearing: number): boolean {
 
 /** The waves of a Night. */
 export const wavesOf = (night: number): number => NIGHT_WAVES[night - 1] ?? NIGHT_WAVES[NIGHT_WAVES.length - 1]!;
+/** How many come at once in a Night. */
+export const burstOf = (night: number): number => SPAWN_BURST[night - 1] ?? SPAWN_BURST[SPAWN_BURST.length - 1]!;
 /** The Raiders of a wave. */
 export const waveSize = (night: number, wave: number): number => WAVE_FIRST + WAVE_GROWTH * (wave - 1) + NIGHT_GROWTH * (night - 1);
 
@@ -69,11 +72,14 @@ export function stepNight(n: NightState, input: NightInput): NightState {
   const size = waveSize(n.night, wave);
   const coming: Enemy[] = [];
   if (phase === "wave" && spawned < size && t >= nextSpawn) {
-    const [f, next] = nextFloat(rng);
-    rng = next;
-    coming.push({ id: nextId, family: "raider", bearing: f * 360, distance: SEA_RADIUS, health: FAMILY.raider.health });
-    nextId += 1;
-    spawned += 1;
+    const burst = Math.min(size - spawned, burstOf(n.night));
+    for (let k = 0; k < burst; k++) {
+      const [f, next] = nextFloat(rng);
+      rng = next;
+      coming.push({ id: nextId, family: "raider", bearing: f * 360, distance: SEA_RADIUS, health: FAMILY.raider.health });
+      nextId += 1;
+    }
+    spawned += burst;
     nextSpawn = t + SPACING_STEPS;
   }
 

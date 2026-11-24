@@ -85,7 +85,37 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
   - Done 24 November: `client/src/night/portal.ts` chains Night, dawn and Day: a new player starts in Night 1 at once, a player back finds their city; a Night's loot goes home and is saved the moment it ends; the end card leads "To your city" (Again is gone). `day.ts`: the store (wood, fish, Pearls), each building with what it does for the Night now and next ("Beam: 60 → 69 a second"), its cost, Upgrade or Build, or the rules' reason in red; "Start Night N" always in sight. The island shows the city's levels (its Lighthouse changes look). Taps on the 3D view are the beam's by Night and open none of the Brinelight on Solana's sheets by Day; a Night's frame callback is stopped when it ends (`onFrame` now gives a way to stop it). 4 tests on the Day's text; the portal's third e2e plays the loop (a Night lost, its loot, the Lighthouse upgraded, a reload, the next Night): `npm run e2e:portal` 3 of 3. Played by hand: Night 1 lost brought 128 wood and 90 fish; the Lighthouse 1→2 paid; 48 wood and 30 fish left.
 - [x] **4.6** The first minutes' guide: the quest card points at what to tap next (the building, the Night), and moves the camera there when tapped.
   - Done 24 November: in the first 3 Days, one line at the top of the Day and a glow on its button: an upgrade you can pay (the Lighthouse first, "Upgrade the Lighthouse: your beam burns harder.", else the cheapest), or "Start the next Night to bring back more." (`dayGuide`, 4 tests; still with reduced motion, as an outline). Night 1's own line (task A.1) guides the first Night. Not done: moving the camera to the building, since the Day's panel, not the 3D view, is where you act in the portal.
-- [ ] **4.7** Nights 1 to 5 as the design's starting values say, played by the simulator's bots; their numbers in this file.
+- [x] **4.7** Nights 1 to 5 as the design's starting values say, played by the simulator's bots; their numbers in this file.
+  - Done 24 November: `npm run night` gains a bot that turns toward the nearest boat at 180° a second (a hand on the keys) and a campaign: a new city, Night after Night, its loot spent as the guide says, until Night 5 is won. With the values of step 1, even that bot won every Night at once without losing oil: nothing to tune, nothing to spend for. **Starting values changed:** the Raider has 60 health (1 s in the beam, was 0.5 s) and speed 4 (6 s from the edge, was 8 s); Raiders come 1 at a time in Nights 1 and 2, 2 in Nights 3 and 4, 3 in Night 5, each at its own bearing (`SPAWN_BURST`). Tests that had the old values written in now read them.
+
+    Each Night with a new city's powers, 20 seeds:
+
+    | Night | Bot | Won | Wave reached (median) | Minutes (median) | Oil left | Wood | Fish |
+    | --- | --- | --- | --- | --- | --- | --- | --- |
+    | 1 | still beam | 0/20 | 4 | 1.1 | 0 | 124 | 90 |
+    | 1 | turns at 180°/s | 20/20 | 5 | 1.4 | 100 | 280 | 150 |
+    | 1 | aims at the nearest | 20/20 | 5 | 1.4 | 100 | 280 | 150 |
+    | 2 | still beam | 0/20 | 3 | 1.0 | 0 | 84 | 60 |
+    | 2 | turns at 180°/s | 20/20 | 8 | 3.3 | 100 | 528 | 240 |
+    | 2 | aims at the nearest | 20/20 | 8 | 3.2 | 100 | 528 | 240 |
+    | 3 | still beam | 0/20 | 3 | 0.7 | 0 | 86 | 60 |
+    | 3 | turns at 180°/s | 19/20 | 9 | 3.1 | 40 | 624 | 270 |
+    | 3 | aims at the nearest | 20/20 | 9 | 2.9 | 100 | 648 | 270 |
+    | 4 | still beam | 0/20 | 2 | 0.5 | 0 | 60 | 30 |
+    | 4 | turns at 180°/s | 13/20 | 10 | 3.9 | 5 | 742 | 300 |
+    | 4 | aims at the nearest | 20/20 | 10 | 3.6 | 100 | 780 | 300 |
+    | 5 | still beam | 0/20 | 2 | 0.5 | 0 | 60 | 30 |
+    | 5 | turns at 180°/s | 0/20 | 6 | 1.7 | 0 | 354 | 150 |
+    | 5 | aims at the nearest | 20/20 | 12 | 4.1 | 65 | 1018 | 360 |
+
+    A new city, Night after Night:
+
+    | Bot | Night 5 won | Tries for Nights 1 to 5 (median) | Minutes (median) | Lighthouse · Refinery · Infirmary at the end |
+    | --- | --- | --- | --- | --- |
+    | turns at 180°/s | 20/20 | 1 · 1 · 1 · 1 · 1 | 15 | 5 · 5 · 4 |
+    | aims at the nearest | 20/20 | 1 · 1 · 1 · 1 · 1 | 14 | 5 · 5 · 4 |
+
+    What it says: with a new city's beam, the hand-speed bot loses Night 5 every time and Night 4 one time in three; the city it grows (Lighthouse 5, Refinery 5, Infirmary 4) wins them at the first try. A player's hand is slower and less steady than the bot's: they will lose some Nights, and the city is what wins them back. To judge at gate A.
 - [ ] **4.8** `?measure`: the game counts, on the device only, each session's length, the Nights started and reached, and the time to the first card; a hidden page shows them for the tester to read out. Nothing is sent.
 - [ ] **4.9** e2e: Night, dawn, upgrade, Night again; reload keeps the city.
 - [ ] **Gate A · Is the loop fun?** Moved after step 4 (owner, 24 November): five people who never saw the game play a Night, spend its loot in the city, and play again, with nothing explained. Passed if four of five start a second Night on their own and none asks what to do.

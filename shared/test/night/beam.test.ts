@@ -17,6 +17,9 @@ const run = (n: NightState, steps: number, beam: number): NightState => {
   return s;
 };
 
+/** The steps a Raider lasts in the beam. */
+const KILL = Math.ceil((FAMILY.raider.health / BEAM_DPS) * STEPS_PER_SECOND);
+
 describe("the beam", () => {
   it("an enemy in it dies in the steps its health says", () => {
     const steps = Math.ceil((FAMILY.raider.health / BEAM_DPS) * STEPS_PER_SECOND);
@@ -40,11 +43,11 @@ describe("the beam", () => {
     expect(inBeam(350, 10)).toBe(true);
     expect(inBeam(10, 350)).toBe(true);
     expect(inBeam(355, 30)).toBe(false);
-    expect(run(one(10), 15, 350).enemies).toEqual([]);
+    expect(run(one(10), KILL, 350).enemies).toEqual([]);
   });
 
   it("burns every enemy it lights at once", () => {
     const two: NightState = { ...one(0), enemies: [one(0).enemies[0]!, { id: 2, family: "raider", bearing: 5, distance: 20, health: FAMILY.raider.health }], nextId: 3 };
-    expect(run(two, 15, 0).enemies).toEqual([]);
+    expect(run(two, KILL, 0).enemies).toEqual([]);
   });
 });

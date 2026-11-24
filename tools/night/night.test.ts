@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aim, playNight, still, summarize, toTable } from "./simulate.js";
+import { aim, campaign, playNight, steady, still, summarize, toTable } from "./simulate.js";
 
 const SEEDS = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -25,5 +25,19 @@ describe("the Night's simulator", () => {
     const rows = summarize([1, 2], [still, aim]);
     expect(rows).toHaveLength(10);
     expect(toTable(rows).split("\n")).toHaveLength(12);
+  });
+});
+
+describe("a campaign: Night after Night, the loot spent", () => {
+  it("is the same for the same seed, and grows the city", () => {
+    const a = campaign(steady, 3, 20);
+    expect(campaign(steady, 3, 20)).toEqual(a);
+    expect(a.city.buildings.lighthouse).toBeGreaterThan(1);
+    expect(a.tries[0]).toBeGreaterThan(0);
+  });
+
+  it("a beam left still loses its first Night 1, and needs the city to win it", () => {
+    const c = campaign(still, 1, 15);
+    expect(c.tries[0]).toBeGreaterThan(1);
   });
 });

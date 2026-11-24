@@ -29,7 +29,7 @@ export type Family = (typeof FAMILIES)[number];
 
 export const FAMILY: Readonly<Record<Family, { speed: number; health: number; oil: number }>> = {
   /** Pirate skiffs: quick, straight to the coast. 8 s from the edge, half a second in the beam. */
-  raider: { speed: 3, health: 30, oil: 5 },
+  raider: { speed: 4, health: 60, oil: 5 },
 };
 
 /** The Nights there are: Nights 1 to 5 first (step 4), then the chart (step 5). */
@@ -43,6 +43,8 @@ export const WAVE_GROWTH = 2;
 export const NIGHT_GROWTH = 2;
 /** Between two enemies of a wave, in seconds. */
 export const SPAWN_SPACING = 1.5;
+/** How many Raiders come at once, each at its own bearing, in Nights 1 to 5: later Nights make the beam choose. */
+export const SPAWN_BURST: readonly number[] = [1, 1, 2, 2, 3];
 /** The pause after a wave, in seconds: the cards will be chosen in it (step 3). */
 export const WAVE_PAUSE = 6;
 /** Night 1's first waves cannot put the Lighthouse out: a new player learns the beam before they can lose. */
