@@ -124,3 +124,16 @@ describe("the loot at dawn", () => {
     expect(nightLoot({ ...newNight(1, 1), phase: "lost", oil: 0 })).toEqual({ wood: LOOT_FLOOR.wood, fish: 0, pearls: 0 });
   });
 });
+
+describe("the loot as it grows, during the Night", () => {
+  it("the waves cleared and the Raiders burned so far, without the floor of a lost Night, no Pearls until dawn", async () => {
+    const { lootSoFar } = await import("../../src/rules/night/loot.js");
+    const n = newNight(5, 1);
+    expect(lootSoFar(n)).toEqual({ wood: 0, fish: 0, pearls: 0 });
+    const mid = { ...n, phase: "pause" as const, wave: 2, burned: 9 };
+    expect(lootSoFar(mid)).toEqual({ wood: 2 * LOOT_PER_WAVE.wood + 2 * 9, fish: 2 * LOOT_PER_WAVE.fish, pearls: 0 });
+    // At dawn, what was earned is what you bring back.
+    const won = play(newNight(5, 1), aim);
+    expect({ ...lootSoFar(won), pearls: LOOT_DAWN_PEARLS }).toEqual(nightLoot(won));
+  });
+});

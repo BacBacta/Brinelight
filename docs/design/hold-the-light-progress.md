@@ -79,6 +79,8 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
     - **What they will meet (known, not to explain):** plain shapes (red blocks for the Raiders, a wedge of light); no sound in the Night yet; Night 1 alone, about 80 s when lost and 1.3 min when every Raider is burned; no cards, no posts, no city between Nights (steps 3 and 4); in portrait the island is small.
     - **On the S22:** open it once with `?fps` at the end of the address (`…/portal/?fps`) and note the FPS line during wave 3.
     - **Write here:** passed or not passed, the five testers' notes in a line each, and what to rework if not passed.
+  - Owner's first note (24 November, before the test with five players): "no explanation of the resources, you do not even see them; you only see what you won at the end".
+  - [x] **A.1** What you earn and what to do, during the Night: the wood and fish earned so far beside their icons under the oil's gauge, flashing as they rise (`lootSoFar` in the rules, tested); the gauge with the oil's icon and its name for screen readers and on hover ("Oil: the Lighthouse's life"); in Night 1, until the first boat burns, one line at the bottom: "Turn the light onto the boats. Boats that land steal oil." 4 tests. Captured at 384 × 699 and 907 × 510. Not done: what the loot is for. It is spent in the city between the Nights (step 4); until then it only adds up.
   - Result (owner): 
 
 ## Step 3 · Depth

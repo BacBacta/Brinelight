@@ -8,12 +8,14 @@ export type Loot = { wood: number; fish: number; pearls: number };
 /** The waves this Night has cleared so far. */
 export const wavesCleared = (n: NightState): number => (n.phase === "won" ? wavesOf(n.night) : n.phase === "pause" ? n.wave : n.wave - 1);
 
-/** The loot of a Night as it stands: the waves cleared, the enemies burned, and Pearls if it was won. */
-export function nightLoot(n: NightState): Loot {
+/** What the Night has earned so far, shown as it grows: the waves cleared and the enemies burned. Pearls come at dawn. */
+export function lootSoFar(n: NightState): Loot {
   const waves = wavesCleared(n);
-  return {
-    wood: Math.max(LOOT_FLOOR.wood, waves * LOOT_PER_WAVE.wood + n.burned * LOOT_PER_BURNED.wood),
-    fish: waves * LOOT_PER_WAVE.fish,
-    pearls: n.phase === "won" ? LOOT_DAWN_PEARLS : 0,
-  };
+  return { wood: waves * LOOT_PER_WAVE.wood + n.burned * LOOT_PER_BURNED.wood, fish: waves * LOOT_PER_WAVE.fish, pearls: 0 };
+}
+
+/** What a Night brings back: what it earned, never less than the floor, and Pearls if it was won. */
+export function nightLoot(n: NightState): Loot {
+  const earned = lootSoFar(n);
+  return { wood: Math.max(LOOT_FLOOR.wood, earned.wood), fish: earned.fish, pearls: n.phase === "won" ? LOOT_DAWN_PEARLS : 0 };
 }

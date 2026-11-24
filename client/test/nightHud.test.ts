@@ -6,7 +6,7 @@ const base = N.newNight(1, 1);
 
 describe("the Night's panel", () => {
   it("the oil as a share of a full Lighthouse, and the wave of all", () => {
-    expect(hudParts({ ...base, oil: 75 })).toEqual({ oil: 0.75, oilText: "75", wave: "Wave 1 of 5", next: "" });
+    expect(hudParts({ ...base, oil: 75 })).toMatchObject({ oil: 0.75, oilText: "75", wave: "Wave 1 of 5", next: "" });
     expect(hudParts({ ...base, oil: 0, phase: "lost" }).oil).toBe(0);
   });
 
@@ -14,6 +14,25 @@ describe("the Night's panel", () => {
     const pause = { ...base, phase: "pause" as const, wave: 2, step: 100, pauseEnd: 100 + 4 * N.STEPS_PER_SECOND };
     expect(hudParts(pause)).toMatchObject({ wave: "Wave 2 of 5", next: "Next wave in 4 s" });
     expect(hudParts({ ...pause, step: pause.pauseEnd - 1 }).next).toBe("Next wave in 1 s");
+  });
+});
+
+describe("what you earn, and what to do, during the Night", () => {
+  it("the wood and fish earned so far, from the first Raider burned", () => {
+    expect(hudParts(base)).toMatchObject({ wood: 0, fish: 0 });
+    const mid = { ...base, phase: "pause" as const, wave: 1, burned: 4, pauseEnd: 200 };
+    expect(hudParts(mid)).toMatchObject({ wood: N.LOOT_PER_WAVE.wood + 4 * N.LOOT_PER_BURNED.wood, fish: N.LOOT_PER_WAVE.fish });
+  });
+
+  it("Night 1 says what to do until the first boat burns; later Nights say nothing", () => {
+    expect(hudParts(base).hint).toBe(NIGHT_TEXT.hint);
+    expect(hudParts({ ...base, burned: 1 }).hint).toBe("");
+    expect(hudParts({ ...base, wave: 2 }).hint).toBe("");
+    expect(hudParts(N.newNight(1, 2)).hint).toBe("");
+  });
+
+  it("the oil is named for what it is", () => {
+    expect(NIGHT_TEXT.oilLabel).toBe("Oil: the Lighthouse's life");
   });
 });
 
