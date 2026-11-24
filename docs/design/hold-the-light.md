@@ -96,7 +96,7 @@ Rules that hold for all of it:
 
 ## The plan
 
-Seven steps, three gates. A step starts only when the one before is green (`npm run check`) and, at a gate, when the owner has said yes.
+Seven steps, three gates. **Order changed by the owner on 24 November: step 4 (the city between the Nights) comes before step 3 (depth), and gate A after step 4**, so that the first testers play the whole loop (a Night, its loot spent, the next Night) and not a gesture with no purpose; gate B stays after step 3. The steps keep their numbers. A step starts only when the one before is green (`npm run check`) and, at a gate, when the owner has said yes.
 
 ### Step 0 · The portal build
 

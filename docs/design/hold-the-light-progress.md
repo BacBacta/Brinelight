@@ -70,8 +70,21 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
   - Done 24 November: `client/src/night/hud.ts` (the oil's gauge, "Wave 2 of 5" and "Next wave in 4 s"; the end card "The Lighthouse went dark" or "Dawn", the waves held, what you bring back, and Again, focused for the keyboard); Again starts the same Night from a new seed. 5 tests on the text. Played in a browser: Night 1 left alone ends at wave 4 after about 80 s; Again brings back the full oil and wave 1. Seen at gate A: in portrait the island is small behind the end card.
 - [x] **2.4** e2e: the Night starts within 10 s of the page; the beam follows the pointer; a Night left alone ends on the end screen; "Again" starts a new one. Measured: FPS with 150 enemies at 384 × 699 and 907 × 510 (in the container; the S22 at the gate).
   - Done 24 November: `e2e/portal.e2e.ts` (`npm run e2e:portal`, 3 tests, 110 s): the Night's panel within 10 s of the page, no error, nothing fetched outside the folder; the beam east under the mouse at the right of the screen, west at the left, and turned by →; Night 1 left alone ends on its card (about 90 s here), and Again brings back wave 1 and full oil. The canvas carries the beam's bearing (`data-beam`) for the tests. Measured in the container (no GPU): 7 FPS at 907 × 510 during a Night, as the city itself; the Raiders are one draw call whatever their number. 150 enemies at once are not reached by Nights 1 to 5 (12 at most on the sea): the FPS with many is measured on the S22 with `?fps` when step 3 brings more.
-- [ ] **Gate A · Is the beam fun?** Five people who never saw the game play it, with nothing explained. Passed if four of five start a second Night on their own and none asks what to do.
+
+## Step 4 · The city between the Nights (before step 3: owner, 24 November)
+
+- [ ] **4.1** The portal city's state in the rules: buildings and their levels, the stock, the Nights won; a strict parse with a version.
+- [ ] **4.2** The loot at dawn added to the stock; an upgrade at once, its cost from `values.ts`, refused with its reason when the stock is short. Tests.
+- [ ] **4.3** The effects that exist without step 3, read by the Night's rules when a Night starts: the Lighthouse (the beam's damage), the Refinery (the oil a Night starts with), the Infirmary (one second chance a Night). One test each. The Barracks, the Harbor and the Observatory get theirs in step 3 (task 3.9), with the posts and the cards; the Fishery, the Lumberyard and the Shelters in step 5 (what the city makes while you are away).
+- [ ] **4.4** The save on the device: written after each Night and each upgrade; old versions migrated; a bad save set aside and a new city started. Tests, and an e2e with a save edited by hand.
+- [ ] **4.5** The Day on screen: the city view the game has, a building's sheet with its effect on the Night and "Upgrade", the "Next Night" button always in sight.
+- [ ] **4.6** The first minutes' guide: the quest card points at what to tap next (the building, the Night), and moves the camera there when tapped.
+- [ ] **4.7** Nights 1 to 5 as the design's starting values say, played by the simulator's bots; their numbers in this file.
+- [ ] **4.8** `?measure`: the game counts, on the device only, each session's length, the Nights started and reached, and the time to the first card; a hidden page shows them for the tester to read out. Nothing is sent.
+- [ ] **4.9** e2e: Night, dawn, upgrade, Night again; reload keeps the city.
+- [ ] **Gate A · Is the loop fun?** Moved after step 4 (owner, 24 November): five people who never saw the game play a Night, spend its loot in the city, and play again, with nothing explained. Passed if four of five start a second Night on their own and none asks what to do.
   - Packet (24 November):
+    - (Written for step 2's build; the loop updates it at the end of step 4.)
     - **Where:** https://ccr-9319aa6a-txz4sk.brinelight.pages.dev/portal/ (the branch's preview; it follows every push). On a phone or a computer, in a browser, full screen if you can.
     - **What to tell the testers:** nothing. Hand them the phone or the mouse, say only "try this", and do not answer questions while they play (note them).
     - **What to watch, for each tester:** how long before they first move the beam; whether they understand the oil going down; whether they start a second Night on their own (they tap Again without being told); every question they ask; what they say at the end.
@@ -93,19 +106,8 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
 - [ ] **3.6** The boss of wave 10 and its phases. Tests.
 - [ ] **3.7** The lead captain's power: one power, its cooldown, its effect. Tests.
 - [ ] **3.8** On screen: the posts on the rafts (tap a raft, choose a troop), the card choice between waves (three cards, keyboard 1/2/3), the boss and its health bar, the power's button and its cooldown. e2e.
-
-## Step 4 · The city between the Nights
-
-- [ ] **4.1** The portal city's state in the rules: buildings and their levels, the stock, the Nights won; a strict parse with a version.
-- [ ] **4.2** The loot at dawn added to the stock; an upgrade at once, its cost from `values.ts`, refused with its reason when the stock is short. Tests.
-- [ ] **4.3** Each building's effect on the Night (the design's table), read by the Night's rules when a Night starts. One test each.
-- [ ] **4.4** The save on the device: written after each Night and each upgrade; old versions migrated; a bad save set aside and a new city started. Tests, and an e2e with a save edited by hand.
-- [ ] **4.5** The Day on screen: the city view the game has, a building's sheet with its effect on the Night and "Upgrade", the "Next Night" button always in sight.
-- [ ] **4.6** The first minutes' guide: the quest card points at what to tap next (the building, the Night), and moves the camera there when tapped.
-- [ ] **4.7** Nights 1 to 5 as the design's starting values say, played by the simulator's bots; their numbers in this file.
-- [ ] **4.8** `?measure`: the game counts, on the device only, each session's length, the Nights started and reached, and the time to the first card; a hidden page shows them for the tester to read out. Nothing is sent.
-- [ ] **4.9** e2e: Night, dawn, upgrade, Night again; reload keeps the city.
-- [ ] **Gate B · Does a session hold?** Ten new players, read from `?measure`. Passed if the median first session is over 10 minutes, eight of ten play a minute or more, and six of ten reach the third Night.
+- [ ] **3.9** The Barracks (the posts' troops' level), the Harbor (the rafts, so the posts) and the Observatory (new cards in the draw) given their effect on the Night (moved from task 4.3). One test each.
+- [ ] **Gate B · Does a session hold?** (After step 3 now.) Ten new players, read from `?measure`. Passed if the median first session is over 10 minutes, eight of ten play a minute or more, and six of ten reach the third Night.
   - Packet: (the loop writes it here)
   - Result (owner): 
 
