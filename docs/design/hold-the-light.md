@@ -170,8 +170,11 @@ To be tuned at gates A and B; none is balance yet.
 | Loot of a lost Night | at least the cheapest upgrade then on offer |
 | Away | the city's production, up to 4 hours' worth |
 
-## Open questions for the owner
+## Settled by the owner
 
-- The game's name on CrazyGames: "Brinelight" or "Brinelight: Hold the Light" (it must be unique there).
-- French names on the sea ("Murène", "Barbe-Sel"): kept as the world's flavor, or put in English for this edition.
+- **The game's name on CrazyGames: "Brinelight: Hold the Light"** (24 November). Its uniqueness there is checked at step 7.
+- **The sea's names in English in this edition** (24 November): Murène → Moray, Vorace → Ravener, Barbe-Sel → Saltbeard, Lierre → Ivy, Orme → Elm, Perle → Pearl, Ondine → Undine, Topaze → Topaz, Gaspard → Jasper, Krake → Kraken; Aldo, Runa and Brann stay. The Brinelight on Solana keeps its names.
+
+## Open question for the owner
+
 - Rewarded ads at the Full Launch: yes or no, and for what.

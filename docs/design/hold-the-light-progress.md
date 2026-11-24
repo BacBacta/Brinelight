@@ -67,7 +67,7 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
 - [ ] **5.6** What the city makes while you are away, up to 4 hours' worth, from the device's clock given to the rules (never read in them); a clock moved back gives nothing. Tests.
 - [ ] **5.7** The daily tasks and the free daily recruitment, from the rules that exist. `RECRUIT_ODDS` is read, never changed.
 - [ ] **5.8** The curve: each Night of the chart won by the aiming bot with the city its place supposes, and lost with the city of five Nights before (`tools/night/`, a test).
-- [ ] **5.9** Ask the owner: the sea's French names, kept or in English.
+- [ ] **5.9** The sea's names in English in the portal edition, as the owner settled (`docs/design/hold-the-light.md`); the Brinelight on Solana keeps its own.
 
 ## Step 6 · The look and the sound
 
@@ -85,7 +85,7 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
 - [ ] **7.3** The same Night at 60, 144 and 165 Hz (a test of the accumulator); sound starts on iOS after the first tap.
 - [ ] **7.4** The checks of task 0.5 on the final build; no outside link anywhere.
 - [ ] **7.5** The covers (1920 × 1080, 800 × 1200, 800 × 800, the title as the only text) and the two videos (15 to 20 s, no sound, 1080p in 16:9 and in 2:3), captured from the game.
-- [ ] **7.6** The description and the controls in English; ask the owner the game's name.
+- [ ] **7.6** The description and the controls in English, under the name the owner chose: "Brinelight: Hold the Light". Check it is not taken on CrazyGames.
 - [ ] **7.7** The upload folder (`client/dist-portal/` zipped) and a checklist of the developer portal's fields.
 - [ ] **Gate C · Submit?** The owner plays the final build in CrazyGames' preview tool and says yes.
   - Packet: (the loop writes it here)
