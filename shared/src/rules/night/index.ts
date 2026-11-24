@@ -10,3 +10,4 @@ export * from "./upgrade.js";
 export * from "./powers.js";
 export * from "./cards.js";
 export * from "./chart.js";
+export * from "./captains.js";

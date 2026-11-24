@@ -38,7 +38,9 @@ export function hudParts(n: N.NightState): { oil: number; oilText: string; wave:
   const bossName = big ? BOSS_NAMES[big.family as keyof typeof BOSS_NAMES] : "";
   // The flare: ready, or the seconds it still waits.
   const flareReady = n.cooldown === 0;
-  const flare = flareReady ? NIGHT_TEXT.flare : `${NIGHT_TEXT.flare} ${Math.ceil(n.cooldown / N.STEPS_PER_SECOND)} s`;
+  // The lead captain's power, by its name.
+  const power = N.CAPTAIN_POWERS[n.power.captain].name;
+  const flare = flareReady ? power : `${power} ${Math.ceil(n.cooldown / N.STEPS_PER_SECOND)} s`;
   return { bossName, flare, flareReady, boss, oil: Math.max(0, Math.min(1, n.oil / (n.power.startOil + N.cardMods(n.cards).extraOil))), oilText: String(Math.ceil(n.oil)), wave: `Wave ${Math.min(n.wave, waves)} of ${waves}`, next, wood: earned.wood, fish: earned.fish, hint };
 }
 

@@ -98,6 +98,22 @@ function row(b: N.CityBuilding, c: N.PortalCity, guided: boolean): string {
   );
 }
 
+/** The captains: those who joined, their power and Lead; the others, their shards. */
+export function captainsHtml(c: N.PortalCity): string {
+  const rows = N.CAPTAIN_IDS.map((id) => {
+    const p = N.CAPTAIN_POWERS[id];
+    const has = c.captains.unlocked.includes(id);
+    const lead = c.captains.lead === id;
+    const right = !has
+      ? `<small class="shards">${Math.min(c.captains.shards[id], N.SHARDS_TO_UNLOCK)}/${N.SHARDS_TO_UNLOCK} shards</small>`
+      : lead
+        ? `<small class="leading">Leading</small>`
+        : `<button class="b" data-act="lead" data-c="${id}">Lead</button>`;
+    return `<div class="day-row captain${has ? "" : " locked"}">${ICONS.captains}<div class="txt"><b>${esc(p.captain)}</b><span>${esc(p.name)}: ${esc(p.text)}</span></div>${right}</div>`;
+  }).join("");
+  return `<h3 class="day-sub">Captains</h3>${rows}<p class="day-note">A Night won brings a captain closer to joining you.</p>`;
+}
+
 /** The sea chart: a dot a Night, won ones marked, the next lit, later ones locked; the one chosen named. */
 export function chartHtml(c: N.PortalCity, chosen: number): string {
   const next = N.nextNight(c);
@@ -118,13 +134,14 @@ export function dayHtml(c: N.PortalCity, chosen: number = N.nextNight(c)): strin
     `<h2>${DAY_TEXT.title}</h2>` +
     (g ? `<p class="day-guide" role="status">${esc(g.text)}</p>` : "") +
     N.CITY_BUILDINGS.map((b) => row(b, c, g?.target === b)).join("") +
+    captainsHtml(c) +
     chartHtml(c, chosen) +
     `<button class="b gold xl day-night${g?.target === "night" ? " guide" : ""}" data-act="night">Start Night ${chosen}</button>`
   );
 }
 
 /** The Day on screen. */
-export function createDay(root: HTMLElement, actions: { upgrade(b: N.CityBuilding): void; night(k: number): void }) {
+export function createDay(root: HTMLElement, actions: { upgrade(b: N.CityBuilding): void; night(k: number): void; lead(id: N.CaptainId): void }) {
   let city: N.PortalCity | null = null;
   let chosen = 1;
   const el = document.createElement("section");
@@ -136,6 +153,7 @@ export function createDay(root: HTMLElement, actions: { upgrade(b: N.CityBuildin
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-act]");
     if (!b || b.disabled) return;
     if (b.dataset.act === "night") actions.night(chosen);
+    if (b.dataset.act === "lead" && b.dataset.c) actions.lead(b.dataset.c as N.CaptainId);
     if (b.dataset.act === "pick" && city) {
       chosen = Number(b.dataset.night);
       el.innerHTML = dayHtml(city, chosen);

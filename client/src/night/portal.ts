@@ -57,6 +57,16 @@ export function startPortal(d: PortalDeps): { city(): N.PortalCity } {
       showDay();
     },
     night: (k) => begin(k),
+    lead(id) {
+      const r = N.setLead(city, id);
+      if (!r.ok) {
+        d.toast(r.reason, true);
+        return;
+      }
+      city = r.city;
+      keep();
+      showDay();
+    },
   });
 
   function begin(k: number = N.nextNight(city)): void {

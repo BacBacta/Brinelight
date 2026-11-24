@@ -1,4 +1,5 @@
 /** What the portal's city gives its Night (Hold the Light): read when the Night starts, carried in it, never changed by it. */
+import type { CaptainId } from "./captains.js";
 import type { PortalCity } from "./city.js";
 import { BARRACKS_PER_LEVEL, BEAM_DPS, BEAM_PER_LEVEL, OIL_PER_REFINERY, POSTS_BASE, RESCUE_BASE, RESCUE_PER_LEVEL, START_OIL } from "./values.js";
 
@@ -15,10 +16,12 @@ export type NightPowers = {
   postMul: number;
   /** The cards' tiers open to the draw (the Observatory): 0 to 3. */
   cardTier: number;
+  /** The captain who leads: its power is the Night's. */
+  captain: CaptainId;
 };
 
 /** A Night with no city behind it: the values' own. */
-export const BASE_POWERS: Readonly<NightPowers> = { beamDps: BEAM_DPS, startOil: START_OIL, rescue: 0, posts: POSTS_BASE, postMul: 1, cardTier: 0 };
+export const BASE_POWERS: Readonly<NightPowers> = { beamDps: BEAM_DPS, startOil: START_OIL, rescue: 0, posts: POSTS_BASE, postMul: 1, cardTier: 0, captain: "tom" };
 
 /** The powers a city gives its next Night: the Lighthouse's beam, the Refinery's oil, the Infirmary's second chance. */
 export function cityPowers(c: PortalCity): NightPowers {
@@ -30,5 +33,6 @@ export function cityPowers(c: PortalCity): NightPowers {
     posts: POSTS_BASE + Math.floor((harbor + 1) / 2),
     postMul: 1 + BARRACKS_PER_LEVEL * barracks,
     cardTier: Math.min(3, observatory),
+    captain: c.captains.lead,
   };
 }

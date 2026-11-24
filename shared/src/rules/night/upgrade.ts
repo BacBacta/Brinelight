@@ -3,7 +3,9 @@
  * happens at once, with no timer. Refusals in the player's words, as the server would send them.
  */
 import { CITY_MAX_LEVEL, CITY_MIN_LEVEL, type CityBuilding, type PortalCity } from "./city.js";
+import { CAPTAIN_IDS } from "./captains.js";
 import { nightLoot } from "./loot.js";
+import { SHARDS_PER_WIN, SHARDS_TO_UNLOCK } from "./values.js";
 import type { NightState } from "./state.js";
 import { UPGRADE_BASE, UPGRADE_GROWTH } from "./values.js";
 
@@ -22,8 +24,17 @@ export function dawn(c: PortalCity, n: NightState): CityResult {
       stock: { wood: c.stock.wood + loot.wood, fish: c.stock.fish + loot.fish, pearls: c.stock.pearls + loot.pearls },
       won: n.phase === "won" ? Math.max(c.won, n.night) : c.won,
       played: c.played + 1,
+      captains: n.phase === "won" ? withShards(c.captains) : c.captains,
     },
   };
+}
+
+/** A Night won: shards for the first captain still to join, who joins at 10. */
+function withShards(cap: PortalCity["captains"]): PortalCity["captains"] {
+  const next = CAPTAIN_IDS.find((id) => !cap.unlocked.includes(id));
+  if (!next) return cap;
+  const shards = { ...cap.shards, [next]: cap.shards[next] + SHARDS_PER_WIN };
+  return { ...cap, shards, unlocked: shards[next] >= SHARDS_TO_UNLOCK ? [...cap.unlocked, next] : cap.unlocked };
 }
 
 /** What it costs to bring a building from `level` to the next, rounded to 5. */

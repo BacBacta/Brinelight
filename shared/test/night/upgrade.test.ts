@@ -12,7 +12,7 @@ describe("dawn: what a Night brings back comes into the city", () => {
   it("its loot into the store, one more Night played; a Night won opens the next", () => {
     const won = over("won");
     const r = dawn(newCity(), won);
-    expect(r.ok && r.city).toEqual({ ...newCity(), stock: nightLoot(won), won: 1, played: 1 });
+    expect(r.ok && r.city).toMatchObject({ stock: nightLoot(won), won: 1, played: 1 });
   });
 
   it("a Night lost still pays, and opens nothing", () => {

@@ -88,3 +88,18 @@ describe("the sea chart in the Day", async () => {
     expect(html).toMatch(/data-night="2"[^>]*class="dot won chosen"/);
   });
 });
+
+describe("the captains in the Day", async () => {
+  const { captainsHtml } = await import("../src/night/day.js");
+  it("those who joined, with their power and Lead; the others with their shards", () => {
+    const c = city({ captains: { lead: "tom", unlocked: ["tom", "bran"], shards: { tom: 0, bran: 12, isa: 4, mira: 0, nera: 0, sel: 0 } } });
+    const html = captainsHtml(c);
+    expect(html).toContain("Old Tom");
+    expect(html).toContain("Leading");
+    expect(html).toContain("Bran the Boarder");
+    expect(html).toMatch(/data-act="lead" data-c="bran"/);
+    expect(html).toContain("Boarding");
+    expect(html).toContain("Isa the Harpooner");
+    expect(html).toContain("4/10 shards");
+  });
+});

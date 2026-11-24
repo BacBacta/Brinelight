@@ -10,7 +10,7 @@ const city = (lighthouse: number, refinery: number, infirmary: number): PortalCi
 describe("what the city gives its Night", () => {
   it("a new city gives the base: the beam's damage, the oil, no second chance", () => {
     expect(cityPowers(newCity())).toEqual(BASE_POWERS);
-    expect(BASE_POWERS).toEqual({ beamDps: BEAM_DPS, startOil: START_OIL, rescue: 0, posts: 2, postMul: 1, cardTier: 0 });
+    expect(BASE_POWERS).toEqual({ beamDps: BEAM_DPS, startOil: START_OIL, rescue: 0, posts: 2, postMul: 1, cardTier: 0, captain: "tom" });
   });
 
   it("the Lighthouse: the beam burns harder, level by level", () => {

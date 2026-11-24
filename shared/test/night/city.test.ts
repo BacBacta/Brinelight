@@ -12,7 +12,7 @@ const withField = (key: string, value: unknown): unknown => {
 
 describe("the portal's city", () => {
   it("starts with its Lighthouse and its Refinery at level 1, no Infirmary, nothing in store, no Night won", () => {
-    expect(city()).toEqual({ v: CITY_SHAPE, buildings: { lighthouse: 1, refinery: 1, infirmary: 0, barracks: 0, harbor: 0, observatory: 0 }, stock: { wood: 0, fish: 0, pearls: 0 }, won: 0, played: 0 });
+    expect(city()).toEqual({ v: CITY_SHAPE, buildings: { lighthouse: 1, refinery: 1, infirmary: 0, barracks: 0, harbor: 0, observatory: 0 }, stock: { wood: 0, fish: 0, pearls: 0 }, won: 0, played: 0, captains: newCity().captains });
     expect(CITY_BUILDINGS).toHaveLength(6);
   });
 
@@ -36,7 +36,7 @@ describe("parseCity: a save read back is strict", () => {
   it("refuses each field missing, unknown or out of its range", () => {
     const bad: [string, unknown][] = [
       ["v", 0],
-      ["v", 3],
+      ["v", 4],
       ["buildings", { lighthouse: 1, refinery: 1 }],
       ["buildings", { lighthouse: 0, refinery: 1, infirmary: 0, barracks: 0, harbor: 0, observatory: 0 }],
       ["buildings", { lighthouse: 1, refinery: 0, infirmary: 0, barracks: 0, harbor: 0, observatory: 0 }],

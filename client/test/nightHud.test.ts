@@ -84,3 +84,9 @@ describe("the flare's button", () => {
     expect(hudParts({ ...base, cooldown: 12 * N.STEPS_PER_SECOND - 5 })).toMatchObject({ flare: "Flare 12 s", flareReady: false });
   });
 });
+
+describe("the power's button bears the lead captain's power", () => {
+  it("Bright lens when Sel leads", () => {
+    expect(hudParts({ ...base, power: { ...base.power, captain: "sel" } }).flare).toBe("Bright lens");
+  });
+});

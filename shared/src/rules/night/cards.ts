@@ -93,6 +93,8 @@ export function cardMods(held: readonly CardId[]) {
     fishPerWave: 20 * n("shoal"),
     pearls: 5 * n("star"),
     cooldown: FLARE_COOLDOWN * 0.75 ** n("quick"),
+    /** Seconds added to a lasting power (Long flare). */
+    longer: n("long"),
     flare: FLARE_SECONDS + n("long"),
   };
 }

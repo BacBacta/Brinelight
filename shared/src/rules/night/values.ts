@@ -124,3 +124,10 @@ export const FLARE_COOLDOWN = 20;
 
 /** The Barracks: the posts' troops hit this much harder a level. */
 export const BARRACKS_PER_LEVEL = 0.2;
+
+/** The captains: shards a Night won gives the first one still to join, and how many make them join. */
+export const SHARDS_PER_WIN = 4;
+export const SHARDS_TO_UNLOCK = 10;
+/** Isa's Harpoon, and Mira's Crossfire on each Raider. */
+export const HARPOON = 300;
+export const CROSSFIRE = 80;

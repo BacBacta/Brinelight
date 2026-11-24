@@ -452,3 +452,15 @@ body.portal .nav {
   font: 800 14px var(--f-b);
   color: var(--gold);
 }
+
+/* The captains in the Day. */
+.day .day-sub {
+  margin: 12px 0 2px;
+  font: 900 15px var(--f-b);
+  color: var(--gold);
+}
+.day .captain.locked { opacity: 0.6; }
+.day .captain .shards,
+.day .captain .leading { flex: none; font: 800 12px var(--f-b); color: var(--soft); }
+.day .captain .leading { color: var(--gold); }
+.day .day-note { margin: 4px 0 0; font: 700 12px var(--f-b); color: var(--soft); }

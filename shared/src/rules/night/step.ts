@@ -3,6 +3,7 @@
  * the enemies come, the beam burns what it lights, the coast is raided. Pure: the Night given is never changed.
  */
 import type { TroopType } from "../types.js";
+import { CAPTAIN_POWERS } from "./captains.js";
 import { chartNight } from "./chart.js";
 import { BARREL_OIL, EMBER_NEAR, TANK_OIL, cardMods, cardPool, type CardId } from "./cards.js";
 import { nextFloat, pickDistinct, type Rng } from "./random.js";
@@ -12,6 +13,8 @@ import {
   COAST_RADIUS,
   BOSS_RAGE,
   BOSSES,
+  CROSSFIRE,
+  HARPOON,
   BOSS_AT,
   FAMILIES,
   FLARE_SHARE,
@@ -103,14 +106,21 @@ export function stepNight(n: NightState, input: NightInput): NightState {
     if (input.card === "raft") posts = [...posts, null];
   }
   const mods = cardMods(cards);
-  // The lead captain's flare: fired when ready, it burns every enemy on the sea for a while.
+  // The lead captain's power: fired when ready. Some last (the flare, Boarding, the Mist veil, Bright lens), some strike at once.
+  const captain = n.power.captain;
+  const fired = input.power === true && n.cooldown === 0;
   let flare = Math.max(0, n.flare - 1);
   let cooldown = Math.max(0, n.cooldown - 1);
-  if (input.power && n.cooldown === 0) {
-    flare = Math.round(mods.flare * STEPS_PER_SECOND) - 1;
+  if (fired) {
+    const lasting = CAPTAIN_POWERS[captain].seconds;
+    flare = lasting > 0 ? Math.round((lasting + mods.longer) * STEPS_PER_SECOND) - 1 : 0;
     cooldown = Math.round(mods.cooldown * STEPS_PER_SECOND) - 1;
   }
-  const flaring = n.flare > 0 || (input.power === true && n.cooldown === 0);
+  const active = n.flare > 0 || (fired && CAPTAIN_POWERS[captain].seconds > 0);
+  const flaring = active && captain === "tom";
+  const boarding = active && captain === "bran" ? 2 : 1;
+  const veiled = active && captain === "nera";
+  const lens = active && captain === "sel" ? 2 : 1;
   const oilCap = n.power.startOil + mods.extraOil;
   const order = input.post;
   if (order && Number.isInteger(order.slot) && order.slot >= 0 && order.slot < posts.length && TROOPS.includes(order.troop)) {
@@ -169,14 +179,21 @@ export function stepNight(n: NightState, input: NightInput): NightState {
         netted.add(e.id);
         if (!target || e.distance < target.distance) target = e;
       }
-    if (target) hits.set(target.id, (hits.get(target.id) ?? 0) + mods.postDps * n.power.postMul * STEP * (COUNTERED_BY[target.family] === troop ? mods.counter : 1));
+    if (target) hits.set(target.id, (hits.get(target.id) ?? 0) + mods.postDps * n.power.postMul * boarding * STEP * (COUNTERED_BY[target.family] === troop ? mods.counter : 1));
   });
+  // Isa's Harpoon on the enemy nearest the coast; Mira's Crossfire on every Raider.
+  const struck = new Map<number, number>();
+  if (fired && captain === "isa" && sea.length) {
+    const near = sea.reduce((a, e) => (e.distance < a.distance ? e : a));
+    struck.set(near.id, HARPOON);
+  }
+  if (fired && captain === "mira") for (const e of sea) if (e.family === "raider") struck.set(e.id, CROSSFIRE);
   for (const e of sea) {
     // The beam burns first: what it lights this step never reaches the coast in it. A faded Wraith it goes through.
     const fading = e.fade > 0;
     const lit = !fading && inBeam(beam, e.bearing, mods.beamWidth - (chart.rule === "dark" ? 10 : 0));
-    const beamHit = n.power.beamDps * mods.beamMul * (e.family === "beast" ? mods.beastMul : 1) * (e.distance <= EMBER_NEAR ? mods.nearMul : 1) * STEP;
-    const health = (lit ? e.health - beamHit : e.health) - (hits.get(e.id) ?? 0) - (flaring ? n.power.beamDps * FLARE_SHARE * STEP : 0);
+    const beamHit = n.power.beamDps * lens * mods.beamMul * (e.family === "beast" ? mods.beastMul : 1) * (e.distance <= EMBER_NEAR ? mods.nearMul : 1) * STEP;
+    const health = (lit ? e.health - beamHit : e.health) - (hits.get(e.id) ?? 0) - (flaring ? n.power.beamDps * FLARE_SHARE * STEP : 0) - (struck.get(e.id) ?? 0);
     let litFor = lit ? e.lit + 1 : 0;
     let fade = fading ? e.fade - 1 : 0;
     if (e.family === "wraith" && litFor >= Math.round(mods.fadeAfter * STEPS_PER_SECOND)) {
@@ -201,7 +218,7 @@ export function stepNight(n: NightState, input: NightInput): NightState {
       if (stage === 1 && health <= FAMILY[e.family].health / 3) stage = 2;
     }
     const speed = FAMILY[e.family].speed * (chart.rule === "swift" ? 1.25 : 1) * (stage === 2 ? BOSS_RAGE : 1) * mods.speed * (e.family === "raider" ? mods.raiderSpeed : 1) * (netted.has(e.id) ? mods.netSlow : 1);
-    const distance = e.distance - speed * STEP;
+    const distance = e.distance - (veiled ? 0 : speed) * STEP;
     if (distance <= ON_COAST) {
       oil = Math.max(Math.min(floor, oil), oil - mods.steal[e.family]);
       continue;
