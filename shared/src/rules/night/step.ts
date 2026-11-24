@@ -2,9 +2,8 @@
  * A Night advances by one step of 1/30 s (Hold the Light). The client gives the beam's angle; the rules do the rest:
  * the enemies come, the beam burns what it lights, the coast is raided. Pure: the Night given is never changed.
  */
-import { COUNTER_BONUS } from "../combat.js";
 import type { TroopType } from "../types.js";
-import { BARREL_OIL, cardMods, cardPool, type CardId } from "./cards.js";
+import { BARREL_OIL, EMBER_NEAR, TANK_OIL, cardMods, cardPool, type CardId } from "./cards.js";
 import { nextFloat, pickDistinct, type Rng } from "./random.js";
 import { TROOPS, type Enemy, type NightPhase, type NightState } from "./state.js";
 import {
@@ -13,8 +12,6 @@ import {
   FAMILIES,
   FAMILY,
   NIGHT_MIX,
-  WRAITH_FADE_AFTER,
-  WRAITH_HIDDEN,
   type Family,
   NIGHT1_GRACE_WAVES,
   NIGHT_GROWTH,
@@ -61,8 +58,6 @@ export function inBeam(beam: number, bearing: number, width: number = BEAM_WIDTH
 
 /** The waves of a Night. */
 export const wavesOf = (night: number): number => NIGHT_WAVES[night - 1] ?? NIGHT_WAVES[NIGHT_WAVES.length - 1]!;
-const FADE_AFTER_STEPS = Math.round(WRAITH_FADE_AFTER * STEPS_PER_SECOND);
-const HIDDEN_STEPS = Math.round(WRAITH_HIDDEN * STEPS_PER_SECOND);
 
 /** The family of a newcomer in a Night, drawn from its mix, and the generator's state after. */
 export function familyAt(night: number, r: Rng): [Family, Rng] {
@@ -95,13 +90,17 @@ export function stepNight(n: NightState, input: NightInput): NightState {
   let { offer, cards } = n;
   let oil = n.oil;
   // A card chosen from the offer: kept until dawn; an Oil barrel pours at once.
+  let posts = n.posts;
   if (input.card && offer.includes(input.card)) {
     cards = [...cards, input.card];
     offer = [];
-    if (input.card === "barrel") oil = Math.min(n.power.startOil, oil + BARREL_OIL);
+    const cap = n.power.startOil + cardMods(cards).extraOil;
+    if (input.card === "barrel") oil = Math.min(cap, oil + BARREL_OIL);
+    if (input.card === "tanks") oil = Math.min(cap, oil + TANK_OIL);
+    if (input.card === "raft") posts = [...posts, null];
   }
   const mods = cardMods(cards);
-  let posts = n.posts;
+  const oilCap = n.power.startOil + mods.extraOil;
   const order = input.post;
   if (order && Number.isInteger(order.slot) && order.slot >= 0 && order.slot < posts.length && TROOPS.includes(order.troop)) {
     posts = posts.slice();
@@ -140,31 +139,38 @@ export function stepNight(n: NightState, input: NightInput): NightState {
   const sea = [...n.enemies, ...coming];
   // The posts fire on their own: each at the enemy nearest the coast in its reach, harder at the family its troop beats.
   const hits = new Map<number, number>();
+  const netted = new Set<number>();
   posts.forEach((troop, i) => {
     if (!troop) return;
     const at = postBearing(i, posts.length);
     let target: Enemy | null = null;
-    for (const e of sea) if (e.distance <= mods.postRange && angleApart(at, e.bearing) <= mods.postArc / 2 && (!target || e.distance < target.distance)) target = e;
-    if (target) hits.set(target.id, (hits.get(target.id) ?? 0) + mods.postDps * STEP * (COUNTERED_BY[target.family] === troop ? COUNTER_BONUS : 1));
+    for (const e of sea)
+      if (e.distance <= mods.postRange && angleApart(at, e.bearing) <= mods.postArc / 2) {
+        netted.add(e.id);
+        if (!target || e.distance < target.distance) target = e;
+      }
+    if (target) hits.set(target.id, (hits.get(target.id) ?? 0) + mods.postDps * STEP * (COUNTERED_BY[target.family] === troop ? mods.counter : 1));
   });
   for (const e of sea) {
     // The beam burns first: what it lights this step never reaches the coast in it. A faded Wraith it goes through.
     const fading = e.fade > 0;
     const lit = !fading && inBeam(beam, e.bearing, mods.beamWidth);
-    const health = (lit ? e.health - n.power.beamDps * mods.beamMul * STEP : e.health) - (hits.get(e.id) ?? 0);
+    const beamHit = n.power.beamDps * mods.beamMul * (e.family === "beast" ? mods.beastMul : 1) * (e.distance <= EMBER_NEAR ? mods.nearMul : 1) * STEP;
+    const health = (lit ? e.health - beamHit : e.health) - (hits.get(e.id) ?? 0);
     let litFor = lit ? e.lit + 1 : 0;
     let fade = fading ? e.fade - 1 : 0;
-    if (e.family === "wraith" && litFor >= FADE_AFTER_STEPS) {
-      fade = HIDDEN_STEPS;
+    if (e.family === "wraith" && litFor >= Math.round(mods.fadeAfter * STEPS_PER_SECOND)) {
+      fade = Math.round(mods.hidden * STEPS_PER_SECOND);
       litFor = 0;
     }
     if (health <= SPENT) {
       burned += 1;
       continue;
     }
-    const distance = e.distance - FAMILY[e.family].speed * mods.speed * STEP;
+    const speed = FAMILY[e.family].speed * mods.speed * (e.family === "raider" ? mods.raiderSpeed : 1) * (netted.has(e.id) ? mods.netSlow : 1);
+    const distance = e.distance - speed * STEP;
     if (distance <= ON_COAST) {
-      oil = Math.max(Math.min(floor, oil), oil - FAMILY[e.family].oil);
+      oil = Math.max(Math.min(floor, oil), oil - mods.steal[e.family]);
       continue;
     }
     enemies.push({ ...e, distance, health, lit: litFor, fade });
@@ -183,7 +189,7 @@ export function stepNight(n: NightState, input: NightInput): NightState {
       phase = "pause";
       pauseEnd = t + 1 + PAUSE_STEPS;
       // Tar pots pour; three cards are drawn from the seed for this pause.
-      oil = Math.min(n.power.startOil, oil + mods.oilPerWave);
+      oil = Math.min(oilCap, oil + mods.oilPerWave);
       const pool = cardPool(cards);
       const [drawn, next] = pickDistinct(rng, pool, Math.min(3, pool.length));
       offer = drawn;

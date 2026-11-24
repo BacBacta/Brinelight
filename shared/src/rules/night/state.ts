@@ -114,7 +114,7 @@ export function parseNight(raw: unknown): NightState | null {
     if (!Array.isArray(offer) || offer.length > 3 || !offer.every(isCard) || new Set(offer).size !== offer.length) return null;
     if (!Array.isArray(cards) || cards.length > 100 || !cards.every(isCard)) return null;
     const posts = o.posts;
-    if (!Array.isArray(posts) || posts.length !== p.posts || !posts.every((t) => t === null || (typeof t === "string" && (TROOPS as readonly string[]).includes(t)))) return null;
+    if (!Array.isArray(posts) || posts.length !== (p.posts as number) + (cards as unknown[]).filter((c) => c === "raft").length || !posts.every((t) => t === null || (typeof t === "string" && (TROOPS as readonly string[]).includes(t)))) return null;
     const enemies: Enemy[] = [];
     const ids = new Set<number>();
     for (const e of o.enemies) {

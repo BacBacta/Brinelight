@@ -28,7 +28,7 @@ export function hudParts(n: N.NightState): { oil: number; oilText: string; wave:
       : n.night > 1 && n.posts.length > 0 && n.posts.every((p) => p === null)
         ? POSTS_HINT
         : "";
-  return { oil: Math.max(0, Math.min(1, n.oil / n.power.startOil)), oilText: String(Math.ceil(n.oil)), wave: `Wave ${Math.min(n.wave, waves)} of ${waves}`, next, wood: earned.wood, fish: earned.fish, hint };
+  return { oil: Math.max(0, Math.min(1, n.oil / (n.power.startOil + N.cardMods(n.cards).extraOil))), oilText: String(Math.ceil(n.oil)), wave: `Wave ${Math.min(n.wave, waves)} of ${waves}`, next, wood: earned.wood, fish: earned.fish, hint };
 }
 
 /** The end card's inside: the Night won or lost, the waves held, what you bring back, and the way to your city. */
@@ -93,7 +93,7 @@ export function createNightHud(root: HTMLElement, onDone: () => void) {
       fill.style.transform = `scaleX(${p.oil})`;
       oilText.textContent = p.oilText;
       meter.setAttribute("aria-valuenow", p.oilText);
-      meter.setAttribute("aria-valuemax", String(n.power.startOil));
+      meter.setAttribute("aria-valuemax", String(n.power.startOil + N.cardMods(n.cards).extraOil));
       wave.textContent = p.wave;
       next.textContent = p.next;
       count(wood, p.wood);
