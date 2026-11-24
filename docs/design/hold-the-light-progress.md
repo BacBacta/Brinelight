@@ -218,11 +218,18 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
   - Done 24 November: a Night fed at 60, 144 and 165 frames a second for 20 s is the same, field for field (`shared/test/night/waves.test.ts`). The sound starts at the first tap (its AudioContext is made then, `night/audio.ts`), as iOS asks; not tried on an iOS device here.
 - [x] **7.4** The checks of task 0.5 on the final build; no outside link anywhere.
   - Done 24 November: task 0.5's checks run on every build in `npm run check` (`client/test/portalFiles.test.ts`: under 1,500 files and 20 MB, relative addresses, none of the wallet's or a server's words, no web address but three.js's two in text) and `e2e/portal.e2e.ts` (nothing fetched outside the folder, the first Night under 5 MB). No link in the portal's screens.
-- [ ] **7.5** The covers (1920 × 1080, 800 × 1200, 800 × 800, the title as the only text) and the two videos (15 to 20 s, no sound, 1080p in 16:9 and in 2:3), captured from the game.
-- [ ] **7.6** The description and the controls in English, under the name the owner chose: "Brinelight: Hold the Light". Check it is not taken on CrazyGames.
-- [ ] **7.7** The upload folder (`client/dist-portal/` zipped) and a checklist of the developer portal's fields.
+- [x] **7.5** The covers (1920 × 1080, 800 × 1200, 800 × 800, the title as the only text) and the two videos (15 to 20 s, no sound, 1080p in 16:9 and in 2:3), captured from the game.
+  - Done 24 November for the covers: `assets/crazygames/cover-landscape-1920x1080.png`, `cover-portrait-800x1200.png`, `cover-square-800x800.png`, captured from the game in Night 4 (the island, the beam, the three families), the title "Brinelight / Hold the Light" the only text. A first draft: a designer's would help the click rate. **The two videos are the owner's** (`assets/crazygames/submission.md` says how): this container draws about 6 frames a second, too few to record.
+- [x] **7.6** The description and the controls in English, under the name the owner chose: "Brinelight: Hold the Light". Check it is not taken on CrazyGames.
+  - Done 24 November: `assets/crazygames/submission.md`: the one-line and long descriptions, the controls, tags, orientation, language, save, age, in English. The name's freedom is checked in the developer portal (CrazyGames' search shows nothing without a browser).
+- [x] **7.7** The upload folder (`client/dist-portal/` zipped) and a checklist of the developer portal's fields.
+  - Done 24 November: `npm run pack:portal` (`tools/portal/pack.py`) writes `brinelight-hold-the-light.zip` (not committed): 293 files, 9.6 MB, `index.html` at its root. The developer portal's fields and the last checks are in `assets/crazygames/submission.md`.
 - [ ] **Gate C · Submit?** The owner plays the final build in CrazyGames' preview tool and says yes.
-  - Packet: (the loop writes it here)
+  - Packet (24 November):
+    - **What to play:** the branch preview's `/portal/` (https://ccr-9319aa6a-txz4sk.brinelight.pages.dev/portal/) now, then the zip in CrazyGames' preview tool once uploaded (`npm run pack:portal`).
+    - **What to bring:** the two preview videos (to record: `assets/crazygames/submission.md`); the covers (made, a first draft); the ElevenLabs plan checked; the S22's `?fps` line.
+    - **What to check yourself:** the game opens in Night 1 with nothing to click first; the beam with the mouse, a finger and the keys; a card, a raft's troops, the Flare; the city between Nights; a reload keeps it; nothing speaks of a wallet, an account or a payment; sounds after the first tap, M to mute.
+    - **Passed if** you say yes to submitting.
   - Result (owner): 
 
 ## Found on the way

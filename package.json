@@ -20,6 +20,7 @@
     "typecheck": "tsc -p shared && tsc -p client && tsc -p server && tsc -p e2e && tsc -p tools",
     "build": "npm run build -w client",
     "build:portal": "npm run build:portal -w client",
+    "pack:portal": "npm run build:portal && python3 tools/portal/pack.py",
     "check": "npm run typecheck && npm test && npm run build && npm run build:portal",
     "e2e": "vitest run --config e2e/vitest.config.ts",
     "e2e:portal": "vitest run --config e2e/vitest.config.ts e2e/portal.e2e.ts",
