@@ -120,7 +120,7 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
   - Done 24 November: `client/src/portal/measure.ts`: each session's length, the time before the beam first moved, and each Night's end (its number, the wave, won or lost), kept under `brinelight-portal-v1/hold-the-light-measure` (the last 20 sessions), saved every 15 s, when the page is hidden and at each Night's end; with `?measure` a panel over the game lists them, a line a session, for the tester to read out. Nothing is sent. Not counted yet: the time to the first card (the cards come with step 3). 3 tests.
 - [x] **4.9** e2e: Night, dawn, upgrade, Night again; reload keeps the city.
   - Done 24 November: `npm run e2e:portal`, 5 of 5 (112 s): a Night lost, its loot in the city, the Lighthouse upgraded, a reload that keeps it, the next Night; a save edited by hand set aside (a new city, Night 1, the toast, the copy kept); `?measure` listing the sessions. `npm run check` green (1,370 tests).
-- [ ] **Gate A · Is the loop fun?** Moved after step 4 (owner, 24 November): five people who never saw the game play a Night, spend its loot in the city, and play again, with nothing explained. Passed if four of five start a second Night on their own and none asks what to do.
+- [x] **Gate A · Is the loop fun?** Moved after step 4 (owner, 24 November): five people who never saw the game play a Night, spend its loot in the city, and play again, with nothing explained. Passed if four of five start a second Night on their own and none asks what to do.
   - Packet (24 November, for step 4's build):
     - **Where:** https://ccr-9319aa6a-txz4sk.brinelight.pages.dev/portal/ (the branch's preview; it follows every push, a minute or two after). On a phone or a computer, in a browser, full screen if you can. Each tester on a device that never opened it, or in a private window (the city is kept on the device).
     - **What to tell the testers:** nothing. Hand them the phone or the mouse, say only "try this", and do not answer questions while they play (note them). Let them play as long as they like.
@@ -133,7 +133,7 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
     - **Write here:** passed or not passed, the five testers' notes in a line each (with their `?measure` line), and what to rework if not passed.
   - Owner's first note (24 November, before the test with five players): "no explanation of the resources, you do not even see them; you only see what you won at the end".
   - [x] **A.1** What you earn and what to do, during the Night: the wood and fish earned so far beside their icons under the oil's gauge, flashing as they rise (`lootSoFar` in the rules, tested); the gauge with the oil's icon and its name for screen readers and on hover ("Oil: the Lighthouse's life"); in Night 1, until the first boat burns, one line at the bottom: "Turn the light onto the boats. Boats that land steal oil." 4 tests. Captured at 384 × 699 and 907 × 510. Not done: what the loot is for. It is spent in the city between the Nights (step 4); until then it only adds up.
-  - Result (owner): 
+  - Result (owner): **skipped** (24 November): "Saute la porte A, enchaîne sur l'étape 3." Not tested with players; the risk accepted is to learn at gate B, after step 3, whether the beam and the loop hold.
 
 ## Step 3 · Depth
 
