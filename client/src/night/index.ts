@@ -9,6 +9,7 @@ import { SEA_RISE } from "../scene/cityLook.js";
 import { coastAt } from "../scene/coast.js";
 import type { SceneHandle } from "../scene/index.js";
 import { SHORE } from "../scene/shore.js";
+import { createNightHud } from "./hud.js";
 import { NIGHT_REACH, pointerBearing, seaToWorld, turnBy } from "./view.js";
 import "./night.css";
 
@@ -26,7 +27,12 @@ export type NightHandle = {
 };
 
 /** Starts a Night on the island's water; `onChange` hears each step that changed what the screen shows. */
-export function startNight(scene: SceneHandle, canvas: HTMLCanvasElement, opts: { seed: number; night: number; onChange?(n: N.NightState): void }): NightHandle {
+export function startNight(
+  scene: SceneHandle,
+  canvas: HTMLCanvasElement,
+  root: HTMLElement,
+  opts: { night: number; newSeed(): number; onChange?(n: N.NightState): void },
+): NightHandle {
   document.body.classList.add("night");
   // Fingers steer the beam: they no longer turn the camera.
   scene.lockCamera(true);
@@ -45,7 +51,12 @@ export function startNight(scene: SceneHandle, canvas: HTMLCanvasElement, opts: 
   beam.position.y = y + 0.02;
   scene.add(beam);
 
-  let clock: N.NightClock = { night: N.newNight(opts.seed, opts.night), spare: 0 };
+  let clock: N.NightClock = { night: N.newNight(opts.newSeed(), opts.night), spare: 0 };
+  // Again: the same Night from a new seed, at once.
+  const hud = createNightHud(root, () => {
+    clock = { night: N.newNight(opts.newSeed(), opts.night), spare: 0 };
+    shown = -1;
+  });
   let aimed = 0;
   let last: number | null = null;
   let shown = -1;
@@ -117,6 +128,7 @@ export function startNight(scene: SceneHandle, canvas: HTMLCanvasElement, opts: 
     draw();
     if (clock.night.step !== shown) {
       shown = clock.night.step;
+      hud.update(clock.night);
       opts.onChange?.(clock.night);
     }
   });
@@ -127,6 +139,7 @@ export function startNight(scene: SceneHandle, canvas: HTMLCanvasElement, opts: 
       aimed = bearing;
     },
     dispose() {
+      hud.dispose();
       document.removeEventListener("visibilitychange", onVisibility);
       canvas.removeEventListener("pointermove", follow);
       canvas.removeEventListener("pointerdown", hold);

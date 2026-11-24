@@ -9,3 +9,80 @@ body.night .labels,
 body.night .nav {
   display: none !important;
 }
+
+/* The Night's panel: the oil at the top left, the wave at the top centre. */
+.night-hud {
+  position: fixed;
+  inset: calc(10px + env(safe-area-inset-top, 0px)) 10px auto 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  z-index: 5;
+  pointer-events: none;
+}
+.night-hud .oil {
+  position: relative;
+  width: min(42vw, 220px);
+  height: 26px;
+  border-radius: 99px;
+  background: rgba(6, 16, 36, 0.78);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+.night-hud .oil i {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--gold2), var(--gold));
+  transform-origin: left;
+}
+.night-hud .oil b {
+  position: relative;
+  display: block;
+  font: 900 14px/22px var(--f-b);
+  text-align: center;
+  /* Readable on the full gauge and on the empty one. */
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85), 0 0 4px rgba(0, 0, 0, 0.6);
+}
+.night-hud .wave {
+  display: grid;
+  justify-items: end;
+  font: 900 16px var(--f-h, var(--f-b));
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+.night-hud .wave small {
+  font: 800 13px var(--f-b);
+  color: var(--soft);
+}
+/* The end of a Night: in the middle, over everything. */
+.night-end {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 8;
+  width: min(86vw, 340px);
+  padding: 18px 18px 20px;
+  text-align: center;
+  background: rgba(10, 26, 51, 0.94);
+  border: 2px solid var(--edge);
+  border-radius: 18px;
+}
+.night-end h2 {
+  margin: 0 0 6px;
+  font: 400 26px var(--f-h, var(--f-b));
+  color: var(--gold);
+}
+.night-end p {
+  margin: 6px 0;
+  font: 700 15px var(--f-b);
+}
+.night-end .bring {
+  color: var(--soft);
+}
+.night-end button {
+  margin-top: 12px;
+  min-width: 160px;
+  min-height: 48px;
+}
