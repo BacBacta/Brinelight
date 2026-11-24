@@ -3,6 +3,9 @@ import { night as N } from "@brinelight/shared";
 import { esc } from "../ui/components.js";
 import { ICONS } from "../ui/icons.js";
 
+/** Said once the beam is learnt, while every raft is empty (choices.ts has it too). */
+const POSTS_HINT = "Tap ＋ on a raft to put troops there. They fire on their own.";
+
 export const NIGHT_TEXT = {
   oil: "Oil",
   oilLabel: "Oil: the Lighthouse's life",
@@ -19,7 +22,12 @@ export function hudParts(n: N.NightState): { oil: number; oilText: string; wave:
   const next = n.phase === "pause" ? `Next wave in ${Math.max(1, Math.ceil((n.pauseEnd - n.step) / N.STEPS_PER_SECOND))} s` : "";
   const earned = N.lootSoFar(n);
   // Night 1 says what to do until the first boat burns: the beam is the whole game, and nothing else explains it.
-  const hint = n.night === 1 && n.wave === 1 && n.burned === 0 && n.phase === "wave" ? NIGHT_TEXT.hint : "";
+  const hint =
+    n.night === 1 && n.wave === 1 && n.burned === 0 && n.phase === "wave"
+      ? NIGHT_TEXT.hint
+      : n.night > 1 && n.posts.length > 0 && n.posts.every((p) => p === null)
+        ? POSTS_HINT
+        : "";
   return { oil: Math.max(0, Math.min(1, n.oil / n.power.startOil)), oilText: String(Math.ceil(n.oil)), wave: `Wave ${Math.min(n.wave, waves)} of ${waves}`, next, wood: earned.wood, fish: earned.fish, hint };
 }
 

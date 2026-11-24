@@ -98,11 +98,16 @@ describe("the portal, from a folder of its own", () => {
     await context.close();
   });
 
-  it("a Night left alone ends on its card; its loot goes to your city, where the Lighthouse is upgraded; the city stays after a reload", async () => {
+  it("a Night with the beam left alone ends on its card; its loot goes to your city, where the Lighthouse is upgraded; the city stays after a reload", async () => {
     const context = await browser.newContext({ viewport: { width: 384, height: 699 } });
     const page = await context.newPage();
     await page.goto(`http://127.0.0.1:${PORT}${FOLDER}`);
-    await page.waitForSelector(".night-end:not([hidden])", { timeout: 170_000 });
+    // The beam left alone; between waves, the first card (key 1): the next wave waits for a choice.
+    await page.waitForSelector(".night-hud", { timeout: 60_000 });
+    for (let i = 0; i < 170 && !(await read(page)).end; i++) {
+      if (await page.locator(".night-cards:not([hidden])").count()) await page.keyboard.press("Digit1");
+      await page.waitForTimeout(1000);
+    }
     const end = await page.locator(".night-end").innerText();
     expect(end).toContain("The Lighthouse went dark");
     expect(end).toMatch(/You held \d waves of 5\./);
@@ -154,4 +159,28 @@ describe("the portal, from a folder of its own", () => {
     expect(text).toContain("Nothing is sent.");
     await context.close();
   });
+
+  it("between waves, three cards; a tap on a raft puts troops there", async () => {
+    const context = await browser.newContext({ viewport: { width: 907, height: 510 } });
+    await context.addInitScript(() =>
+      localStorage.setItem("brinelight-portal-v1/hold-the-light-city", JSON.stringify({ v: 1, city: { v: 1, buildings: { lighthouse: 3, refinery: 1, infirmary: 0 }, stock: { wood: 0, fish: 0, pearls: 0 }, won: 1, played: 1 } })),
+    );
+    const page = await context.newPage();
+    await page.goto(`http://127.0.0.1:${PORT}${FOLDER}`);
+    await page.waitForSelector(".day:not([hidden])", { timeout: 60_000 });
+    await page.locator('.day [data-act="night"]').click();
+    await page.waitForSelector(".night-post", { timeout: 10_000 });
+    await expect.poll(async () => (await page.locator(".night-hud").innerText()).replace(/\s+/g, " ")).toContain("Wave 1 of 8");
+    expect(await page.locator("body").innerText()).toContain("Tap ＋ on a raft to put troops there.");
+    await page.locator('.night-post[data-post="0"]').click();
+    await page.locator('.night-troops [data-troop="crossbowmen"]').click();
+    await expect.poll(() => page.locator('.night-post[data-post="0"] span').getAttribute("aria-label")).toBe("Crossbowmen on this raft");
+    const cards = page.locator(".night-cards:not([hidden])");
+    await expect.poll(() => cards.count(), { timeout: 120_000 }).toBe(1);
+    expect(await cards.locator("[data-card]").count()).toBe(3);
+    await page.keyboard.press("Digit2");
+    await expect.poll(() => cards.count()).toBe(0);
+    await expect.poll(async () => (await page.locator(".night-hud").innerText()).replace(/\s+/g, " "), { timeout: 30_000 }).toContain("Wave 2 of 8");
+    await context.close();
+  }, 200_000);
 });

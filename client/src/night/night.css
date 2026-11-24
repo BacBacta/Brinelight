@@ -275,3 +275,108 @@ body.portal .nav {
 .measure li {
   margin-bottom: 8px;
 }
+
+/* The rafts' posts: a round button over each raft, ＋ when empty, its troop's icon when held. */
+.night-posts {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.night-post {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  background: rgba(6, 16, 36, 0.82);
+  color: var(--gold);
+  font: 900 22px/1 var(--f-b);
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.night-post .icon {
+  width: 30px;
+  height: 30px;
+}
+/* The troops to choose from, and the cards: in the middle, over the sea. */
+.night-troops,
+.night-cards {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9;
+  width: min(92vw, 520px);
+  padding: 14px;
+  background: rgba(10, 26, 51, 0.95);
+  border: 2px solid var(--edge);
+  border-radius: 18px;
+  display: grid;
+  gap: 8px;
+}
+.night-cards h2 {
+  margin: 0;
+  text-align: center;
+  font: 400 22px var(--f-h, var(--f-b));
+  color: var(--gold);
+}
+.night-cards .cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+.night-card,
+.night-troops .troop {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  min-height: 48px;
+  padding: 12px 10px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+  font: 700 14px/1.3 var(--f-b);
+  text-align: center;
+  cursor: pointer;
+}
+.night-card:hover,
+.night-card:focus-visible,
+.night-troops .troop:hover,
+.night-troops .troop:focus-visible {
+  border-color: var(--gold);
+}
+.night-card b,
+.night-troops .troop b {
+  font: 900 16px var(--f-b);
+  color: var(--gold);
+}
+.night-card kbd {
+  font: 800 11px var(--f-b);
+  color: var(--soft);
+}
+.night-troops .troop .icon {
+  width: 34px;
+  height: 34px;
+}
+.night-troops .troop small {
+  color: var(--soft);
+}
+/* `hidden` wins over the display above. */
+.night-troops[hidden],
+.night-cards[hidden] {
+  display: none;
+}
+/* The troops' chooser at the bottom, above the cards: it is the one you just opened. */
+.night-troops {
+  top: auto;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  grid-template-columns: repeat(3, 1fr);
+  z-index: 10;
+}

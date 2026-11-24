@@ -26,11 +26,12 @@ describe("what you earn, and what to do, during the Night", () => {
     expect(hudParts(mid)).toMatchObject({ wood: N.LOOT_PER_WAVE.wood + 4 * N.LOOT_PER_BURNED.wood, fish: N.LOOT_PER_WAVE.fish });
   });
 
-  it("Night 1 says what to do until the first boat burns; later Nights say nothing", () => {
+  it("Night 1 says what to do until the first boat burns; later Nights with troops on their rafts say nothing", () => {
     expect(hudParts(base).hint).toBe(NIGHT_TEXT.hint);
     expect(hudParts({ ...base, burned: 1 }).hint).toBe("");
     expect(hudParts({ ...base, wave: 2 }).hint).toBe("");
-    expect(hudParts(N.newNight(1, 2)).hint).toBe("");
+    // Later Nights say nothing of the beam; their rafts' hint is tested with the choices.
+    expect(hudParts({ ...N.newNight(1, 2), posts: ["boarders", "harpooners"] }).hint).toBe("");
   });
 
   it("the oil is named for what it is", () => {
