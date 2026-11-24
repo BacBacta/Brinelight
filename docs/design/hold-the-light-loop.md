@@ -8,7 +8,7 @@ The prompt that builds the portal edition, one task per iteration, until every s
 /loop Follow docs/design/hold-the-light-loop.md: do the next task.
 ```
 
-Or paste the same line into each new session. Each iteration does one task, leaves the repository green, writes down what it did and stops. The loop stops by itself at each gate and at each blocker, and waits for the owner.
+Or paste the same line into each new session. Each iteration chains tasks until a step ends, a gate or a blocker comes, or its context runs short; each task leaves the repository green and is written down. The loop stops by itself at each gate and at each blocker, and waits for the owner.
 
 ---
 
@@ -25,18 +25,14 @@ You are building **Hold the Light**, Brinelight's portal edition for CrazyGames.
 
 ### 2. Pick the task
 
-- The **first task not ticked** in the progress file whose step is open.
+- The **first task not ticked** in the progress file whose step is open. When it is done, take the next one at once, in the same iteration: no pause between tasks. End the iteration at the end of a step, at a gate, at a blocker, or when your context runs short.
 - If that task is a **gate** and the owner's result is not written under it: do not build past it. Make sure the gate's packet is ready (section 6), report, and stop.
 - If the progress file says **Blocked** on a task: report what it waits on, and stop.
 - If every task is ticked: say so, and stop the loop.
 
 ### 3. Describe it before you build it
 
-Under the task in the progress file, write three lines before any code:
-
-- **Does:** what it adds, in the player's words when it shows.
-- **Does not:** what it leaves for later.
-- **Tested by:** the tests that will prove it.
+Under the task in the progress file, write before any code, in one or two lines in all: **Does**, **Does not**, **Tested by**. A task whose line in the backlog already says all three needs nothing more.
 
 If the task is too big for one iteration (more than about 400 changed lines without tests, or more than one rule plus its display), split it in the progress file into smaller ticked items and do the first one.
 
@@ -54,13 +50,18 @@ If the task is too big for one iteration (more than about 400 changed lines with
 
 ### 5. Finish it
 
-1. `npm run check`, green. If the task touches the client, also `npm run e2e` (it runs on Vitest: Playwright's `--trace` flag does not apply). In a cloud container whose Chromium is not the build this Playwright expects, run it with `E2E_CHROMIUM=/opt/pw-browsers/chromium`.
-2. Read your own diff as a reviewer would: `CLAUDE.md`'s rules, the principles never to break, dead code, a value without its test, a text that is not plain English.
-3. Tick the task in the progress file, with the date and what you measured (sizes, FPS, step counts, times).
-4. If you decided something, add one line to `docs/decisions.md`: what, and why.
-5. Commit in the imperative present ("Add the beam's damage"), ending with the attribution lines your session gives you. Push.
-6. At the end of a **step** (its last task ticked), open a pull request for that step if none is open, using the repository's template if it has one. Never merge it: the owner merges.
-7. End your turn with five lines at most, in French: what is done, what was measured, what comes next, and any question for the owner.
+1. **While you build:** run only the tests of what you touch (`npx vitest run <files>`) and `npx tsc -p <package>`.
+2. **Before the commit:** `npm run check`, green. It is what CI runs and it is needed before every commit (`CLAUDE.md`).
+3. **The e2e (`npm run e2e`, about 10 minutes):** not after each task. Run it:
+   - at the end of each step, before its pull request;
+   - and after a task that changes what the Brinelight on Solana's own build shows or does (its scene, its sheets, its start-up, its saves), since the e2e covers that game.
+   Start it in the background and go on with the next task while it runs; if it fails, fixing it comes before anything else. It runs on Vitest (Playwright's `--trace` flag does not apply); in a cloud container whose Chromium is not the build this Playwright expects, run it with `E2E_CHROMIUM=/opt/pw-browsers/chromium`.
+4. Read your own diff as a reviewer would: `CLAUDE.md`'s rules, the principles never to break, dead code, a value without its test, a text that is not plain English.
+5. Tick the task **in the same commit as its code**, with the date and what you measured in one line (sizes, FPS, step counts, times). A task ticked whose e2e is still to run says so ("e2e at the end of the step").
+6. If you decided something, add one line to `docs/decisions.md`: what, and why.
+7. Commit in the imperative present ("Add the beam's damage"), ending with the attribution lines your session gives you. Push.
+8. At the end of a **step** (its last task ticked and its e2e green), open a pull request for that step if none is open, using the repository's template if it has one. Never merge it: the owner merges.
+9. End the iteration with five lines at most, in French: what is done, what was measured, what comes next, and any question for the owner.
 
 ### 6. Gates
 
@@ -100,6 +101,6 @@ Never: skip, disable or loosen a test to get green; change a look reference with
 
 ## Notes for the owner
 
-- One task an iteration keeps each step small, green and easy to review, and lets you stop the loop at any time.
+- One commit a task keeps each step small, green and easy to review; tasks follow one another without a pause, and the e2e runs once a step (and after a change to the main game), so a task takes minutes, not half an hour. You can stop the loop at any time.
 - The loop stops at gates A, B and C: they need real players, and the decision is yours.
 - The three open questions of the design (the game's name, the sea's French names, ads) do not block before steps 5 and 7. The loop will ask then.
