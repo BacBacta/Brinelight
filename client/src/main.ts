@@ -357,6 +357,8 @@ if (!PORTAL && new URLSearchParams(location.search).has("rules")) {
             showLighthouse();
           },
           toast: (text, bad) => ui.toast(text, bad ? "bad" : "", bad ? "!" : "i"),
+          soundOn: () => sound.on,
+          toggleSound: () => (sound.on = !sound.on),
         });
       city = createCity(scene, canvas, app, { state: () => state, upgrade: (building) => act({ type: "upgrade", building }), research: (tech) => act({ type: "research", tech }), train: (troop) => act({ type: "train", troop }), promote: (troop) => act({ type: "promote", troop }), heal: () => act({ type: "heal" }), stoke: (on) => act({ type: "stoke", on }), dockRaft: (slot) => act({ type: "dockRaft", slot }), installOnRaft: (slot, building) => act({ type: "installOnRaft", slot, building }), upgradeRaft: (slot) => act({ type: "upgradeRaft", slot }), repairRafts: () => act({ type: "repairRafts" }), toCity: () => ui.showView("city"), speed });
       refresh();

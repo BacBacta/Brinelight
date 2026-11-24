@@ -8,6 +8,7 @@ import type { SceneHandle } from "../scene/index.js";
 import { createMeasure, measureHtml, readMeasures } from "../portal/measure.js";
 import { openCity, saveCity } from "../portal/save.js";
 import type { PortalStore } from "../portal/store.js";
+import { createNightAudio } from "./audio.js";
 import { createDay } from "./day.js";
 import { startNight, type NightHandle } from "./index.js";
 
@@ -21,6 +22,9 @@ export type PortalDeps = {
   showLevels(levels: N.PortalCity["buildings"]): void;
   /** A refusal or a piece of news, in a toast. */
   toast(text: string, bad?: boolean): void;
+  /** The game's Sounds switch (Settings), and turning it. */
+  soundOn(): boolean;
+  toggleSound(): void;
 };
 
 export function startPortal(d: PortalDeps): { city(): N.PortalCity } {
@@ -29,6 +33,16 @@ export function startPortal(d: PortalDeps): { city(): N.PortalCity } {
   let city = opened.city;
   if (opened.rejected) d.toast("Your saved city could not be read. A copy was kept.", true);
   let night: NightHandle | null = null;
+  // The Night's sounds and music: from the first tap, the Sounds switch obeyed.
+  const audio = createNightAudio(() => d.soundOn());
+  setInterval(() => audio.refresh(), 500);
+  // M turns the sounds off and on, by Night and by Day.
+  addEventListener("keydown", (e) => {
+    if (e.code !== "KeyM") return;
+    d.toggleSound();
+    audio.refresh();
+    if (day.shown) showDay();
+  });
   // ?measure (gates A and B): counted on the device only, read out by the tester.
   const measure = createMeasure(d.store, () => Date.now());
   setInterval(() => measure.save(), 15_000);
@@ -58,6 +72,11 @@ export function startPortal(d: PortalDeps): { city(): N.PortalCity } {
       showDay();
     },
     night: (k) => begin(k),
+    sound: () => {
+      d.toggleSound();
+      audio.refresh();
+    },
+    soundOn: () => d.soundOn(),
     chest(points) {
       const r = N.openDailyChest(city, Date.now() / 1000, points);
       if (!r.ok) return d.toast(r.reason, true);
@@ -94,6 +113,7 @@ export function startPortal(d: PortalDeps): { city(): N.PortalCity } {
       seed: d.newSeed(),
       powers: N.cityPowers(city),
       onAim: () => measure.beamMoved(),
+      onSound: (s) => audio.play(s),
       onOver(n) {
         measure.nightEnded(n.night, n.wave, n.phase === "won" ? "won" : "lost");
         measure.save();

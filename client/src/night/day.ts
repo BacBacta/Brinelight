@@ -146,7 +146,7 @@ export function chartHtml(c: N.PortalCity, chosen: number): string {
 }
 
 /** The Day's panel: the store, each building, the sea chart and the Night chosen (the next one unless you pick another). */
-export function dayHtml(c: N.PortalCity, chosen: number = N.nextNight(c)): string {
+export function dayHtml(c: N.PortalCity, chosen: number = N.nextNight(c), soundOn = true): string {
   const s = c.stock;
   const g = dayGuide(c);
   return (
@@ -157,6 +157,7 @@ export function dayHtml(c: N.PortalCity, chosen: number = N.nextNight(c)): strin
     captainsHtml(c) +
     todayHtml(c) +
     chartHtml(c, chosen) +
+    `<button class="b day-sound" data-act="sound" aria-pressed="${soundOn}" aria-keyshortcuts="M">Sounds: ${soundOn ? "On" : "Off"}</button>` +
     `<button class="b gold xl day-night${g?.target === "night" ? " guide" : ""}" data-act="night">${chosen === N.ENDLESS ? "Start the Endless Night" : `Start Night ${chosen}`}</button>`
   );
 }
@@ -164,7 +165,7 @@ export function dayHtml(c: N.PortalCity, chosen: number = N.nextNight(c)): strin
 /** The Day on screen. */
 export function createDay(
   root: HTMLElement,
-  actions: { upgrade(b: N.CityBuilding): void; night(k: number): void; lead(id: N.CaptainId): void; chest(points: number): void; recruit(): void },
+  actions: { upgrade(b: N.CityBuilding): void; night(k: number): void; lead(id: N.CaptainId): void; chest(points: number): void; recruit(): void; sound(): void; soundOn(): boolean },
 ) {
   let city: N.PortalCity | null = null;
   let chosen = 1;
@@ -180,9 +181,13 @@ export function createDay(
     if (b.dataset.act === "lead" && b.dataset.c) actions.lead(b.dataset.c as N.CaptainId);
     if (b.dataset.act === "chest") actions.chest(Number(b.dataset.p));
     if (b.dataset.act === "recruit") actions.recruit();
+    if (b.dataset.act === "sound") {
+      actions.sound();
+      if (city) el.innerHTML = dayHtml(city, chosen, actions.soundOn());
+    }
     if (b.dataset.act === "pick" && city) {
       chosen = Number(b.dataset.night);
-      el.innerHTML = dayHtml(city, chosen);
+      el.innerHTML = dayHtml(city, chosen, actions.soundOn());
     }
     if (b.dataset.act === "upgrade" && b.dataset.b) actions.upgrade(b.dataset.b as N.CityBuilding);
   });
@@ -192,7 +197,7 @@ export function createDay(
       // A new city or a Night won: the chosen Night goes back to the next one.
       if (!city || c.won !== city.won) chosen = N.nextNight(c);
       city = c;
-      el.innerHTML = dayHtml(c, chosen);
+      el.innerHTML = dayHtml(c, chosen, actions.soundOn());
       el.hidden = false;
     },
     hide() {

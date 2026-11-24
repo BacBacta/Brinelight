@@ -137,3 +137,10 @@ describe("the portal speaks English", () => {
     for (let k = 1; k <= N.ENDLESS; k++) expect(dayHtml(c, Math.min(k, 13))).not.toMatch(/Murène|Vorace|Barbe-Sel|Lierre|Orme|Perle|Ondine|Topaze|Gaspard|Krake\b/);
   });
 });
+
+describe("the sounds' switch in the Day", () => {
+  it("says whether the sounds are on, and M turns them", () => {
+    expect(dayHtml(city(), 1, true)).toContain("Sounds: On");
+    expect(dayHtml(city(), 1, false)).toMatch(/aria-pressed="false"[^>]*>Sounds: Off/);
+  });
+});

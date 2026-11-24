@@ -13,6 +13,7 @@ import { cardsHtml, postButtonHtml, troopsHtml } from "./choices.js";
 import { beamWedge, burnedBetween, createBursts } from "./effects.js";
 import { createNightHud } from "./hud.js";
 import { loadNightModels } from "./models.js";
+import { soundsBetween, type NightSound } from "./audio.js";
 import { NIGHT_REACH, pointerBearing, seaToWorld, turnBy } from "./view.js";
 import "./night.css";
 
@@ -47,6 +48,8 @@ export function startNight(
     onDone(): void;
     /** The hand moved the beam (the pointer, a finger or a key). */
     onAim?(): void;
+    /** A sound the Night calls for (audio.ts). */
+    onSound?(s: NightSound): void;
   },
 ): NightHandle {
   document.body.classList.add("night");
@@ -278,9 +281,11 @@ export function startNight(
     const turn = keyTurn();
     if (turn !== 0) opts.onAim?.();
     aimed = turnBy(aimed, turn, dt);
+    const before = clock.night;
     const fired = clock.night.cooldown === 0 && pendingPower;
     clock = N.feedTime(clock, dt, { beam: aimed, ...(pendingCard ? { card: pendingCard } : {}), ...(pendingPost ? { post: pendingPost } : {}), ...(pendingPower ? { power: true } : {}) });
     if (fired || clock.night.cooldown > 0) pendingPower = false;
+    if (clock.night !== before && opts.onSound) for (const s of soundsBetween(before, clock.night)) opts.onSound(s);
     // A choice is given to the steps of one frame (a frame may run none: the next one takes it).
     if (pendingCard && !clock.night.offer.includes(pendingCard)) pendingCard = null;
     if (pendingPost && clock.night.posts[pendingPost.slot] === pendingPost.troop) pendingPost = null;

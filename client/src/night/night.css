@@ -476,3 +476,4 @@ body.portal .nav {
 .day .recruit { display: grid; gap: 4px; margin-top: 8px; }
 .day .recruit button { min-height: 44px; }
 .day .recruit small { color: var(--soft); font: 700 12px var(--f-b); }
+.day .day-sound { width: 100%; min-height: 44px; margin-top: 10px; }
