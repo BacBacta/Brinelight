@@ -72,7 +72,7 @@ export function startPortal(d: PortalDeps): { city(): N.PortalCity } {
   function begin(k: number = N.nextNight(city)): void {
     day.hide();
     night = startNight(d.scene, d.canvas, d.root, {
-      night: Math.min(k, N.nextNight(city)),
+      night: k === N.ENDLESS && N.endlessOpen(city) ? N.ENDLESS : Math.min(k, N.nextNight(city)),
       seed: d.newSeed(),
       powers: N.cityPowers(city),
       onAim: () => measure.beamMoved(),

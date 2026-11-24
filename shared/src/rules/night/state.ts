@@ -9,6 +9,9 @@ import { BASE_POWERS, type NightPowers } from "./powers.js";
 import { seedRng, type Rng } from "./random.js";
 import { FAMILIES, NIGHTS, type Family } from "./values.js";
 
+/** The Endless Night comes after the chart's last (chart.ts has its rules). */
+const LAST = NIGHTS + 1;
+
 /** The shape of a Night's data: raised when it changes, so that an old save or replay is read knowingly. */
 export const NIGHT_SHAPE = 8;
 
@@ -89,7 +92,7 @@ const exactKeys = (o: Record<string, unknown>, keys: readonly string[]): boolean
 /** A Night about to begin. The seed is a whole 32-bit number; the Night, 1 to NIGHTS. */
 export function newNight(seed: number, night: number, power: NightPowers = BASE_POWERS): NightState {
   if (!isUint32(seed)) throw new RangeError(`A Night's seed is a whole 32-bit number, not ${seed}`);
-  if (!Number.isInteger(night) || night < 1 || night > NIGHTS) throw new RangeError(`There is no Night ${night}`);
+  if (!Number.isInteger(night) || night < 1 || night > LAST) throw new RangeError(`There is no Night ${night}`);
   return { v: NIGHT_SHAPE, night, seed, rng: seedRng(seed), step: 0, oil: power.startOil, wave: 1, phase: "wave", pauseEnd: -1, spawned: 0, nextSpawn: 0, enemies: [], nextId: 1, burned: 0, beam: 0, power: { ...power }, rescued: false, posts: new Array<TroopType | null>(power.posts).fill(null), offer: [], cards: [], flare: 0, cooldown: 0 };
 }
 
@@ -110,7 +113,7 @@ export function parseNight(raw: unknown): NightState | null {
   try {
     if (!isObj(raw) || !exactKeys(raw, NIGHT_KEYS)) return null;
     const o = raw;
-    if (o.v !== NIGHT_SHAPE || !Number.isInteger(o.night) || (o.night as number) < 1 || (o.night as number) > NIGHTS) return null;
+    if (o.v !== NIGHT_SHAPE || !Number.isInteger(o.night) || (o.night as number) < 1 || (o.night as number) > LAST) return null;
     if (!isUint32(o.seed) || !isUint32(o.rng) || !isWhole(o.step) || !isNum(o.oil) || o.oil < 0 || !isWhole(o.wave, 1)) return null;
     if (typeof o.phase !== "string" || !PHASES.includes(o.phase) || !isWhole(o.pauseEnd, -1) || !isWhole(o.spawned) || !isWhole(o.nextSpawn)) return null;
     if (!isAngle(o.beam) || !isWhole(o.nextId, 1) || !isWhole(o.burned) || !Array.isArray(o.enemies) || typeof o.rescued !== "boolean") return null;

@@ -7,7 +7,7 @@ import { CAPTAIN_IDS, newCaptains, type Captains } from "./captains.js";
 import { NIGHTS, SHARDS_TO_UNLOCK } from "./values.js";
 
 /** The shape of the city's data: raised when it changes, so that an old save is migrated knowingly. */
-export const CITY_SHAPE = 3;
+export const CITY_SHAPE = 4;
 
 /**
  * The buildings with an effect on the Night today: the Lighthouse (the beam), the Refinery (the oil a Night starts
@@ -34,9 +34,11 @@ export type PortalCity = {
   played: number;
   /** The captains who joined, their shards, and the one who leads. */
   captains: Captains;
+  /** The most waves held in the Endless Night. */
+  record: number;
 };
 
-export const newCity = (): PortalCity => ({ v: CITY_SHAPE, buildings: { ...CITY_MIN_LEVEL }, stock: { wood: 0, fish: 0, pearls: 0 }, won: 0, played: 0, captains: newCaptains() });
+export const newCity = (): PortalCity => ({ v: CITY_SHAPE, buildings: { ...CITY_MIN_LEVEL }, stock: { wood: 0, fish: 0, pearls: 0 }, won: 0, played: 0, captains: newCaptains(), record: 0 });
 
 /** The Night to play next: the one after the last won, never past the last. */
 export const nextNight = (c: PortalCity): number => Math.min(c.won + 1, NIGHTS);
@@ -53,8 +55,10 @@ export function parseCity(input: unknown): PortalCity | null {
     // captains): Old Tom alone.
     let raw = input;
     if (isObj(raw) && raw.v === 1 && isObj(raw.buildings)) raw = { ...raw, v: 2, buildings: { ...raw.buildings, barracks: 0, harbor: 0, observatory: 0 } };
-    if (isObj(raw) && raw.v === 2) raw = { ...raw, v: CITY_SHAPE, captains: newCaptains() };
-    if (!isObj(raw) || !exactKeys(raw, ["v", "buildings", "stock", "won", "played", "captains"]) || raw.v !== CITY_SHAPE) return null;
+    if (isObj(raw) && raw.v === 2) raw = { ...raw, v: 3, captains: newCaptains() };
+    if (isObj(raw) && raw.v === 3) raw = { ...raw, v: CITY_SHAPE, record: 0 };
+    if (!isObj(raw) || !exactKeys(raw, ["v", "buildings", "stock", "won", "played", "captains", "record"]) || raw.v !== CITY_SHAPE) return null;
+    if (!isWhole(raw.record)) return null;
     const cap = raw.captains;
     const isCaptain = (x: unknown) => typeof x === "string" && (CAPTAIN_IDS as readonly string[]).includes(x);
     if (!isObj(cap) || !exactKeys(cap, ["lead", "unlocked", "shards"]) || !isCaptain(cap.lead) || !Array.isArray(cap.unlocked) || !cap.unlocked.every(isCaptain)) return null;
@@ -71,6 +75,7 @@ export function parseCity(input: unknown): PortalCity | null {
       stock: { wood: s.wood as number, fish: s.fish as number, pearls: s.pearls as number },
       won,
       played,
+      record: raw.record as number,
       captains: { lead: cap.lead as Captains["lead"], unlocked: cap.unlocked as Captains["unlocked"], shards: { ...(sh as Captains["shards"]) } },
     };
   } catch {

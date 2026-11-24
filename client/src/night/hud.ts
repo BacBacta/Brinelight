@@ -41,14 +41,15 @@ export function hudParts(n: N.NightState): { oil: number; oilText: string; wave:
   // The lead captain's power, by its name.
   const power = N.CAPTAIN_POWERS[n.power.captain].name;
   const flare = flareReady ? power : `${power} ${Math.ceil(n.cooldown / N.STEPS_PER_SECOND)} s`;
-  return { bossName, flare, flareReady, boss, oil: Math.max(0, Math.min(1, n.oil / (n.power.startOil + N.cardMods(n.cards).extraOil))), oilText: String(Math.ceil(n.oil)), wave: `Wave ${Math.min(n.wave, waves)} of ${waves}`, next, wood: earned.wood, fish: earned.fish, hint };
+  return { bossName, flare, flareReady, boss, oil: Math.max(0, Math.min(1, n.oil / (n.power.startOil + N.cardMods(n.cards).extraOil))), oilText: String(Math.ceil(n.oil)), wave: n.night === N.ENDLESS ? `Wave ${n.wave}` : `Wave ${Math.min(n.wave, waves)} of ${waves}`, next, wood: earned.wood, fish: earned.fish, hint };
 }
 
 /** The end card's inside: the Night won or lost, the waves held, what you bring back, and the way to your city. */
 export function endHtml(n: N.NightState, loot: N.Loot): string {
   const waves = N.wavesOf(n.night);
   const won = n.phase === "won";
-  const held = won ? `You held all ${waves} waves.` : `You held ${N.wavesCleared(n)} waves of ${waves}.`;
+  const held =
+    n.night === N.ENDLESS ? `You held ${N.wavesCleared(n)} waves of the Endless Night.` : won ? `You held all ${waves} waves.` : `You held ${N.wavesCleared(n)} waves of ${waves}.`;
   const items = [`${loot.wood} wood`, `${loot.fish} fish`, ...(loot.pearls > 0 ? [`${loot.pearls} Pearls`] : [])];
   return (
     `<h2>${won ? NIGHT_TEXT.won : NIGHT_TEXT.lost}</h2>` +

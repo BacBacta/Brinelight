@@ -60,5 +60,14 @@ function make(k: number): ChartNight {
 
 export const CHART: readonly ChartNight[] = Array.from({ length: 30 }, (_, i) => make(i + 1));
 
-/** A Night of the chart (the last one past its end). */
-export const chartNight = (k: number): ChartNight => CHART[Math.min(Math.max(1, k), CHART.length) - 1]!;
+/** The Endless Night: after the chart's 30, waves without end, each tougher; your record is the waves you hold. */
+export const ENDLESS = CHART.length + 1;
+/** It opens once Night 5 is won. */
+export const ENDLESS_AFTER = 5;
+export const endlessOpen = (c: { won: number; played?: number }): boolean => c.won >= ENDLESS_AFTER;
+/** How much tougher each wave of the Endless Night is. */
+export const ENDLESS_PER_WAVE = 0.05;
+const ENDLESS_NIGHT: ChartNight = { ...make(30), name: "Endless Night", waves: Number.MAX_SAFE_INTEGER, rule: "none", mix: MIX.none };
+
+/** A Night of the chart, or the Endless one. */
+export const chartNight = (k: number): ChartNight => (k >= ENDLESS ? ENDLESS_NIGHT : CHART[Math.min(Math.max(1, k), CHART.length) - 1]!);

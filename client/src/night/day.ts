@@ -122,7 +122,12 @@ export function chartHtml(c: N.PortalCity, chosen: number): string {
     const state = k <= c.won ? "won" : k === next ? "next" : "locked";
     return `<button data-act="pick" data-night="${k}" class="dot ${state}${k === chosen ? " chosen" : ""}"${state === "locked" ? " disabled" : ""} aria-label="Night ${k}">${state === "won" ? "✓" : k}</button>`;
   }).join("");
-  return `<div class="chart" aria-label="Sea chart">${dots}</div><p class="chart-name">${esc(N.chartNight(chosen).name)}</p>`;
+  // The Endless Night, once Night 5 is won: its dot, and your record.
+  const endless = N.endlessOpen(c)
+    ? `<button data-act="pick" data-night="${N.ENDLESS}" class="dot endless${chosen === N.ENDLESS ? " chosen" : ""}" aria-label="Endless Night">∞</button>`
+    : "";
+  const name = chosen === N.ENDLESS ? `Endless Night · your record: ${c.record} waves` : N.chartNight(chosen).name;
+  return `<div class="chart" aria-label="Sea chart">${dots}${endless}</div><p class="chart-name">${esc(name)}</p>`;
 }
 
 /** The Day's panel: the store, each building, the sea chart and the Night chosen (the next one unless you pick another). */
@@ -136,7 +141,7 @@ export function dayHtml(c: N.PortalCity, chosen: number = N.nextNight(c)): strin
     N.CITY_BUILDINGS.map((b) => row(b, c, g?.target === b)).join("") +
     captainsHtml(c) +
     chartHtml(c, chosen) +
-    `<button class="b gold xl day-night${g?.target === "night" ? " guide" : ""}" data-act="night">Start Night ${chosen}</button>`
+    `<button class="b gold xl day-night${g?.target === "night" ? " guide" : ""}" data-act="night">${chosen === N.ENDLESS ? "Start the Endless Night" : `Start Night ${chosen}`}</button>`
   );
 }
 

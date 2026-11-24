@@ -90,3 +90,11 @@ describe("the power's button bears the lead captain's power", () => {
     expect(hudParts({ ...base, power: { ...base.power, captain: "sel" } }).flare).toBe("Bright lens");
   });
 });
+
+describe("the Endless Night's panel and end", () => {
+  it("the wave with no end to it, and the waves held", () => {
+    const e = { ...N.newNight(1, N.ENDLESS), wave: 12 };
+    expect(hudParts(e).wave).toBe("Wave 12");
+    expect(endHtml({ ...e, phase: "lost", oil: 0 }, N.nightLoot({ ...e, phase: "lost", oil: 0 }))).toContain("You held 11 waves of the Endless Night.");
+  });
+});

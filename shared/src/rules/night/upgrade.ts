@@ -4,7 +4,8 @@
  */
 import { CITY_MAX_LEVEL, CITY_MIN_LEVEL, type CityBuilding, type PortalCity } from "./city.js";
 import { CAPTAIN_IDS } from "./captains.js";
-import { nightLoot } from "./loot.js";
+import { ENDLESS } from "./chart.js";
+import { nightLoot, wavesCleared } from "./loot.js";
 import { SHARDS_PER_WIN, SHARDS_TO_UNLOCK } from "./values.js";
 import type { NightState } from "./state.js";
 import { UPGRADE_BASE, UPGRADE_GROWTH } from "./values.js";
@@ -22,7 +23,8 @@ export function dawn(c: PortalCity, n: NightState): CityResult {
     city: {
       ...c,
       stock: { wood: c.stock.wood + loot.wood, fish: c.stock.fish + loot.fish, pearls: c.stock.pearls + loot.pearls },
-      won: n.phase === "won" ? Math.max(c.won, n.night) : c.won,
+      won: n.phase === "won" && n.night !== ENDLESS ? Math.max(c.won, n.night) : c.won,
+      record: n.night === ENDLESS ? Math.max(c.record, wavesCleared(n)) : c.record,
       played: c.played + 1,
       captains: n.phase === "won" ? withShards(c.captains) : c.captains,
     },

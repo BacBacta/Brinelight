@@ -4,7 +4,7 @@
  */
 import type { TroopType } from "../types.js";
 import { CAPTAIN_POWERS } from "./captains.js";
-import { chartNight } from "./chart.js";
+import { ENDLESS, ENDLESS_PER_WAVE, chartNight } from "./chart.js";
 import { BARREL_OIL, EMBER_NEAR, TANK_OIL, cardMods, cardPool, type CardId } from "./cards.js";
 import { nextFloat, pickDistinct, type Rng } from "./random.js";
 import { TROOPS, type Enemy, type NightPhase, type NightState } from "./state.js";
@@ -141,7 +141,8 @@ export function stepNight(n: NightState, input: NightInput): NightState {
   const size = waveSize(n.night, wave);
   const coming: Enemy[] = [];
   // Waves 10, 20 and 30, in the Nights that have them: their boss comes first, from the seed's bearing.
-  const bossFamily = BOSS_AT[wave];
+  // In the Endless Night the bosses come back every ten waves, in turn.
+  const bossFamily = BOSS_AT[n.night === ENDLESS ? ((wave - 1) % 30) + 1 : wave];
   if (phase === "wave" && bossFamily && spawned === 0 && t >= nextSpawn && !n.enemies.some((e) => e.family === bossFamily)) {
     const [f, next] = nextFloat(rng);
     rng = next;
@@ -154,7 +155,7 @@ export function stepNight(n: NightState, input: NightInput): NightState {
       const [family, afterFamily] = familyAt(n.night, rng);
       const [f, next] = nextFloat(afterFamily);
       rng = next;
-      coming.push({ id: nextId, family, bearing: f * 360, distance: SEA_RADIUS, health: FAMILY[family].health * chart.health, lit: 0, fade: 0, stage: 0 });
+      coming.push({ id: nextId, family, bearing: f * 360, distance: SEA_RADIUS, health: FAMILY[family].health * chart.health * (n.night === ENDLESS ? 1 + ENDLESS_PER_WAVE * (wave - 1) : 1), lit: 0, fade: 0, stage: 0 });
       nextId += 1;
     }
     spawned += burst;

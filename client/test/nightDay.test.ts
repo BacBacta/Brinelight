@@ -103,3 +103,14 @@ describe("the captains in the Day", async () => {
     expect(html).toContain("4/10 shards");
   });
 });
+
+describe("the Endless Night in the Day", async () => {
+  const { chartHtml } = await import("../src/night/day.js");
+  it("its dot once Night 5 is won, and your record", () => {
+    expect(chartHtml(city({ won: 4, played: 4 }), 5)).not.toContain("∞");
+    const c = city({ won: 5, played: 6, record: 17 });
+    expect(chartHtml(c, 6)).toContain("∞");
+    expect(chartHtml(c, N.ENDLESS)).toContain("Endless Night · your record: 17 waves");
+    expect(dayHtml(c, N.ENDLESS)).toContain("Start the Endless Night");
+  });
+});
