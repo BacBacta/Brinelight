@@ -9,7 +9,7 @@ import { UPGRADE_BASE, UPGRADE_GROWTH } from "./values.js";
 
 export type CityResult = { ok: true; city: PortalCity } | { ok: false; reason: string };
 
-const NAMES: Readonly<Record<CityBuilding, string>> = { lighthouse: "Lighthouse", refinery: "Refinery", infirmary: "Infirmary" };
+const NAMES: Readonly<Record<CityBuilding, string>> = { lighthouse: "Lighthouse", refinery: "Refinery", infirmary: "Infirmary", barracks: "Barracks", harbor: "Harbor", observatory: "Observatory" };
 
 /** The city at dawn: the Night's loot in its store, one Night more played, and the Night won if it was. */
 export function dawn(c: PortalCity, n: NightState): CityResult {

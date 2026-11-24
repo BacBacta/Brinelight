@@ -5,12 +5,12 @@ import { newNight, parseNight, type NightState } from "../../src/rules/night/sta
 import { stepNight } from "../../src/rules/night/step.js";
 import { BEAM_DPS, BEAM_PER_LEVEL, FAMILY, OIL_PER_REFINERY, RESCUE_BASE, RESCUE_PER_LEVEL, START_OIL, STEPS_PER_SECOND } from "../../src/rules/night/values.js";
 
-const city = (lighthouse: number, refinery: number, infirmary: number): PortalCity => ({ ...newCity(), buildings: { lighthouse, refinery, infirmary } });
+const city = (lighthouse: number, refinery: number, infirmary: number): PortalCity => ({ ...newCity(), buildings: { ...newCity().buildings, lighthouse, refinery, infirmary } });
 
 describe("what the city gives its Night", () => {
   it("a new city gives the base: the beam's damage, the oil, no second chance", () => {
     expect(cityPowers(newCity())).toEqual(BASE_POWERS);
-    expect(BASE_POWERS).toEqual({ beamDps: BEAM_DPS, startOil: START_OIL, rescue: 0, posts: 2 });
+    expect(BASE_POWERS).toEqual({ beamDps: BEAM_DPS, startOil: START_OIL, rescue: 0, posts: 2, postMul: 1, cardTier: 0 });
   });
 
   it("the Lighthouse: the beam burns harder, level by level", () => {

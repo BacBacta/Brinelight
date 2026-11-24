@@ -47,7 +47,7 @@ describe("the cards: one of three after each wave", () => {
   it("a card at its most is no longer drawn", () => {
     expect(cardPool(["wide", "wide", "wide"])).not.toContain("wide");
     expect(cardPool(["wide", "wide"])).toContain("wide");
-    expect(cardPool([])).toEqual([...CARD_IDS]);
+    expect(cardPool([]).slice().sort()).toEqual([...CARD_IDS].sort());
   });
 
   it("each card's text is short and plain", () => {

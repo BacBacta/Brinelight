@@ -351,7 +351,7 @@ if (!PORTAL && new URLSearchParams(location.search).has("rules")) {
           store: portalCityStore,
           newSeed: () => Math.floor(Math.random() * 2 ** 32),
           showLevels: (b) => {
-            state = { ...state, buildings: { ...state.buildings, lighthouse: b.lighthouse, refinery: b.refinery, infirmary: b.infirmary } };
+            state = { ...state, buildings: { ...state.buildings, ...b } };
             refresh();
             showLighthouse();
           },

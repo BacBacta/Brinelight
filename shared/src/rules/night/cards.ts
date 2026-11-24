@@ -49,8 +49,19 @@ export const BARREL_OIL = 25;
 
 const count = (held: readonly CardId[], id: CardId): number => held.filter((c) => c === id).length;
 
-/** The cards that can still be drawn: those not held at their most. */
-export const cardPool = (held: readonly CardId[]): CardId[] => CARD_IDS.filter((id) => count(held, id) < CARDS[id].most);
+/** The cards by tier: the first 8 for every city, 6 more for each Observatory level, all 26 at level 3. */
+export const CARD_TIERS: readonly (readonly CardId[])[] = [
+  ["wide", "bright", "sharp", "reach", "arc", "barrel", "tar", "tide"],
+  ["focus", "hunter", "drill", "foe", "tanks", "patch"],
+  ["ghostlight", "ember", "raft", "nets", "seawall", "salvage"],
+  ["fog", "headwind", "shoal", "star", "quick", "long"],
+];
+
+/** The cards that can still be drawn: those the Observatory opens (`tier`), not held at their most. */
+export const cardPool = (held: readonly CardId[], tier = 3): CardId[] =>
+  CARD_TIERS.slice(0, tier + 1)
+    .flat()
+    .filter((id) => count(held, id) < CARDS[id].most);
 
 /** Oil Deep tanks hold more, and pour at once. */
 export const TANK_OIL = 20;

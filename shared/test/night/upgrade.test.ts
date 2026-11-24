@@ -61,7 +61,7 @@ describe("an upgrade, at once", () => {
     expect(upgradeCity(newCity(), "lighthouse")).toEqual({ ok: false, reason: "You need 80 more wood and 60 more fish." });
     expect(upgradeCity({ ...newCity(), stock: { wood: 80, fish: 0, pearls: 0 } }, "lighthouse")).toEqual({ ok: false, reason: "You need 60 more fish." });
     expect(upgradeCity(rich(), "refinery")).toEqual({ ok: false, reason: "Upgrade the Lighthouse first." });
-    const top = rich({ ...newCity(), buildings: { lighthouse: 10, refinery: 1, infirmary: 0 } });
+    const top = rich({ ...newCity(), buildings: { ...newCity().buildings, lighthouse: 10 } });
     expect(upgradeCity(top, "lighthouse")).toEqual({ ok: false, reason: "Your Lighthouse is at its highest level." });
     // Built from 0: the Infirmary's first level waits for nothing but its cost.
     expect(upgradeCity(rich(), "infirmary").ok).toBe(true);

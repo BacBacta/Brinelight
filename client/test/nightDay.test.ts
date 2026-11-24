@@ -9,7 +9,7 @@ describe("the Day: your city between the Nights", () => {
     expect(effectLine("lighthouse", city())).toBe("Beam: 60 → 69 a second");
     expect(effectLine("refinery", city())).toBe("Oil to start: 100 → 115");
     expect(effectLine("infirmary", city())).toBe("Build it: once a Night, the Lighthouse lights again with 30% of its oil");
-    expect(effectLine("infirmary", city({ buildings: { lighthouse: 3, refinery: 1, infirmary: 1 } }))).toBe("Second chance: 30% → 35% of your oil");
+    expect(effectLine("infirmary", city({ buildings: { ...N.newCity().buildings, lighthouse: 3, refinery: 1, infirmary: 1 } }))).toBe("Second chance: 30% → 35% of your oil");
   });
 
   it("an upgrade you can pay has its button; one you cannot says why, in the rules' words", () => {
@@ -39,7 +39,7 @@ describe("the first Days' guide", async () => {
   it("an upgrade you can pay: the Lighthouse first, else the cheapest", () => {
     const g = dayGuide(city({ stock: { wood: 200, fish: 200, pearls: 0 }, played: 1 }));
     expect(g).toEqual({ target: "lighthouse", text: "Upgrade the Lighthouse: your beam burns harder." });
-    const lit = city({ buildings: { lighthouse: 2, refinery: 1, infirmary: 0 }, stock: { wood: 70, fish: 30, pearls: 0 }, played: 2 });
+    const lit = city({ buildings: { ...N.newCity().buildings, lighthouse: 2, refinery: 1, infirmary: 0 }, stock: { wood: 70, fish: 30, pearls: 0 }, played: 2 });
     expect(dayGuide(lit)).toEqual({ target: "refinery", text: "Upgrade the Refinery: more oil for the Night." });
   });
 
@@ -55,5 +55,16 @@ describe("the first Days' guide", async () => {
     const html = dayHtml(city({ stock: { wood: 200, fish: 200, pearls: 0 }, played: 1 }));
     expect(html).toContain("Upgrade the Lighthouse: your beam burns harder.");
     expect(html).toMatch(/class="b gold guide" data-act="upgrade" data-b="lighthouse"/);
+  });
+});
+
+describe("the Barracks, the Harbor and the Observatory in the Day", () => {
+  it("each says what it does for the Night", () => {
+    expect(effectLine("barracks", city())).toBe("Build it: your rafts' troops hit 20% harder");
+    expect(effectLine("harbor", city())).toBe("Rafts for your troops: 2 → 3");
+    expect(effectLine("observatory", city())).toBe("Cards to draw from: 8 → 14");
+    const grown = city({ buildings: { ...N.newCity().buildings, lighthouse: 5, barracks: 2, observatory: 3 } });
+    expect(effectLine("barracks", grown)).toBe("Troops: +40% → +60%");
+    expect(effectLine("observatory", grown)).toBe("Cards to draw from: all 26");
   });
 });

@@ -13,10 +13,26 @@ export const DAY_TEXT = {
   stock: "In store",
 } as const;
 
-const NAMES: Readonly<Record<N.CityBuilding, string>> = { lighthouse: "Lighthouse", refinery: "Refinery", infirmary: "Infirmary" };
-const ICON: Readonly<Record<N.CityBuilding, string>> = { lighthouse: ICONS.lighthouse, refinery: ICONS.oil, infirmary: ICONS.wounded };
+const NAMES: Readonly<Record<N.CityBuilding, string>> = {
+  lighthouse: "Lighthouse",
+  refinery: "Refinery",
+  infirmary: "Infirmary",
+  barracks: "Barracks",
+  harbor: "Harbor",
+  observatory: "Observatory",
+};
+const ICON: Readonly<Record<N.CityBuilding, string>> = {
+  lighthouse: ICONS.lighthouse,
+  refinery: ICONS.oil,
+  infirmary: ICONS.wounded,
+  barracks: ICONS.boarders,
+  harbor: ICONS.sail,
+  observatory: ICONS.research,
+};
 
 const pct = (x: number): string => `${Math.round(x * 100)}%`;
+/** How many cards an Observatory's tier opens to the draw. */
+const cardsOpen = (tier: number): number => N.cardPool([], tier).length;
 
 /** What a building does for the Night now, and at its next level. */
 export function effectLine(b: N.CityBuilding, c: N.PortalCity): string {
@@ -33,6 +49,12 @@ export function effectLine(b: N.CityBuilding, c: N.PortalCity): string {
       return c.buildings.infirmary === 0
         ? `Build it: once a Night, the Lighthouse lights again with ${pct(next.rescue)} of its oil`
         : `Second chance: ${to(pct(now.rescue), pct(next.rescue))} of your oil`;
+    case "barracks":
+      return c.buildings.barracks === 0 ? `Build it: your rafts' troops hit ${pct(next.postMul - 1)} harder` : `Troops: ${to(`+${pct(now.postMul - 1)}`, `+${pct(next.postMul - 1)}`)}`;
+    case "harbor":
+      return `Rafts for your troops: ${to(String(now.posts), String(next.posts))}`;
+    case "observatory":
+      return top || now.cardTier >= 3 ? `Cards to draw from: all ${cardsOpen(3)}` : `Cards to draw from: ${to(String(cardsOpen(now.cardTier)), String(cardsOpen(next.cardTier)))}`;
   }
 }
 
@@ -43,6 +65,9 @@ const WHY: Readonly<Record<N.CityBuilding, string>> = {
   lighthouse: "Upgrade the Lighthouse: your beam burns harder.",
   refinery: "Upgrade the Refinery: more oil for the Night.",
   infirmary: "Build the Infirmary: a second chance each Night.",
+  barracks: "Build the Barracks: your troops hit harder.",
+  harbor: "Build the Harbor: one more raft for troops.",
+  observatory: "Build the Observatory: new cards to draw.",
 };
 
 /** What to do next, in the first Days: an upgrade you can pay (the Lighthouse first, else the cheapest), or the next Night. */

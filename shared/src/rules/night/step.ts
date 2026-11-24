@@ -169,7 +169,7 @@ export function stepNight(n: NightState, input: NightInput): NightState {
         netted.add(e.id);
         if (!target || e.distance < target.distance) target = e;
       }
-    if (target) hits.set(target.id, (hits.get(target.id) ?? 0) + mods.postDps * STEP * (COUNTERED_BY[target.family] === troop ? mods.counter : 1));
+    if (target) hits.set(target.id, (hits.get(target.id) ?? 0) + mods.postDps * n.power.postMul * STEP * (COUNTERED_BY[target.family] === troop ? mods.counter : 1));
   });
   for (const e of sea) {
     // The beam burns first: what it lights this step never reaches the coast in it. A faded Wraith it goes through.
@@ -223,7 +223,7 @@ export function stepNight(n: NightState, input: NightInput): NightState {
       pauseEnd = t + 1 + PAUSE_STEPS;
       // Tar pots pour; three cards are drawn from the seed for this pause.
       oil = Math.min(oilCap, oil + mods.oilPerWave);
-      const pool = cardPool(cards);
+      const pool = cardPool(cards, n.power.cardTier);
       const [drawn, next] = pickDistinct(rng, pool, Math.min(3, pool.length));
       offer = drawn;
       rng = next;

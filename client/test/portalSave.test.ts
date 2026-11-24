@@ -8,7 +8,7 @@ const memory = () => {
   const store: PortalStore = { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => void m.set(k, v), removeItem: (k) => void m.delete(k) };
   return { m, store };
 };
-const grown = (): N.PortalCity => ({ ...N.newCity(), buildings: { lighthouse: 3, refinery: 2, infirmary: 1 }, stock: { wood: 140, fish: 30, pearls: 10 }, won: 2, played: 4 });
+const grown = (): N.PortalCity => ({ ...N.newCity(), buildings: { ...N.newCity().buildings, lighthouse: 3, refinery: 2, infirmary: 1 }, stock: { wood: 140, fish: 30, pearls: 10 }, won: 2, played: 4 });
 
 describe("the portal's city on the device", () => {
   it("nothing saved: a new city", () => {
@@ -23,7 +23,7 @@ describe("the portal's city on the device", () => {
 
   it("a save edited by hand that the rules refuse: set aside untouched, and a new city", () => {
     const { m, store } = memory();
-    const edited = JSON.stringify({ v: 1, city: { ...grown(), buildings: { lighthouse: 99, refinery: 1, infirmary: 0 } } });
+    const edited = JSON.stringify({ v: 1, city: { ...grown(), buildings: { ...N.newCity().buildings, lighthouse: 99, refinery: 1, infirmary: 0 } } });
     m.set(CITY_KEY, edited);
     expect(openCity(store)).toEqual({ city: N.newCity(), rejected: true });
     expect(m.get(REJECTED_CITY_KEY)).toBe(edited);

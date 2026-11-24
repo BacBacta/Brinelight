@@ -9,7 +9,7 @@ import { seedRng, type Rng } from "./random.js";
 import { FAMILIES, NIGHTS, type Family } from "./values.js";
 
 /** The shape of a Night's data: raised when it changes, so that an old save or replay is read knowingly. */
-export const NIGHT_SHAPE = 6;
+export const NIGHT_SHAPE = 7;
 
 export type Enemy = {
   /** Whole, from 1, never reused in a Night. */
@@ -114,7 +114,7 @@ export function parseNight(raw: unknown): NightState | null {
     if (typeof o.phase !== "string" || !PHASES.includes(o.phase) || !isWhole(o.pauseEnd, -1) || !isWhole(o.spawned) || !isWhole(o.nextSpawn)) return null;
     if (!isAngle(o.beam) || !isWhole(o.nextId, 1) || !isWhole(o.burned) || !Array.isArray(o.enemies) || typeof o.rescued !== "boolean") return null;
     const p = o.power;
-    if (!isObj(p) || !exactKeys(p, ["beamDps", "startOil", "rescue", "posts"]) || !isNum(p.beamDps) || p.beamDps <= 0 || !isNum(p.startOil) || p.startOil <= 0 || !isNum(p.rescue) || p.rescue < 0 || p.rescue > 1 || !isWhole(p.posts) || (p.posts as number) > 12) return null;
+    if (!isObj(p) || !exactKeys(p, ["beamDps", "startOil", "rescue", "posts", "postMul", "cardTier"]) || !isNum(p.postMul) || p.postMul <= 0 || !isWhole(p.cardTier) || (p.cardTier as number) > 3 || !isNum(p.beamDps) || p.beamDps <= 0 || !isNum(p.startOil) || p.startOil <= 0 || !isNum(p.rescue) || p.rescue < 0 || p.rescue > 1 || !isWhole(p.posts) || (p.posts as number) > 12) return null;
     if (!isWhole(o.flare) || !isWhole(o.cooldown)) return null;
     const isCard = (c: unknown) => typeof c === "string" && (CARD_IDS as readonly string[]).includes(c);
     const { offer, cards } = o;
@@ -146,7 +146,7 @@ export function parseNight(raw: unknown): NightState | null {
       nextId: o.nextId,
       burned: o.burned,
       beam: o.beam,
-      power: { beamDps: p.beamDps, startOil: p.startOil, rescue: p.rescue, posts: p.posts as number },
+      power: { beamDps: p.beamDps, startOil: p.startOil, rescue: p.rescue, posts: p.posts as number, postMul: p.postMul, cardTier: p.cardTier as number },
       posts: posts as (TroopType | null)[],
       flare: o.flare as number,
       cooldown: o.cooldown as number,

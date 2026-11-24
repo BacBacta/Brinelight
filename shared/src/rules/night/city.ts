@@ -6,19 +6,19 @@
 import { NIGHTS } from "./values.js";
 
 /** The shape of the city's data: raised when it changes, so that an old save is migrated knowingly. */
-export const CITY_SHAPE = 1;
+export const CITY_SHAPE = 2;
 
 /**
  * The buildings with an effect on the Night today: the Lighthouse (the beam), the Refinery (the oil a Night starts
  * with), the Infirmary (a second chance). The others come with what they do (steps 3 and 5).
  */
-export const CITY_BUILDINGS = ["lighthouse", "refinery", "infirmary"] as const;
+export const CITY_BUILDINGS = ["lighthouse", "refinery", "infirmary", "barracks", "harbor", "observatory"] as const;
 export type CityBuilding = (typeof CITY_BUILDINGS)[number];
 
 /** The highest level a building reaches, for now. */
 export const CITY_MAX_LEVEL = 10;
 /** The lowest level of each: the Lighthouse and the Refinery stand from the start; the Infirmary is built. */
-export const CITY_MIN_LEVEL: Readonly<Record<CityBuilding, number>> = { lighthouse: 1, refinery: 1, infirmary: 0 };
+export const CITY_MIN_LEVEL: Readonly<Record<CityBuilding, number>> = { lighthouse: 1, refinery: 1, infirmary: 0, barracks: 0, harbor: 0, observatory: 0 };
 
 export const CITY_STOCK = ["wood", "fish", "pearls"] as const;
 export type CityStock = Record<(typeof CITY_STOCK)[number], number>;
@@ -44,8 +44,13 @@ const exactKeys = (o: Record<string, unknown>, keys: readonly string[]): boolean
   Object.keys(o).length === keys.length && keys.every((k) => Object.prototype.hasOwnProperty.call(o, k));
 
 /** A city read back from the device: exactly its fields, each in its range, or null. Never throws. */
-export function parseCity(raw: unknown): PortalCity | null {
+export function parseCity(input: unknown): PortalCity | null {
   try {
+    // Shape 1 (before the Barracks, the Harbor and the Observatory): the three come at 0.
+    const raw =
+      isObj(input) && input.v === 1 && isObj(input.buildings)
+        ? { ...input, v: CITY_SHAPE, buildings: { ...input.buildings, barracks: 0, harbor: 0, observatory: 0 } }
+        : input;
     if (!isObj(raw) || !exactKeys(raw, ["v", "buildings", "stock", "won", "played"]) || raw.v !== CITY_SHAPE) return null;
     const { buildings: b, stock: s, won, played } = raw;
     if (!isObj(b) || !exactKeys(b, CITY_BUILDINGS) || !CITY_BUILDINGS.every((id) => isWhole(b[id], CITY_MIN_LEVEL[id], CITY_MAX_LEVEL))) return null;
@@ -53,7 +58,7 @@ export function parseCity(raw: unknown): PortalCity | null {
     if (!isWhole(won, 0, NIGHTS) || !isWhole(played) || won > played) return null;
     return {
       v: CITY_SHAPE,
-      buildings: { lighthouse: b.lighthouse as number, refinery: b.refinery as number, infirmary: b.infirmary as number },
+      buildings: Object.fromEntries(CITY_BUILDINGS.map((id) => [id, b[id] as number])) as Record<CityBuilding, number>,
       stock: { wood: s.wood as number, fish: s.fish as number, pearls: s.pearls as number },
       won,
       played,

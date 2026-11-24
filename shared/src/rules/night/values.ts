@@ -93,6 +93,9 @@ export const UPGRADE_BASE = {
   lighthouse: { wood: 80, fish: 60 },
   refinery: { wood: 60, fish: 20 },
   infirmary: { wood: 120, fish: 80 },
+  barracks: { wood: 100, fish: 80 },
+  harbor: { wood: 120, fish: 60 },
+  observatory: { wood: 90, fish: 90 },
 } as const;
 /** Each level costs this much more than the one before. */
 export const UPGRADE_GROWTH = 1.6;
@@ -121,3 +124,6 @@ export const FLARE_SECONDS = 2;
 export const FLARE_SHARE = 0.5;
 /** …then waits this long to be fired again. */
 export const FLARE_COOLDOWN = 20;
+
+/** The Barracks: the posts' troops hit this much harder a level. */
+export const BARRACKS_PER_LEVEL = 0.2;
