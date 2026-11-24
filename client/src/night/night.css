@@ -425,3 +425,30 @@ body.portal .nav {
 .night-flare[hidden] {
   display: none;
 }
+
+/* The sea chart: a dot a Night. */
+.day .chart {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  margin-top: 10px;
+}
+.day .chart .dot {
+  min-height: 40px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--soft);
+  font: 800 13px var(--f-b);
+  cursor: pointer;
+}
+.day .chart .won { color: var(--green); }
+.day .chart .next { border-color: var(--gold); color: var(--gold); }
+.day .chart .locked { opacity: 0.35; cursor: default; }
+.day .chart .chosen { background: rgba(255, 200, 58, 0.25); outline: 2px solid var(--gold); }
+.day .chart-name {
+  margin: 6px 0 0;
+  text-align: center;
+  font: 800 14px var(--f-b);
+  color: var(--gold);
+}

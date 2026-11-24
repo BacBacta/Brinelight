@@ -68,3 +68,23 @@ describe("the Barracks, the Harbor and the Observatory in the Day", () => {
     expect(effectLine("observatory", grown)).toBe("Cards to draw from: all 26");
   });
 });
+
+describe("the sea chart in the Day", async () => {
+  const { chartHtml } = await import("../src/night/day.js");
+  it("30 Nights: those won marked, the next lit, the others locked; the one chosen named with its rule", () => {
+    const c = city({ won: 3, played: 5 });
+    const html = chartHtml(c, 4);
+    expect(html.match(/data-night=/g)).toHaveLength(30);
+    expect(html).toMatch(/data-night="1"[^>]*class="dot won"/);
+    expect(html).toMatch(/data-night="4"[^>]*class="dot next chosen"/);
+    expect(html).toMatch(/data-night="5"[^>]*class="dot locked"[^>]*disabled/);
+    expect(html).toContain("Night 4");
+    expect(chartHtml(city({ won: 7, played: 7 }), 8)).toContain("Night 8 · Night of Wraiths");
+  });
+
+  it("a Night won can be chosen again: the button says which", () => {
+    const html = dayHtml(city({ won: 3, played: 5 }), 2);
+    expect(html).toContain("Start Night 2");
+    expect(html).toMatch(/data-night="2"[^>]*class="dot won chosen"/);
+  });
+});

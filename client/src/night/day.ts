@@ -98,8 +98,19 @@ function row(b: N.CityBuilding, c: N.PortalCity, guided: boolean): string {
   );
 }
 
-/** The Day's panel: the store, each building, and the next Night. */
-export function dayHtml(c: N.PortalCity): string {
+/** The sea chart: a dot a Night, won ones marked, the next lit, later ones locked; the one chosen named. */
+export function chartHtml(c: N.PortalCity, chosen: number): string {
+  const next = N.nextNight(c);
+  const dots = N.CHART.map((_, i) => {
+    const k = i + 1;
+    const state = k <= c.won ? "won" : k === next ? "next" : "locked";
+    return `<button data-act="pick" data-night="${k}" class="dot ${state}${k === chosen ? " chosen" : ""}"${state === "locked" ? " disabled" : ""} aria-label="Night ${k}">${state === "won" ? "✓" : k}</button>`;
+  }).join("");
+  return `<div class="chart" aria-label="Sea chart">${dots}</div><p class="chart-name">${esc(N.chartNight(chosen).name)}</p>`;
+}
+
+/** The Day's panel: the store, each building, the sea chart and the Night chosen (the next one unless you pick another). */
+export function dayHtml(c: N.PortalCity, chosen: number = N.nextNight(c)): string {
   const s = c.stock;
   const g = dayGuide(c);
   return (
@@ -107,12 +118,15 @@ export function dayHtml(c: N.PortalCity): string {
     `<h2>${DAY_TEXT.title}</h2>` +
     (g ? `<p class="day-guide" role="status">${esc(g.text)}</p>` : "") +
     N.CITY_BUILDINGS.map((b) => row(b, c, g?.target === b)).join("") +
-    `<button class="b gold xl day-night${g?.target === "night" ? " guide" : ""}" data-act="night">Start Night ${N.nextNight(c)}</button>`
+    chartHtml(c, chosen) +
+    `<button class="b gold xl day-night${g?.target === "night" ? " guide" : ""}" data-act="night">Start Night ${chosen}</button>`
   );
 }
 
 /** The Day on screen. */
-export function createDay(root: HTMLElement, actions: { upgrade(b: N.CityBuilding): void; night(): void }) {
+export function createDay(root: HTMLElement, actions: { upgrade(b: N.CityBuilding): void; night(k: number): void }) {
+  let city: N.PortalCity | null = null;
+  let chosen = 1;
   const el = document.createElement("section");
   el.className = "day card";
   el.setAttribute("role", "dialog");
@@ -121,13 +135,20 @@ export function createDay(root: HTMLElement, actions: { upgrade(b: N.CityBuildin
   el.addEventListener("click", (e) => {
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-act]");
     if (!b || b.disabled) return;
-    if (b.dataset.act === "night") actions.night();
+    if (b.dataset.act === "night") actions.night(chosen);
+    if (b.dataset.act === "pick" && city) {
+      chosen = Number(b.dataset.night);
+      el.innerHTML = dayHtml(city, chosen);
+    }
     if (b.dataset.act === "upgrade" && b.dataset.b) actions.upgrade(b.dataset.b as N.CityBuilding);
   });
   root.append(el);
   return {
     show(c: N.PortalCity) {
-      el.innerHTML = dayHtml(c);
+      // A new city or a Night won: the chosen Night goes back to the next one.
+      if (!city || c.won !== city.won) chosen = N.nextNight(c);
+      city = c;
+      el.innerHTML = dayHtml(c, chosen);
       el.hidden = false;
     },
     hide() {

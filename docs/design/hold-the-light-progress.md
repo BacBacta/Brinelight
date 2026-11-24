@@ -174,7 +174,8 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
 
 - [x] **5.1** The sea chart: 30 Nights, each with its families and its rule (a Night of Wraiths, a Night with no pause…), in the rules, with tests that each rule does what it says.
   - Done 24 November: `chart.ts`, 30 Nights (`NIGHTS` 30). Nights 1 to 5 as they were; Nights 6 to 30 from 13 to 30 waves, 3 to 5 enemies at once, their health 6 % more a Night past 5, and a rule in turn: Swift Night (enemies 25 % faster), Night of Wraiths (7 in 10), Night of Beasts (6 in 10), Night without rest (a second between waves), Dark Night (the beam 10° narrower), or none. Each Night's name says its rule. The step reads every Night's values from the chart (the old per-Night arrays are gone). 8 tests. `npm run night` keeps to Nights 1 to 5 by default; the chart's curve is task 5.8.
-- [ ] **5.2** The chart on screen: the Nights as points on the sea, the next one lit, the ones won marked.
+- [x] **5.2** The chart on screen: the Nights as points on the sea, the next one lit, the ones won marked.
+  - Done 24 November: in the Day, the sea chart: 30 dots six a row (40 px each), the Nights won ticked, the next one lit, the later ones locked; below, the chosen Night's name with its rule. A Night won can be chosen again (to gather more), and the button says which ("Start Night 2"); a Night won brings the choice back to the next one. 2 tests.
 - [ ] **5.3** The bosses of waves 20 and 30 (the Leviathan). Tests.
 - [ ] **5.4** The six captains' powers and their unlock by shards. Tests.
 - [ ] **5.5** The Endless Night and your record, kept on the device.
