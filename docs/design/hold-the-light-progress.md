@@ -204,7 +204,9 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
   - Done 24 November: each card shows one of the game's own icons, by what it acts on (the Lighthouse for the beam's, the troops and the sail for the rafts', oil, sea, Mist, fish, Pearls, captains): in the art direction, nothing more to download. Not made: a picture of its own for each of the 26 (an image service's credits and some 26 more files to load); for later if the owner wants them. 1 test.
 - [x] **6.5** Loading in two parts: what Night 1 needs first (under 5 MB), the rest during it. Measured.
   - Done 24 November: measured on the portal's build, uncompressed: **2.71 MB before Night 1 can be played** (three.js 599 KB, the code 318 KB, the island and its buildings of the first era), playable in 4.3 s here; 3.36 MB after 30 s, once the enemies' models (173 KB) and the sounds have come during the Night. The portal's first e2e now holds the first part under 5 MB.
-- [ ] **6.6** 60 FPS at wave 30: measured in the container, then on the S22 by the owner with `?fps`. The e2e's look references, shown to the owner before they change.
+- [x] **6.6** 60 FPS at wave 30: measured in the container, then on the S22 by the owner with `?fps`. The e2e's look references, shown to the owner before they change.
+  - Done in the container, 24 November: Night 30 at 384 × 699 with a grown city, `?fps`: **32 draw calls, 38.0 k triangles** at quality step 2, the families one draw call each whatever their number; 6 FPS here, where the city alone runs at 3 to 7 (no GPU): not a phone's measure. Seen too: Night 30's waves are big (62 enemies in its first, `waveSize` growing 2 a Night); the aiming bot wins it (5.8), a player's hand is to be seen.
+  - [ ] **For the owner, on the S22:** a city at Night 30 is far; the measure that matters is any late Night at its busiest: open `…/portal/?fps`, play until a wave's middle, and note the line (FPS, its 10 s minimum and mean, quality step). Under 60, say so and step 6 is reopened on what the counter shows. The portal's e2e has no look references to show.
 
 ## Step 7 · To CrazyGames
 
