@@ -62,11 +62,15 @@ describe("the portal, from a folder of its own", () => {
     page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
     page.on("pageerror", (e) => errors.push(e.message));
     page.on("response", (r) => r.status() >= 400 && failed.push(`${r.status()} ${r.url()}`));
+    // What the first Night needs comes first (under 5 MB); the models made in Blender and the sounds come during it.
+    let bytes = 0;
+    page.on("response", (r) => void r.body().then((b) => (bytes += b.length), () => undefined));
     const opened = Date.now();
     await page.goto(`http://127.0.0.1:${PORT}${FOLDER}`);
     // The Night starts at once: no menu, no title, within 10 s of the page.
     await page.waitForSelector(".night-hud", { timeout: 10_000 });
     expect(Date.now() - opened).toBeLessThan(10_000);
+    expect(bytes).toBeLessThan(5 * 1024 * 1024);
     expect(await page.title()).toBe("Brinelight: Hold the Light");
     await expect.poll(async () => (await read(page)).wave).toBe("Wave 1 of 5");
     expect((await read(page)).oil).toBe("100");
