@@ -30,7 +30,7 @@ describe("what the city gives its Night", () => {
 /** One Raider at this bearing far out, the waves held back. Night 2: no grace. */
 const one = (powers = BASE_POWERS, oil?: number): NightState => {
   const n = newNight(1, 2, powers);
-  return { ...n, oil: oil ?? n.oil, phase: "pause", pauseEnd: 1_000_000, enemies: [{ id: 1, family: "raider", bearing: 0, distance: 28, health: FAMILY.raider.health }], nextId: 2 };
+  return { ...n, oil: oil ?? n.oil, phase: "pause", pauseEnd: 1_000_000, enemies: [{ id: 1, family: "raider", bearing: 0, distance: 28, health: FAMILY.raider.health, lit: 0, fade: 0 }], nextId: 2 };
 };
 const run = (n: NightState, steps: number, beam: number): NightState => {
   let s = n;

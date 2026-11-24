@@ -10,7 +10,7 @@ const withField = (key: string, value: unknown): unknown => {
   else o[key] = value;
   return o;
 };
-const enemy = { id: 1, family: "raider", bearing: 90, distance: 20, health: 30 };
+const enemy = { id: 1, family: "raider", bearing: 90, distance: 20, health: 30, lit: 0, fade: 0 };
 
 describe("a new Night", () => {
   it("starts at step 0, its oil full, its first wave coming, the beam to the north, nothing on the sea", () => {
@@ -45,7 +45,7 @@ describe("parseNight: a Night read back (a save, a replay) is strict", () => {
 
   it("refuses each field missing, unknown or out of its range", () => {
     const bad: [string, unknown][] = [
-      ["v", 2],
+      ["v", 1],
       ["night", 0],
       ["seed", -1],
       ["seed", 1.5],

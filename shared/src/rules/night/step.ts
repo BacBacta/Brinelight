@@ -2,12 +2,17 @@
  * A Night advances by one step of 1/30 s (Hold the Light). The client gives the beam's angle; the rules do the rest:
  * the enemies come, the beam burns what it lights, the coast is raided. Pure: the Night given is never changed.
  */
-import { nextFloat } from "./random.js";
+import { nextFloat, type Rng } from "./random.js";
 import type { Enemy, NightPhase, NightState } from "./state.js";
 import {
   BEAM_WIDTH,
   COAST_RADIUS,
+  FAMILIES,
   FAMILY,
+  NIGHT_MIX,
+  WRAITH_FADE_AFTER,
+  WRAITH_HIDDEN,
+  type Family,
   NIGHT1_GRACE_WAVES,
   NIGHT_GROWTH,
   NIGHT_WAVES,
@@ -42,6 +47,21 @@ export function inBeam(beam: number, bearing: number): boolean {
 
 /** The waves of a Night. */
 export const wavesOf = (night: number): number => NIGHT_WAVES[night - 1] ?? NIGHT_WAVES[NIGHT_WAVES.length - 1]!;
+const FADE_AFTER_STEPS = Math.round(WRAITH_FADE_AFTER * STEPS_PER_SECOND);
+const HIDDEN_STEPS = Math.round(WRAITH_HIDDEN * STEPS_PER_SECOND);
+
+/** The family of a newcomer in a Night, drawn from its mix, and the generator's state after. */
+export function familyAt(night: number, r: Rng): [Family, Rng] {
+  const mix = NIGHT_MIX[night - 1] ?? NIGHT_MIX[NIGHT_MIX.length - 1]!;
+  const [f, next] = nextFloat(r);
+  let left = f;
+  for (const fam of FAMILIES) {
+    left -= mix[fam];
+    if (left < 0) return [fam, next];
+  }
+  return ["raider", next];
+}
+
 /** How many come at once in a Night. */
 export const burstOf = (night: number): number => SPAWN_BURST[night - 1] ?? SPAWN_BURST[SPAWN_BURST.length - 1]!;
 /** The Raiders of a wave. */
@@ -74,9 +94,10 @@ export function stepNight(n: NightState, input: NightInput): NightState {
   if (phase === "wave" && spawned < size && t >= nextSpawn) {
     const burst = Math.min(size - spawned, burstOf(n.night));
     for (let k = 0; k < burst; k++) {
-      const [f, next] = nextFloat(rng);
+      const [family, afterFamily] = familyAt(n.night, rng);
+      const [f, next] = nextFloat(afterFamily);
       rng = next;
-      coming.push({ id: nextId, family: "raider", bearing: f * 360, distance: SEA_RADIUS, health: FAMILY.raider.health });
+      coming.push({ id: nextId, family, bearing: f * 360, distance: SEA_RADIUS, health: FAMILY[family].health, lit: 0, fade: 0 });
       nextId += 1;
     }
     spawned += burst;
@@ -89,8 +110,16 @@ export function stepNight(n: NightState, input: NightInput): NightState {
   let burned = n.burned;
   const enemies: Enemy[] = [];
   for (const e of [...n.enemies, ...coming]) {
-    // The beam burns first: what it lights this step never reaches the coast in it.
-    const health = inBeam(beam, e.bearing) ? e.health - n.power.beamDps * STEP : e.health;
+    // The beam burns first: what it lights this step never reaches the coast in it. A faded Wraith it goes through.
+    const fading = e.fade > 0;
+    const lit = !fading && inBeam(beam, e.bearing);
+    const health = lit ? e.health - n.power.beamDps * STEP : e.health;
+    let litFor = lit ? e.lit + 1 : 0;
+    let fade = fading ? e.fade - 1 : 0;
+    if (e.family === "wraith" && litFor >= FADE_AFTER_STEPS) {
+      fade = HIDDEN_STEPS;
+      litFor = 0;
+    }
     if (health <= SPENT) {
       burned += 1;
       continue;
@@ -100,7 +129,7 @@ export function stepNight(n: NightState, input: NightInput): NightState {
       oil = Math.max(Math.min(floor, oil), oil - FAMILY[e.family].oil);
       continue;
     }
-    enemies.push({ ...e, distance, health });
+    enemies.push({ ...e, distance, health, lit: litFor, fade });
   }
 
   // The Infirmary's second chance: once, the Lighthouse lights again.

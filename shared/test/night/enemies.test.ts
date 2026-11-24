@@ -12,7 +12,7 @@ const sea = (enemies: Omit<Enemy, "id">[], oil = START_OIL): NightState => ({
   enemies: enemies.map((e, i) => ({ ...e, id: i + 1 })),
   nextId: enemies.length + 1,
 });
-const raider = (bearing: number, distance: number): Omit<Enemy, "id"> => ({ family: "raider", bearing, distance, health: FAMILY.raider.health });
+const raider = (bearing: number, distance: number): Omit<Enemy, "id"> => ({ family: "raider", bearing, distance, health: FAMILY.raider.health, lit: 0, fade: 0 });
 /** Steps the Night n times, the beam held where it is told (180°, away from the enemies at 0°). */
 const run = (n: NightState, steps: number, beam = 180): NightState => {
   let s = n;

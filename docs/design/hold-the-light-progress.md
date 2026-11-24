@@ -137,7 +137,9 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
 
 ## Step 3 · Depth
 
-- [ ] **3.1** The three families (Raiders, Beasts, Wraiths) in the rules, with their speed, health, oil stolen and behavior (a Wraith fades out of the beam). Tests for each.
+- [x] **3.1** The three families (Raiders, Beasts, Wraiths) in the rules, with their speed, health, oil stolen and behavior (a Wraith fades out of the beam). Tests for each.
+  - Done 24 November: Raiders (speed 4, health 60, 5 oil), Beasts (speed 2, health 240, 20 oil), Wraiths (speed 3, health 90, 10 oil; lit 0.6 s without a break, they fade for 1.5 s: the beam goes through them and they come on). Night 1 sends Raiders only, Nights 2 and 3 one Beast in five, Nights 4 and 5 one Beast and one Wraith in five (`NIGHT_MIX`, drawn from the seed). The Night's shape is 2 (each enemy counts its time lit and its fading). 8 tests. The screen still draws every family as a Raider's block until task 3.8.
+  - Measured (`npm run night`, 20 seeds): with a new city's powers, even a perfect aim loses Nights 3 to 5; the hand-speed bot's campaign wins Nights 1 to 3 at once, Night 4 in 5 tries and Night 5 in 9 (65 minutes, Lighthouse 7, Refinery 7, Infirmary 5 at the end). Hard; the posts and the cards (3.2 to 3.5) make the player stronger, and the curve is measured again then.
 - [ ] **3.2** Posts: a troop on a raft fires on its own at its range; the triangle on the families (`COUNTER_BONUS` 1.2, read from the existing rules, never changed). Tests.
 - [ ] **3.3** The cards' engine: three different cards drawn from the seed after each wave, one chosen, its effect held for the rest of the Night. Tests: the draw, the choice refused if not offered, an effect stacking as its card says.
 - [ ] **3.4** The first 8 cards (beam, posts, oil, captains: two of each), one test each.

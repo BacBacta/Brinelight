@@ -65,7 +65,7 @@ describe("the waves", () => {
     expect(lost.wave).toBeGreaterThan(NIGHT1_GRACE_WAVES);
     // The same Night, the same end: replays rest on this.
     expect(lost.step).toBe(play(newNight(5, 1), () => ({ beam: 0 })).step);
-    expect(lost.step).toMatchInlineSnapshot(`2025`);
+    expect(lost.step).toMatchInlineSnapshot(`2160`);
   });
 
   it("Night 1's first waves leave at least a drop of oil, even with nothing left", () => {

@@ -23,14 +23,32 @@ export const BEAM_WIDTH = 40;
 /** The damage the beam does in a second to each enemy it lights. */
 export const BEAM_DPS = 60;
 
-/** The enemies' families. Raiders first; Beasts and Wraiths come with step 3 of the plan. */
-export const FAMILIES = ["raider"] as const;
+/** The enemies' families. */
+export const FAMILIES = ["raider", "beast", "wraith"] as const;
 export type Family = (typeof FAMILIES)[number];
 
 export const FAMILY: Readonly<Record<Family, { speed: number; health: number; oil: number }>> = {
   /** Pirate skiffs: quick, straight to the coast. 8 s from the edge, half a second in the beam. */
   raider: { speed: 4, health: 60, oil: 5 },
+  /** Beasts of the Mist: few, slow, tough; 11 s from the edge, 4 s in the beam. */
+  beast: { speed: 2, health: 240, oil: 20 },
+  /** Wraiths: they fade out of the beam (below); 8 s from the edge, 1.5 s in the beam, in strokes. */
+  wraith: { speed: 3, health: 90, oil: 10 },
 };
+
+/** A Wraith lit this long (seconds, without a break) fades… */
+export const WRAITH_FADE_AFTER = 0.6;
+/** …for this long: the beam goes through it, and it comes on. */
+export const WRAITH_HIDDEN = 1.5;
+
+/** Which family each newcomer is, in Nights 1 to 5: Raiders only in Night 1, Beasts from Night 2, Wraiths from Night 4. */
+export const NIGHT_MIX: readonly Readonly<Record<Family, number>>[] = [
+  { raider: 1, beast: 0, wraith: 0 },
+  { raider: 0.8, beast: 0.2, wraith: 0 },
+  { raider: 0.8, beast: 0.2, wraith: 0 },
+  { raider: 0.6, beast: 0.2, wraith: 0.2 },
+  { raider: 0.6, beast: 0.2, wraith: 0.2 },
+];
 
 /** The Nights there are: Nights 1 to 5 first (step 4), then the chart (step 5). */
 export const NIGHTS = 5;

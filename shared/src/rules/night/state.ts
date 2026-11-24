@@ -7,7 +7,7 @@ import { seedRng, type Rng } from "./random.js";
 import { FAMILIES, NIGHTS, type Family } from "./values.js";
 
 /** The shape of a Night's data: raised when it changes, so that an old save or replay is read knowingly. */
-export const NIGHT_SHAPE = 1;
+export const NIGHT_SHAPE = 2;
 
 export type Enemy = {
   /** Whole, from 1, never reused in a Night. */
@@ -19,6 +19,10 @@ export type Enemy = {
   distance: number;
   /** Above 0: at 0 it is gone. */
   health: number;
+  /** Steps lit by the beam without a break (a Wraith fades when it is lit long enough). */
+  lit: number;
+  /** Steps left faded out of the beam (Wraiths): the beam goes through it. */
+  fade: number;
 };
 
 export type NightPhase = "wave" | "pause" | "won" | "lost";
@@ -72,16 +76,16 @@ export function newNight(seed: number, night: number, power: NightPowers = BASE_
   return { v: NIGHT_SHAPE, night, seed, rng: seedRng(seed), step: 0, oil: power.startOil, wave: 1, phase: "wave", pauseEnd: -1, spawned: 0, nextSpawn: 0, enemies: [], nextId: 1, burned: 0, beam: 0, power: { ...power }, rescued: false };
 }
 
-const ENEMY_KEYS = ["id", "family", "bearing", "distance", "health"] as const;
+const ENEMY_KEYS = ["id", "family", "bearing", "distance", "health", "lit", "fade"] as const;
 const NIGHT_KEYS = ["v", "night", "seed", "rng", "step", "oil", "wave", "phase", "pauseEnd", "spawned", "nextSpawn", "enemies", "nextId", "burned", "beam", "power", "rescued"] as const;
 const PHASES: readonly string[] = ["wave", "pause", "won", "lost"];
 
 function parseEnemy(raw: unknown): Enemy | null {
   if (!isObj(raw) || !exactKeys(raw, ENEMY_KEYS)) return null;
-  const { id, family, bearing, distance, health } = raw;
+  const { id, family, bearing, distance, health, lit, fade } = raw;
   if (!isWhole(id, 1) || typeof family !== "string" || !(FAMILIES as readonly string[]).includes(family)) return null;
-  if (!isAngle(bearing) || !isNum(distance) || distance < 0 || !isNum(health) || health <= 0) return null;
-  return { id, family: family as Family, bearing, distance, health };
+  if (!isAngle(bearing) || !isNum(distance) || distance < 0 || !isNum(health) || health <= 0 || !isWhole(lit) || !isWhole(fade)) return null;
+  return { id, family: family as Family, bearing, distance, health, lit, fade };
 }
 
 /** A Night read back from a save or a replay: exactly its fields, each in its range, or null. Never throws. */
