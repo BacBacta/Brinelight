@@ -14,6 +14,9 @@ export type Models = Record<ModelId, THREE.Object3D>;
 
 export const modelUrl = (id: string): string => `${import.meta.env.BASE_URL}models/${id}.glb`;
 
+/** The prototype's kit (island tiles, scaffolding, flags, rafts, the sea's sites): a copy of its phare.glb, so that no build needs the prototype's folder. */
+export const kitUrl = modelUrl("phare");
+
 /** Loads the models in parallel with the scene's loader. */
 export async function loadModels(loader: GLTFLoader): Promise<Models> {
   const loaded = await Promise.all(MODEL_IDS.map((id) => loader.loadAsync(modelUrl(id))));

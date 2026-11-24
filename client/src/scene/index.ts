@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { tierOf } from "./buildings.js";
-import { ISLAND_ANISOTROPY, filterTexture, loadModels, type Models } from "./models.js";
+import { ISLAND_ANISOTROPY, filterTexture, kitUrl, loadModels, type Models } from "./models.js";
 import { createCamera, createControls, frameCity } from "./camera.js";
 import { CITY_MANIFEST, SEA_RISE, cityModelUrl, gridIsland } from "./cityLook.js";
 import { CITY_ANGLE, CITY_FILL, buildingPoints, cityFraming, clearView, type Volume } from "./framing.js";
@@ -137,8 +137,6 @@ export type SceneOptions = {
   /** The top of the sheet open at the bottom of the screen, if one is (CSS pixels): the close view stays above it. */
   sheetTop?: () => number | null;
 };
-
-const KIT_URL = `${import.meta.env.BASE_URL}prototype/assets/phare.glb`;
 
 /** The two views of the prototype: the city (island, Lighthouse) and the sea map. */
 export function startScene(canvas: HTMLCanvasElement, options: SceneOptions): SceneHandle {
@@ -458,7 +456,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions): Sc
       glideTo(normal.target.clone().addScaledVector(CITY_ANGLE, normal.distance), normal.target.clone());
     },
     loadSea() {
-      seaModels ??= Promise.all([loader.loadAsync(KIT_URL), loadModels(loader), cityDone]).then(([gltf, models]) => ({ kit: kitOf(gltf), models }));
+      seaModels ??= Promise.all([loader.loadAsync(kitUrl), loadModels(loader), cityDone]).then(([gltf, models]) => ({ kit: kitOf(gltf), models }));
       return seaModels;
     },
     setView(v) {
