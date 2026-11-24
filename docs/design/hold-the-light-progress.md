@@ -31,7 +31,8 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
 
 ## Step 1 · A Night in the rules
 
-- [ ] **1.1** The seeded generator, `shared/src/rules/night/random.ts`: a state you carry, never a global. Tests: the same seed gives the same sequence; draws spread evenly over 100,000 values; a choice of 3 among N gives 3 different items.
+- [x] **1.1** The seeded generator, `shared/src/rules/night/random.ts`: a state you carry, never a global. Tests: the same seed gives the same sequence; draws spread evenly over 100,000 values; a choice of 3 among N gives 3 different items.
+  - Done 24 November: mulberry32 (`nextFloat`, `nextInt`, `pickDistinct`), its state a number carried by the caller; its first three values for the seed 1 are pinned to the algorithm's own, so a Night replayed from its seed always draws the same. 7 tests; the purity test covers `night/`.
 - [ ] **1.2** `values.ts` and the Night's types: its state (seed, step, oil, wave, enemies, beam), its inputs (the beam's angle), a strict `parseNight`. Tests: a valid state passes, each wrong field is refused.
 - [ ] **1.3** Enemies: each comes on its bearing from the edge of the sea at its speed; on the coast it steals its oil and is gone. Tests: an enemy's step count to the coast; the oil after it lands; the oil never below 0.
 - [ ] **1.4** The beam: angle, width, damage a second. Tests: an enemy in the beam dies in the steps its health says; on the beam's edge it is in; just outside it is not; the angle wraps at 360°.
