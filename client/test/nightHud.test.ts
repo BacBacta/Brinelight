@@ -8,6 +8,8 @@ describe("the Night's panel", () => {
   it("the oil as a share of a full Lighthouse, and the wave of all", () => {
     expect(hudParts({ ...base, oil: 75 })).toMatchObject({ oil: 0.75, oilText: "75", wave: "Wave 1 of 5", next: "" });
     expect(hudParts({ ...base, oil: 0, phase: "lost" }).oil).toBe(0);
+    // Against the oil this Night started with (the Refinery's).
+    expect(hudParts({ ...base, oil: 65, power: { ...base.power, startOil: 130 } }).oil).toBe(0.5);
   });
 
   it("in the pause, when the next wave comes", () => {

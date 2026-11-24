@@ -5,7 +5,6 @@
 import { nextFloat } from "./random.js";
 import type { Enemy, NightPhase, NightState } from "./state.js";
 import {
-  BEAM_DPS,
   BEAM_WIDTH,
   COAST_RADIUS,
   FAMILY,
@@ -85,7 +84,7 @@ export function stepNight(n: NightState, input: NightInput): NightState {
   const enemies: Enemy[] = [];
   for (const e of [...n.enemies, ...coming]) {
     // The beam burns first: what it lights this step never reaches the coast in it.
-    const health = inBeam(beam, e.bearing) ? e.health - BEAM_DPS * STEP : e.health;
+    const health = inBeam(beam, e.bearing) ? e.health - n.power.beamDps * STEP : e.health;
     if (health <= SPENT) {
       burned += 1;
       continue;
@@ -98,6 +97,12 @@ export function stepNight(n: NightState, input: NightInput): NightState {
     enemies.push({ ...e, distance, health });
   }
 
+  // The Infirmary's second chance: once, the Lighthouse lights again.
+  let rescued = n.rescued;
+  if (oil <= 0 && !rescued && n.power.rescue > 0) {
+    oil = Math.round(n.power.startOil * n.power.rescue);
+    rescued = true;
+  }
   if (oil <= 0) phase = "lost";
   else if (phase === "wave" && spawned >= size && enemies.length === 0) {
     if (wave >= wavesOf(n.night)) phase = "won";
@@ -106,5 +111,5 @@ export function stepNight(n: NightState, input: NightInput): NightState {
       pauseEnd = t + 1 + PAUSE_STEPS;
     }
   }
-  return { ...n, step: t + 1, beam, oil, phase, wave, pauseEnd, spawned, nextSpawn, rng, nextId, burned, enemies };
+  return { ...n, step: t + 1, beam, oil, phase, wave, pauseEnd, spawned, nextSpawn, rng, nextId, burned, enemies, rescued };
 }

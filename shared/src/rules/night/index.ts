@@ -7,3 +7,4 @@ export * from "./clock.js";
 export * from "./loot.js";
 export * from "./city.js";
 export * from "./upgrade.js";
+export * from "./powers.js";

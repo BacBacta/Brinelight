@@ -67,3 +67,12 @@ export const UPGRADE_BASE = {
 } as const;
 /** Each level costs this much more than the one before. */
 export const UPGRADE_GROWTH = 1.6;
+
+/** The Lighthouse's level: the beam burns this much harder for each level above 1. */
+export const BEAM_PER_LEVEL = 0.15;
+/** The Refinery's level: this much more oil to start a Night with, for each level above 1. */
+export const OIL_PER_REFINERY = 15;
+/** The Infirmary: once a Night, when the oil runs out, the Lighthouse lights again with this share of its oil… */
+export const RESCUE_BASE = 0.3;
+/** …and this much more for each level above 1. */
+export const RESCUE_PER_LEVEL = 0.05;

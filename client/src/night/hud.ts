@@ -20,7 +20,7 @@ export function hudParts(n: N.NightState): { oil: number; oilText: string; wave:
   const earned = N.lootSoFar(n);
   // Night 1 says what to do until the first boat burns: the beam is the whole game, and nothing else explains it.
   const hint = n.night === 1 && n.wave === 1 && n.burned === 0 && n.phase === "wave" ? NIGHT_TEXT.hint : "";
-  return { oil: Math.max(0, Math.min(1, n.oil / N.START_OIL)), oilText: String(Math.ceil(n.oil)), wave: `Wave ${Math.min(n.wave, waves)} of ${waves}`, next, wood: earned.wood, fish: earned.fish, hint };
+  return { oil: Math.max(0, Math.min(1, n.oil / n.power.startOil)), oilText: String(Math.ceil(n.oil)), wave: `Wave ${Math.min(n.wave, waves)} of ${waves}`, next, wood: earned.wood, fish: earned.fish, hint };
 }
 
 /** The end card's inside: the Night won or lost, the waves held, the loot, and Again. */
@@ -42,7 +42,7 @@ export function createNightHud(root: HTMLElement, onAgain: () => void) {
   const panel = document.createElement("div");
   panel.className = "night-hud";
   panel.innerHTML =
-    `<div class="left"><div class="oil" role="meter" aria-label="${NIGHT_TEXT.oilLabel}" title="${NIGHT_TEXT.oilLabel}" aria-valuemin="0" aria-valuemax="${N.START_OIL}">${ICONS.oil}<span class="bar"><i></i><b></b></span></div>` +
+    `<div class="left"><div class="oil" role="meter" aria-label="${NIGHT_TEXT.oilLabel}" title="${NIGHT_TEXT.oilLabel}" aria-valuemin="0">${ICONS.oil}<span class="bar"><i></i><b></b></span></div>` +
     `<div class="earned" aria-label="Earned this Night"><span data-k="wood">${ICONS.wood}<b>0</b></span><span data-k="fish">${ICONS.fish}<b>0</b></span></div></div>` +
     `<div class="wave" aria-live="polite"><b></b><small></small></div>`;
   const hint = document.createElement("p");
@@ -85,6 +85,7 @@ export function createNightHud(root: HTMLElement, onAgain: () => void) {
       fill.style.transform = `scaleX(${p.oil})`;
       oilText.textContent = p.oilText;
       meter.setAttribute("aria-valuenow", p.oilText);
+      meter.setAttribute("aria-valuemax", String(n.power.startOil));
       wave.textContent = p.wave;
       next.textContent = p.next;
       count(wood, p.wood);
