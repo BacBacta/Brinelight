@@ -61,7 +61,8 @@ export async function startHarness(): Promise<Harness> {
   delete process.env.VITE_API_URL;
   const site: PreviewServer = await preview({ root: CLIENT, logLevel: "warn", build: { outDir: OUT }, preview: { port: 4173, host: "127.0.0.1", strictPort: true } });
 
-  const browser = await chromium.launch();
+  // E2E_CHROMIUM: a Chromium of your own when this Playwright's build is not installed (a cloud container); CI sets none.
+  const browser = await chromium.launch(process.env.E2E_CHROMIUM ? { executablePath: process.env.E2E_CHROMIUM } : {});
   return {
     browser,
     notary: {

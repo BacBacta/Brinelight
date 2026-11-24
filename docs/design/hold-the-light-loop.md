@@ -54,7 +54,7 @@ If the task is too big for one iteration (more than about 400 changed lines with
 
 ### 5. Finish it
 
-1. `npm run check`, green. If the task touches the client, also `npm run e2e` (it runs on Vitest: Playwright's `--trace` flag does not apply).
+1. `npm run check`, green. If the task touches the client, also `npm run e2e` (it runs on Vitest: Playwright's `--trace` flag does not apply). In a cloud container whose Chromium is not the build this Playwright expects, run it with `E2E_CHROMIUM=/opt/pw-browsers/chromium`.
 2. Read your own diff as a reviewer would: `CLAUDE.md`'s rules, the principles never to break, dead code, a value without its test, a text that is not plain English.
 3. Tick the task in the progress file, with the date and what you measured (sizes, FPS, step counts, times).
 4. If you decided something, add one line to `docs/decisions.md`: what, and why.
