@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Brinelight · L'Âge des Phares (prototype)</title>
+<link rel="icon" href="data:,">
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#050b16;color:#fff;font-family:system-ui,sans-serif;user-select:none;-webkit-user-select:none;touch-action:none}
+  canvas{display:block;width:100vw;height:100vh}
+  #top{position:fixed;left:6px;right:6px;top:6px;display:flex;gap:5px;flex-wrap:wrap;z-index:3;pointer-events:none}
+  .pill{background:rgba(6,16,36,.88);border:1px solid rgba(255,255,255,.15);border-radius:99px;padding:4px 9px;font:800 13px system-ui;pointer-events:auto}
+  .pill.gold{color:#FFC83A}.pill.btn{cursor:pointer;border-color:#FFC83A}
+  #hint{position:fixed;left:50%;transform:translateX(-50%);max-width:min(94vw,560px);background:rgba(6,16,36,.94);border:2px solid #FFC83A;border-radius:12px;padding:7px 12px;font:700 14px/1.35 system-ui;text-align:center;z-index:3;pointer-events:none}
+  #hint:empty{display:none}
+  #bar{position:fixed;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;gap:6px;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));z-index:3;flex-wrap:wrap;background:rgba(5,11,22,.9);min-height:52px}
+  #bar .info{font:700 13px/1.3 system-ui;color:#C6D8F2;max-width:100%}
+  button{font:800 14px system-ui;color:#2b1a00;background:linear-gradient(180deg,#FFD866,#FFC83A);border:0;border-bottom:3px solid #B9770A;border-radius:11px;padding:9px 12px;min-height:44px;cursor:pointer}
+  button:disabled{opacity:.45;cursor:default}
+  button.alt{background:#163A63;color:#fff;border-bottom-color:#0C1F3A}
+  button.red{background:#c0392b;color:#fff;border-bottom-color:#7d2018}
+  .ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(3,8,18,.84);z-index:5}
+  .ov[hidden]{display:none}
+  .box{width:min(94vw,560px);max-height:90vh;overflow:auto;padding:16px 18px;border-radius:16px;background:#0C1F3A;border:2px solid #2E5C8F}
+  h1{margin:0 0 8px;color:#FFC83A;font-size:24px;text-align:center} h2{margin:0 0 8px;color:#FFC83A;font-size:19px;text-align:center}
+  .box p,.box li{color:#C6D8F2;font-size:14px;line-height:1.4;margin:5px 0} .box ul{padding-left:18px;margin:6px 0} .box b{color:#fff}
+  .list{display:grid;gap:6px}
+  .list button{text-align:left;display:grid;gap:2px;background:#163A63;color:#fff;border-bottom-color:#0C1F3A}
+  .list button b{color:#FFC83A;font-size:15px}.list button span{font:600 12.5px system-ui;color:#C6D8F2}
+  .list button.rec{outline:2px solid #FFC83A}
+  .center{text-align:center}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="top"></div><div id="hint"></div><div id="bar"></div><div id="ov" class="ov" hidden></div>
+<script>
+"use strict";
+/*
+ * Brinelight · L'Âge des Phares. A throwaway prototype for the owner: a short turn-based game of civilization on a
+ * drowned sea hidden by the Mist. Explore, found lighthouse-cities, choose what they make, research through three
+ * eras, deal with two rival nations, and win in one of three ways. Plain 2D canvas; no rule of the game; French text
+ * for the owner's test (the game itself will be in English).
+ */
+const cv=document.getElementById("c"),g=cv.getContext("2d"),topEl=document.getElementById("top"),hintEl=document.getElementById("hint"),bar=document.getElementById("bar"),ov=document.getElementById("ov");
+let W=0,H=0,TS=32,OX=0,OY=0,COLS=18,ROWS=11,seed=1;
+const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
+const MAXT=60,HUMAN=0,MIST=3;
+const COL=["#FFC83A","#ff5a4e","#b48cff","#6b5a86"],NAMES=["Toi","la Ligue Écarlate","le Pacte Violet","la Brume"];
+const CITYN=[["Havre-d'Or","Port-Ambre","Cap-Soleil","Île-Miel","Roc-Clair","Anse-Dorée"],["Rougefer","Braise","Sang-de-Mer","Écarlate","Fournaise","Corail"],["Améthyste","Brume-Close","Lilas","Nocturne","Iris","Crépuscule"]];
+// Tiles: what a worked tile gives [fish, wood, lore].
+const YIELD={sea:[1,0,0],shoal:[3,0,0],kelp:[1,2,0],seep:[0,2,1],isle:[0,1,0],wreck:[1,0,0],reef:[0,0,0]};
+const TNAME={sea:"Mer",shoal:"Banc de poissons (+3 poisson)",kelp:"Forêt de varech (+1 poisson, +2 bois)",seep:"Source d'huile (+2 bois, +1 savoir)",isle:"Île (on peut y fonder une cité)",wreck:"Épave (un trésor pour qui l'atteint)",reef:"Récifs (infranchissables)"};
+const U={
+  scout:{n:"Éclaireur",l:"É",s:1,mv:3,c:8,d:"Rapide, voit loin. Pour explorer."},
+  board:{n:"Abordeurs",l:"A",s:3,mv:2,c:10,d:"Force 3. Battent les Harponneurs."},
+  harp:{n:"Harponneurs",l:"H",s:4,mv:2,c:14,tech:"harpoons",d:"Force 4. Battent les Arbalétriers."},
+  cross:{n:"Arbalétriers",l:"X",s:4,mv:2,c:14,tech:"crossbows",d:"Force 4. Battent les Abordeurs."},
+  iron:{n:"Cuirassé",l:"C",s:7,mv:3,c:28,tech:"engines",d:"Force 7, rapide."},
+  raft:{n:"Radeau de colons",l:"R",s:0,mv:2,c:18,d:"Fonde une nouvelle cité sur une île (coûte 1 habitant)."},
+  beast:{n:"Créature de la Brume",l:"☠",s:2,mv:1,c:0}};
+const BEATS={board:"harp",harp:"cross",cross:"board"};
+const B={
+  fishery:{n:"Pêcherie",c:12,tech:"nets",d:"+2 poisson : la cité grandit plus vite."},
+  yard:{n:"Scierie",c:12,tech:"sawpits",d:"+2 bois : tout se construit plus vite."},
+  obs:{n:"Observatoire",c:16,tech:"lenses",d:"+3 savoir : les découvertes vont plus vite."},
+  lamp:{n:"Grande lampe",c:16,tech:"refining",d:"La lumière de la cité porte 1 case plus loin."},
+  walls:{n:"Remparts",c:14,tech:"masonry",d:"Défense de la cité +50 %."},
+  wonder:{n:"Le Grand Phare",c:110,tech:"greatlens",d:"MERVEILLE : la terminer, c'est gagner."}};
+const TECH={
+  nets:{n:"Filets",c:12,era:0,d:"Débloque la Pêcherie."},
+  sawpits:{n:"Scieries",c:12,era:0,d:"Débloque la Scierie."},
+  charts:{n:"Cartes marines",c:12,era:0,d:"Toutes tes unités voient 1 case plus loin."},
+  harpoons:{n:"Harpons",c:14,era:0,d:"Débloque les Harponneurs."},
+  refining:{n:"Raffinage",c:34,era:1,req:["nets"],d:"Débloque la Grande lampe."},
+  lenses:{n:"Lentilles",c:34,era:1,req:["charts"],d:"Débloque l'Observatoire."},
+  crossbows:{n:"Arbalètes",c:30,era:1,req:["harpoons"],d:"Débloque les Arbalétriers."},
+  masonry:{n:"Maçonnerie",c:30,era:1,req:["sawpits"],d:"Débloque les Remparts."},
+  engines:{n:"Machines",c:70,era:2,req:["crossbows","masonry"],d:"Débloque le Cuirassé ; unités +1 déplacement."},
+  greatlens:{n:"Grande lentille",c:64,era:2,req:["lenses","refining"],d:"Débloque la merveille : le Grand Phare."},
+  atlas:{n:"Atlas du monde noyé",c:120,era:2,req:["greatlens","engines"],d:"VICTOIRE par le savoir."}};
+const ERA=["Âge du Bois flotté","Âge des Jardins","Âge de l'Acier"];
+const AI={1:{style:"war",research:["harpoons","sawpits","crossbows","masonry","nets","engines","charts","refining","lenses","greatlens","atlas"],build:["yard","walls","fishery","lamp","obs"]},
+          2:{style:"build",research:["nets","charts","lenses","sawpits","refining","greatlens","harpoons","masonry","crossbows","engines","atlas"],build:["fishery","obs","yard","lamp","walls","wonder"]},
+          0:{style:"build",research:["nets","sawpits","charts","harpoons","lenses","refining","masonry","crossbows","greatlens","engines","atlas"],build:["fishery","yard","obs","lamp","walls","wonder"]}};
+
+let G=null,sel=null,reach=null,auto=false;
+function fit(){const d=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;g.setTransform(d,0,0,d,0,0);if(G)layout()}
+function layout(){const topH=62,botH=64;TS=Math.floor(Math.min(W/COLS,(H-topH-botH)/ROWS));OX=Math.floor((W-COLS*TS)/2);OY=topH+Math.floor((H-topH-botH-ROWS*TS)/2)}
+addEventListener("resize",fit);
+const inb=(x,y)=>x>=0&&y>=0&&x<COLS&&y<ROWS,dist=(a,b,c,d)=>Math.max(Math.abs(a-c),Math.abs(b-d));
+const NB=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+const tile=(x,y)=>G.map[y][x],pass=(x,y)=>inb(x,y)&&G.map[y][x].t!=="reef";
+const unitsAt=(x,y)=>G.units.filter(u=>u.x===x&&u.y===y),cityAt=(x,y)=>G.cities.find(c=>c.x===x&&c.y===y);
+const hostile=(a,b)=>a!==b&&(a===MIST||b===MIST||G.war[a][b]>0);
+const has=(k,t)=>G.P[k].tech.has(t);
+const light=c=>2+(c.bld.has("lamp")?1:0)+(c.pop>=5?1:0);
+const visOf=u=>(u.type==="scout"?2:1)+(u.k<3&&has(u.k,"charts")?1:0);
+const mvOf=u=>U[u.type].mv+(u.k<3&&has(u.k,"engines")&&u.type!=="beast"?1:0);
+const era=k=>{const n=G.P[k].tech.size;return n>=8?2:n>=4?1:0};
+const military=k=>G.units.filter(u=>u.k===k&&U[u.type].s>0).reduce((s,u)=>s+U[u.type].s*u.hp/10,0);
+
+function newGame(){
+  seed=(Date.now()&0xffffff)||5;const land=innerWidth>=innerHeight;COLS=land?18:11;ROWS=land?11:18;
+  const map=[];for(let y=0;y<ROWS;y++){map.push([]);for(let x=0;x<COLS;x++){const r=rnd();map[y].push({t:r<.13?"shoal":r<.23?"kelp":r<.28?"seep":r<.33?"reef":"sea",seen:[false,false,false]})}}
+  const caps=land?[[2,ROWS-3],[COLS-3,2],[COLS-3,ROWS-3]]:[[2,ROWS-3],[COLS-3,2],[2,2]];
+  const sites=caps.map(c=>({x:c[0],y:c[1]}));let tries=0;
+  while(sites.length<15&&tries++<4000){const p={x:1+Math.floor(rnd()*(COLS-2)),y:1+Math.floor(rnd()*(ROWS-2))};if(sites.every(q=>dist(p.x,p.y,q.x,q.y)>=3))sites.push(p)}
+  for(const s of sites)map[s.y][s.x].t="isle";
+  // No reef next to an island or on the edge columns: every island can be reached.
+  for(const s of sites)for(const [dx,dy] of NB){const x=s.x+dx,y=s.y+dy;if(inb(x,y)&&map[y][x].t==="reef")map[y][x].t="sea"}
+  let w=0;tries=0;while(w<6&&tries++<500){const x=Math.floor(rnd()*COLS),y=Math.floor(rnd()*ROWS);if(map[y][x].t==="sea"&&caps.every(c=>dist(x,y,c[0],c[1])>=3)){map[y][x].t="wreck";w++}}
+  G={map,turn:1,cities:[],units:[],P:[0,1,2].map(k=>({k,lore:0,tech:new Set(),research:null,alive:true})),war:[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]],over:false,log:[],flags:new Set(),uid:1,wonderBy:-1};
+  caps.forEach((c,k)=>{const city=found(k,c[0],c[1]);city.cap=true;city.orig=k;city.pop=2;spawn(k,"board",c[0],c[1]);spawn(k,"scout",c[0],c[1])});
+  sel=null;reach=null;layout();see();startTurn(HUMAN);
+}
+function found(k,x,y){const n=G.cities.filter(c=>c.founder===k).length;const c={k,founder:k,x,y,name:CITYN[k][n%6],pop:1,food:0,prog:0,build:null,bld:new Set(),hp:10,cap:false,orig:-1};G.cities.push(c);return c}
+function spawn(k,type,x,y){const u={id:G.uid++,k,type,x,y,hp:10,mv:0};u.mv=mvOf(u);G.units.push(u);return u}
+function say(s,k){G.log.push({s,t:G.turn});if(G.log.length>30)G.log.shift();G.last=s;G.lastAt=performance.now()}
+
+// ── Light, territory and what a city yields ──
+function see(){
+  for(let k=0;k<3;k++){G.P[k].vis=new Set()}
+  const mark=(k,x,y,r)=>{for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){const X=x+dx,Y=y+dy;if(inb(X,Y)){G.P[k].vis.add(Y*COLS+X);G.map[Y][X].seen[k]=true}}};
+  for(const c of G.cities)mark(c.k,c.x,c.y,light(c));
+  for(const u of G.units)if(u.k<3)mark(u.k,u.x,u.y,visOf(u));
+  G.own=new Map();for(const c of G.cities){const r=light(c);for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){const X=c.x+dx,Y=c.y+dy;if(!inb(X,Y))continue;const key=Y*COLS+X,o=G.own.get(key);if(!o||dist(X,Y,c.x,c.y)<dist(X,Y,o.x,o.y))G.own.set(key,c)}}
+}
+function yields(c){
+  const tiles=[];const r=light(c);for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){const X=c.x+dx,Y=c.y+dy;if(!inb(X,Y)||(dx===0&&dy===0))continue;if(G.own.get(Y*COLS+X)!==c)continue;const y=YIELD[G.map[Y][X].t];tiles.push(y)}
+  tiles.sort((a,b)=>(b[0]+b[1]+b[2]*1.2)-(a[0]+a[1]+a[2]*1.2));
+  let f=2,p=1,l=1;for(const y of tiles.slice(0,c.pop)){f+=y[0];p+=y[1];l+=y[2]}
+  if(c.bld.has("fishery"))f+=2;if(c.bld.has("yard"))p+=2;if(c.bld.has("obs"))l+=3;l+=Math.floor(c.pop/3);
+  return {f,p,l};
+}
+const needFood=c=>6+4*c.pop;
+function cost(item){return item.kind==="unit"?U[item.id].c:B[item.id].c}
+function options(c){
+  const k=c.k,out=[];
+  for(const id of ["board","harp","cross","iron","scout","raft"]){const u=U[id];if(u.tech&&!has(k,u.tech))continue;if(id==="raft"&&c.pop<2)continue;out.push({kind:"unit",id})}
+  for(const id in B){if(c.bld.has(id)||!has(k,B[id].tech))continue;if(id==="wonder"&&G.cities.some(o=>o!==c&&o.k===k&&o.build&&o.build.id==="wonder"))continue;out.push({kind:"bld",id})}
+  return out;
+}
+function availTech(k){return Object.keys(TECH).filter(t=>!has(k,t)&&(TECH[t].req||[]).every(r=>has(k,r)))}
+
+function startTurn(k){
+  const P=G.P[k];if(!P.alive)return;
+  for(const c of G.cities.filter(c=>c.k===k)){
+    const y=yields(c);c.food+=y.f-c.pop;if(c.food>=needFood(c)){c.food=0;c.pop++;if(k===HUMAN)say(`${c.name} grandit : ${c.pop} habitants.`)}if(c.food<0)c.food=0;
+    c.hp=Math.min(10,c.hp+2);
+    if(c.build){c.prog+=y.p;if(c.prog>=cost(c.build))complete(c)}
+    P.lore+=y.l;
+  }
+  if(P.research&&P.lore>=TECH[P.research].c){const t=P.research,before=era(k);P.lore-=TECH[t].c;P.tech.add(t);P.research=null;
+    if(k===HUMAN)say(`Découverte : ${TECH[t].n} ! ${TECH[t].d}`);
+    if(era(k)>before){if(k===HUMAN){G.flags.add("era");say(`Tu entres dans l'${ERA[era(k)]} !`)}else say(`${NAMES[k]} entre dans l'${ERA[era(k)]}.`)}
+    if(t==="atlas")return win(k,"savoir")}
+  for(const u of G.units)if(u.k===k){u.mv=mvOf(u);if(cityAt(u.x,u.y))u.hp=Math.min(10,u.hp+3);else u.hp=Math.min(10,u.hp+1)}
+  for(let o=0;o<3;o++)if(G.war[k][o]>0)G.war[k][o]++;
+  see();
+}
+function complete(c){
+  const it=c.build;c.prog=0;c.build=null;
+  if(it.kind==="unit"){if(it.id==="raft")c.pop=Math.max(1,c.pop-1);spawn(c.k,it.id,c.x,c.y);if(c.k===HUMAN)say(`${c.name} a terminé : ${U[it.id].n}.`)}
+  else{c.bld.add(it.id);if(c.k===HUMAN)say(`${c.name} a terminé : ${B[it.id].n}.`);if(it.id==="wonder"){G.wonderBy=c.k;win(c.k,"phare")}}
+}
+function win(k,how){
+  if(G.over)return;G.over=true;G.winner=k;G.how=how;if(auto)return;
+  const txt={phare:"Le Grand Phare éclaire toute la mer.",savoir:"L'Atlas du monde noyé est achevé.",conquete:"Toutes les capitales sont tombées.",score:"L'aube se lève : fin de la partie."}[how];
+  const sc=[0,1,2].map(score);
+  ov.hidden=false;ov.innerHTML=`<div class="box center"><h2>${k===HUMAN?"Victoire !":"Défaite"}</h2><p><b>${k===HUMAN?"Tu gagnes":NAMES[k]+" gagne"}</b> par ${how==="phare"?"la Merveille":how==="savoir"?"le Savoir":how==="conquete"?"la Conquête":"le score"}. ${txt}</p>
+  <p>Tour ${G.turn} · Scores : toi <b>${sc[0]}</b>, Ligue Écarlate ${sc[1]}, Pacte Violet ${sc[2]}</p><button id="again">Rejouer</button></div>`;
+  document.getElementById("again").onclick=()=>{ov.hidden=true;newGame();draw()};
+}
+const score=k=>G.cities.filter(c=>c.k===k).reduce((s,c)=>s+5+c.pop*3+c.bld.size*2,0)+G.P[k].tech.size*4;
+
+// ── Moving and fighting ──
+function bfs(u,goal,max=400){
+  const k=u.k,start=u.y*COLS+u.x,par=new Map([[start,-1]]),q=[start];let found=-1,n=0;
+  while(q.length&&n++<max){const cur=q.shift(),cx=cur%COLS,cy=(cur-cx)/COLS;if(cur!==start&&goal(cx,cy)){found=cur;break}
+    for(const [dx,dy] of NB){const x=cx+dx,y=cy+dy,key=y*COLS+x;if(!pass(x,y)||par.has(key))continue;
+      const blocked=unitsAt(x,y).some(o=>o.k!==k)||(cityAt(x,y)&&cityAt(x,y).k!==k);
+      if(blocked){if(goal(x,y)){par.set(key,cur);found=key;q.length=0;break}continue}
+      par.set(key,cur);q.push(key)}}
+  if(found<0)return null;const path=[];let c=found;while(c!==start){path.unshift(c);c=par.get(c)}return path.map(p=>({x:p%COLS,y:(p-p%COLS)/COLS}));
+}
+function enter(u,x,y){u.x=x;u.y=y;const t=G.map[y][x];
+  if(t.t==="wreck"&&u.k<3){t.t="sea";const P=G.P[u.k];if(G.uid%2){P.lore+=12;if(u.k===HUMAN)say("Épave fouillée : d'anciennes cartes ! +12 savoir.")}else{const c=G.cities.filter(c=>c.k===u.k)[0];if(c){c.prog+=10;if(u.k===HUMAN)say(`Épave fouillée : du bois pour ${c.name} ! +10.`)}}G.uid++;if(u.k===HUMAN)G.flags.add("wreck")}}
+function strength(u,vs,defending){let s=U[u.type].s*(u.type==="beast"?1+G.turn/25:1)*u.hp/10;if(vs&&BEATS[u.type]===vs)s*=1.5;if(defending){const c=cityAt(u.x,u.y);if(c)s*=c.bld.has("walls")?1.75:1.25}return s}
+function attack(u,x,y){
+  const foes=unitsAt(x,y).filter(o=>hostile(u.k,o.k)),c=cityAt(x,y);u.mv=0;
+  if(u.k<3&&c&&c.k<3&&c.k!==u.k&&!G.war[u.k][c.k])return;
+  let d=foes.sort((a,b)=>strength(b,u.type,true)-strength(a,u.type,true))[0];
+  if(d){const a=strength(u,d.type,false),b=strength(d,u.type,true);const dd=Math.max(1,Math.round(9*a/(a+b))),da=Math.max(1,Math.round(7*b/(a+b)));d.hp-=dd;u.hp-=da;
+    G.fx.push({x,y,t:0,s:"-"+dd});G.fx.push({x:u.x,y:u.y,t:0,s:"-"+da});
+    if(d.hp<=0){G.units.splice(G.units.indexOf(d),1);if(u.k===HUMAN){G.flags.add("kill");say(`Tes ${U[u.type].n} ont vaincu : ${U[d.type].n}.`)}else if(d.k===HUMAN)say(`Tu as perdu : ${U[d.type].n}.`)}
+    if(u.hp<=0){G.units.splice(G.units.indexOf(u),1);if(u.k===HUMAN)say(`Tes ${U[u.type].n} ont été détruits.`);return}
+    if(d.hp<=0&&!unitsAt(x,y).some(o=>hostile(u.k,o.k))&&!(c&&c.k!==u.k))enter(u,x,y);
+  }else if(c&&c.k!==u.k){
+    const a=strength(u,null,false),b=(2+c.pop/2)*(c.bld.has("walls")?1.5:1)*c.hp/10;const dd=Math.max(2,Math.round(10*a/(a+b))),da=Math.max(1,Math.round(5*b/(a+b)));c.hp-=dd;u.hp-=da;G.fx.push({x,y,t:0,s:"-"+dd});
+    if(u.hp<=0){G.units.splice(G.units.indexOf(u),1);return}
+    if(c.hp<=0){if(u.k===MIST){c.hp=6;c.pop=Math.max(1,c.pop-1);G.units.splice(G.units.indexOf(u),1);if(c.k===HUMAN)say(`La Brume a pillé ${c.name} : −1 habitant. Garde des troupes dans tes cités !`);return}
+      const was=c.k;c.k=u.k;c.hp=6;c.pop=Math.max(1,c.pop-1);c.build=null;c.prog=0;enter(u,x,y);
+      say(`${u.k===HUMAN?"Tu as pris":NAMES[u.k]+" a pris"} ${c.name}${c.cap?" (capitale)":""} à ${NAMES[was]==="Toi"?"toi":NAMES[was]} !`);if(u.k===HUMAN)G.flags.add("city");
+      if(!G.cities.some(o=>o.k===was)){G.P[was].alive=false;G.units=G.units.filter(o=>o.k!==was);say(`${NAMES[was]==="Toi"?"Ta nation":NAMES[was]} est tombée.`);if(was===HUMAN)return win(u.k,"conquete")}
+      const caps=G.cities.filter(o=>o.cap);if(caps.every(o=>o.k===u.k))return win(u.k,"conquete")}
+  }
+  see();
+}
+function declare(a,b){if(G.war[a][b])return;G.war[a][b]=G.war[b][a]=1;say(`${a===HUMAN?"Tu déclares":NAMES[a]+" déclare"} la guerre à ${b===HUMAN?"toi":NAMES[b]} !`)}
+function peace(a,b){G.war[a][b]=G.war[b][a]=0;say(`Paix entre ${a===HUMAN?"toi":NAMES[a]} et ${b===HUMAN?"toi":NAMES[b]}.`)}
+function settle(u){const c=found(u.k,u.x,u.y);G.units.splice(G.units.indexOf(u),1);see();if(u.k===HUMAN){G.flags.add("settled");say(`Tu fondes ${c.name} ! Choisis ce qu'elle construit.`)}return c}
+const canSettle=(k,x,y)=>G.map[y][x].t==="isle"&&!cityAt(x,y)&&G.cities.every(c=>dist(x,y,c.x,c.y)>=3);
+
+// ── The rival nations (and, in the fast-forward test, the player too) ──
+function aiTurn(k){
+  const P=G.P[k],A=AI[k];if(!P.alive)return;
+  if(!P.research){const av=availTech(k);const t=A.research.find(t=>av.includes(t));if(t)P.research=t}
+  const mine=()=>G.cities.filter(c=>c.k===k),atWar=[0,1,2].some(o=>o!==k&&G.war[k][o]>0);
+  for(const c of mine()){if(c.build)continue;const opt=options(c),can=id=>opt.some(o=>o.id===id);
+    const best=["iron","cross","harp","board"].find(can);
+    const garrison=unitsAt(c.x,c.y).some(u=>u.k===k&&U[u.type].s>0);
+    const sitesKnown=G.cities.length<15&&mine().length<4&&!G.units.some(u=>u.k===k&&u.type==="raft")&&!mine().some(o=>o.build&&o.build.id==="raft");
+    let pick=null;
+    if(!garrison)pick={kind:"unit",id:best};
+    else if(sitesKnown&&can("raft")&&freeSite(k))pick={kind:"unit",id:"raft"};
+    else if(!G.units.some(u=>u.k===k&&u.type==="scout")&&G.turn<18)pick={kind:"unit",id:"scout"};
+    else if(A.style==="war"&&(atWar||military(k)<8+G.turn/3))pick={kind:"unit",id:best};
+    else{const b=A.build.find(id=>can(id)&&(id!=="wonder"||c.cap||mine().length===1));pick=b?{kind:"bld",id:b}:{kind:"unit",id:best}}
+    c.build=pick}
+  // Diplomacy: the Crimson League attacks the weaker of its neighbours once it is armed; peace when a war drags on.
+  if(k!==HUMAN||auto){
+    if(A.style==="war"&&!atWar&&G.turn>=14&&military(k)>=9){const others=[0,1,2].filter(o=>o!==k&&G.P[o].alive).sort((a,b)=>military(a)-military(b));if(others.length&&military(k)>military(others[0])*1.2)declare(k,others[0])}
+    for(const o of [1,2])if(o!==k&&k!==HUMAN&&G.war[k][o]>10&&Math.abs(military(k)-military(o))<4)peace(k,o);
+  }
+  for(const u of G.units.filter(u=>u.k===k)){
+    if(!G.units.includes(u))continue;
+    if(u.type==="raft"){if(canSettle(k,u.x,u.y)){const c=settle(u);continue}const s=freeSite(k,u);if(s)walk(u,(x,y)=>x===s.x&&y===s.y);continue}
+    if(u.type==="scout"){walk(u,(x,y)=>!G.map[y][x].seen[k]||G.map[y][x].t==="wreck"&&G.map[y][x].seen[k]);continue}
+    const here=cityAt(u.x,u.y),alone=here&&unitsAt(u.x,u.y).filter(o=>o.k===k&&U[o.type].s>0).length===1;
+    const foe=(x,y)=>unitsAt(x,y).some(o=>hostile(k,o.k))||(cityAt(x,y)&&cityAt(x,y).k!==k&&hostile(k,cityAt(x,y).k));
+    // A foe next to it: strike if the odds are fair.
+    let hit=null;for(const [dx,dy] of NB){const x=u.x+dx,y=u.y+dy;if(inb(x,y)&&foe(x,y)&&G.P[k].vis.has(y*COLS+x)){const d=unitsAt(x,y).filter(o=>hostile(k,o.k))[0];const b=d?strength(d,u.type,true):2+(cityAt(x,y)?cityAt(x,y).pop/2:0);if(strength(u,d&&d.type,false)>=b*.75)hit={x,y}}}
+    if(hit){attack(u,hit.x,hit.y);continue}
+    if(alone)continue;
+    const near=(x,y)=>foe(x,y)&&G.P[k].vis.has(y*COLS+x)&&mine().some(c=>dist(x,y,c.x,c.y)<=4);
+    if(walk(u,near,60))continue;
+    if(atWar){walk(u,(x,y)=>{const c=cityAt(x,y);return c&&c.k!==k&&c.k<3&&G.war[k][c.k]>0&&G.map[y][x].seen[k]});continue}
+    if(!here){const home=mine()[0];if(home)walk(u,(x,y)=>x===home.x&&y===home.y)}
+  }
+  see();
+}
+function freeSite(k,u){let best=null,bd=1e9;const from=u||G.cities.find(c=>c.k===k);if(!from)return null;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){if(!G.map[y][x].seen[k]||!canSettle(k,x,y))continue;const d=dist(x,y,from.x,from.y);if(d<bd){bd=d;best={x,y}}}return best}
+/** Walks toward the nearest tile the goal accepts; attacks it if it holds a foe. True if it had somewhere to go. */
+function walk(u,goal,max){
+  const path=bfs(u,goal,max);if(!path)return false;
+  for(const s of path){if(u.mv<=0)break;const blocked=unitsAt(s.x,s.y).some(o=>o.k!==u.k)||(cityAt(s.x,s.y)&&cityAt(s.x,s.y).k!==u.k);
+    if(blocked){const ok=unitsAt(s.x,s.y).some(o=>hostile(u.k,o.k))||(cityAt(s.x,s.y)&&hostile(u.k,cityAt(s.x,s.y).k));if(ok&&U[u.type].s>0)attack(u,s.x,s.y);break}
+    u.mv--;enter(u,s.x,s.y)}
+  see();return true;
+}
+function mistTurn(){
+  const lit=new Set();for(let k=0;k<3;k++)for(const v of G.P[k].vis)lit.add(v);
+  const beasts=G.units.filter(u=>u.k===MIST);
+  if(beasts.length<3+Math.floor(G.turn/10)&&rnd()<.3+G.turn*.012)for(let i=0;i<30;i++){const x=Math.floor(rnd()*COLS),y=Math.floor(rnd()*ROWS);if(pass(x,y)&&!lit.has(y*COLS+x)&&!cityAt(x,y)&&!unitsAt(x,y).length&&G.cities.every(c=>dist(x,y,c.x,c.y)>=3)){spawn(MIST,"beast",x,y);break}}
+  for(const u of beasts){if(!G.units.includes(u))continue;u.mv=1;
+    walk(u,(x,y)=>unitsAt(x,y).some(o=>o.k<3)||!!cityAt(x,y),50)}
+  see();
+}
+function endTurn(){
+  if(G.over)return;sel=null;reach=null;
+  for(const k of [1,2]){startTurn(k);if(G.over)return;aiTurn(k);if(G.over)return}
+  mistTurn();if(G.over)return;
+  G.turn++;if(G.turn>MAXT){const sc=[0,1,2].map(k=>G.P[k].alive?score(k):-1);return win(sc.indexOf(Math.max(...sc)),"score")}
+  startTurn(HUMAN);if(auto&&!G.over)aiTurn(HUMAN);
+}
+
+// ── The player's hand ──
+function computeReach(u){
+  const r=new Map(),atk=new Set(),start=u.y*COLS+u.x;r.set(start,0);const q=[start];
+  while(q.length){const cur=q.shift(),cx=cur%COLS,cy=(cur-cx)/COLS,c0=r.get(cur);
+    for(const [dx,dy] of NB){const x=cx+dx,y=cy+dy,key=y*COLS+x;if(!pass(x,y))continue;
+      const others=unitsAt(x,y).some(o=>o.k!==u.k),oc=cityAt(x,y)&&cityAt(x,y).k!==u.k;
+      if(others||oc){const ok=unitsAt(x,y).some(o=>hostile(u.k,o.k))||(oc&&hostile(u.k,cityAt(x,y).k));if(ok&&c0<u.mv&&U[u.type].s>0&&G.P[0].vis.has(key))atk.add(key);continue}
+      if(c0+1<=u.mv&&!r.has(key)){r.set(key,c0+1);q.push(key)}}}
+  return {r,atk};
+}
+function select(o){sel=o;reach=o&&o.type&&o.mv>0?computeReach(o):null;ui()}
+function nextUnit(){const u=G.units.find(u=>u.k===HUMAN&&u.mv>0&&!u.skip);select(u||null)}
+cv.addEventListener("pointerdown",e=>{
+  if(!G||G.over||!ov.hidden)return;const x=Math.floor((e.clientX-OX)/TS),y=Math.floor((e.clientY-OY)/TS);if(!inb(x,y))return;const key=y*COLS+x;
+  if(sel&&sel.type&&reach){
+    if(reach.atk.has(key)){
+      // Step next to the target if needed, then strike.
+      if(dist(sel.x,sel.y,x,y)>1){let best=null,bc=99;for(const [dx,dy] of NB){const k2=(y+dy)*COLS+x+dx;if(reach.r.has(k2)&&reach.r.get(k2)<sel.mv&&reach.r.get(k2)<bc){bc=reach.r.get(k2);best=k2}}if(best!==null){sel.mv-=bc;enter(sel,best%COLS,(best-best%COLS)/COLS)}}
+      attack(sel,x,y);G.flags.add("moved");if(!G.over)nextUnit();draw();return}
+    if(reach.r.has(key)&&reach.r.get(key)>0){sel.mv-=reach.r.get(key);enter(sel,x,y);see();G.flags.add("moved");if(sel.mv>0&&G.units.includes(sel))select(sel);else nextUnit();draw();return}
+  }
+  const mine=unitsAt(x,y).filter(u=>u.k===HUMAN),c=cityAt(x,y);
+  if(sel&&sel.type&&sel.x===x&&sel.y===y){const i=mine.indexOf(sel);if(i<mine.length-1)select(mine[i+1]);else if(c&&c.k===HUMAN)select(c);else select(mine[0])}
+  else if(mine.length)select(mine.find(u=>u.mv>0)||mine[0]);
+  else if(c&&c.k===HUMAN)select(c);
+  else{sel={tile:true,x,y};reach=null;ui()}
+  draw();
+});
+function turnsFor(c,it){const p=yields(c).p;return Math.max(1,Math.ceil((cost(it)-c.prog)/Math.max(1,p)))}
+function pickBuild(c,then){
+  const opt=options(c),y=yields(c);const rec=G.cities.filter(o=>o.k===HUMAN).length<2&&opt.some(o=>o.id==="raft")?"raft":opt.find(o=>o.kind==="bld")?.id;
+  ov.hidden=false;ov.innerHTML=`<div class="box"><h2>${c.name} : que construire ?</h2><p class="center">${c.pop} habitants · +${y.f} poisson · +${y.p} bois · +${y.l} savoir par tour</p><div class="list">${opt.map((o,i)=>{const d=o.kind==="unit"?U[o.id]:B[o.id];return `<button data-i="${i}" class="${o.id===rec?"rec":""}"><b>${d.n} · ${turnsFor(c,o)} tour${turnsFor(c,o)>1?"s":""}</b><span>${d.d}${o.id===rec?" — conseillé":""}</span></button>`}).join("")}</div></div>`;
+  ov.querySelectorAll("button").forEach(b=>b.onclick=()=>{c.build=opt[+b.dataset.i];G.flags.add("build");ov.hidden=true;ui();draw();if(then)then()});
+}
+function pickResearch(then){
+  const av=availTech(HUMAN),P=G.P[0],lpt=G.cities.filter(c=>c.k===0).reduce((s,c)=>s+yields(c).l,0);
+  ov.hidden=false;ov.innerHTML=`<div class="box"><h2>Que rechercher ?</h2><p class="center">${ERA[era(0)]} · +${lpt} savoir par tour</p><div class="list">${av.map(t=>`<button data-t="${t}"><b>${TECH[t].n} · ${Math.max(1,Math.ceil((TECH[t].c-P.lore)/Math.max(1,lpt)))} tours</b><span>${TECH[t].d}</span></button>`).join("")}</div></div>`;
+  ov.querySelectorAll("button").forEach(b=>b.onclick=()=>{P.research=b.dataset.t;G.flags.add("research");ov.hidden=true;ui();draw();if(then)then()});
+}
+function rivals(){
+  ov.hidden=false;ov.innerHTML=`<div class="box"><h2>Les nations rivales</h2>${[1,2].map(k=>{const P=G.P[k];if(!P.alive)return `<p><b style="color:${COL[k]}">${NAMES[k]}</b> : tombée.</p>`;const w=G.war[0][k]>0;
+    return `<p><b style="color:${COL[k]}">${NAMES[k]}</b> (${k===1?"guerrière":"bâtisseuse"}) · ${ERA[era(k)]} · ${G.cities.filter(c=>c.k===k).length} cités · force ${Math.round(military(k))} · ${w?"<b>EN GUERRE</b>":"en paix"}<br><button data-k="${k}" class="${w?"alt":"red"}">${w?"Proposer la paix":"Déclarer la guerre"}</button></p>`}).join("")}
+  <p>Ta force : <b>${Math.round(military(0))}</b>. On ne peut attaquer qu'une nation avec qui on est en guerre.</p><div class="center"><button id="close" class="alt">Fermer</button></div></div>`;
+  ov.querySelectorAll("button[data-k]").forEach(b=>b.onclick=()=>{const k=+b.dataset.k;if(G.war[0][k]>0){if(G.war[0][k]>=4&&military(k)<=military(0)*1.3||k===2&&G.war[0][k]>=3)peace(0,k);else say(`${NAMES[k]} refuse la paix : elle se croit plus forte.`)}else declare(0,k);G.flags.add("diplo");rivals();draw()});
+  document.getElementById("close").onclick=()=>{ov.hidden=true;ui();draw()};
+}
+function tryEnd(){
+  if(!G.P[0].research&&availTech(0).length)return pickResearch(tryEnd);
+  const idle=G.cities.find(c=>c.k===HUMAN&&!c.build);if(idle){select(idle);return pickBuild(idle,tryEnd)}
+  for(const u of G.units)u.skip=false;endTurn();if(!G.over){G.flags.add("ended");nextUnit()}draw();
+}
+function ui(){
+  bar.innerHTML="";if(!G||G.over)return;const add=(t,f,cls,dis)=>{const b=document.createElement("button");b.innerHTML=t;if(cls)b.className=cls;b.disabled=!!dis;b.onclick=()=>{f();draw()};bar.append(b);return b};
+  const info=s=>{const d=document.createElement("div");d.className="info";d.innerHTML=s;bar.append(d)};
+  if(sel&&sel.type){const u=sel,d=U[u.type];info(`<b style="color:#fff">${d.n}</b> · force ${d.s} · vie ${u.hp}/10 · déplacement ${u.mv}`);
+    if(u.type==="raft")add("Fonder une cité ici",()=>{const c=settle(u);select(c);pickBuild(c)},"",!canSettle(0,u.x,u.y));
+    add("Passer",()=>{u.skip=true;nextUnit()},"alt")}
+  else if(sel&&sel.name){const c=sel,y=yields(c);info(`<b style="color:#fff">${c.name}</b> · ${c.pop} hab. (grandit dans ${Math.max(1,Math.ceil((needFood(c)-c.food)/Math.max(1,y.f-c.pop)))} t.) · +${y.p} bois · +${y.l} savoir<br>${c.build?`Construit : ${(c.build.kind==="unit"?U:B)[c.build.id].n} (${turnsFor(c,c.build)} t.)`:"Ne construit rien"}`);
+    add(c.build?"Changer":"Choisir quoi construire",()=>pickBuild(c))}
+  else if(sel&&sel.tile){const t=G.map[sel.y][sel.x];info(t.seen[0]?TNAME[t.t]:"Brume : inexploré")}
+  const waiting=G.units.filter(u=>u.k===HUMAN&&u.mv>0&&!u.skip).length;
+  add(waiting?`Fin du tour (${waiting} unité${waiting>1?"s":""} en attente)`:"Fin du tour ▶",tryEnd,waiting?"alt":"");
+}
+function hint(){
+  const f=G.flags;if(G.last&&performance.now()-G.lastAt<4500)return G.last;
+  if(!f.has("research"))return "Bienvenue. Appuie sur « Fin du tour » : le jeu te demandera d'abord quoi rechercher et quoi construire.";
+  if(!f.has("moved"))return "Touche ton Éclaireur (É) puis une case claire pour l'envoyer explorer la Brume.";
+  if(!f.has("ended"))return "Quand tu as fini tes déplacements, appuie sur « Fin du tour ».";
+  if(!f.has("settled"))return "Construis un Radeau de colons, amène-le sur une île (sable) et fonde une 2ᵉ cité.";
+  if(!f.has("wreck"))return "Les épaves (croix brune) cachent des trésors : envoie une unité dessus.";
+  if(!f.has("kill"))return "Les créatures de la Brume (☠) attaquent tes cités : garde des Abordeurs chez toi, et frappe-les.";
+  if(!f.has("era"))return "Chaque découverte ouvre de nouvelles constructions. 4 découvertes = une nouvelle ère.";
+  if(!f.has("diplo"))return "Le bouton « Rivaux » en haut : guerre ou paix avec les deux autres nations.";
+  return "3 victoires possibles : bâtir le Grand Phare, achever l'Atlas (toutes les découvertes), ou prendre les capitales.";
+}
+
+// ── Drawing ──
+const TCOL={sea:"#12456b",shoal:"#1c6f8f",kelp:"#1f6b55",seep:"#3a3550",isle:"#d9c58a",wreck:"#12456b",reef:"#5d6770"};
+function draw(){
+  if(!G)return;g.fillStyle="#050b16";g.fillRect(0,0,W,H);const vis=G.P[0].vis;
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=G.map[y][x],px=OX+x*TS,py=OY+y*TS,key=y*COLS+x;
+    if(!t.seen[0]){g.fillStyle="#241d38";g.fillRect(px,py,TS,TS);g.fillStyle="rgba(180,160,220,.07)";g.beginPath();g.arc(px+TS*.5,py+TS*.5,TS*.32,0,7);g.fill();continue}
+    g.fillStyle=TCOL[t.t];g.fillRect(px,py,TS,TS);
+    if(t.t==="isle"){g.fillStyle="#6fae4a";g.beginPath();g.arc(px+TS/2,py+TS/2,TS*.3,0,7);g.fill()}
+    if(t.t==="shoal"){g.fillStyle="#9fe8ff";for(const [a,b] of [[.3,.35],[.6,.55],[.4,.7]]){g.beginPath();g.ellipse(px+TS*a,py+TS*b,TS*.1,TS*.05,0,0,7);g.fill()}}
+    if(t.t==="kelp"){g.strokeStyle="#7ed6a0";g.lineWidth=2;for(const a of [.3,.5,.7]){g.beginPath();g.moveTo(px+TS*a,py+TS*.8);g.lineTo(px+TS*(a+.05),py+TS*.3);g.stroke()}}
+    if(t.t==="seep"){g.fillStyle="#FFC83A";g.beginPath();g.arc(px+TS/2,py+TS/2,TS*.14,0,7);g.fill()}
+    if(t.t==="reef"){g.fillStyle="#8b959e";for(const [a,b] of [[.3,.4],[.65,.35],[.5,.7]]){g.beginPath();g.arc(px+TS*a,py+TS*b,TS*.13,0,7);g.fill()}}
+    if(t.t==="wreck"){g.strokeStyle="#c98b4a";g.lineWidth=3;g.beginPath();g.moveTo(px+TS*.3,py+TS*.3);g.lineTo(px+TS*.7,py+TS*.7);g.moveTo(px+TS*.7,py+TS*.3);g.lineTo(px+TS*.3,py+TS*.7);g.stroke()}
+    const o=G.own.get(key);if(o&&(vis.has(key)||t.seen[0])){g.fillStyle=COL[o.k]+"2e";g.fillRect(px,py,TS,TS)}
+    if(!vis.has(key)){g.fillStyle="rgba(20,16,40,.5)";g.fillRect(px,py,TS,TS)}
+    g.strokeStyle="rgba(255,255,255,.05)";g.lineWidth=1;g.strokeRect(px+.5,py+.5,TS,TS);
+  }
+  if(reach&&sel&&sel.type){for(const [key,c] of reach.r){if(!c)continue;const x=key%COLS,y=(key-x)/COLS;g.fillStyle="rgba(255,255,255,.22)";g.fillRect(OX+x*TS+2,OY+y*TS+2,TS-4,TS-4)}
+    for(const key of reach.atk){const x=key%COLS,y=(key-x)/COLS;g.strokeStyle="#ff5a4e";g.lineWidth=3;g.strokeRect(OX+x*TS+2,OY+y*TS+2,TS-4,TS-4)}}
+  g.textAlign="center";g.textBaseline="middle";
+  for(const c of G.cities){if(!G.map[c.y][c.x].seen[0])continue;const px=OX+c.x*TS+TS/2,py=OY+c.y*TS+TS/2;
+    g.fillStyle=COL[c.k];g.beginPath();g.moveTo(px,py-TS*.42);g.lineTo(px+TS*.34,py+TS*.36);g.lineTo(px-TS*.34,py+TS*.36);g.fill();g.strokeStyle=c.cap?"#fff":"#0C1F3A";g.lineWidth=2;g.stroke();
+    g.fillStyle="#0C1F3A";g.font=`900 ${Math.round(TS*.36)}px system-ui`;g.fillText(c.pop,px,py+TS*.1);
+    if(c.hp<10){g.fillStyle="#ff5a4e";g.fillRect(px-TS*.4,py+TS*.4,TS*.8*c.hp/10,3)}
+    if(sel===c){g.strokeStyle="#fff";g.lineWidth=3;g.strokeRect(OX+c.x*TS+1,OY+c.y*TS+1,TS-2,TS-2)}}
+  const drawn=new Set();
+  for(const u of G.units){const key=u.y*COLS+u.x;if(!vis.has(key))continue;if(drawn.has(key)&&sel!==u)continue;drawn.add(key);
+    const inCity=!!cityAt(u.x,u.y),px=OX+u.x*TS+(inCity?TS*.74:TS/2),py=OY+u.y*TS+(inCity?TS*.26:TS/2),r=inCity?TS*.22:TS*.34;
+    g.fillStyle=COL[u.k];g.beginPath();g.arc(px,py,r,0,7);g.fill();g.strokeStyle=sel===u?"#fff":u.k===0&&u.mv>0?"#7CFC8A":"#0C1F3A";g.lineWidth=sel===u?3:2;g.stroke();
+    g.fillStyle=u.k===3?"#fff":"#0C1F3A";g.font=`900 ${Math.round(r*1.1)}px system-ui`;g.fillText(U[u.type].l,px,py+1);
+    if(u.hp<10){g.fillStyle="#111";g.fillRect(px-r,py+r+1,r*2,3);g.fillStyle="#7CFC8A";g.fillRect(px-r,py+r+1,r*2*u.hp/10,3)}
+    const n=unitsAt(u.x,u.y).length;if(n>1){g.fillStyle="#fff";g.font="800 10px system-ui";g.fillText("×"+n,px+r,py-r)}}
+  for(let i=G.fx.length-1;i>=0;i--){const f=G.fx[i];f.t+=.016;if(f.t>1){G.fx.splice(i,1);continue}g.fillStyle=`rgba(255,120,100,${1-f.t})`;g.font="900 16px system-ui";g.fillText(f.s,OX+f.x*TS+TS/2,OY+f.y*TS-f.t*18)}
+  g.textBaseline="alphabetic";
+  const P=G.P[0],lpt=G.cities.filter(c=>c.k===0).reduce((s,c)=>s+yields(c).l,0);
+  topEl.innerHTML=`<span class="pill">Tour ${G.turn}/${MAXT}</span><span class="pill gold">${ERA[era(0)]}</span><span class="pill">${P.research?`${TECH[P.research].n} : ${Math.floor(P.lore)}/${TECH[P.research].c}`:"Aucune recherche"} (+${lpt})</span><span class="pill">Score ${score(0)}</span><span class="pill btn" id="riv">Rivaux${G.war[0][1]||G.war[0][2]?" ⚔":""}</span>`;
+  document.getElementById("riv").onclick=rivals;
+  hintEl.textContent=hint();hintEl.style.top=(topEl.offsetTop+topEl.offsetHeight+4)+"px";
+  if(G.fx.length)requestAnimationFrame(draw);
+}
+function intro(){
+  ov.hidden=false;ov.innerHTML=`<div class="box"><h1>L'Âge des Phares</h1>
+  <p>Le monde est noyé, et la Brume cache la mer. Tu guides une nation née autour d'un phare. Deux autres nations veulent la même mer.</p>
+  <ul><li><b>Explore</b> la Brume avec tes Éclaireurs : îles, bancs de poissons, épaves.</li>
+  <li><b>Fonde des cités</b> sur les îles. Chaque cité éclaire la mer autour d'elle et récolte ce qu'elle éclaire.</li>
+  <li><b>Choisis</b> ce que chaque cité construit : troupes, bâtiments, colons, merveille.</li>
+  <li><b>Recherche</b> 11 découvertes à travers 3 ères.</li>
+  <li><b>Paix ou guerre</b> avec la Ligue Écarlate (guerrière) et le Pacte Violet (bâtisseur).</li></ul>
+  <p><b>3 façons de gagner</b> en 60 tours : bâtir <b>le Grand Phare</b>, achever <b>l'Atlas</b> (tout le savoir), ou prendre <b>les capitales</b>. Sinon, le meilleur score l'emporte.</p>
+  <p class="center"><button id="go">Commencer</button></p></div>`;
+  document.getElementById("go").onclick=()=>{ov.hidden=true;newGame();nextUnit();draw()};
+}
+// Fast-forward a whole game with the three nations played by the AI: used to test the prototype, never by a player.
+function simulate(){auto=true;newGame();G.fx=[];aiTurn(0);let n=0;while(!G.over&&n++<200)endTurn();auto=false;
+  return {turn:G.turn,winner:G.winner,how:G.how,score:[0,1,2].map(score),cities:[0,1,2].map(k=>G.cities.filter(c=>c.k===k).length),tech:[0,1,2].map(k=>G.P[k].tech.size),units:G.units.length}}
+const _ng=newGame;newGame=function(){_ng();G.fx=[]};
+fit();intro();
+</script>
+</body>
+</html>
