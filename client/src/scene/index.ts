@@ -99,6 +99,8 @@ export type SceneHandle = {
   reframe(): void;
   /** The rafts moored around the island (and the shipyard at work): the foam goes around them, and the normal view keeps them on screen. */
   setMoored(discs: readonly Disc[]): void;
+  /** Points of the water the normal view keeps on screen besides the city: the portal's Night, the edge of its sea. */
+  setReach(points: readonly { x: number; z: number }[]): void;
   /**
    * The land won on the sea (city/land, from the Lighthouse 5): its ground takes the island's place (the
    * island's own model hidden) and the shore's foam is measured from it; null gives the island back. `edge`: points of
@@ -242,13 +244,14 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions): Sc
   };
   // The buildings' room: each one's top and foot stays in the normal view's band.
   let volumes: readonly Volume[] = [];
+  let reach: readonly { x: number; z: number }[] = [];
   let framedBand = { top: 0, bottom: 0 };
   let stale = false;
   const cityFramingNow = () => {
     const band = (options.cityBand ?? options.band)?.() ?? { top: 0, bottom: innerHeight };
     framedBand = band;
     // The Lighthouse made in Blender is taller: its top stays on screen too.
-    const tops = [...(lighthouseStaged ? [{ x: 0, y: lighthouseTop, z: 0 }] : []), ...volumes.flatMap(buildingPoints), ...landEdge.map((p) => ({ x: p.x, y: 0, z: p.z }))];
+    const tops = [...(lighthouseStaged ? [{ x: 0, y: lighthouseTop, z: 0 }] : []), ...volumes.flatMap(buildingPoints), ...landEdge.map((p) => ({ x: p.x, y: 0, z: p.z })), ...reach.map((p) => ({ x: p.x, y: 0, z: p.z }))];
     // The city spans three quarters of the screen's width (owner, after the style pass).
     return cityFraming({ width: innerWidth, height: innerHeight, ...band }, moored, tops, { share: CITY_FILL, coast: terrainCoast });
   };
@@ -517,6 +520,10 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions): Sc
       moored = discs;
       measureShore();
       if (changed) layout();
+    },
+    setReach(points) {
+      reach = points;
+      layout();
     },
     stats() {
       if (posted && post) return { step, forced: forced !== null, mood, ...post.scene, post: post.passes, firstImage };

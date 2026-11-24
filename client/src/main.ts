@@ -38,6 +38,7 @@ import { createDailySheet, createQuest, createTasksButton } from "./ui/daily.js"
 import { createUi } from "./ui/index.js";
 import { createSettings } from "./ui/settings.js";
 import { portalStore } from "./portal/store.js";
+import { startNight } from "./night/index.js";
 import { mistPreview, seaMood } from "./ui/values.js";
 import { createSound, type SoundId } from "./ui/sound.js";
 import { DEVICE, DEV_SPEED, SAVE_EVERY_MS, accountOwner, awayEvents, browserStore, elapse, eventsBetween, openSave, readSeen, saveGame, writeSeen, type PlayerState } from "./state/index.js";
@@ -340,6 +341,8 @@ if (!PORTAL && new URLSearchParams(location.search).has("rules")) {
     onLoaded: () => {
       status.remove();
       fps?.modelsLoaded();
+      // The portal opens in its first Night at once: no menu, no title (Hold the Light).
+      if (PORTAL) startNight(scene, { seed: Math.floor(Math.random() * 2 ** 32), night: 1 });
       city = createCity(scene, canvas, app, { state: () => state, upgrade: (building) => act({ type: "upgrade", building }), research: (tech) => act({ type: "research", tech }), train: (troop) => act({ type: "train", troop }), promote: (troop) => act({ type: "promote", troop }), heal: () => act({ type: "heal" }), stoke: (on) => act({ type: "stoke", on }), dockRaft: (slot) => act({ type: "dockRaft", slot }), installOnRaft: (slot, building) => act({ type: "installOnRaft", slot, building }), upgradeRaft: (slot) => act({ type: "upgradeRaft", slot }), repairRafts: () => act({ type: "repairRafts" }), toCity: () => ui.showView("city"), speed });
       refresh();
     },

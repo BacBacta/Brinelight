@@ -1,0 +1,11 @@
+/* The portal's Night (Hold the Light): the city's panels make way; the Night's own come with task 2.3. */
+body.night .hud,
+body.night .sub,
+body.night .rail,
+body.night .queue,
+body.night .quest,
+body.night .more-up,
+body.night .labels,
+body.night .nav {
+  display: none !important;
+}

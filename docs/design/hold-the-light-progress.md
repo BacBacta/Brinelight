@@ -62,7 +62,8 @@ Under a task, the loop writes **Does / Does not / Tested by** before building it
 
 ## Step 2 · A Night you can play, in plain shapes
 
-- [ ] **2.1** `client/src/night/`: the island as it is, enemies as plain shapes (one `InstancedMesh` per family), the beam as a cone of light on the water.
+- [x] **2.1** `client/src/night/`: the island as it is, enemies as plain shapes (one `InstancedMesh` per family), the beam as a cone of light on the water.
+  - Done 24 November: `client/src/night/` (`view.ts`, pure and tested: the rules' coast on the island's, the edge of the sea at 12 world units; `index.ts`: the Night run by the frames' time through `feedTime`, the Raiders as dark red blocks in one `InstancedMesh`, the beam as a wedge of light, the city's panels hidden). The scene's `setReach` keeps the edge of the sea in the normal view. The portal starts Night 1 as its city loads, with a seed from the browser. Captured at 907 × 510 and 384 × 699: no console error. The main build's code holds none of it (only its few CSS lines, under `body.night`). Display values to judge at gate A: the sea's edge at 12, the camera's angle.
 - [ ] **2.2** The hand: the beam follows the pointer and the finger; the arrow keys and A/D turn it; the fixed-step accumulator (at most 8 steps a frame); the Night pauses when the page is hidden.
 - [ ] **2.3** The screen: the oil's gauge, the wave's number, the end screen ("The Lighthouse went dark" or "Dawn", the loot, "Again"). The portal opens in Night 1 at once: no menu, no title screen.
 - [ ] **2.4** e2e: the Night starts within 10 s of the page; the beam follows the pointer; a Night left alone ends on the end screen; "Again" starts a new one. Measured: FPS with 150 enemies at 384 × 699 and 907 × 510 (in the container; the S22 at the gate).
