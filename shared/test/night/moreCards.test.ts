@@ -6,7 +6,7 @@ import { postBearing, stepNight } from "../../src/rules/night/step.js";
 import { FAMILY, LOOT_DAWN_PEARLS, LOOT_PER_BURNED, LOOT_PER_WAVE, POST_DPS, POST_RANGE, STEP, STEPS_PER_SECOND, WRAITH_FADE_AFTER, WRAITH_HIDDEN } from "../../src/rules/night/values.js";
 import { COUNTER_BONUS } from "../../src/rules/combat.js";
 
-const foe = (family: Enemy["family"], bearing = 0, distance = 28): Enemy => ({ id: 1, family, bearing, distance, health: FAMILY[family].health, lit: 0, fade: 0 });
+const foe = (family: Enemy["family"], bearing = 0, distance = 28): Enemy => ({ id: 1, family, bearing, distance, health: FAMILY[family].health, lit: 0, fade: 0, stage: 0 });
 /** A Night 2 holding these cards, these enemies, the waves held back. */
 const held = (cards: NightState["cards"], enemies: Enemy[] = [], posts?: NightState["posts"]): NightState => {
   const n = newNight(1, 2);

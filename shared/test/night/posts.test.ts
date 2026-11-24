@@ -6,7 +6,7 @@ import { newNight, parseNight, type Enemy, type NightState } from "../../src/rul
 import { COUNTERED_BY, postBearing, stepNight } from "../../src/rules/night/step.js";
 import { FAMILY, POST_ARC, POST_DPS, POST_RANGE, STEP } from "../../src/rules/night/values.js";
 
-const enemy = (family: Enemy["family"], bearing: number, distance = 12, id = 1): Enemy => ({ id, family, bearing, distance, health: FAMILY[family].health, lit: 0, fade: 0 });
+const enemy = (family: Enemy["family"], bearing: number, distance = 12, id = 1): Enemy => ({ id, family, bearing, distance, health: FAMILY[family].health, lit: 0, fade: 0, stage: 0 });
 /** A Night with these enemies, the waves held back, the beam turned far away (it burns nothing here). */
 const sea = (enemies: Enemy[], posts: NightState["posts"]): NightState => ({ ...newNight(1, 2), phase: "pause", pauseEnd: 1_000_000, enemies, nextId: 99, posts, beam: 0 });
 const away = (n: NightState) => ({ beam: (postBearing(0, n.posts.length) + 180) % 360 });
@@ -34,7 +34,7 @@ describe("the posts on the rafts", () => {
     expect(FAMILY.raider.health - plain.health).toBeCloseTo(POST_DPS * STEP, 9);
     const counter = stepNight(sea([enemy("raider", b)], [COUNTERED_BY.raider, null]), { beam: (b + 180) % 360 }).enemies[0]!;
     expect(FAMILY.raider.health - counter.health).toBeCloseTo(POST_DPS * STEP * COUNTER_BONUS, 9);
-    expect(COUNTERED_BY).toEqual({ raider: "crossbowmen", beast: "harpooners", wraith: "boarders" });
+    expect(COUNTERED_BY).toEqual({ raider: "crossbowmen", beast: "harpooners", wraith: "boarders", galleon: "harpooners" });
   });
 
   it("out of its reach (too far, or round the island), a post does nothing; an empty post never fires", () => {

@@ -10,7 +10,7 @@ const withField = (key: string, value: unknown): unknown => {
   else o[key] = value;
   return o;
 };
-const enemy = { id: 1, family: "raider", bearing: 90, distance: 20, health: 30, lit: 0, fade: 0 };
+const enemy = { id: 1, family: "raider", bearing: 90, distance: 20, health: 30, lit: 0, fade: 0, stage: 0 };
 
 describe("a new Night", () => {
   it("starts at step 0, its oil full, its first wave coming, the beam to the north, nothing on the sea", () => {

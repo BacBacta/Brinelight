@@ -8,7 +8,7 @@ const one = (bearing: number): NightState => ({
   ...newNight(1, 1),
   phase: "pause",
   pauseEnd: 1_000_000,
-  enemies: [{ id: 1, family: "raider", bearing, distance: 28, health: FAMILY.raider.health, lit: 0, fade: 0 }],
+  enemies: [{ id: 1, family: "raider", bearing, distance: 28, health: FAMILY.raider.health, lit: 0, fade: 0, stage: 0 }],
   nextId: 2,
 });
 const run = (n: NightState, steps: number, beam: number): NightState => {
@@ -47,7 +47,7 @@ describe("the beam", () => {
   });
 
   it("burns every enemy it lights at once", () => {
-    const two: NightState = { ...one(0), enemies: [one(0).enemies[0]!, { id: 2, family: "raider", bearing: 5, distance: 20, health: FAMILY.raider.health, lit: 0, fade: 0 }], nextId: 3 };
+    const two: NightState = { ...one(0), enemies: [one(0).enemies[0]!, { id: 2, family: "raider", bearing: 5, distance: 20, health: FAMILY.raider.health, lit: 0, fade: 0, stage: 0 }], nextId: 3 };
     expect(run(two, KILL, 0).enemies).toEqual([]);
   });
 });

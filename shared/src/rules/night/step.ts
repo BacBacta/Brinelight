@@ -9,6 +9,9 @@ import { TROOPS, type Enemy, type NightPhase, type NightState } from "./state.js
 import {
   BEAM_WIDTH,
   COAST_RADIUS,
+  BOSS_RAGE,
+  BOSS_SUMMON,
+  BOSS_WAVE,
   FAMILIES,
   FAMILY,
   NIGHT_MIX,
@@ -30,7 +33,7 @@ import {
 export type NightInput = { beam: number; post?: { slot: number; troop: TroopType }; card?: CardId };
 
 /** The troop that beats each family, on the troops' triangle (boarders > harpooners > crossbowmen > boarders). */
-export const COUNTERED_BY: Readonly<Record<Family, TroopType>> = { raider: "crossbowmen", beast: "harpooners", wraith: "boarders" };
+export const COUNTERED_BY: Readonly<Record<Family, TroopType>> = { raider: "crossbowmen", beast: "harpooners", wraith: "boarders", galleon: "harpooners" };
 
 /** Where post `i` of `count` stands around the island, in degrees: evenly, the first at 45°. */
 export const postBearing = (i: number, count: number): number => (45 + (i * 360) / count) % 360;
@@ -65,7 +68,7 @@ export function familyAt(night: number, r: Rng): [Family, Rng] {
   const [f, next] = nextFloat(r);
   let left = f;
   for (const fam of FAMILIES) {
-    left -= mix[fam];
+    left -= mix[fam] ?? 0;
     if (left < 0) return [fam, next];
   }
   return ["raider", next];
@@ -119,13 +122,20 @@ export function stepNight(n: NightState, input: NightInput): NightState {
   }
   const size = waveSize(n.night, wave);
   const coming: Enemy[] = [];
+  // Wave 10, in a Night that has one: the Mist Galleon comes first, from the seed's bearing.
+  if (phase === "wave" && wave === BOSS_WAVE && spawned === 0 && t >= nextSpawn && !n.enemies.some((e) => e.family === "galleon")) {
+    const [f, next] = nextFloat(rng);
+    rng = next;
+    coming.push({ id: nextId, family: "galleon", bearing: f * 360, distance: SEA_RADIUS, health: FAMILY.galleon.health, lit: 0, fade: 0, stage: 0 });
+    nextId += 1;
+  }
   if (phase === "wave" && spawned < size && t >= nextSpawn) {
     const burst = Math.min(size - spawned, burstOf(n.night));
     for (let k = 0; k < burst; k++) {
       const [family, afterFamily] = familyAt(n.night, rng);
       const [f, next] = nextFloat(afterFamily);
       rng = next;
-      coming.push({ id: nextId, family, bearing: f * 360, distance: SEA_RADIUS, health: FAMILY[family].health, lit: 0, fade: 0 });
+      coming.push({ id: nextId, family, bearing: f * 360, distance: SEA_RADIUS, health: FAMILY[family].health, lit: 0, fade: 0, stage: 0 });
       nextId += 1;
     }
     spawned += burst;
@@ -140,6 +150,7 @@ export function stepNight(n: NightState, input: NightInput): NightState {
   // The posts fire on their own: each at the enemy nearest the coast in its reach, harder at the family its troop beats.
   const hits = new Map<number, number>();
   const netted = new Set<number>();
+  const sent: Enemy[] = [];
   posts.forEach((troop, i) => {
     if (!troop) return;
     const at = postBearing(i, posts.length);
@@ -167,14 +178,27 @@ export function stepNight(n: NightState, input: NightInput): NightState {
       burned += 1;
       continue;
     }
-    const speed = FAMILY[e.family].speed * mods.speed * (e.family === "raider" ? mods.raiderSpeed : 1) * (netted.has(e.id) ? mods.netSlow : 1);
+    // The Galleon's stages: at two thirds it sends Raiders around it, at a third it rages.
+    let stage = e.stage;
+    if (e.family === "galleon") {
+      if (stage === 0 && health <= (FAMILY.galleon.health * 2) / 3) {
+        stage = 1;
+        for (let k = 0; k < BOSS_SUMMON; k++) {
+          sent.push({ id: nextId, family: "raider", bearing: (e.bearing + (k - 1) * 12 + 360) % 360, distance: e.distance, health: FAMILY.raider.health, lit: 0, fade: 0, stage: 0 });
+          nextId += 1;
+        }
+      }
+      if (stage === 1 && health <= FAMILY.galleon.health / 3) stage = 2;
+    }
+    const speed = FAMILY[e.family].speed * (stage === 2 ? BOSS_RAGE : 1) * mods.speed * (e.family === "raider" ? mods.raiderSpeed : 1) * (netted.has(e.id) ? mods.netSlow : 1);
     const distance = e.distance - speed * STEP;
     if (distance <= ON_COAST) {
       oil = Math.max(Math.min(floor, oil), oil - mods.steal[e.family]);
       continue;
     }
-    enemies.push({ ...e, distance, health, lit: litFor, fade });
+    enemies.push({ ...e, distance, health, lit: litFor, fade, stage });
   }
+  enemies.push(...sent);
 
   // The Infirmary's second chance: once, the Lighthouse lights again.
   let rescued = n.rescued;

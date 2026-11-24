@@ -66,3 +66,12 @@ describe("the end of a Night", () => {
     }
   });
 });
+
+describe("the boss's health", () => {
+  it("shown while the Mist Galleon is on the sea, as a share of its health", () => {
+    expect(hudParts(base).boss).toBe(null);
+    const g = { id: 1, family: "galleon" as const, bearing: 0, distance: 20, health: N.FAMILY.galleon.health / 2, lit: 0, fade: 0, stage: 1 };
+    expect(hudParts({ ...base, enemies: [g] }).boss).toBe(0.5);
+    expect(NIGHT_TEXT.boss).toBe("The Mist Galleon");
+  });
+});

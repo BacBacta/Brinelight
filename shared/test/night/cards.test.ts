@@ -68,7 +68,7 @@ describe("what each card does, stacking as it says", () => {
   });
 
   it("Brighter beam: 25 % more damage, each time", () => {
-    const n = far({ ...newNight(1, 2), cards: ["bright", "bright"], enemies: [{ id: 1, family: "raider", bearing: 0, distance: 28, health: FAMILY.raider.health, lit: 0, fade: 0 }], nextId: 2 });
+    const n = far({ ...newNight(1, 2), cards: ["bright", "bright"], enemies: [{ id: 1, family: "raider", bearing: 0, distance: 28, health: FAMILY.raider.health, lit: 0, fade: 0, stage: 0 }], nextId: 2 });
     const hit = FAMILY.raider.health - stepNight(n, { beam: 0 }).enemies[0]!.health;
     expect(hit).toBeCloseTo(n.power.beamDps * 1.5 * STEP, 9);
   });
@@ -96,7 +96,7 @@ describe("what each card does, stacking as it says", () => {
 
   it("Slack tide: the enemies come 15 % slower", () => {
     expect(cardMods(["tide"]).speed).toBeCloseTo(0.85, 9);
-    const n = far({ ...newNight(1, 2), cards: ["tide"], enemies: [{ id: 1, family: "raider", bearing: 0, distance: 28, health: FAMILY.raider.health, lit: 0, fade: 0 }], nextId: 2 });
+    const n = far({ ...newNight(1, 2), cards: ["tide"], enemies: [{ id: 1, family: "raider", bearing: 0, distance: 28, health: FAMILY.raider.health, lit: 0, fade: 0, stage: 0 }], nextId: 2 });
     expect(28 - stepNight(n, { beam: 180 }).enemies[0]!.distance).toBeCloseTo(FAMILY.raider.speed * 0.85 * STEP, 9);
   });
 

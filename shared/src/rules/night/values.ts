@@ -24,7 +24,7 @@ export const BEAM_WIDTH = 40;
 export const BEAM_DPS = 60;
 
 /** The enemies' families. */
-export const FAMILIES = ["raider", "beast", "wraith"] as const;
+export const FAMILIES = ["raider", "beast", "wraith", "galleon"] as const;
 export type Family = (typeof FAMILIES)[number];
 
 export const FAMILY: Readonly<Record<Family, { speed: number; health: number; oil: number }>> = {
@@ -34,7 +34,16 @@ export const FAMILY: Readonly<Record<Family, { speed: number; health: number; oi
   beast: { speed: 2, health: 240, oil: 20 },
   /** Wraiths: they fade out of the beam (below); 8 s from the edge, 1.5 s in the beam, in strokes. */
   wraith: { speed: 3, health: 90, oil: 10 },
+  /** The Mist Galleon, wave 10's boss: 24 s from the edge, 25 s in the beam alone. */
+  galleon: { speed: 1, health: 1500, oil: 50 },
 };
+
+/** The wave a boss comes with, in the Nights that have it. */
+export const BOSS_WAVE = 10;
+/** Raiders the Galleon sends around it at two thirds of its health. */
+export const BOSS_SUMMON = 3;
+/** How much faster it comes at a third of its health. */
+export const BOSS_RAGE = 1.6;
 
 /** A Wraith lit this long (seconds, without a break) fades… */
 export const WRAITH_FADE_AFTER = 0.6;
@@ -42,7 +51,7 @@ export const WRAITH_FADE_AFTER = 0.6;
 export const WRAITH_HIDDEN = 1.5;
 
 /** Which family each newcomer is, in Nights 1 to 5: Raiders only in Night 1, Beasts from Night 2, Wraiths from Night 4. */
-export const NIGHT_MIX: readonly Readonly<Record<Family, number>>[] = [
+export const NIGHT_MIX: readonly Readonly<Partial<Record<Family, number>>>[] = [
   { raider: 1, beast: 0, wraith: 0 },
   { raider: 0.8, beast: 0.2, wraith: 0 },
   { raider: 0.8, beast: 0.2, wraith: 0 },

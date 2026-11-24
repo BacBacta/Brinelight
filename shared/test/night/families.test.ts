@@ -4,7 +4,7 @@ import { familyAt, stepNight } from "../../src/rules/night/step.js";
 import { seedRng } from "../../src/rules/night/random.js";
 import { BEAM_DPS, FAMILY, NIGHT_MIX, STEPS_PER_SECOND, WRAITH_FADE_AFTER, WRAITH_HIDDEN } from "../../src/rules/night/values.js";
 
-const enemy = (family: Enemy["family"], bearing = 0, distance = 28): Enemy => ({ id: 1, family, bearing, distance, health: FAMILY[family].health, lit: 0, fade: 0 });
+const enemy = (family: Enemy["family"], bearing = 0, distance = 28): Enemy => ({ id: 1, family, bearing, distance, health: FAMILY[family].health, lit: 0, fade: 0, stage: 0 });
 const alone = (e: Enemy): NightState => ({ ...newNight(1, 2), phase: "pause", pauseEnd: 1_000_000, enemies: [e], nextId: 2 });
 const run = (n: NightState, steps: number, beam: number): NightState => {
   let s = n;
@@ -57,7 +57,7 @@ describe("the three families", () => {
 describe("which family comes, Night by Night", () => {
   const draw = (night: number, n = 2000) => {
     let r = seedRng(night * 101);
-    const count = { raider: 0, beast: 0, wraith: 0 };
+    const count = { raider: 0, beast: 0, wraith: 0, galleon: 0 };
     for (let i = 0; i < n; i++) {
       const [f, next] = familyAt(night, r);
       count[f] += 1;
@@ -67,7 +67,7 @@ describe("which family comes, Night by Night", () => {
   };
 
   it("Night 1: Raiders only; Beasts from Night 2; Wraiths from Night 4, as the mix says", () => {
-    expect(draw(1)).toEqual({ raider: 2000, beast: 0, wraith: 0 });
+    expect(draw(1)).toEqual({ raider: 2000, beast: 0, wraith: 0, galleon: 0 });
     expect(draw(2).beast).toBeGreaterThan(300);
     expect(draw(3).wraith).toBe(0);
     expect(draw(4).wraith).toBeGreaterThan(300);

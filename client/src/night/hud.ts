@@ -9,6 +9,7 @@ const POSTS_HINT = "Tap ＋ on a raft to put troops there. They fire on their ow
 export const NIGHT_TEXT = {
   oil: "Oil",
   oilLabel: "Oil: the Lighthouse's life",
+  boss: "The Mist Galleon",
   hint: "Turn the light onto the boats. Boats that land steal oil.",
   lost: "The Lighthouse went dark",
   won: "Dawn",
@@ -17,7 +18,7 @@ export const NIGHT_TEXT = {
 } as const;
 
 /** What the panel shows of a Night. */
-export function hudParts(n: N.NightState): { oil: number; oilText: string; wave: string; next: string; wood: number; fish: number; hint: string } {
+export function hudParts(n: N.NightState): { oil: number; oilText: string; wave: string; next: string; wood: number; fish: number; hint: string; boss: number | null } {
   const waves = N.wavesOf(n.night);
   const next = n.phase === "pause" ? `Next wave in ${Math.max(1, Math.ceil((n.pauseEnd - n.step) / N.STEPS_PER_SECOND))} s` : "";
   const earned = N.lootSoFar(n);
@@ -28,7 +29,10 @@ export function hudParts(n: N.NightState): { oil: number; oilText: string; wave:
       : n.night > 1 && n.posts.length > 0 && n.posts.every((p) => p === null)
         ? POSTS_HINT
         : "";
-  return { oil: Math.max(0, Math.min(1, n.oil / (n.power.startOil + N.cardMods(n.cards).extraOil))), oilText: String(Math.ceil(n.oil)), wave: `Wave ${Math.min(n.wave, waves)} of ${waves}`, next, wood: earned.wood, fish: earned.fish, hint };
+  // The Galleon's health, as a share, while it is on the sea.
+  const galleon = n.enemies.find((e) => e.family === "galleon");
+  const boss = galleon ? Math.max(0, galleon.health / N.FAMILY.galleon.health) : null;
+  return { boss, oil: Math.max(0, Math.min(1, n.oil / (n.power.startOil + N.cardMods(n.cards).extraOil))), oilText: String(Math.ceil(n.oil)), wave: `Wave ${Math.min(n.wave, waves)} of ${waves}`, next, wood: earned.wood, fish: earned.fish, hint };
 }
 
 /** The end card's inside: the Night won or lost, the waves held, what you bring back, and the way to your city. */
@@ -52,7 +56,8 @@ export function createNightHud(root: HTMLElement, onDone: () => void) {
   panel.innerHTML =
     `<div class="left"><div class="oil" role="meter" aria-label="${NIGHT_TEXT.oilLabel}" title="${NIGHT_TEXT.oilLabel}" aria-valuemin="0">${ICONS.oil}<span class="bar"><i></i><b></b></span></div>` +
     `<div class="earned" aria-label="Earned this Night"><span data-k="wood">${ICONS.wood}<b>0</b></span><span data-k="fish">${ICONS.fish}<b>0</b></span></div></div>` +
-    `<div class="wave" aria-live="polite"><b></b><small></small></div>`;
+    `<div class="wave" aria-live="polite"><b></b><small></small></div>` +
+    `<div class="boss" role="meter" aria-label="${NIGHT_TEXT.boss}" hidden><b>${NIGHT_TEXT.boss}</b><span class="bar"><i></i></span></div>`;
   const hint = document.createElement("p");
   hint.className = "night-hint";
   hint.setAttribute("role", "status");
@@ -66,6 +71,8 @@ export function createNightHud(root: HTMLElement, onDone: () => void) {
   root.append(panel, hint, end);
   const fill = panel.querySelector<HTMLElement>(".oil i")!;
   const wood = panel.querySelector<HTMLElement>('[data-k="wood"]')!;
+  const bossBar = panel.querySelector<HTMLElement>(".boss")!;
+  const bossFill = panel.querySelector<HTMLElement>(".boss i")!;
   const fish = panel.querySelector<HTMLElement>('[data-k="fish"]')!;
   /** A number that rose flashes once, so the eye sees what a burned boat brought. */
   const count = (el: HTMLElement, value: number) => {
@@ -87,7 +94,7 @@ export function createNightHud(root: HTMLElement, onDone: () => void) {
   return {
     update(n: N.NightState) {
       const p = hudParts(n);
-      const key = `${p.oilText}|${p.wave}|${p.next}|${n.phase}|${p.wood}|${p.fish}|${p.hint}`;
+      const key = `${p.oilText}|${p.wave}|${p.next}|${n.phase}|${p.wood}|${p.fish}|${p.hint}|${p.boss === null ? "" : p.boss.toFixed(2)}`;
       if (key === shown) return;
       shown = key;
       fill.style.transform = `scaleX(${p.oil})`;
@@ -96,6 +103,11 @@ export function createNightHud(root: HTMLElement, onDone: () => void) {
       meter.setAttribute("aria-valuemax", String(n.power.startOil + N.cardMods(n.cards).extraOil));
       wave.textContent = p.wave;
       next.textContent = p.next;
+      bossBar.hidden = p.boss === null;
+      if (p.boss !== null) {
+        bossFill.style.transform = `scaleX(${p.boss})`;
+        bossBar.setAttribute("aria-valuenow", String(Math.round(p.boss * 100)));
+      }
       count(wood, p.wood);
       count(fish, p.fish);
       hint.textContent = p.hint;
