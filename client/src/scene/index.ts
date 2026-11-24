@@ -101,6 +101,8 @@ export type SceneHandle = {
   setMoored(discs: readonly Disc[]): void;
   /** Points of the water the normal view keeps on screen besides the city: the portal's Night, the edge of its sea. */
   setReach(points: readonly { x: number; z: number }[]): void;
+  /** Fingers no longer turn or zoom the city's camera (the portal's Night: they steer the beam). */
+  lockCamera(locked: boolean): void;
   /**
    * The land won on the sea (city/land, from the Lighthouse 5): its ground takes the island's place (the
    * island's own model hidden) and the shore's foam is measured from it; null gives the island back. `edge`: points of
@@ -245,6 +247,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions): Sc
   // The buildings' room: each one's top and foot stays in the normal view's band.
   let volumes: readonly Volume[] = [];
   let reach: readonly { x: number; z: number }[] = [];
+  let cameraLocked = false;
   let framedBand = { top: 0, bottom: 0 };
   let stale = false;
   const cityFramingNow = () => {
@@ -464,7 +467,7 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions): Sc
     },
     setView(v) {
       view = v;
-      controls.enabled = v === "city";
+      controls.enabled = v === "city" && !cameraLocked;
       sea.controls.enabled = v === "sea";
     },
     get view() {
@@ -520,6 +523,10 @@ export function startScene(canvas: HTMLCanvasElement, options: SceneOptions): Sc
       moored = discs;
       measureShore();
       if (changed) layout();
+    },
+    lockCamera(locked) {
+      cameraLocked = locked;
+      controls.enabled = view === "city" && !locked;
     },
     setReach(points) {
       reach = points;

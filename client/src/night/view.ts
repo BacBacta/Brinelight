@@ -2,6 +2,7 @@
  * Where the Night's sea (the rules' bearings and distances, shared/src/rules/night) lies on the island's water. Pure,
  * so it is tested without a screen. 0° is north, up the screen (−z); bearings turn clockwise.
  */
+import * as THREE from "three";
 import { night as N } from "@brinelight/shared";
 
 /** How far from the Lighthouse the edge of the Night's sea is drawn, in world units: the camera keeps it on screen. */
@@ -32,3 +33,34 @@ export function bearingOf(x: number, z: number): number | null {
   const b = Math.atan2(x, -z) / RAD;
   return b < 0 ? b + 360 : b;
 }
+
+/** How fast the keys turn the beam, in degrees a second: half a turn a second. */
+export const KEY_TURN = 180;
+
+/** The beam turned by the keys: `dir` 1 clockwise, −1 the other way, 0 held; for `seconds`. */
+export function turnBy(bearing: number, dir: -1 | 0 | 1, seconds: number): number {
+  if (dir === 0) return bearing;
+  const b = (bearing + dir * KEY_TURN * seconds) % 360;
+  return b < 0 ? b + 360 : b;
+}
+
+/** The bearing of the water under a point of the screen (client pixels); none if it misses the water or is on the Lighthouse. */
+export function pointerBearing(
+  clientX: number,
+  clientY: number,
+  rect: { left: number; top: number; width: number; height: number },
+  camera: THREE.Camera,
+  waterY: number,
+): number | null {
+  pointer.set(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
+  ray.setFromCamera(pointer, camera);
+  water.constant = -waterY;
+  const hit = ray.ray.intersectPlane(water, onWater);
+  if (!hit || Math.hypot(hit.x, hit.z) < 0.5) return null;
+  return bearingOf(hit.x, hit.z);
+}
+
+const pointer = new THREE.Vector2();
+const ray = new THREE.Raycaster();
+const water = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const onWater = new THREE.Vector3();

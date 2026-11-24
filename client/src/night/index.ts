@@ -9,7 +9,7 @@ import { SEA_RISE } from "../scene/cityLook.js";
 import { coastAt } from "../scene/coast.js";
 import type { SceneHandle } from "../scene/index.js";
 import { SHORE } from "../scene/shore.js";
-import { NIGHT_REACH, seaToWorld } from "./view.js";
+import { NIGHT_REACH, pointerBearing, seaToWorld, turnBy } from "./view.js";
 import "./night.css";
 
 /** The most Raiders drawn at once: far more than a wave sends. */
@@ -19,15 +19,17 @@ const RAD = Math.PI / 180;
 export type NightHandle = {
   /** The Night as the rules have it now. */
   state(): N.NightState;
-  /** Where the beam is told to point, in degrees (the hand: task 2.2). */
+  /** Where the beam is told to point, in degrees. */
   aim(bearing: number): void;
   /** Stops it and takes its shapes off the water. */
   dispose(): void;
 };
 
 /** Starts a Night on the island's water; `onChange` hears each step that changed what the screen shows. */
-export function startNight(scene: SceneHandle, opts: { seed: number; night: number; onChange?(n: N.NightState): void }): NightHandle {
+export function startNight(scene: SceneHandle, canvas: HTMLCanvasElement, opts: { seed: number; night: number; onChange?(n: N.NightState): void }): NightHandle {
   document.body.classList.add("night");
+  // Fingers steer the beam: they no longer turn the camera.
+  scene.lockCamera(true);
   // The camera steps back until the edge of the Night's sea is on screen.
   scene.setReach(Array.from({ length: 12 }, (_, i) => seaToWorld(i * 30, N.SEA_RADIUS, coastAt)));
   const y = SHORE.waterY + SEA_RISE + 0.04;
@@ -67,9 +69,42 @@ export function startNight(scene: SceneHandle, opts: { seed: number; night: numb
     raiders.instanceMatrix.needsUpdate = true;
   };
 
+  // The hand: the beam follows the mouse, or the finger on the water. The city's own taps (a building's sheet) wait.
+  const water = y - 0.04;
+  const follow = (e: PointerEvent) => {
+    if (e.pointerType !== "mouse" && e.buttons === 0 && e.type === "pointermove") return;
+    const b = pointerBearing(e.clientX, e.clientY, canvas.getBoundingClientRect(), scene.cityCamera, water);
+    if (b !== null) aimed = b;
+  };
+  const hold = (e: PointerEvent) => {
+    e.stopImmediatePropagation();
+    follow(e);
+  };
+  canvas.addEventListener("pointermove", follow);
+  canvas.addEventListener("pointerdown", hold);
+  canvas.addEventListener("pointerup", hold);
+  canvas.style.touchAction = "none";
+  // The keys: ← → or A D (by their place on the keyboard: Q D on AZERTY) turn the beam while held.
+  const held = new Set<string>();
+  const TURN_KEYS: Record<string, -1 | 1> = { ArrowLeft: -1, KeyA: -1, ArrowRight: 1, KeyD: 1 };
+  const onKey = (e: KeyboardEvent) => {
+    if (!(e.code in TURN_KEYS)) return;
+    e.preventDefault();
+    if (e.type === "keydown") held.add(e.code);
+    else held.delete(e.code);
+  };
+  addEventListener("keydown", onKey);
+  addEventListener("keyup", onKey);
+  const keyTurn = (): -1 | 0 | 1 => {
+    let d = 0;
+    for (const k of held) d += TURN_KEYS[k]!;
+    return d > 0 ? 1 : d < 0 ? -1 : 0;
+  };
+
   // A hidden page stops the Night: no frame comes, and the first one back runs no time.
   const onVisibility = () => {
     last = null;
+    held.clear();
   };
   document.addEventListener("visibilitychange", onVisibility);
 
@@ -77,6 +112,7 @@ export function startNight(scene: SceneHandle, opts: { seed: number; night: numb
     if (document.hidden) return;
     const dt = last === null ? 0 : now - last;
     last = now;
+    aimed = turnBy(aimed, keyTurn(), dt);
     clock = N.feedTime(clock, dt, { beam: aimed });
     draw();
     if (clock.night.step !== shown) {
@@ -92,6 +128,13 @@ export function startNight(scene: SceneHandle, opts: { seed: number; night: numb
     },
     dispose() {
       document.removeEventListener("visibilitychange", onVisibility);
+      canvas.removeEventListener("pointermove", follow);
+      canvas.removeEventListener("pointerdown", hold);
+      canvas.removeEventListener("pointerup", hold);
+      removeEventListener("keydown", onKey);
+      removeEventListener("keyup", onKey);
+      canvas.style.touchAction = "";
+      scene.lockCamera(false);
       document.body.classList.remove("night");
       raiders.removeFromParent();
       beam.removeFromParent();

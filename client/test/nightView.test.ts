@@ -30,3 +30,31 @@ describe("the Night on the island's sea", () => {
     expect(bearingOf(0, 0)).toBe(null);
   });
 });
+
+describe("the hand on the beam", () => {
+  it("a point of the screen gives the bearing of the water under it", async () => {
+    const THREE = await import("three");
+    const { pointerBearing } = await import("../src/night/view.js");
+    // A camera high above the Lighthouse, looking straight down, north up the screen.
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
+    camera.position.set(0, 20, 0);
+    camera.up.set(0, 0, -1);
+    camera.lookAt(0, 0, 0);
+    camera.updateMatrixWorld();
+    const rect = { left: 0, top: 0, width: 400, height: 400 };
+    expect(pointerBearing(200, 50, rect, camera, 0)).toBeCloseTo(0, 3);
+    expect(pointerBearing(350, 200, rect, camera, 0)).toBeCloseTo(90, 3);
+    expect(pointerBearing(200, 350, rect, camera, 0)).toBeCloseTo(180, 3);
+    expect(pointerBearing(50, 200, rect, camera, 0)).toBeCloseTo(270, 3);
+    // Right on the Lighthouse: no bearing.
+    expect(pointerBearing(200, 200, rect, camera, 0)).toBe(null);
+  });
+
+  it("the keys turn the beam at their speed, either way, round past north", async () => {
+    const { KEY_TURN, turnBy } = await import("../src/night/view.js");
+    expect(turnBy(0, 1, 0.5)).toBeCloseTo(KEY_TURN / 2, 9);
+    expect(turnBy(10, -1, 1 / KEY_TURN * 20)).toBeCloseTo(350, 9);
+    expect(turnBy(350, 1, 1 / KEY_TURN * 20)).toBeCloseTo(10, 9);
+    expect(turnBy(90, 0, 1)).toBe(90);
+  });
+});
