@@ -9,3 +9,4 @@ export * from "./city.js";
 export * from "./upgrade.js";
 export * from "./powers.js";
 export * from "./cards.js";
+export * from "./chart.js";

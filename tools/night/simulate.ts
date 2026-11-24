@@ -51,9 +51,9 @@ const median = (xs: number[]): number => {
 export type NightSummary = { night: number; bot: string; won: number; runs: number; wave: number; minutes: number; oil: number; wood: number; fish: number };
 
 /** Each Night 1 to NIGHTS, each bot, over these seeds: how often it is won, and the medians. */
-export function summarize(seeds: readonly number[], bots: readonly Bot[] = BOTS): NightSummary[] {
+export function summarize(seeds: readonly number[], bots: readonly Bot[] = BOTS, upTo = 5): NightSummary[] {
   const out: NightSummary[] = [];
-  for (let night = 1; night <= N.NIGHTS; night++)
+  for (let night = 1; night <= upTo; night++)
     for (const bot of bots) {
       const runs = seeds.map((seed) => playNight(night, seed, bot));
       out.push({
@@ -96,11 +96,11 @@ function buyAll(c: N.PortalCity): N.PortalCity {
 export type Campaign = { bot: string; seed: number; tries: number[]; minutes: number; city: N.PortalCity; done: boolean };
 
 /** A new city played Night after Night by a bot, its loot spent as the guide says, until Night 5 is won (or `maxNights`). */
-export function campaign(bot: Bot, seed: number, maxNights = 60): Campaign {
+export function campaign(bot: Bot, seed: number, maxNights = 60, upTo = 5): Campaign {
   let city = N.newCity();
-  const tries = new Array<number>(N.NIGHTS).fill(0);
+  const tries = new Array<number>(upTo).fill(0);
   let seconds = 0;
-  for (let i = 0; i < maxNights && city.won < N.NIGHTS; i++) {
+  for (let i = 0; i < maxNights && city.won < upTo; i++) {
     const night = N.nextNight(city);
     let n = N.newNight((seed * 7919 + i) >>> 0, night, N.cityPowers(city));
     while (n.phase !== "won" && n.phase !== "lost") n = N.stepNight(n, play(bot, n));
@@ -109,14 +109,14 @@ export function campaign(bot: Bot, seed: number, maxNights = 60): Campaign {
     const r = N.dawn(city, n);
     if (r.ok) city = buyAll(r.city);
   }
-  return { bot: bot.name, seed, tries, minutes: seconds / 60, city, done: city.won >= N.NIGHTS };
+  return { bot: bot.name, seed, tries, minutes: seconds / 60, city, done: city.won >= upTo };
 }
 
 /** Campaigns over these seeds, as a Markdown table: the tries each Night took (median), the minutes, the city at the end. */
 export function campaignTable(seeds: readonly number[], bots: readonly Bot[] = [steady, aim]): string {
   const rows = bots.map((bot) => {
     const runs = seeds.map((seed) => campaign(bot, seed));
-    const tries = Array.from({ length: N.NIGHTS }, (_, k) => median(runs.map((r) => r.tries[k]!)));
+    const tries = Array.from({ length: 5 }, (_, k) => median(runs.map((r) => r.tries[k]!)));
     const last = runs[Math.floor(runs.length / 2)]!.city.buildings;
     return `| ${bot.name} | ${runs.filter((r) => r.done).length}/${runs.length} | ${tries.join(" · ")} | ${median(runs.map((r) => r.minutes)).toFixed(0)} | ${last.lighthouse} · ${last.refinery} · ${last.infirmary} |`;
   });

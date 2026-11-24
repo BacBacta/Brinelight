@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { newNight, parseNight, type Enemy, type NightState } from "../../src/rules/night/state.js";
 import { familyAt, stepNight } from "../../src/rules/night/step.js";
 import { seedRng } from "../../src/rules/night/random.js";
-import { BEAM_DPS, FAMILY, NIGHT_MIX, STEPS_PER_SECOND, WRAITH_FADE_AFTER, WRAITH_HIDDEN } from "../../src/rules/night/values.js";
+import { BEAM_DPS, FAMILY, STEPS_PER_SECOND, WRAITH_FADE_AFTER, WRAITH_HIDDEN } from "../../src/rules/night/values.js";
+import { chartNight } from "../../src/rules/night/chart.js";
 
 const enemy = (family: Enemy["family"], bearing = 0, distance = 28): Enemy => ({ id: 1, family, bearing, distance, health: FAMILY[family].health, lit: 0, fade: 0, stage: 0 });
 const alone = (e: Enemy): NightState => ({ ...newNight(1, 2), phase: "pause", pauseEnd: 1_000_000, enemies: [e], nextId: 2 });
@@ -71,7 +72,7 @@ describe("which family comes, Night by Night", () => {
     expect(draw(2).beast).toBeGreaterThan(300);
     expect(draw(3).wraith).toBe(0);
     expect(draw(4).wraith).toBeGreaterThan(300);
-    expect(NIGHT_MIX[0]).toEqual({ raider: 1, beast: 0, wraith: 0 });
+    expect(chartNight(1).mix).toEqual({ raider: 1 });
   });
 
   it("a Night's waves bring its families, from its seed", () => {

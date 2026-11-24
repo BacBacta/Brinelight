@@ -50,28 +50,16 @@ export const WRAITH_FADE_AFTER = 0.6;
 /** …for this long: the beam goes through it, and it comes on. */
 export const WRAITH_HIDDEN = 1.5;
 
-/** Which family each newcomer is, in Nights 1 to 5: Raiders only in Night 1, Beasts from Night 2, Wraiths from Night 4. */
-export const NIGHT_MIX: readonly Readonly<Partial<Record<Family, number>>>[] = [
-  { raider: 1, beast: 0, wraith: 0 },
-  { raider: 0.8, beast: 0.2, wraith: 0 },
-  { raider: 0.8, beast: 0.2, wraith: 0 },
-  { raider: 0.6, beast: 0.2, wraith: 0.2 },
-  { raider: 0.6, beast: 0.2, wraith: 0.2 },
-];
 
 /** The Nights there are: Nights 1 to 5 first (step 4), then the chart (step 5). */
-export const NIGHTS = 5;
+export const NIGHTS = 30;
 
-/** The waves of each Night, from Night 1: Night 1 is short (about 3 minutes). */
-export const NIGHT_WAVES: readonly number[] = [5, 8, 9, 10, 12];
 /** A wave's Raiders: 4 in Night 1's first wave, 2 more each wave, 2 more each Night. */
 export const WAVE_FIRST = 4;
 export const WAVE_GROWTH = 2;
 export const NIGHT_GROWTH = 2;
 /** Between two enemies of a wave, in seconds. */
 export const SPAWN_SPACING = 1.5;
-/** How many Raiders come at once, each at its own bearing, in Nights 1 to 5: later Nights make the beam choose. */
-export const SPAWN_BURST: readonly number[] = [1, 1, 2, 2, 3];
 /** The pause after a wave, in seconds: the cards will be chosen in it (step 3). */
 export const WAVE_PAUSE = 6;
 /** Night 1's first waves cannot put the Lighthouse out: a new player learns the beam before they can lose. */
