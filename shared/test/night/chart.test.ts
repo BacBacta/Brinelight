@@ -50,7 +50,7 @@ describe("each Night's rule does what it says", () => {
     expect(moved).toBeCloseTo(FAMILY.raider.speed * 1.25 * STEP, 9);
   });
 
-  it("wraiths and beasts: their family most", () => {
+  it("wraiths and beasts: far more of their family than another Night", () => {
     const share = (k: number, fam: Enemy["family"]) => {
       let r = seedRng(k);
       let c = 0;
@@ -62,7 +62,8 @@ describe("each Night's rule does what it says", () => {
       return c / 2000;
     };
     expect(share(night("wraiths"), "wraith")).toBeGreaterThan(0.6);
-    expect(share(night("beasts"), "beast")).toBeGreaterThan(0.5);
+    expect(share(night("beasts"), "beast")).toBeGreaterThan(0.4);
+    expect(share(night("swift"), "beast")).toBeLessThan(0.3);
   });
 
   it("no pause: a second between waves, not six", () => {

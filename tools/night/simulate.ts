@@ -34,8 +34,12 @@ export const BOTS: readonly Bot[] = [still, steady, aim];
 export type NightRun = { night: number; seed: number; bot: string; won: boolean; wave: number; waves: number; seconds: number; oil: number; loot: N.Loot };
 
 /** One Night, played to its end by a bot. */
-/** A bot's input, with the first card offered taken: the bots choose no better than that. */
-const play = (bot: Bot, n: N.NightState): N.NightInput => ({ ...bot.input(n), card: n.offer[0] });
+/** A bot's input, with the first card offered taken (the bots choose no better than that) and its rafts manned in turn. */
+const TROOPS = ["crossbowmen", "harpooners", "boarders"] as const;
+const play = (bot: Bot, n: N.NightState): N.NightInput => {
+  const empty = n.posts.findIndex((p) => p === null);
+  return { ...bot.input(n), card: n.offer[0], ...(empty >= 0 ? { post: { slot: empty, troop: TROOPS[empty % 3]! } } : {}) };
+};
 
 export function playNight(night: number, seed: number, bot: Bot, powers: N.NightPowers = N.BASE_POWERS): NightRun {
   let n = N.newNight(seed, night, powers);
@@ -93,15 +97,17 @@ function buyAll(c: N.PortalCity): N.PortalCity {
   }
 }
 
-export type Campaign = { bot: string; seed: number; tries: number[]; minutes: number; city: N.PortalCity; done: boolean };
+export type Campaign = { bot: string; seed: number; tries: number[]; minutes: number; city: N.PortalCity; done: boolean; /** The city at its first try of each Night. */ cities: N.PortalCity[] };
 
 /** A new city played Night after Night by a bot, its loot spent as the guide says, until Night 5 is won (or `maxNights`). */
 export function campaign(bot: Bot, seed: number, maxNights = 60, upTo = 5): Campaign {
   let city = N.newCity();
   const tries = new Array<number>(upTo).fill(0);
+  const cities: N.PortalCity[] = [];
   let seconds = 0;
   for (let i = 0; i < maxNights && city.won < upTo; i++) {
     const night = N.nextNight(city);
+    if (tries[night - 1] === 0) cities[night - 1] = city;
     let n = N.newNight((seed * 7919 + i) >>> 0, night, N.cityPowers(city));
     while (n.phase !== "won" && n.phase !== "lost") n = N.stepNight(n, play(bot, n));
     seconds += n.step / N.STEPS_PER_SECOND;
@@ -109,7 +115,7 @@ export function campaign(bot: Bot, seed: number, maxNights = 60, upTo = 5): Camp
     const r = N.dawn(city, n);
     if (r.ok) city = buyAll(r.city);
   }
-  return { bot: bot.name, seed, tries, minutes: seconds / 60, city, done: city.won >= upTo };
+  return { bot: bot.name, seed, tries, minutes: seconds / 60, city, done: city.won >= upTo, cities };
 }
 
 /** Campaigns over these seeds, as a Markdown table: the tries each Night took (median), the minutes, the city at the end. */

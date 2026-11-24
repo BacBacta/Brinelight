@@ -40,20 +40,21 @@ const MIX: Readonly<Record<NightRule, Readonly<Partial<Record<Family, number>>>>
   none: { raider: 0.5, beast: 0.25, wraith: 0.25 },
   swift: { raider: 0.5, beast: 0.25, wraith: 0.25 },
   wraiths: { raider: 0.3, wraith: 0.7 },
-  beasts: { raider: 0.4, beast: 0.6 },
+  beasts: { raider: 0.55, beast: 0.45 },
   nopause: { raider: 0.5, beast: 0.25, wraith: 0.25 },
   dark: { raider: 0.5, beast: 0.25, wraith: 0.25 },
 };
 
 function make(k: number): ChartNight {
   if (k <= FIRST.length) return { ...FIRST[k - 1]!, name: `Night ${k}`, health: 1, rule: "none" };
-  const rule = TURN[(k - 6) % TURN.length]!;
+  // The last Night has no rule of its own: the Leviathan is its trial.
+  const rule = k === 30 ? "none" : TURN[(k - 6) % TURN.length]!;
   return {
     name: rule === "none" ? `Night ${k}` : `Night ${k} · ${RULE_NAMES[rule]}`,
     waves: Math.min(30, 12 + Math.round(((k - 5) * 18) / 25)),
     burst: Math.min(5, 3 + Math.floor((k - 5) / 9)),
     mix: MIX[rule],
-    health: 1 + 0.06 * (k - 5),
+    health: 1 + 0.045 * (k - 5),
     rule,
   };
 }
